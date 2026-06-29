@@ -1,0 +1,25 @@
+// infrastructure — the driven side (ADR-0002): adapters that reach external
+// services (PostgreSQL persistence, external scrapers/ingestors, exporters),
+// implementing ports defined in domain. Depends on domain and nothing else; it
+// does NOT depend on application.
+plugins {
+    alias(libs.plugins.micronaut.library)
+}
+
+dependencies {
+    implementation(project(":domain"))
+
+    // PostgreSQL persistence (ADR-0001). The concrete data-access flavour
+    // (repositories, schema, migrations) is introduced by the first persistence
+    // feature; no datasource is configured yet, so nothing connects at startup.
+    implementation(libs.micronaut.jdbc.hikari)
+    runtimeOnly(libs.postgresql)
+}
+
+micronaut {
+    testRuntime("junit5")
+    processing {
+        incremental(true)
+        annotations("gal.conxugal.infrastructure.*")
+    }
+}

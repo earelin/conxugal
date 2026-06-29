@@ -1,0 +1,14 @@
+// domain — the hexagon core (ADR-0002): entities, value objects, domain services
+// and the ports (interfaces) the outer modules implement. Free of transport and
+// persistence concerns; domain classes MAY carry Micronaut DI annotations.
+plugins {
+    alias(libs.plugins.micronaut.library)
+}
+
+micronaut {
+    testRuntime("junit5")
+    processing {
+        incremental(true)
+        annotations("gal.conxugal.domain.*")
+    }
+}

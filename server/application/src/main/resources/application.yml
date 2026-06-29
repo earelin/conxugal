@@ -1,0 +1,5 @@
+micronaut:
+  application:
+    name: conxugal-server
+  server:
+    port: 8080

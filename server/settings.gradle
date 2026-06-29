@@ -1,0 +1,8 @@
+rootProject.name = "conxugal-server"
+
+// Hexagonal modules (ADR-0002). domain is the core; application (driving side)
+// and infrastructure (driven side) are decoupled siblings that both depend only
+// on domain and meet at runtime through Micronaut's DI container.
+include("domain")
+include("application")
+include("infrastructure")
