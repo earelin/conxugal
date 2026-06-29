@@ -1,0 +1,17 @@
+{
+  "enabledPlugins": {
+    "github@earelin-plugins": true,
+    "backend@earelin-plugins": true,
+    "jdtls-lsp@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "earelin-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "earelin/claude"
+      },
+      "autoUpdate": true
+    }
+  }
+}
+
