@@ -1,7 +1,8 @@
 # Feature authoring + GitHub issues
 
 A feature is a **buildable slice** of a spec.
-Design decisions live here, and a feature maps to one GitHub parent issue.
+Design decisions live here, and a feature maps to a **list of small, PR-sized
+GitHub issues** (no parent issue).
 
 ## Feature doc format
 
@@ -10,7 +11,6 @@ Design decisions live here, and a feature maps to one GitHub parent issue.
   ```yaml
   ---
   spec: SPEC-NNN          # parent spec (required)
-  github_issue: <n>       # the GitHub parent issue, recorded once created
   adrs: [NNNN]            # governing ADRs, if any
   status: draft           # draft | active | implemented
   ---
@@ -20,26 +20,28 @@ Design decisions live here, and a feature maps to one GitHub parent issue.
 
 ## GitHub issues
 
-Issues live on GitHub, not the filesystem. Requires `gh >= 2.94.0` (native sub-issues,
-issue types, dependencies).
+Issues live on GitHub, not the filesystem. A feature gets **no parent issue** — it
+maps to a **flat list of small, PR-sized issues**, one issue ≈ one PR.
 
-- A `FEAT-NNN` doc maps to one **parent issue** (type: `Feature`). Record its number back
-  into the feature frontmatter as `github_issue`.
-- PR-sized work is a **sub-issue** of that parent. Its body MUST reference the `FEAT-NNN`
-  it implements and any governing `ADR-NNNN`. One sub-issue ≈ one PR.
+- Group a feature's issues with a **per-feature label** `FEAT-NNN` (create it once).
+  This is a personal (non-org) repo, so native **custom issue types are unavailable** —
+  use labels, never `gh issue create --type`.
+- Each issue body MUST reference the `FEAT-NNN` it implements and any governing
+  `ADR-NNNN`, so the trace survives without a parent link.
+- Record every created issue back into the feature doc's **`## GitHub issues`**
+  section (number + title) so the feature lists its full work breakdown.
 
 ```bash
-# feature → parent issue (once); capture the returned number into frontmatter
-gh issue create --type Feature --title "FEAT-001 Officer extraction" \
-  --body-file docs/features/FEAT-001-officer-extraction.md
+# one-time: a label to group the feature's issues
+gh label create FEAT-002 --description "FEAT-002 login process" --color 1D76DB
 
-# work item → sub-issue of the feature's parent
-gh issue create --parent 42 --type Task \
-  --title "Grammar/regex parser for officer block" \
-  --body $'Implements FEAT-001. Governed by ADR-0001.\n\nAcceptance criteria:\n- ...'
+# a PR-sized issue, linked back to the feature + governing ADR
+gh issue create --label FEAT-002 \
+  --title "Domain: User, Role and authenticate use case" \
+  --body $'Implements FEAT-002. Governed by ADR-0004.\n\nAcceptance criteria:\n- ...'
 
-# read the trace back as JSON
-gh issue view 55 --json number,title,parent,type,body
+# read the feature's issues back
+gh issue list --label FEAT-002 --state all
 ```
 
-Use `--blocked-by` / `--blocking` to record dependencies between sub-issues when relevant.
+Use `--blocked-by` / `--blocking` to record dependencies between issues when relevant.
