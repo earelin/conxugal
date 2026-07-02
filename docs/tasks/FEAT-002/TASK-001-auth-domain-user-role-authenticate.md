@@ -1,13 +1,13 @@
 ---
 feat: FEAT-002
-adrs: [0004]
+adrs: [0005]
 status: todo
 depends_on: []
 ---
 
 # Auth domain: User, Role and authenticate use case
 
-Governed by ADR-0004 (session-based authentication). Domain only — no transport or persistence.
+Governed by [ADR-0005](../../architecture/0005-session-based-authentication.md) (session-based authentication). Domain only — no transport or persistence.
 
 ## Scope
 - `User` (identity, password hash, role) and `Role` (`USER`, `ADMIN`).

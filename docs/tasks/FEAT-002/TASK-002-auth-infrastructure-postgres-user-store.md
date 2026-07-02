@@ -1,13 +1,13 @@
 ---
 feat: FEAT-002
-adrs: [0004]
+adrs: [0005]
 status: todo
 depends_on: [TASK-001]
 ---
 
 # Auth infrastructure: PostgreSQL user store + password hashing adapters
 
-Governed by ADR-0004 (session-based authentication). Driven adapters for the domain ports.
+Governed by [ADR-0005](../../architecture/0005-session-based-authentication.md) (session-based authentication). Driven adapters for the domain ports.
 
 ## Scope
 - PostgreSQL `UserRepository` adapter + schema (users: email, password hash, role).
