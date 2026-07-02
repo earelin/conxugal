@@ -2,7 +2,7 @@
 feat: FEAT-002
 adrs: [0004]
 status: todo
-depends_on: [ISSUE-003]
+depends_on: [TASK-003]
 ---
 
 # Logout and SPA 401-handling redirect to login

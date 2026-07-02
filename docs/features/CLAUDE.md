@@ -1,7 +1,7 @@
 # Feature authoring
 
 A feature is a **buildable slice** of a spec. Design decisions live here, and a feature
-is broken into small issues under `docs/issues/FEAT-NNN/`.
+is broken into small tasks under `docs/tasks/FEAT-NNN/`.
 
 ## Feature doc format
 
@@ -17,13 +17,13 @@ is broken into small issues under `docs/issues/FEAT-NNN/`.
 - Body: the design — components, contracts, sequencing, edge cases. This is the place for
   implementation detail that specs deliberately omit.
 
-## Issues
+## Tasks
 
-Issues live on the filesystem. Each feature's work items sit in a
-folder named after the feature: `docs/issues/FEAT-NNN/`. See `docs/issues/CLAUDE.md` for
-the issue file format.
+Tasks live on the filesystem. Each feature's work items sit in a
+folder named after the feature: `docs/tasks/FEAT-NNN/`. See `docs/tasks/CLAUDE.md` for
+the task file format.
 
-- A `FEAT-NNN` doc's sequencing section enumerates the issues; each becomes one file in
-  `docs/issues/FEAT-NNN/`. Each issue is a small, self-contained change.
-- Every issue records its parent feature in `feat:` frontmatter and any governing
+- A `FEAT-NNN` doc's sequencing section enumerates the tasks; each becomes one file in
+  `docs/tasks/FEAT-NNN/`. Each task is a small, self-contained change.
+- Every task records its parent feature in `feat:` frontmatter and any governing
   `ADR-NNNN` in `adrs:`.

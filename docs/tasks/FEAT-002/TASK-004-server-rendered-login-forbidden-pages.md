@@ -2,7 +2,7 @@
 feat: FEAT-002
 adrs: [0004]
 status: todo
-depends_on: [ISSUE-003]
+depends_on: [TASK-003]
 ---
 
 # Server-rendered login + forbidden pages and login form

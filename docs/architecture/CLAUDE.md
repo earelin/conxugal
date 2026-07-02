@@ -40,4 +40,4 @@ The choice made, stated plainly.
 - Number sequentially: `0001-…`, `0002-…`.
 - ADRs are **immutable once `accepted`**. To revise, create a new ADR and set `supersedes`
   / `superseded_by` on both records. Never rewrite an accepted decision.
-- Reference the governing ADR from the feature (`adrs:` frontmatter) and from issue frontmatter (`adrs:`).
+- Reference the governing ADR from the feature (`adrs:` frontmatter) and from task frontmatter (`adrs:`).

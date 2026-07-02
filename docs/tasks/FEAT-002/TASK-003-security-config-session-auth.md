@@ -2,7 +2,7 @@
 feat: FEAT-002
 adrs: [0004]
 status: todo
-depends_on: [ISSUE-001, ISSUE-002]
+depends_on: [TASK-001, TASK-002]
 ---
 
 # Security config: session auth, AuthenticationProvider and @Secured rules
