@@ -35,6 +35,19 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty'); case \"$f\" in *.ts|*.tsx) out=$(cd \"${CLAUDE_PROJECT_DIR:-.}/ui\" 2>/dev/null && ./node_modules/.bin/eslint --no-warn-ignored \"$f\" 2>&1); rc=$?; if [ \"$rc\" -ne 0 ] && [ -n \"$out\" ]; then jq -n --arg msg \"eslint found issues in $(basename \"$f\"):\n$out\" '{systemMessage:$msg, hookSpecificOutput:{hookEventName:\"PostToolUse\", additionalContext:$msg}}'; fi ;; esac",
+            "timeout": 30,
+            "statusMessage": "Linting edited TypeScript file"
+          }
+        ]
+      }
     ]
   }
 }
