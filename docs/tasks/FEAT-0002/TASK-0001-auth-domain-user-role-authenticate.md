@@ -1,5 +1,5 @@
 ---
-feat: FEAT-002
+feat: FEAT-0002
 adrs: [0005]
 status: todo
 depends_on: []

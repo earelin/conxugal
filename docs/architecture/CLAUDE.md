@@ -14,7 +14,7 @@ exists, **STOP and propose one first**.
 ---
 status: accepted          # proposed | accepted | superseded | deprecated
 date: YYYY-MM-DD
-spec: SPEC-NNN            # what motivated it (optional)
+spec: SPEC-NNNN           # what motivated it (optional)
 supersedes: null
 superseded_by: null
 ---

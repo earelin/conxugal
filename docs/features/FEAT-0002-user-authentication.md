@@ -1,14 +1,14 @@
 ---
-spec: SPEC-002
+spec: SPEC-0002
 adrs: [0002, 0005]
 status: draft
 ---
 
-# FEAT-002. User authentication
+# FEAT-0002. User authentication
 
 ## Goal
 Implement email + password authentication with `USER`/`ADMIN` roles and server-side
-sessions, satisfying **[SPEC-002](../specs/SPEC-002-user-authentication.md)**. The
+sessions, satisfying **[SPEC-0002](../specs/SPEC-0002-user-authentication.md)**. The
 mechanism is session-based auth via Micronaut Security
 (**[ADR-0005](../architecture/0005-session-based-authentication.md)**), placed inside
 the hexagonal server (**[ADR-0002](../architecture/0002-hexagonal-architecture.md)**):
@@ -76,25 +76,25 @@ flowchart LR
   never stored, logged, or returned.
 
 ## Sequencing (tasks, one small change each)
-1. **[TASK-001](../tasks/FEAT-002/TASK-001-auth-domain-user-role-authenticate.md)** —
+1. **[TASK-0001](../tasks/FEAT-0002/TASK-0001-auth-domain-user-role-authenticate.md)** —
    Auth domain: `User`, `Role` and the authenticate use case with its ports. *(domain only)*
-2. **[TASK-002](../tasks/FEAT-002/TASK-002-auth-infrastructure-postgres-user-store.md)** —
+2. **[TASK-0002](../tasks/FEAT-0002/TASK-0002-auth-infrastructure-postgres-user-store.md)** —
    PostgreSQL user store + password-hashing adapters implementing the domain ports.
-3. **[TASK-003](../tasks/FEAT-002/TASK-003-security-config-session-auth.md)** —
+3. **[TASK-0003](../tasks/FEAT-0002/TASK-0003-security-config-session-auth.md)** —
    Security config: session auth, `AuthenticationProvider`, `@Secured` rules, CSRF.
-   *(SPEC-002 #2, #4–#6)*
-4. **[TASK-004](../tasks/FEAT-002/TASK-004-server-rendered-login-forbidden-pages.md)** —
-   Server-rendered login + forbidden pages and the login form. *(SPEC-002 #1, #3)*
-5. **[TASK-005](../tasks/FEAT-002/TASK-005-logout-and-spa-401-handling.md)** —
-   Logout and the SPA 401-handling redirect to login. *(SPEC-002 #7)*
+   *(SPEC-0002 #2, #4–#6)*
+4. **[TASK-0004](../tasks/FEAT-0002/TASK-0004-server-rendered-login-forbidden-pages.md)** —
+   Server-rendered login + forbidden pages and the login form. *(SPEC-0002 #1, #3)*
+5. **[TASK-0005](../tasks/FEAT-0002/TASK-0005-logout-and-spa-401-handling.md)** —
+   Logout and the SPA 401-handling redirect to login. *(SPEC-0002 #7)*
 
 ## Edge cases
 - **Indistinct failure** — unknown email vs. wrong password must not be separable; the
   password check runs even when the email is unknown so timing and messaging do not
-  disclose which field was wrong (SPEC-002 #3).
+  disclose which field was wrong (SPEC-0002 #3).
 - **Expired session mid-use** — an XHR gets a 401 and the SPA sends the user back to
-  `/login` rather than failing silently (SPEC-002 #7).
+  `/login` rather than failing silently (SPEC-0002 #7).
 - **Already-authenticated visitor of `/login`** — redirected to `/` (the SPA) instead of
   being shown the login form again.
 - **No plaintext anywhere** — passwords never appear in storage, logs, error messages or
-  responses (SPEC-002 #8).
+  responses (SPEC-0002 #8).

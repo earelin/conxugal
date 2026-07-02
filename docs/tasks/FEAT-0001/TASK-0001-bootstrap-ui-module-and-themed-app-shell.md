@@ -1,5 +1,5 @@
 ---
-feat: FEAT-001
+feat: FEAT-0001
 adrs: [0003, 0004]
 status: done
 depends_on: []
@@ -17,7 +17,7 @@ runnable and buildable to static assets.
 - `AppShell` layout: header with product name, collapsible navbar with primary navigation, Galician interface chrome.
 - Vitest + Testing Library smoke test; responsive/a11y polish.
 
-## Acceptance criteria ([SPEC-001](../../specs/SPEC-001-web-ui.md))
+## Acceptance criteria ([SPEC-0001](../../specs/SPEC-0001-web-ui.md))
 - AC1: root renders the app shell with product name + primary nav.
 - AC2/AC3: nav changes section + URL; reload and Back behave.
 - AC4: unknown path shows in-shell Galician "page not found".

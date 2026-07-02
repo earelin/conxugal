@@ -1,15 +1,15 @@
 ---
-spec: SPEC-001
+spec: SPEC-0001
 adrs: [0003, 0004]
 status: draft
 ---
 
-# FEAT-001. UI application scaffolding
+# FEAT-0001. UI application scaffolding
 
 ## Goal
 Stand up the `ui/` module: a buildable, runnable React Router SPA with the Mantine
 theme and an application shell, satisfying the *reachable, navigable, themed shell*
-requirements of **[SPEC-001](../specs/SPEC-001-web-ui.md)** and the stack decided in
+requirements of **[SPEC-0001](../specs/SPEC-0001-web-ui.md)** and the stack decided in
 **[ADR-0003](../architecture/0003-react-router-ui-served-by-backend.md)** (React Router served
 by the backend) and **[ADR-0004](../architecture/0004-ui-stack-vite-mantine.md)** (Vite build, library-mode SPA, Mantine, npm).
 
@@ -100,8 +100,8 @@ flowchart TD
 ## Sequencing (tasks, one small change each)
 1. **Bootstrap `ui/`** — Vite React-TS project, npm, tsconfig, ESLint/Prettier, `.gitignore`, baseline scripts. *([ADR-0004](../architecture/0004-ui-stack-vite-mantine.md))*
 2. **Wire Mantine** — install core/hooks, PostCSS preset, `theme.ts`, `MantineProvider` + `ColorSchemeScript`, global styles. *([ADR-0004](../architecture/0004-ui-stack-vite-mantine.md))*
-3. **Router + AppShell layout** — `router.tsx`, `AppLayout`, `HomePage`, `NotFoundPage`, Galician chrome. *([SPEC-001](../specs/SPEC-001-web-ui.md) R1–R3, R6)*
-4. **Test + responsive polish** — Vitest setup + smoke test, burger/responsive navbar, a11y pass. *([SPEC-001](../specs/SPEC-001-web-ui.md) R4–R6)*
+3. **Router + AppShell layout** — `router.tsx`, `AppLayout`, `HomePage`, `NotFoundPage`, Galician chrome. *([SPEC-0001](../specs/SPEC-0001-web-ui.md) R1–R3, R6)*
+4. **Test + responsive polish** — Vitest setup + smoke test, burger/responsive navbar, a11y pass. *([SPEC-0001](../specs/SPEC-0001-web-ui.md) R4–R6)*
 
 ## Edge cases
 - **Unknown deep link in production** → blank/404 unless backend serves `index.html`

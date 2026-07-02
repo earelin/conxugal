@@ -2,7 +2,7 @@
 status: draft
 ---
 
-# SPEC-001. Web UI for browsing, searching and exporting contracts
+# SPEC-0001. Web UI for browsing, searching and exporting contracts
 
 ## Capability
 Users need a web interface to make the imported public-contract information of the

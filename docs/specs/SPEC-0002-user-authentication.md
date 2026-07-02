@@ -2,7 +2,7 @@
 status: draft
 ---
 
-# SPEC-002 User authentication
+# SPEC-0002 User authentication
 
 ## Summary
 

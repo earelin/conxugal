@@ -9,24 +9,24 @@ Tasks are grouped in one folder per feature:
 
 ```
 docs/tasks/
-  FEAT-NNN/                   # one folder per feature, named exactly after the FEAT
-    TASK-NNN-kebab-title.md   # NNN is sequential within the feature folder
+  FEAT-NNNN/                   # one folder per feature, named exactly after the FEAT
+    TASK-NNNN-kebab-title.md   # NNNN is sequential within the feature folder
 ```
 
 ## Task doc format
 
-- Filename: `TASK-NNN-kebab-title.md`. `NNN` restarts at `001` in each `FEAT-NNN/` folder.
+- Filename: `TASK-NNNN-kebab-title.md`. `NNNN` restarts at `0001` in each `FEAT-NNNN/` folder.
 - Frontmatter:
   ```yaml
   ---
-  feat: FEAT-NNN          # parent feature (required)
+  feat: FEAT-NNNN          # parent feature (required)
   adrs: [NNNN]            # governing ADRs, if any
   status: todo            # todo | in-progress | done
-  depends_on: []          # other tasks in this feature that must land first, e.g. [TASK-001]
+  depends_on: []          # other tasks in this feature that must land first, e.g. [TASK-0001]
   ---
   ```
 - Body: a short goal, a **Scope** list of what the change touches, and **testable acceptance
-  criteria** tracing back to the spec (e.g. `SPEC-001 #4`) or feature requirements.
+  criteria** tracing back to the spec (e.g. `SPEC-0001 #4`) or feature requirements.
 
 ## Rules
 

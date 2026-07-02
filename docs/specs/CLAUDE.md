@@ -4,7 +4,7 @@ A spec describes a capability at the **what** level, independent of how it's bui
 
 ## Format
 
-- Filename: `SPEC-NNN-kebab-title.md` (sequential `NNN`).
+- Filename: `SPEC-NNNN-kebab-title.md` (sequential `NNNN`).
 - Frontmatter:
   ```yaml
   ---

@@ -9,7 +9,7 @@ that the Micronaut server serves as a single deployable artifact.
 Governing decisions: [ADR-0003](../docs/architecture/0003-react-router-ui-served-by-backend.md)
 (React Router served by the backend) and
 [ADR-0004](../docs/architecture/0004-ui-stack-vite-mantine.md) (Vite + Mantine).
-Design: [FEAT-001](../docs/features/FEAT-001-ui-application-scaffolding.md).
+Design: [FEAT-0001](../docs/features/FEAT-0001-ui-application-scaffolding.md).
 
 ## Requirements
 

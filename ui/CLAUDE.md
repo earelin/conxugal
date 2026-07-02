@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the `ui/` module of conxugal — see the root `CLAUDE.md` for the repo-wide
 spec-driven workflow (`SPEC → FEAT → TASK`). This module implements
-`docs/specs/SPEC-001-web-ui.md` via `docs/features/FEAT-001-ui-application-scaffolding.md`;
-code comments reference requirement/acceptance-criteria IDs (e.g. `SPEC-001 R1`) back to
+`docs/specs/SPEC-0001-web-ui.md` via `docs/features/FEAT-0001-ui-application-scaffolding.md`;
+code comments reference requirement/acceptance-criteria IDs (e.g. `SPEC-0001 R1`) back to
 that spec.
 
 ## Commands

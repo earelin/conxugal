@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-06-29
-spec: SPEC-001
+spec: SPEC-0001
 supersedes: null
 superseded_by: null
 ---

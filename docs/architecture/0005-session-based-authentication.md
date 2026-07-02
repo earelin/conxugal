@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-07-02
-spec: SPEC-002
+spec: SPEC-0002
 supersedes: null
 superseded_by: null
 ---
@@ -12,7 +12,7 @@ superseded_by: null
 Accepted
 
 ## Context
-[SPEC-002](../specs/SPEC-002-user-authentication.md) requires email + password
+[SPEC-0002](../specs/SPEC-0002-user-authentication.md) requires email + password
 authentication, `USER`/`ADMIN` roles, sessions that persist across requests, logout,
 and passwords that are never stored or exposed in a recoverable form. We must decide
 the authentication **mechanism** (server-side session vs. stateless token/JWT), where
@@ -29,7 +29,7 @@ Forces at play:
   concern that must respect the module boundaries: the identity model and the
   credential check are domain rules; the user store, password hashing and the security
   framework are driven adapters.
-- **Credential safety (SPEC-002).** Passwords must never reach client-side JavaScript
+- **Credential safety (SPEC-0002).** Passwords must never reach client-side JavaScript
   as plaintext, never be stored recoverably, and never leak in logs or responses.
 - **Revocation.** A user must be able to log out and immediately lose access; an
   administrator-invalidated or expired session must stop working at once.

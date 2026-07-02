@@ -1,8 +1,8 @@
 ---
-feat: FEAT-002
+feat: FEAT-0002
 adrs: [0005]
 status: todo
-depends_on: [TASK-001]
+depends_on: [TASK-0001]
 ---
 
 # Auth infrastructure: PostgreSQL user store + password hashing adapters
