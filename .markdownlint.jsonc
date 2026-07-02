@@ -1,0 +1,33 @@
+// markdownlint rules for the docs — consumed by scripts/docs-lint.sh.
+//
+// Philosophy: enforce correctness/consistency rules (bad link syntax, bare
+// hashes, trailing whitespace, multiple H1s, …) but do NOT impose layout rules
+// that fight this repo's *documented* authoring conventions. The ADR/spec/
+// feature/task templates (see docs/**/CLAUDE.md) intentionally use tight
+// spacing and `+` / `−` markers for positive/negative ADR consequences.
+{
+  "default": true,
+
+  // ADR "Consequences" use `+` (pro) and `−` (con) markers by convention;
+  // don't force all unordered lists to a single dash style.
+  "MD004": false,
+
+  // Templates place content directly under a heading (e.g. "## Status\nAccepted"),
+  // group `+`/`−` consequences without separating blank lines, and nest example
+  // code fences tightly under list items.
+  "MD022": false,
+  "MD031": false,
+  "MD032": false,
+
+  // Prose, tables and code wrap at the author's discretion; we don't hard-wrap at 80.
+  "MD013": false,
+
+  // Directory/file trees are drawn as language-less fenced blocks (see docs/CLAUDE.md).
+  "MD040": false,
+
+  // Spec/feature/task/ADR docs begin with YAML frontmatter, not a top-level heading.
+  "MD041": false,
+
+  // GitHub-style tables don't need their trailing pipes aligned across rows.
+  "MD060": false
+}
