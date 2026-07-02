@@ -28,3 +28,11 @@ The trace is entirely on the filesystem: `SPEC → FEAT` via feature frontmatter
 3. When implementing a task, first read its parent feature, its spec, and any referenced ADRs.
 4. Keep scope to the single task: a small, self-contained change committed straight to
    `trunk` (trunk-based development — no long-lived branches or pull requests).
+
+## Before committing
+
+Run the relevant lint script and fix any failures before committing — CI
+(`.github/workflows/`) re-checks these on push, but catch failures locally first:
+
+- Staged changes under `docs/` (or root `*.md`/`CLAUDE.md` files): run `scripts/docs-lint.sh`.
+- Staged changes under `.github/workflows/`: run `scripts/actions-lint.sh`.
