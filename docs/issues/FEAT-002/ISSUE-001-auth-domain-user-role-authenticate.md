@@ -1,0 +1,21 @@
+---
+feat: FEAT-002
+adrs: [0004]
+status: todo
+depends_on: []
+---
+
+# Auth domain: User, Role and authenticate use case
+
+Governed by ADR-0004 (session-based authentication). Domain only — no transport or persistence.
+
+## Scope
+- `User` (identity, password hash, role) and `Role` (`USER`, `ADMIN`).
+- `UserRepository` and `PasswordEncoder` ports.
+- Authenticate use case: find user by email, verify password against stored hash, return role or an indistinct failure.
+
+## Acceptance criteria
+- Authenticate succeeds only for a known email with a matching password.
+- Failure is indistinct: unknown email and wrong password are not separable (no field-specific signal); password check is not short-circuited when the email is unknown.
+- No plaintext password is stored, logged, or returned.
+- Unit-tested without a database or HTTP server.

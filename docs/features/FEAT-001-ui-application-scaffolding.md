@@ -1,6 +1,5 @@
 ---
 spec: SPEC-001
-github_issue: 2
 adrs: [0003, 0004]
 status: draft
 ---
@@ -97,7 +96,7 @@ flowchart TD
 - **npm scripts:** `dev`, `build` (`tsc -b && vite build` → `ui/dist`), `preview`,
   `lint`, `format`, `test`.
 
-## Sequencing (sub-issues, ≈ one PR each)
+## Sequencing (issues, ≈ one PR each)
 1. **Bootstrap `ui/`** — Vite React-TS project, npm, tsconfig, ESLint/Prettier, `.gitignore`, baseline scripts. *(ADR-0004)*
 2. **Wire Mantine** — install core/hooks, PostCSS preset, `theme.ts`, `MantineProvider` + `ColorSchemeScript`, global styles. *(ADR-0004)*
 3. **Router + AppShell layout** — `router.tsx`, `AppLayout`, `HomePage`, `NotFoundPage`, Galician chrome. *(SPEC-001 R1–R3, R6)*

@@ -6,25 +6,24 @@ Aplicación web para extraer, almacenar, analizar e exportar a información de c
 
 ## Spec-driven workflow
 
-Work flows **spec → feature → GitHub issue**, with **architecture decisions (ADRs)**
+Work flows **spec → feature → issue**, with **architecture decisions (ADRs)**
 recorded orthogonally. Do not write implementation code without a traced issue that
 links up to a feature and a spec.
 
 ```
 docs/
-  specs/        SPEC-NNN-*.md   # the "what": requirements + acceptance criteria, impl-agnostic
-  features/     FEAT-NNN-*.md   # a buildable slice of a spec; design lives here; maps to a GitHub parent issue
-  architecture/ NNNN-*.md       # ADRs: one architecturally significant decision each
-GitHub Issues                 # PR-sized work
+  specs/        SPEC-NNN-*.md          # the "what": requirements + acceptance criteria, impl-agnostic
+  features/     FEAT-NNN-*.md          # a buildable slice of a spec; design lives here
+  issues/       FEAT-NNN/ISSUE-NNN-*.md # PR-sized work, grouped in one folder per feature
+  architecture/ NNNN-*.md              # ADRs: one architecturally significant decision each
 ```
 
-The trace spans two systems: `SPEC → FEAT` via frontmatter on the filesystem, and
-`FEAT → parent issue → sub-issues` via native GitHub parent/child links.
+The trace is entirely on the filesystem: `SPEC → FEAT` via feature frontmatter, and
+`FEAT → ISSUE` via the `docs/issues/FEAT-NNN/` folder plus each issue's `feat:` frontmatter.
 
 ### Before coding — check the chain
 
-1. Confirm the `SPEC → FEAT → issue` chain exists for the work.
+1. Confirm the `SPEC → FEAT → ISSUE` chain exists for the work.
 2. If a level is missing, **propose the missing doc(s) and STOP for review** before implementing.
 3. When implementing an issue, first read its parent feature, its spec, and any referenced ADRs.
-4. Keep scope to the single issue. One sub-issue ≈ one PR.
-
+4. Keep scope to the single issue. One issue ≈ one PR.
