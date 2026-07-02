@@ -1,7 +1,7 @@
 ---
 spec: SPEC-0001
 adrs: [0003, 0004]
-status: draft
+status: implemented
 ---
 
 # FEAT-0001. UI application scaffolding
@@ -105,8 +105,10 @@ flowchart TD
 
 ## Edge cases
 - **Unknown deep link in production** → blank/404 unless backend serves `index.html`
-  fallback. Mitigation: documented as a dependency on the server feature (R3 fully holds
-  only once that lands); in dev it already works.
+  fallback. Mitigation: tracked as a dependency on
+  **[FEAT-0003](FEAT-0003-backend-serves-ui-application.md)** (R3 fully holds only once
+  that lands); in dev it already works.
 - **Color-scheme flash** → mitigated by `ColorSchemeScript`.
 - **Asset base path** when served under a sub-path by Micronaut → Vite `base` may need
-  configuring; deferred until the serving feature fixes the path.
+  configuring; tracked in
+  **[FEAT-0003](FEAT-0003-backend-serves-ui-application.md)**.
