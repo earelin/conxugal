@@ -20,7 +20,7 @@ is broken into small tasks under `docs/tasks/FEAT-NNN/`.
 ## Tasks
 
 Tasks live on the filesystem. Each feature's work items sit in a
-folder named after the feature: `docs/tasks/FEAT-NNN/`. See `docs/tasks/CLAUDE.md` for
+folder named after the feature: `docs/tasks/FEAT-NNN/`. See [`docs/tasks/CLAUDE.md`](../tasks/CLAUDE.md) for
 the task file format.
 
 - A `FEAT-NNN` doc's sequencing section enumerates the tasks; each becomes one file in

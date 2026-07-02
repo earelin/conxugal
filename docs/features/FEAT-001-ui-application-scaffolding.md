@@ -9,8 +9,9 @@ status: draft
 ## Goal
 Stand up the `ui/` module: a buildable, runnable React Router SPA with the Mantine
 theme and an application shell, satisfying the *reachable, navigable, themed shell*
-requirements of **SPEC-001** and the stack decided in **ADR-0003** (React Router served
-by the backend) and **ADR-0004** (Vite build, library-mode SPA, Mantine, npm).
+requirements of **[SPEC-001](../specs/SPEC-001-web-ui.md)** and the stack decided in
+**[ADR-0003](../architecture/0003-react-router-ui-served-by-backend.md)** (React Router served
+by the backend) and **[ADR-0004](../architecture/0004-ui-stack-vite-mantine.md)** (Vite build, library-mode SPA, Mantine, npm).
 
 This is the foundation; data browsing/search/export features build on top of it later.
 
@@ -64,7 +65,7 @@ flowchart TD
     provider --> layout
 ```
 
-### Routing (library mode, ADR-0004)
+### Routing (library mode, [ADR-0004](../architecture/0004-ui-stack-vite-mantine.md))
 - `createBrowserRouter` with a single layout route (`path: "/"`, element `<AppLayout/>`).
   - `index: true` → `HomePage` (R1).
   - `path: "*"` → `NotFoundPage` (R3 / AC4), rendered inside the shell.
@@ -97,10 +98,10 @@ flowchart TD
   `lint`, `format`, `test`.
 
 ## Sequencing (tasks, one small change each)
-1. **Bootstrap `ui/`** — Vite React-TS project, npm, tsconfig, ESLint/Prettier, `.gitignore`, baseline scripts. *(ADR-0004)*
-2. **Wire Mantine** — install core/hooks, PostCSS preset, `theme.ts`, `MantineProvider` + `ColorSchemeScript`, global styles. *(ADR-0004)*
-3. **Router + AppShell layout** — `router.tsx`, `AppLayout`, `HomePage`, `NotFoundPage`, Galician chrome. *(SPEC-001 R1–R3, R6)*
-4. **Test + responsive polish** — Vitest setup + smoke test, burger/responsive navbar, a11y pass. *(SPEC-001 R4–R6)*
+1. **Bootstrap `ui/`** — Vite React-TS project, npm, tsconfig, ESLint/Prettier, `.gitignore`, baseline scripts. *([ADR-0004](../architecture/0004-ui-stack-vite-mantine.md))*
+2. **Wire Mantine** — install core/hooks, PostCSS preset, `theme.ts`, `MantineProvider` + `ColorSchemeScript`, global styles. *([ADR-0004](../architecture/0004-ui-stack-vite-mantine.md))*
+3. **Router + AppShell layout** — `router.tsx`, `AppLayout`, `HomePage`, `NotFoundPage`, Galician chrome. *([SPEC-001](../specs/SPEC-001-web-ui.md) R1–R3, R6)*
+4. **Test + responsive polish** — Vitest setup + smoke test, burger/responsive navbar, a11y pass. *([SPEC-001](../specs/SPEC-001-web-ui.md) R4–R6)*
 
 ## Edge cases
 - **Unknown deep link in production** → blank/404 unless backend serves `index.html`

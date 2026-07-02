@@ -7,7 +7,7 @@ status: draft
 ## Capability
 Users need a web interface to make the imported public-contract information of the
 Xunta de Galicia (sourced from contratosdegalicia.gal) **accessible and analysable**,
-as stated in the project README. The UI lets a user reach the system in a browser,
+as stated in the project [README](../../README.md). The UI lets a user reach the system in a browser,
 find contracts, inspect their detail, and export results — all over a single origin.
 
 This spec describes the *what*. It is independent of framework, component library and

@@ -12,7 +12,7 @@ superseded_by: null
 Accepted
 
 ## Context
-The server (ADR-0001) ingests data from an external source, applies analysis, and
+The server ([ADR-0001](0001-backend-stack.md)) ingests data from an external source, applies analysis, and
 exposes it through a REST API and exports. These responsibilities pull in different
 directions: scraping and persistence are volatile infrastructure concerns, while the
 contract/tender model and analysis rules are the stable core of the system. We want

@@ -17,7 +17,7 @@ runnable and buildable to static assets.
 - `AppShell` layout: header with product name, collapsible navbar with primary navigation, Galician interface chrome.
 - Vitest + Testing Library smoke test; responsive/a11y polish.
 
-## Acceptance criteria (SPEC-001)
+## Acceptance criteria ([SPEC-001](../../specs/SPEC-001-web-ui.md))
 - AC1: root renders the app shell with product name + primary nav.
 - AC2/AC3: nav changes section + URL; reload and Back behave.
 - AC4: unknown path shows in-shell Galician "page not found".

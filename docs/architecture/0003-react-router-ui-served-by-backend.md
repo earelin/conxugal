@@ -13,7 +13,7 @@ Accepted
 
 ## Context
 The system needs a web UI to browse, analyse and export contract data exposed by the
-REST API (ADR-0001). We must choose the UI technology and how it is delivered to
+REST API ([ADR-0001](0001-backend-stack.md)). We must choose the UI technology and how it is delivered to
 users. Options range from a separately deployed front-end (its own host/Node server)
 to bundling the UI with the backend so there is a single deployable artifact.
 
