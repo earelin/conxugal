@@ -14,7 +14,7 @@ links up to a feature and a spec.
 docs/
   specs/        SPEC-NNN-*.md          # the "what": requirements + acceptance criteria, impl-agnostic
   features/     FEAT-NNN-*.md          # a buildable slice of a spec; design lives here
-  issues/       FEAT-NNN/ISSUE-NNN-*.md # PR-sized work, grouped in one folder per feature
+  issues/       FEAT-NNN/ISSUE-NNN-*.md # small, self-contained work, one folder per feature
   architecture/ NNNN-*.md              # ADRs: one architecturally significant decision each
 ```
 
@@ -26,4 +26,5 @@ The trace is entirely on the filesystem: `SPEC → FEAT` via feature frontmatter
 1. Confirm the `SPEC → FEAT → ISSUE` chain exists for the work.
 2. If a level is missing, **propose the missing doc(s) and STOP for review** before implementing.
 3. When implementing an issue, first read its parent feature, its spec, and any referenced ADRs.
-4. Keep scope to the single issue. One issue ≈ one PR.
+4. Keep scope to the single issue: a small, self-contained change committed straight to
+   `trunk` (trunk-based development — no long-lived branches or pull requests).

@@ -24,6 +24,6 @@ folder named after the feature: `docs/issues/FEAT-NNN/`. See `docs/issues/CLAUDE
 the issue file format.
 
 - A `FEAT-NNN` doc's sequencing section enumerates the issues; each becomes one file in
-  `docs/issues/FEAT-NNN/`. One issue ≈ one PR.
+  `docs/issues/FEAT-NNN/`. Each issue is a small, self-contained change.
 - Every issue records its parent feature in `feat:` frontmatter and any governing
   `ADR-NNNN` in `adrs:`.

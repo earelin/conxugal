@@ -1,7 +1,7 @@
 # Issue authoring
 
-An issue is a **PR-sized slice** of a feature — the smallest traceable unit of work.
-Issues live on the filesystem, **not** on GitHub.
+An issue is a **small, self-contained slice** of a feature — the smallest traceable unit
+of work. Issues live on the filesystem, **not** on GitHub.
 
 ## Layout
 
@@ -25,12 +25,13 @@ docs/issues/
   depends_on: []          # other issues in this feature that must land first, e.g. [ISSUE-001]
   ---
   ```
-- Body: a short goal, a **Scope** list of what the PR touches, and **testable acceptance
+- Body: a short goal, a **Scope** list of what the change touches, and **testable acceptance
   criteria** tracing back to the spec (e.g. `SPEC-001 #4`) or feature requirements.
 
 ## Rules
 
-- One issue ≈ one PR. Keep scope to the single issue.
+- Keep each issue to a small, self-contained change committed straight to `trunk`
+  (trunk-based development — no long-lived branches or pull requests).
 - Every issue must trace up: `feat:` frontmatter to its parent feature, which traces to a
   spec. If the feature or spec is missing, **STOP and propose it first** — do not write
   implementation code against an untraced issue.
