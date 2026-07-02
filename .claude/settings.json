@@ -25,6 +25,13 @@
             "if": "Bash(git commit *)",
             "timeout": 120,
             "statusMessage": "Linting docs before commit"
+          },
+          {
+            "type": "command",
+            "command": "if git diff --cached --name-only --diff-filter=ACMR | grep -q \"^\\.github/workflows/\"; then raw=$(\"${CLAUDE_PROJECT_DIR:-.}/scripts/actions-lint.sh\" 2>&1); rc=$?; if [ \"$rc\" -ne 0 ]; then out=$(printf \"%s\" \"$raw\" | sed -E \"s/\\x1b\\[[0-9;]*[a-zA-Z]//g; s/\\x1b\\(B//g\"); jq -n --arg reason \"actions-lint.sh failed for staged .github/workflows/ changes — fix before committing:\n$out\" \"{hookSpecificOutput:{hookEventName:\\\"PreToolUse\\\",permissionDecision:\\\"deny\\\",permissionDecisionReason:\\$reason}}\"; fi; fi",
+            "if": "Bash(git commit *)",
+            "timeout": 120,
+            "statusMessage": "Linting GitHub Actions workflows before commit"
           }
         ]
       }
