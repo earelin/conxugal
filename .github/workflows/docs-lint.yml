@@ -1,0 +1,37 @@
+name: Docs Lint
+
+# Mirrors the local pre-commit hook (.claude/settings.json): only runs when
+# staged/pushed changes touch the docs surface scripts/docs-lint.sh checks.
+on:
+  push:
+    branches: [trunk]
+    paths:
+      - "docs/**"
+      - "*.md"
+      - ".markdownlint.jsonc"
+      - "scripts/docs-lint.sh"
+      - ".github/workflows/docs-lint.yml"
+  workflow_dispatch:
+
+jobs:
+  docs-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Install markdownlint-cli2 and maid
+        run: npm install -g markdownlint-cli2 @probelabs/maid
+
+      - name: Install lychee
+        run: |
+          curl -fsSL "https://github.com/lycheeverse/lychee/releases/latest/download/lychee-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP"
+          mv "$RUNNER_TEMP"/lychee-x86_64-unknown-linux-gnu/lychee "$RUNNER_TEMP"/lychee
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Run docs-lint.sh
+        run: scripts/docs-lint.sh
