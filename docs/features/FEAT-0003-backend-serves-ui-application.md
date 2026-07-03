@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0001
-adrs: [0003, 0004]
+adrs: [0003, 0004, 0006]
 status: draft
 ---
 
@@ -61,9 +61,9 @@ adds no domain or infrastructure code.
 
 ### API prefix convention
 - Reserving `/api/` is a cross-cutting convention every future REST endpoint must
-  follow, not just this feature's concern. It is recorded here and in `server/CLAUDE.md`
-  once implemented; raise a short ADR instead if the team wants it formalised at that
-  level rather than as a documented convention.
+  follow, not just this feature's concern. It is governed by
+  **[ADR-0006](../architecture/0006-reserved-api-url-prefix.md)** and restated in
+  `server/CLAUDE.md` once implemented; this feature is its first consumer.
 
 ## Sequencing (tasks, one small change each)
 1. **[TASK-0001](../tasks/FEAT-0003/TASK-0001-wire-ui-build-into-server-artifact.md)** —

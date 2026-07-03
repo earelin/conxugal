@@ -1,6 +1,6 @@
 ---
 feat: FEAT-0002
-adrs: [0005]
+adrs: [0002, 0005]
 status: todo
 depends_on: [TASK-0001]
 ---
@@ -16,5 +16,5 @@ Governed by [ADR-0005](../../architecture/0005-session-based-authentication.md) 
 
 ## Acceptance criteria
 - A user can be looked up by email; absent email returns empty without error.
-- Stored passwords are salted hashes; verification compares hashes, never plaintext.
+- Stored passwords are salted hashes; verification compares hashes, never plaintext; no plaintext appears in storage, logs, or responses ([SPEC-0002](../../specs/SPEC-0002-user-authentication.md) #9).
 - Adapters satisfy the domain port contracts (integration-tested against PostgreSQL).

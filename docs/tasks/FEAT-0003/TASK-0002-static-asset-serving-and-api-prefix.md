@@ -1,6 +1,6 @@
 ---
 feat: FEAT-0003
-adrs: [0003, 0004]
+adrs: [0003, 0004, 0006]
 status: todo
 depends_on: [TASK-0001]
 ---
@@ -8,7 +8,8 @@ depends_on: [TASK-0001]
 # Static asset serving at `/` and the reserved `/api/` prefix
 
 Governed by [ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md) (static-asset
-delivery). Application-module driving-side config only.
+delivery) and [ADR-0006](../../architecture/0006-reserved-api-url-prefix.md) (reserved
+`/api/` prefix). Application-module driving-side config only.
 
 ## Scope
 - Micronaut `micronaut.router.static-resources` (or equivalent) mapping the UI assets

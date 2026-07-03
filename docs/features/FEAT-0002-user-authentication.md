@@ -85,6 +85,7 @@ flowchart LR
    Auth domain: `User`, `Role` and the authenticate use case with its ports. *(domain only)*
 2. **[TASK-0002](../tasks/FEAT-0002/TASK-0002-auth-infrastructure-postgres-user-store.md)** —
    PostgreSQL user store + password-hashing adapters implementing the domain ports.
+   *(SPEC-0002 #9)*
 3. **[TASK-0003](../tasks/FEAT-0002/TASK-0003-security-config-session-auth.md)** —
    Security config: session auth, `AuthenticationProvider`, `@Secured` rules, CSRF,
    30-minute idle session timeout. *(SPEC-0002 #2, #4–#6, #8)*
