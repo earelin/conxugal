@@ -66,6 +66,11 @@ flowchart LR
 - `@Secured` rules: data/analysis and the SPA require `IS_AUTHENTICATED`; admin routes
   require `ADMIN`; `/login` is `IS_ANONYMOUS`. `ADMIN` is a strict superset of `USER`.
 
+### Sessions
+- A session **expires after 30 minutes of inactivity**; the next request is treated as
+  unauthenticated and requires logging in again (SPEC-0002 #8). The window is enforced by
+  the Micronaut session configuration in [TASK-0003](../tasks/FEAT-0002/TASK-0003-security-config-session-auth.md).
+
 ### Session loss
 - Protected XHR/API routes return **401 (not an HTML redirect)** when the session is
   absent or expired; the SPA treats a 401 as *session gone* and navigates the browser to
@@ -81,8 +86,8 @@ flowchart LR
 2. **[TASK-0002](../tasks/FEAT-0002/TASK-0002-auth-infrastructure-postgres-user-store.md)** —
    PostgreSQL user store + password-hashing adapters implementing the domain ports.
 3. **[TASK-0003](../tasks/FEAT-0002/TASK-0003-security-config-session-auth.md)** —
-   Security config: session auth, `AuthenticationProvider`, `@Secured` rules, CSRF.
-   *(SPEC-0002 #2, #4–#6)*
+   Security config: session auth, `AuthenticationProvider`, `@Secured` rules, CSRF,
+   30-minute idle session timeout. *(SPEC-0002 #2, #4–#6, #8)*
 4. **[TASK-0004](../tasks/FEAT-0002/TASK-0004-server-rendered-login-forbidden-pages.md)** —
    Server-rendered login + forbidden pages and the login form. *(SPEC-0002 #1, #3)*
 5. **[TASK-0005](../tasks/FEAT-0002/TASK-0005-logout-and-spa-401-handling.md)** —
@@ -97,4 +102,4 @@ flowchart LR
 - **Already-authenticated visitor of `/login`** — redirected to `/` (the SPA) instead of
   being shown the login form again.
 - **No plaintext anywhere** — passwords never appear in storage, logs, error messages or
-  responses (SPEC-0002 #8).
+  responses (SPEC-0002 #9).

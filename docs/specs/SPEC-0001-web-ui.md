@@ -1,5 +1,5 @@
 ---
-status: draft
+status: active
 ---
 
 # SPEC-0001. Web UI for browsing, searching and exporting contracts
@@ -30,7 +30,7 @@ state from within the application shell, not a server or browser error.
 
 ### R4 — Consistent, accessible presentation
 The UI applies one consistent visual theme across all screens. Interactive elements are
-keyboard-operable and carry accessible names/roles.
+keyboard-operable and carry accessible names and semantics.
 
 ### R5 — Readable on common viewports
 The shell and its content remain usable on a typical desktop browser width and degrade
@@ -57,6 +57,6 @@ Galician, consistent with the project and its data source.
   "page not found" message in Galician and a way back to a known section.
 - **AC5 (R4):** Every screen renders with the same theme (colors/typography) applied;
   the primary navigation is reachable and operable using only the keyboard (Tab/Enter).
-- **AC6 (R5):** At a 360 px-wide viewport, the shell's primary content has no horizontal
-  scrollbar and navigation remains reachable.
+- **AC6 (R5):** At a 360 px-wide viewport (≈ the smallest common mobile viewport width),
+  the shell's primary content has no horizontal scrollbar and navigation remains reachable.
 - **AC7 (R6):** The navigation labels and the not-found message are presented in Galician.
