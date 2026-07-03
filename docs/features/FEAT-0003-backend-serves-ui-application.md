@@ -1,7 +1,7 @@
 ---
 spec: SPEC-0001
 adrs: [0003, 0004, 0006]
-status: draft
+status: active
 ---
 
 # FEAT-0003. Backend serves the UI application

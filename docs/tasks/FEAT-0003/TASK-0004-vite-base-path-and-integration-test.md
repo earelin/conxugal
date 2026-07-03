@@ -1,6 +1,6 @@
 ---
 feat: FEAT-0003
-adrs: [0004]
+adrs: [0003, 0004, 0006]
 status: todo
 depends_on: [TASK-0003]
 ---

@@ -1,8 +1,8 @@
 ---
 feat: FEAT-0002
-adrs: [0002, 0005]
+adrs: [0002, 0005, 0006]
 status: todo
-depends_on: [TASK-0003]
+depends_on: [TASK-0003, TASK-0004]
 ---
 
 # Logout and SPA 401-handling redirect to login
