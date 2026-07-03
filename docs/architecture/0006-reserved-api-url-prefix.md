@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-07-03
 spec: null
 supersedes: null
@@ -9,7 +9,7 @@ superseded_by: null
 # 0006. Reserve the `/api/` URL prefix for REST endpoints
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 [ADR-0003](0003-react-router-ui-served-by-backend.md) makes the Micronaut server the
