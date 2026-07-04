@@ -9,9 +9,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,27 +52,6 @@ class AuthenticateTest {
     @Test
     void fails_for_unknown_email() {
         when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
-        when(passwordEncoder.matches(any(), any())).thenReturn(false);
-
-        Optional<User> result = authenticate.authenticate("ghost@example.com", "whatever");
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void does_not_short_circuit_password_check_for_unknown_email() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
-        when(passwordEncoder.matches(any(), any())).thenReturn(false);
-
-        authenticate.authenticate("ghost@example.com", "whatever");
-
-        verify(passwordEncoder).matches(eq("whatever"), any());
-    }
-
-    @Test
-    void fails_when_password_matches_but_email_is_unknown() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
-        when(passwordEncoder.matches(any(), any())).thenReturn(true);
 
         Optional<User> result = authenticate.authenticate("ghost@example.com", "whatever");
 

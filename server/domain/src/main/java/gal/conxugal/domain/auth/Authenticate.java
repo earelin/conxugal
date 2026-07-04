@@ -9,14 +9,13 @@ import java.util.Optional;
  * verifies the password against the stored hash, returning the user on success or an
  * indistinct failure otherwise.
  *
- * <p>The password check always runs, even for an unknown email, comparing against
- * {@link #UNKNOWN_USER_PLACEHOLDER_HASH} instead of short-circuiting — so an unknown
- * email and a wrong password are not separable (SPEC-0002 #3).
+ * <p>For an unknown email there is no stored hash to compare against, so the check is
+ * not short-circuited: {@link PasswordEncoder#matchAgainstDummyHash} runs instead, at
+ * the adapter's normalized cost, so an unknown email and a wrong password are not
+ * separable by execution time (SPEC-0002 #3).
  */
 @Singleton
 public class Authenticate {
-
-    private static final String UNKNOWN_USER_PLACEHOLDER_HASH = "";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -28,12 +27,13 @@ public class Authenticate {
 
     public Optional<User> authenticate(String email, String password) {
         Optional<User> user = userRepository.findByEmail(email);
-        String hashToVerify = user.map(User::passwordHash).orElse(UNKNOWN_USER_PLACEHOLDER_HASH);
 
-        // Always invoked, even for an unknown user (hashToVerify falls back to the
-        // placeholder above), so the check never short-circuits on a missing user.
-        boolean passwordMatches = passwordEncoder.matches(password, hashToVerify);
+        if (user.isEmpty()) {
+            passwordEncoder.matchAgainstDummyHash(password);
+            return Optional.empty();
+        }
 
+        boolean passwordMatches = passwordEncoder.matches(password, user.get().passwordHash());
         return passwordMatches ? user : Optional.empty();
     }
 }
