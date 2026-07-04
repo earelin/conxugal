@@ -6,6 +6,13 @@
 [versions]
 micronautPlugin = "5.0.1"
 
+# acceptance module (ADR-0007): versioned explicitly since it is a plain `java`
+# module, outside the Micronaut BOM's reach.
+junit = "5.11.3"
+restAssured = "5.5.1"
+assertj = "3.26.3"
+wiremock = "3.9.2"
+
 [libraries]
 micronaut-http-server-netty = { module = "io.micronaut:micronaut-http-server-netty" }
 micronaut-serde-jackson = { module = "io.micronaut.serde:micronaut-serde-jackson" }
@@ -14,8 +21,16 @@ micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari" }
 postgresql = { module = "org.postgresql:postgresql" }
 logback-classic = { module = "ch.qos.logback:logback-classic" }
 snakeyaml = { module = "org.yaml:snakeyaml" }
-assertj-core = { module = "org.assertj:assertj-core" }
+# Versioned explicitly (unlike the io.micronaut*/driver entries above) so it also
+# resolves in the `acceptance` module, which sits outside the Micronaut BOM's reach.
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter" }
+
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "restAssured" }
+wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
 
 [plugins]
 micronaut-application = { id = "io.micronaut.application", version.ref = "micronautPlugin" }

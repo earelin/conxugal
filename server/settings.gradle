@@ -6,3 +6,7 @@ rootProject.name = "conxugal-server"
 include("domain")
 include("application")
 include("infrastructure")
+
+// Black-box acceptance tests against a real running instance of `application`
+// (ADR-0007). No compile dependency on the hexagonal modules above.
+include("acceptance")
