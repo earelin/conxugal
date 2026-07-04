@@ -11,7 +11,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -56,7 +55,7 @@ class AuthenticateTest {
     @Test
     void fails_for_unknown_email() {
         when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
-        lenient().when(passwordEncoder.matches(any(), any())).thenReturn(false);
+        when(passwordEncoder.matches(any(), any())).thenReturn(false);
 
         Optional<User> result = authenticate.authenticate("ghost@example.com", "whatever");
 
