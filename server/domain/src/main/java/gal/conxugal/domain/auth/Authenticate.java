@@ -29,8 +29,11 @@ public class Authenticate {
     public Optional<User> authenticate(String email, String password) {
         Optional<User> user = userRepository.findByEmail(email);
         String hashToVerify = user.map(User::passwordHash).orElse(UNKNOWN_USER_PLACEHOLDER_HASH);
+
+        // Always invoked, even for an unknown user (hashToVerify falls back to the
+        // placeholder above), so the check never short-circuits on a missing user.
         boolean passwordMatches = passwordEncoder.matches(password, hashToVerify);
 
-        return user.filter(ignored -> passwordMatches);
+        return passwordMatches ? user : Optional.empty();
     }
 }
