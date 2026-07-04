@@ -5,6 +5,11 @@ plugins {
     alias(libs.plugins.micronaut.library)
 }
 
+dependencies {
+    testImplementation(libs.assertj.core)
+    testImplementation(libs.mockito.junit.jupiter)
+}
+
 micronaut {
     testRuntime("junit5")
     processing {

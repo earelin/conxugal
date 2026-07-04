@@ -14,6 +14,8 @@ micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari" }
 postgresql = { module = "org.postgresql:postgresql" }
 logback-classic = { module = "ch.qos.logback:logback-classic" }
 snakeyaml = { module = "org.yaml:snakeyaml" }
+assertj-core = { module = "org.assertj:assertj-core" }
+mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter" }
 
 [plugins]
 micronaut-application = { id = "io.micronaut.application", version.ref = "micronautPlugin" }
