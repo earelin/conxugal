@@ -12,21 +12,27 @@ links up to a feature and a spec.
 
 ```
 docs/
-  specs/        SPEC-NNNN-*.md                     # the "what": requirements + acceptance criteria, impl-agnostic
-  features/     FEAT-NNNN-*/README.md              # a buildable slice of a spec; design lives here
-                FEAT-NNNN-*/TASK-NNNN-*.md         # small, self-contained work, alongside its feature
-  architecture/ NNNN-*.md                          # ADRs: one architecturally significant decision each
+  specs/        SPEC-NNNN-kebab.md                   # the "what": requirements + acceptance criteria, impl-agnostic
+  features/     FEAT-NNNN-kebab/README.md            # a buildable slice of a spec; design lives here
+                FEAT-NNNN-kebab/TASK-NNNN-kebab.md   # small, self-contained work, alongside its feature
+  architecture/ NNNN-kebab.md                        # ADRs: one architecturally significant decision each
 ```
 
-The trace is entirely on the filesystem: `SPEC → FEAT` via feature frontmatter, and
-`FEAT → TASK` via the task living inside the `docs/features/FEAT-NNNN-*/` folder plus each
-task's `feat:` frontmatter.
+Each level narrows the one above: a **spec** stays at the *what* level (no design
+detail); a **feature** is a buildable slice where design decisions live and are
+enumerated as tasks; a **task** is the smallest self-contained change. The trace is
+entirely on the filesystem — `SPEC → FEAT` via the feature's `spec:` frontmatter,
+and `FEAT → TASK` via the task living inside the `docs/features/FEAT-NNNN-*/` folder
+plus its `feat:` frontmatter. Governing decisions are cited in `adrs:`.
 
 ### Before coding — check the chain
 
 1. Confirm the `SPEC → FEAT → TASK` chain exists for the work.
-2. If a level is missing, **propose the missing doc(s) and STOP for review** before implementing.
-3. When implementing a task, first read its parent feature, its spec, and any referenced ADRs.
+2. If a level is missing, **propose the missing doc(s) (via the matching `create-*`
+   skill) and STOP for review** before implementing. Likewise, if a task implies an
+   architecturally significant decision with no ADR, propose the ADR first.
+3. When implementing a task, first read its parent feature, its spec, and any ADRs it
+   cites; honour `depends_on:` ordering and flip `status:` as work moves.
 4. Keep scope to the single task: a small, self-contained change committed straight to
    `trunk` (trunk-based development — no long-lived branches or pull requests).
 
