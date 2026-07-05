@@ -1,7 +1,10 @@
 # Documentation conventions
 
-General rules for everything under `docs/`. The per-folder `CLAUDE.md` files
-(`specs/`, `features/`, `architecture/`) add rules specific to each doc type.
+The `docs/` tree follows the `SPEC → feature → task` flow, with ADRs recorded
+orthogonally. Per-doc-type authoring — format, frontmatter, and rules — is owned
+by the skills (`create-spec`, `create-feature`, `create-task`, `create-adr`); the
+per-folder `CLAUDE.md` files only record repo-specific overrides. This file holds
+the conventions that apply across every doc.
 
 ## Diagrams
 
