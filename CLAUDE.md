@@ -12,14 +12,15 @@ links up to a feature and a spec.
 
 ```
 docs/
-  specs/        SPEC-NNNN-*.md          # the "what": requirements + acceptance criteria, impl-agnostic
-  features/     FEAT-NNNN-*.md          # a buildable slice of a spec; design lives here
-  tasks/        FEAT-NNNN/TASK-NNNN-*.md # small, self-contained work, one folder per feature
-  architecture/ NNNN-*.md               # ADRs: one architecturally significant decision each
+  specs/        SPEC-NNNN-*.md                     # the "what": requirements + acceptance criteria, impl-agnostic
+  features/     FEAT-NNNN-*/README.md              # a buildable slice of a spec; design lives here
+                FEAT-NNNN-*/TASK-NNNN-*.md         # small, self-contained work, alongside its feature
+  architecture/ NNNN-*.md                          # ADRs: one architecturally significant decision each
 ```
 
 The trace is entirely on the filesystem: `SPEC → FEAT` via feature frontmatter, and
-`FEAT → TASK` via the `docs/tasks/FEAT-NNNN/` folder plus each task's `feat:` frontmatter.
+`FEAT → TASK` via the task living inside the `docs/features/FEAT-NNNN-*/` folder plus each
+task's `feat:` frontmatter.
 
 ### Before coding — check the chain
 

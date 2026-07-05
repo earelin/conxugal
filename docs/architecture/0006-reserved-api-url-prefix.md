@@ -27,7 +27,7 @@ path would return `200 index.html` instead of `404`, misleading API clients and 
 This is not one feature's concern: every current and future REST endpoint, across any
 spec, is bound by whatever convention resolves the ambiguity. It is a cross-cutting URL
 contract, so it is recorded as a decision rather than left as prose in a single feature
-or module readme. [FEAT-0003](../features/FEAT-0003-backend-serves-ui-application.md) is
+or module readme. [FEAT-0003](../features/FEAT-0003-backend-serves-ui-application/README.md) is
 the first consumer, reserving the prefix and implementing the fallback split.
 
 ## Decision

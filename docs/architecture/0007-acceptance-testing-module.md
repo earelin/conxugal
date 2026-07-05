@@ -15,7 +15,7 @@ Accepted
 The server has unit tests inside each hexagonal module ([ADR-0002](0002-hexagonal-architecture.md))
 and a handful of Micronaut HTTP-client tests inside `application/src/test` (e.g.
 `ApplicationTest`, and the routing-matrix test added by
-`docs/tasks/FEAT-0003/TASK-0004-vite-base-path-and-integration-test.md`). None of these
+`docs/features/FEAT-0003-backend-serves-ui-application/TASK-0004-vite-base-path-and-integration-test.md`). None of these
 exercise the *packaged* application as an outside caller would: they run inside the
 module's own test source set, in the same JVM/build context as unit tests, and can reach
 internal types directly.

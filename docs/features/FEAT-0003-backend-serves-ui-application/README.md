@@ -9,12 +9,12 @@ status: active
 ## Goal
 Make the Micronaut `application` module the single deployable artifact and single
 origin for both the REST API and the built UI, as decided in
-**[ADR-0003](../architecture/0003-react-router-ui-served-by-backend.md)** (serve the UI
-from the backend) and **[ADR-0004](../architecture/0004-ui-stack-vite-mantine.md)**
+**[ADR-0003](../../architecture/0003-react-router-ui-served-by-backend.md)** (serve the UI
+from the backend) and **[ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md)**
 (static-asset build, history routing, backend-owned SPA fallback and asset base path).
 
 `docs/features/FEAT-0001-ui-application-scaffolding.md` built the UI shell and
-explicitly deferred this wiring; without it, **[SPEC-0001](../specs/SPEC-0001-web-ui.md)**
+explicitly deferred this wiring; without it, **[SPEC-0001](../../specs/SPEC-0001-web-ui.md)**
 R2/AC2 and R3/AC4 only hold in Vite's dev server, not in a production build.
 
 ## Scope
@@ -37,7 +37,7 @@ hardening beyond functional correctness.
 
 ## Design
 
-### Request routing (application module, driving side — [ADR-0002](../architecture/0002-hexagonal-architecture.md))
+### Request routing (application module, driving side — [ADR-0002](../../architecture/0002-hexagonal-architecture.md))
 ```mermaid
 flowchart TD
     req["Browser GET request"] --> api{"path starts with /api/?"}
@@ -62,20 +62,20 @@ adds no domain or infrastructure code.
 ### API prefix convention
 - Reserving `/api/` is a cross-cutting convention every future REST endpoint must
   follow, not just this feature's concern. It is governed by
-  **[ADR-0006](../architecture/0006-reserved-api-url-prefix.md)** and restated in
+  **[ADR-0006](../../architecture/0006-reserved-api-url-prefix.md)** and restated in
   `server/CLAUDE.md` once implemented; this feature is its first consumer.
 
 ## Sequencing (tasks, one small change each)
-1. **[TASK-0001](../tasks/FEAT-0003/TASK-0001-wire-ui-build-into-server-artifact.md)** —
+1. **[TASK-0001](TASK-0001-wire-ui-build-into-server-artifact.md)** —
    Gradle wiring: consume `ui/dist` and package it into the `application` module's
    artifact.
-2. **[TASK-0002](../tasks/FEAT-0003/TASK-0002-static-asset-serving-and-api-prefix.md)** —
+2. **[TASK-0002](TASK-0002-static-asset-serving-and-api-prefix.md)** —
    Micronaut static-resource serving at `/`, plus reserving and documenting the `/api/`
    prefix.
-3. **[TASK-0003](../tasks/FEAT-0003/TASK-0003-spa-history-fallback.md)** —
+3. **[TASK-0003](TASK-0003-spa-history-fallback.md)** —
    SPA history-fallback for unmatched non-`/api/` GET requests. *(SPEC-0001 R2, R3,
    AC2, AC4)*
-4. **[TASK-0004](../tasks/FEAT-0003/TASK-0004-vite-base-path-and-integration-test.md)** —
+4. **[TASK-0004](TASK-0004-vite-base-path-and-integration-test.md)** —
    Confirm Vite's `base` path and add an end-to-end integration test covering the
    routing matrix above.
 

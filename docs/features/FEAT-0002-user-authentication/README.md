@@ -8,10 +8,10 @@ status: draft
 
 ## Goal
 Implement email + password authentication with `USER`/`ADMIN` roles and server-side
-sessions, satisfying **[SPEC-0002](../specs/SPEC-0002-user-authentication.md)**. The
+sessions, satisfying **[SPEC-0002](../../specs/SPEC-0002-user-authentication.md)**. The
 mechanism is session-based auth via Micronaut Security
-(**[ADR-0005](../architecture/0005-session-based-authentication.md)**), placed inside
-the hexagonal server (**[ADR-0002](../architecture/0002-hexagonal-architecture.md)**):
+(**[ADR-0005](../../architecture/0005-session-based-authentication.md)**), placed inside
+the hexagonal server (**[ADR-0002](../../architecture/0002-hexagonal-architecture.md)**):
 the identity model and credential check are domain rules; the user store, password
 hashing and security wiring are driven adapters; the login/logout endpoints and
 `@Secured` rules are the driving side.
@@ -30,7 +30,7 @@ gates access to it).
 
 ## Design
 
-### Hexagonal placement ([ADR-0002](../architecture/0002-hexagonal-architecture.md))
+### Hexagonal placement ([ADR-0002](../../architecture/0002-hexagonal-architecture.md))
 ```mermaid
 flowchart LR
     subgraph application["application (driving)"]
@@ -51,7 +51,7 @@ flowchart LR
     infrastructure --> domain
 ```
 
-### Authentication ([ADR-0005](../architecture/0005-session-based-authentication.md))
+### Authentication ([ADR-0005](../../architecture/0005-session-based-authentication.md))
 - A successful login establishes a **server-side session** identified by a cookie; the
   user stays authenticated across requests. Logout invalidates the session.
 - The **login page is server-rendered, outside the SPA** — credentials are submitted by
@@ -69,7 +69,7 @@ flowchart LR
 ### Sessions
 - A session **expires after 30 minutes of inactivity**; the next request is treated as
   unauthenticated and requires logging in again (SPEC-0002 #8). The window is enforced by
-  the Micronaut session configuration in [TASK-0003](../tasks/FEAT-0002/TASK-0003-security-config-session-auth.md).
+  the Micronaut session configuration in [TASK-0003](TASK-0003-security-config-session-auth.md).
 
 ### Session loss
 - Protected XHR/API routes return **401 (not an HTML redirect)** when the session is
@@ -81,17 +81,17 @@ flowchart LR
   never stored, logged, or returned.
 
 ## Sequencing (tasks, one small change each)
-1. **[TASK-0001](../tasks/FEAT-0002/TASK-0001-auth-domain-user-role-authenticate.md)** —
+1. **[TASK-0001](TASK-0001-auth-domain-user-role-authenticate.md)** —
    Auth domain: `User`, `Role` and the authenticate use case with its ports. *(domain only)*
-2. **[TASK-0002](../tasks/FEAT-0002/TASK-0002-auth-infrastructure-postgres-user-store.md)** —
+2. **[TASK-0002](TASK-0002-auth-infrastructure-postgres-user-store.md)** —
    PostgreSQL user store + password-hashing adapters implementing the domain ports.
    *(SPEC-0002 #9)*
-3. **[TASK-0003](../tasks/FEAT-0002/TASK-0003-security-config-session-auth.md)** —
+3. **[TASK-0003](TASK-0003-security-config-session-auth.md)** —
    Security config: session auth, `AuthenticationProvider`, `@Secured` rules, CSRF,
    30-minute idle session timeout. *(SPEC-0002 #2, #4–#6, #8)*
-4. **[TASK-0004](../tasks/FEAT-0002/TASK-0004-server-rendered-login-forbidden-pages.md)** —
+4. **[TASK-0004](TASK-0004-server-rendered-login-forbidden-pages.md)** —
    Server-rendered login + forbidden pages and the login form. *(SPEC-0002 #1, #3)*
-5. **[TASK-0005](../tasks/FEAT-0002/TASK-0005-logout-and-spa-401-handling.md)** —
+5. **[TASK-0005](TASK-0005-logout-and-spa-401-handling.md)** —
    Logout and the SPA 401-handling redirect to login. *(SPEC-0002 #7)*
 
 ## Edge cases

@@ -9,9 +9,9 @@ status: implemented
 ## Goal
 Stand up the `ui/` module: a buildable, runnable React Router SPA with the Mantine
 theme and an application shell, satisfying the *reachable, navigable, themed shell*
-requirements of **[SPEC-0001](../specs/SPEC-0001-web-ui.md)** and the stack decided in
-**[ADR-0003](../architecture/0003-react-router-ui-served-by-backend.md)** (React Router served
-by the backend) and **[ADR-0004](../architecture/0004-ui-stack-vite-mantine.md)** (Vite build, library-mode SPA, Mantine, npm).
+requirements of **[SPEC-0001](../../specs/SPEC-0001-web-ui.md)** and the stack decided in
+**[ADR-0003](../../architecture/0003-react-router-ui-served-by-backend.md)** (React Router served
+by the backend) and **[ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md)** (Vite build, library-mode SPA, Mantine, npm).
 
 This is the foundation; data browsing/search/export features build on top of it later.
 
@@ -65,7 +65,7 @@ flowchart TD
     provider --> layout
 ```
 
-### Routing (library mode, [ADR-0004](../architecture/0004-ui-stack-vite-mantine.md))
+### Routing (library mode, [ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md))
 - `createBrowserRouter` with a single layout route (`path: "/"`, element `<AppLayout/>`).
   - `index: true` → `HomePage` (R1).
   - `path: "*"` → `NotFoundPage` (R3 / AC4), rendered inside the shell.
@@ -101,19 +101,19 @@ flowchart TD
 This foundational scaffold shipped as a single self-contained task rather than the
 finer-grained split originally envisaged:
 
-1. **[TASK-0001](../tasks/FEAT-0001/TASK-0001-bootstrap-ui-module-and-themed-app-shell.md)** —
+1. **[TASK-0001](TASK-0001-bootstrap-ui-module-and-themed-app-shell.md)** —
    Bootstrap the `ui/` module and themed app shell: Vite React-TS project (npm, tsconfig,
    ESLint/Prettier, baseline scripts), Mantine wired via `theme.ts` + `MantineProvider` +
    `ColorSchemeScript`, React Router with `AppLayout`/`HomePage`/`NotFoundPage` and Galician
    chrome, plus the Vitest smoke test and responsive/a11y pass.
-   *([SPEC-0001](../specs/SPEC-0001-web-ui.md) R1–R6; [ADR-0003](../architecture/0003-react-router-ui-served-by-backend.md), [ADR-0004](../architecture/0004-ui-stack-vite-mantine.md))*
+   *([SPEC-0001](../../specs/SPEC-0001-web-ui.md) R1–R6; [ADR-0003](../../architecture/0003-react-router-ui-served-by-backend.md), [ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md))*
 
 ## Edge cases
 - **Unknown deep link in production** → blank/404 unless backend serves `index.html`
   fallback. Mitigation: tracked as a dependency on
-  **[FEAT-0003](FEAT-0003-backend-serves-ui-application.md)** (R3 fully holds only once
+  **[FEAT-0003](../FEAT-0003-backend-serves-ui-application/README.md)** (R3 fully holds only once
   that lands); in dev it already works.
 - **Color-scheme flash** → mitigated by `ColorSchemeScript`.
 - **Asset base path** when served under a sub-path by Micronaut → Vite `base` may need
   configuring; tracked in
-  **[FEAT-0003](FEAT-0003-backend-serves-ui-application.md)**.
+  **[FEAT-0003](../FEAT-0003-backend-serves-ui-application/README.md)**.
