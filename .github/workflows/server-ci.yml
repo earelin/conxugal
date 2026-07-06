@@ -1,13 +1,16 @@
 name: Server CI
 
-# Builds and tests server/ (ADR-0001: Micronaut, Java 25) on changes to it.
 on:
+  pull_request:
+    branches: [trunk]
+    paths:
+      - "server/**"
+      - ".github/workflows/server-ci.yml"
   push:
     branches: [trunk]
     paths:
       - "server/**"
       - ".github/workflows/server-ci.yml"
-  workflow_dispatch:
 
 jobs:
   build:

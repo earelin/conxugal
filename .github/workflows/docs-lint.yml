@@ -1,8 +1,14 @@
 name: Docs Lint
 
-# Mirrors the local pre-commit hook (.claude/settings.json): only runs when
-# staged/pushed changes touch the docs surface scripts/docs-lint.sh checks.
 on:
+  pull_request:
+    branches: [trunk]
+    paths:
+      - "docs/**"
+      - "*.md"
+      - ".markdownlint.jsonc"
+      - "scripts/docs-lint.sh"
+      - ".github/workflows/docs-lint.yml"
   push:
     branches: [trunk]
     paths:
@@ -11,7 +17,6 @@ on:
       - ".markdownlint.jsonc"
       - "scripts/docs-lint.sh"
       - ".github/workflows/docs-lint.yml"
-  workflow_dispatch:
 
 jobs:
   docs-lint:

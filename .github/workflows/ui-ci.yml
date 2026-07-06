@@ -1,14 +1,16 @@
 name: UI CI
 
-# Lints, tests and builds ui/ (ADR-0004: Vite, React Router, Mantine) on
-# changes to it.
 on:
+  pull_request:
+    branches: [trunk]
+    paths:
+      - "ui/**"
+      - ".github/workflows/ui-ci.yml"
   push:
     branches: [trunk]
     paths:
       - "ui/**"
       - ".github/workflows/ui-ci.yml"
-  workflow_dispatch:
 
 jobs:
   build:

@@ -3,11 +3,14 @@ name: Actions Lint
 # Mirrors the local pre-commit hook (.claude/settings.json): only runs when
 # staged/pushed changes touch .github/workflows/.
 on:
+  pull_request:
+    branches: [trunk]
+    paths:
+      - ".github/workflows/**"
   push:
     branches: [trunk]
     paths:
       - ".github/workflows/**"
-  workflow_dispatch:
 
 jobs:
   actions-lint:
