@@ -52,3 +52,26 @@ npm run build     # xera os activos estáticos en dist/
 
 Máis detalles de cada compoñente en [`server/README.md`](server/README.md) e
 [`ui/README.md`](ui/README.md).
+
+## Linters de documentación e CI
+
+Dous scripts verifican a documentación e os fluxos de traballo antes de facer commit
+(CI vólveos comprobar ao facer push):
+
+- `scripts/docs-lint.sh` — formato Markdown, ligazóns internas e diagramas Mermaid de
+  `docs/` e dos `*.md` da raíz.
+- `scripts/actions-lint.sh` — os fluxos de GitHub Actions de `.github/workflows/`.
+
+Requiren estas ferramentas (os scripts avisan se falta algunha):
+
+```bash
+# docs-lint.sh
+npm install -g markdownlint-cli2 @probelabs/maid   # formato Markdown + Mermaid
+brew install lychee                                # ligazóns internas (https://lychee.cli.rs)
+
+# actions-lint.sh
+brew install actionlint shellcheck                 # workflows + scripts `run:` embebidos
+```
+
+Fóra de macOS, instala `lychee`, `actionlint` e `shellcheck` co xestor de paquetes do
+teu sistema ou dende as súas páxinas de publicación.
