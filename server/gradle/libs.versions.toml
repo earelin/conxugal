@@ -8,26 +8,26 @@
 # versioned explicitly since the module is a plain `java` module, outside the
 # Micronaut BOM's reach.
 assertj = "3.27.7"
-junit = "6.1.1"
-micronautPlugin = "5.0.2"
-restAssured = "6.0.0"
-wiremock = "3.13.2"
 # Flyway 12 moved database-specific support (e.g. PostgreSQL) out of flyway-core
 # into separate plugin artifacts not covered by the Micronaut BOM's constraint;
 # both must share one version, so it's pinned here to the latest release.
 flywayCore = "12.10.0"
+junit = "6.1.1"
+micronautPlugin = "5.0.2"
+restAssured = "6.0.0"
+wiremock = "3.13.2"
 
 [libraries]
 # Versioned explicitly (unlike the io.micronaut*/driver entries, which the BOM
 # resolves) so it also resolves in the `acceptance` module, which sits outside the
 # Micronaut BOM's reach.
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flywayCore" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flywayCore" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 logback-classic = { module = "ch.qos.logback:logback-classic" }
-flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flywayCore" }
-flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flywayCore" }
 micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway" }
 micronaut-http-client = { module = "io.micronaut:micronaut-http-client" }
 micronaut-http-server-netty = { module = "io.micronaut:micronaut-http-server-netty" }
