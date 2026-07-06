@@ -7,11 +7,11 @@
 # acceptance module (ADR-0007): assertj, junit, restAssured, and wiremock are
 # versioned explicitly since the module is a plain `java` module, outside the
 # Micronaut BOM's reach.
-assertj = "3.26.3"
+assertj = "3.27.7"
 junit = "5.11.3"
-micronautPlugin = "5.0.1"
+micronautPlugin = "5.0.2"
 restAssured = "5.5.1"
-wiremock = "3.9.2"
+wiremock = "3.13.2"
 
 [libraries]
 # Versioned explicitly (unlike the io.micronaut*/driver entries, which the BOM
