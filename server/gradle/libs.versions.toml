@@ -8,7 +8,7 @@
 # versioned explicitly since the module is a plain `java` module, outside the
 # Micronaut BOM's reach.
 assertj = "3.27.7"
-junit = "5.11.3"
+junit = "6.1.1"
 micronautPlugin = "5.0.2"
 restAssured = "5.5.1"
 wiremock = "3.13.2"
