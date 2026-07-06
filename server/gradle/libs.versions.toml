@@ -4,32 +4,32 @@
 # driver dependency (see `micronautVersion` in gradle.properties), so the library
 # entries below are declared WITHOUT versions; the BOM resolves them at build time.
 [versions]
-micronautPlugin = "5.0.1"
-
-# acceptance module (ADR-0007): versioned explicitly since it is a plain `java`
-# module, outside the Micronaut BOM's reach.
-junit = "5.11.3"
-restAssured = "5.5.1"
+# acceptance module (ADR-0007): assertj, junit, restAssured, and wiremock are
+# versioned explicitly since the module is a plain `java` module, outside the
+# Micronaut BOM's reach.
 assertj = "3.26.3"
+junit = "5.11.3"
+micronautPlugin = "5.0.1"
+restAssured = "5.5.1"
 wiremock = "3.9.2"
 
 [libraries]
-micronaut-http-server-netty = { module = "io.micronaut:micronaut-http-server-netty" }
-micronaut-serde-jackson = { module = "io.micronaut.serde:micronaut-serde-jackson" }
-micronaut-http-client = { module = "io.micronaut:micronaut-http-client" }
-micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari" }
-postgresql = { module = "org.postgresql:postgresql" }
-logback-classic = { module = "ch.qos.logback:logback-classic" }
-snakeyaml = { module = "org.yaml:snakeyaml" }
-# Versioned explicitly (unlike the io.micronaut*/driver entries above) so it also
-# resolves in the `acceptance` module, which sits outside the Micronaut BOM's reach.
+# Versioned explicitly (unlike the io.micronaut*/driver entries, which the BOM
+# resolves) so it also resolves in the `acceptance` module, which sits outside the
+# Micronaut BOM's reach.
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
-mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter" }
-
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+logback-classic = { module = "ch.qos.logback:logback-classic" }
+micronaut-http-client = { module = "io.micronaut:micronaut-http-client" }
+micronaut-http-server-netty = { module = "io.micronaut:micronaut-http-server-netty" }
+micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari" }
+micronaut-serde-jackson = { module = "io.micronaut.serde:micronaut-serde-jackson" }
+mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter" }
+postgresql = { module = "org.postgresql:postgresql" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "restAssured" }
+snakeyaml = { module = "org.yaml:snakeyaml" }
 wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
 
 [plugins]
