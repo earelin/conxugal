@@ -28,9 +28,7 @@ describe('application shell', () => {
   it('shows the Galician not-found message inside the shell for unknown routes', () => {
     renderAt('/rota-que-non-existe');
 
-    // Shell is still present...
     expect(screen.getByRole('heading', { level: 1, name: strings.appName })).toBeInTheDocument();
-    // ...with the not-found content.
     expect(screen.getByText(strings.notFound.title)).toBeInTheDocument();
     expect(screen.getByText(strings.notFound.description)).toBeInTheDocument();
   });
