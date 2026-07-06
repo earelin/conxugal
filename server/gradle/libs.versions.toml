@@ -12,6 +12,10 @@ junit = "6.1.1"
 micronautPlugin = "5.0.2"
 restAssured = "6.0.0"
 wiremock = "3.13.2"
+# Flyway 12 moved database-specific support (e.g. PostgreSQL) out of flyway-core
+# into separate plugin artifacts not covered by the Micronaut BOM's constraint;
+# both must share one version, so it's pinned here to the latest release.
+flywayCore = "12.10.0"
 
 [libraries]
 # Versioned explicitly (unlike the io.micronaut*/driver entries, which the BOM
@@ -22,6 +26,9 @@ junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 logback-classic = { module = "ch.qos.logback:logback-classic" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flywayCore" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flywayCore" }
+micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway" }
 micronaut-http-client = { module = "io.micronaut:micronaut-http-client" }
 micronaut-http-server-netty = { module = "io.micronaut:micronaut-http-server-netty" }
 micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari" }

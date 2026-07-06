@@ -3,3 +3,17 @@ micronaut:
     name: conxugal-server
   server:
     port: 8080
+
+datasources:
+  default:
+    url: ${JDBC_URL:`jdbc:postgresql://localhost:5432/conxugal`}
+    username: ${JDBC_USERNAME:conxugal}
+    password: ${JDBC_PASSWORD:conxugal}
+    driverClassName: org.postgresql.Driver
+
+# Migrations live in infrastructure's src/main/resources/db/migration (ADR-0002:
+# infrastructure owns persistence), not next to this file.
+flyway:
+  datasources:
+    default:
+      enabled: true

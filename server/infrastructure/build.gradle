@@ -9,11 +9,19 @@ plugins {
 dependencies {
     implementation(project(":domain"))
 
-    // PostgreSQL persistence (ADR-0001). The concrete data-access flavour
-    // (repositories, schema, migrations) is introduced by the first persistence
-    // feature; no datasource is configured yet, so nothing connects at startup.
+    // PostgreSQL persistence (ADR-0001). Datasource connectivity and migration
+    // tooling are wired here; the repositories/schema themselves are introduced
+    // by the first persistence feature.
     implementation(libs.micronaut.jdbc.hikari)
     runtimeOnly(libs.postgresql)
+
+    // Flyway runs migrations from this module's db/migration resources on
+    // startup (configured in application.yml, which lives in `application`).
+    // flyway-core/flyway-database-postgresql versions are forced past the
+    // BOM's — see libs.versions.toml.
+    runtimeOnly(libs.micronaut.flyway)
+    runtimeOnly(libs.flyway.core)
+    runtimeOnly(libs.flyway.database.postgresql)
 }
 
 micronaut {
