@@ -16,8 +16,8 @@ Run from `server/` (Gradle wrapper; Java 25 toolchain is pinned in the root
 - `./gradlew test` — run all tests without assembling
 - `./gradlew :application:test` — run tests in a single module (`:domain:test`,
   `:infrastructure:test` likewise)
-- `./gradlew test --tests "gal.conxugal.application.ApplicationTest"` — run a single
-  test class (works across all modules; scope to one with e.g. `:application:test --tests ...`)
+- `./gradlew test --tests "<FullyQualifiedTestName>"` — run a single test class (works
+  across all modules; scope to one with e.g. `:application:test --tests ...`)
 - `./gradlew run` — run the application (`application` module; embedded Netty server on
   port 8080, see `application/src/main/resources/application.yml`)
 
