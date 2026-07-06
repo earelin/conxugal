@@ -10,7 +10,7 @@
 assertj = "3.27.7"
 junit = "6.1.1"
 micronautPlugin = "5.0.2"
-restAssured = "5.5.1"
+restAssured = "6.0.0"
 wiremock = "3.13.2"
 
 [libraries]
