@@ -36,6 +36,12 @@ plus its `feat:` frontmatter. Governing decisions are cited in `adrs:`.
 4. Keep scope to the single task: a small, self-contained change committed straight to
    `trunk` (trunk-based development — no long-lived branches or pull requests).
 
+## Code style
+
+Do not add unnecessary comments. Skip anything the code already states plainly;
+comment only the non-obvious — intent, trade-offs, or reasons that aren't visible
+from the code itself.
+
 ## Before committing
 
 Run the relevant lint script and fix any failures before committing — CI
