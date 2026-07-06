@@ -10,17 +10,16 @@ afterEach(() => {
 
 // jsdom does not implement these browser APIs that Mantine relies on; provide
 // minimal mocks so components render in tests.
-const matchMediaMock = (query: string): MediaQueryList =>
-  ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  }) as unknown as MediaQueryList;
+const matchMediaMock = (query: string): MediaQueryList => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addListener: vi.fn(),
+  removeListener: vi.fn(),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
+});
 
 class ResizeObserverMock {
   observe() {}
