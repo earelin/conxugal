@@ -30,8 +30,9 @@ Java 25, PostgreSQL), [ADR-0002](../docs/architecture/0002-hexagonal-architectur
 | --- | --- |
 | `./gradlew run` | Run the application (`application` module, port 8080). |
 | `./gradlew build` | Compile, run `check` and assemble all modules. |
-| `./gradlew test` | Run all unit/integration tests without assembling. |
-| `./gradlew :application:test` | Run the tests of a single module (`:domain:test`, `:infrastructure:test` likewise). |
+| `./gradlew test` | Run all unit tests without assembling. |
+| `./gradlew :application:test` | Run the unit tests of a single module (`:domain:test`, `:infrastructure:test` likewise). |
+| `./gradlew :infrastructure:integrationTest` | Run `infrastructure`'s adapter tests against a real PostgreSQL (Testcontainers, needs Docker). Not part of `check`/`build`. |
 | `./gradlew acceptance` | Run the black-box acceptance suite against an **already-running** instance (see below). |
 
 ## Structure

@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0002
-adrs: [0002, 0005]
+adrs: [0002, 0005, 0008]
 status: draft
 ---
 

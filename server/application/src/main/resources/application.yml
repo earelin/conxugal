@@ -10,6 +10,7 @@ datasources:
     username: ${JDBC_USERNAME:conxugal}
     password: ${JDBC_PASSWORD:conxugal}
     driverClassName: org.postgresql.Driver
+    dialect: POSTGRES
 
 # Migrations live in infrastructure's src/main/resources/db/migration (ADR-0002:
 # infrastructure owns persistence), not next to this file.

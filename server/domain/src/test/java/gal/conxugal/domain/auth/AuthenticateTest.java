@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -29,7 +30,7 @@ class AuthenticateTest {
 
     @Test
     void succeeds_and_returns_user_for_known_email_and_matching_password() {
-        User user = new User("ana@example.com", "stored-hash", Role.ADMIN);
+        User user = new User(UUID.randomUUID(), "ana@example.com", "stored-hash", Role.ADMIN);
         when(userRepository.findByEmail("ana@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("correct-password", "stored-hash")).thenReturn(true);
 
@@ -40,7 +41,7 @@ class AuthenticateTest {
 
     @Test
     void fails_for_known_email_and_wrong_password() {
-        User user = new User("ana@example.com", "stored-hash", Role.USER);
+        User user = new User(UUID.randomUUID(), "ana@example.com", "stored-hash", Role.USER);
         when(userRepository.findByEmail("ana@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong-password", "stored-hash")).thenReturn(false);
 

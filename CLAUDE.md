@@ -42,6 +42,15 @@ Do not add unnecessary comments. Skip anything the code already states plainly;
 comment only the non-obvious — intent, trade-offs, or reasons that aren't visible
 from the code itself.
 
+- **Never comment build scripts** (Gradle `build.gradle`, version catalogs, npm
+  configs, etc.) — dependency declarations and build wiring should read for
+  themselves; put rationale in the commit message instead.
+- **Never comment trivial SQL** (e.g. a `CREATE TABLE` restating its own column
+  names/types) — only comment a genuinely non-obvious constraint.
+- **Never reference spec/feature/task/ADR identifiers** (`SPEC-NNNN`, `FEAT-NNNN`,
+  `TASK-NNNN`, `ADR-NNNN`) in code comments — that traceability lives in the commit
+  message and the `docs/` tree, not in source comments that rot as work moves on.
+
 ## Before committing
 
 Run the relevant lint script and fix any failures before committing — CI
