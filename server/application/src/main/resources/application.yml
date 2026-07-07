@@ -12,8 +12,8 @@ datasources:
     driverClassName: org.postgresql.Driver
     dialect: POSTGRES
 
-# Migrations live in infrastructure's src/main/resources/db/migration (ADR-0002:
-# infrastructure owns persistence), not next to this file.
+# Migrations live in infrastructure's src/main/resources/db/migration (infrastructure
+# owns persistence), not next to this file.
 flyway:
   datasources:
     default:

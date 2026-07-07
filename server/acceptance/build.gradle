@@ -1,8 +1,3 @@
-// acceptance — black-box tests against a running instance of `application` (ADR-0007).
-// No compile dependency on domain/application/infrastructure: this module only knows
-// the app's HTTP contract, reached over the wire against an instance that's expected
-// to already be running externally (docker-compose, a deployed env, or a local run) —
-// this module never boots, builds, or manages it.
 plugins {
     id("java")
 }
@@ -15,27 +10,19 @@ dependencies {
     testImplementation(libs.rest.assured)
     testImplementation(libs.assertj.core)
 
-    // WireMock's client, for scenarios that stub/verify a downstream (e.g.
-    // contratosdegalicia.gal) already running as an external mock (ADR-0007). Not every
-    // acceptance test needs it.
     testImplementation(libs.wiremock)
 }
 
-// The built-in `test` task stays disabled: it's wired into `check`/`build`, and this
-// suite must not run there (it needs the external environment from ADR-0007 up). The
-// `acceptance` task below runs the same sources on demand instead.
 tasks.named("test") {
     enabled = false
 }
 
 tasks.register("acceptance", Test) {
     group = "verification"
-    description = "Black-box acceptance tests against a running application instance (ADR-0007)."
+    description = "Black-box acceptance tests against a running application instance."
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform()
-    // Forwarded into the forked test JVM so a run can point at an already-running
-    // instance other than the http://localhost:8080 local-dev default.
     if (System.getProperty("app.baseUrl") != null) {
         systemProperty("app.baseUrl", System.getProperty("app.baseUrl"))
     }

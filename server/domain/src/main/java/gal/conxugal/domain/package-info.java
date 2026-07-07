@@ -1,5 +1,5 @@
 /**
- * Domain core of the conxugal server (ADR-0002).
+ * Domain core of the conxugal server.
  *
  * <p>Holds the contract/tender model and business rules — entities, value objects
  * and domain services — plus the ports (interfaces) that the {@code application}

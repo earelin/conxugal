@@ -1,5 +1,5 @@
 /**
- * User-facing interface text, in Galician (SPEC-001 R6).
+ * User-facing interface text, in Galician.
  *
  * Kept in a single module so a future i18n feature can lift these into a
  * translation catalogue without restructuring the components that use them.

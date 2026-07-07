@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Proves the acceptance harness itself: it can reach an already-running application
- * instance over HTTP (ADR-0007). Real user-scenario tests replace/join this one as
- * features land.
+ * instance over HTTP. Real user-scenario tests replace/join this one as features
+ * land.
  */
 class ServerSmokeTest {
 

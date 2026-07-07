@@ -2,7 +2,7 @@ import { createTheme } from '@mantine/core';
 
 /**
  * Project-wide Mantine theme. Keep visual tokens (colors, radius, fonts)
- * centralised here so every screen stays consistent (SPEC-001 R4).
+ * centralised here so every screen stays consistent.
  */
 export const theme = createTheme({
   primaryColor: 'indigo',

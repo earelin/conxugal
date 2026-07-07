@@ -13,9 +13,9 @@ import { navItems } from '../nav';
 import { strings } from '../strings';
 
 /**
- * Persistent application shell (SPEC-001 R1): a header with the product name and
- * a navbar carrying the primary navigation. The navbar collapses behind a burger
- * on narrow viewports so primary content never overflows horizontally (R5/AC6).
+ * Persistent application shell: a header with the product name and a navbar
+ * carrying the primary navigation. The navbar collapses behind a burger on
+ * narrow viewports so primary content never overflows horizontally.
  */
 export function AppLayout() {
   const [opened, { toggle, close }] = useDisclosure();

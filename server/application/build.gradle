@@ -1,6 +1,3 @@
-// application — the driving side / entry points (ADR-0002): REST endpoints,
-// schedulers and other triggers, plus the use-case orchestration they invoke.
-// It is also the runnable Micronaut application (the composition root).
 plugins {
     alias(libs.plugins.micronaut.application)
 }
@@ -8,10 +5,6 @@ plugins {
 dependencies {
     implementation(project(":domain"))
 
-    // Infrastructure is assembled at RUNTIME ONLY: there is no compile-time edge
-    // from application to infrastructure, so application code cannot reference
-    // adapter types. The two siblings meet solely through domain ports and
-    // Micronaut's DI container at runtime (ADR-0002).
     runtimeOnly(project(":infrastructure"))
 
     implementation(libs.micronaut.http.server.netty)

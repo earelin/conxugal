@@ -6,7 +6,7 @@ export interface NavItem {
   to: string;
 }
 
-/** Primary navigation, rendered in the AppShell navbar (SPEC-001 R2). */
+/** Primary navigation, rendered in the AppShell navbar. */
 export const navItems: NavItem[] = [
   { label: strings.nav.home, to: '/' },
   { label: strings.nav.about, to: '/acerca' },

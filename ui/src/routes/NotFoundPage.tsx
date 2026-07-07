@@ -2,7 +2,7 @@ import { Button, Stack, Text, Title } from '@mantine/core';
 import { Link } from 'react-router';
 import { strings } from '../strings';
 
-/** In-shell not-found state (SPEC-001 R3/AC4), shown for unmatched routes. */
+/** In-shell not-found state, shown for unmatched routes. */
 export function NotFoundPage() {
   return (
     <Stack align="flex-start" gap="xs">

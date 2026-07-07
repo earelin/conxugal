@@ -1,18 +1,7 @@
-# Version catalog — single source of truth for dependencies.
-#
-# The Micronaut platform (BOM) governs the versions of every io.micronaut* and
-# driver dependency (see `micronautVersion` in gradle.properties), so the library
-# entries below are declared WITHOUT versions; the BOM resolves them at build time.
 [versions]
-# acceptance module (ADR-0007): assertj, junit, restAssured, and wiremock are
-# versioned explicitly since the module is a plain `java` module, outside the
-# Micronaut BOM's reach.
 assertj = "3.27.7"
 assertjDb = "3.0.0"
 bouncyCastle = "1.80"
-# Flyway 12 moved database-specific support (e.g. PostgreSQL) out of flyway-core
-# into separate plugin artifacts not covered by the Micronaut BOM's constraint;
-# both must share one version, so it's pinned here to the latest release.
 flywayCore = "12.10.0"
 junit = "6.1.1"
 micronautPlugin = "5.0.2"
@@ -21,9 +10,6 @@ testcontainers = "1.21.3"
 wiremock = "3.13.2"
 
 [libraries]
-# Versioned explicitly (unlike the io.micronaut*/driver entries, which the BOM
-# resolves) so it also resolves in the `acceptance` module, which sits outside the
-# Micronaut BOM's reach.
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 assertj-db = { module = "org.assertj:assertj-db", version.ref = "assertjDb" }
 bouncycastle-provider = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncyCastle" }

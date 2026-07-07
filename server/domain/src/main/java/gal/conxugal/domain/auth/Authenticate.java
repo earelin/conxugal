@@ -5,14 +5,13 @@ import jakarta.inject.Singleton;
 import java.util.Optional;
 
 /**
- * Authenticate use case (SPEC-0002 #1-#3, ADR-0005): finds the user by email and
- * verifies the password against the stored hash, returning the user on success or an
- * indistinct failure otherwise.
+ * Authenticate use case: finds the user by email and verifies the password against
+ * the stored hash, returning the user on success or an indistinct failure otherwise.
  *
  * <p>For an unknown email there is no stored hash to compare against, so the check is
  * not short-circuited: {@link PasswordEncoder#matchAgainstDummyHash} runs instead, at
  * the adapter's normalized cost, so an unknown email and a wrong password are not
- * separable by execution time (SPEC-0002 #3).
+ * separable by execution time.
  */
 @Singleton
 public class Authenticate {
