@@ -9,10 +9,16 @@ dependencies {
 
     implementation(libs.micronaut.http.server.netty)
     implementation(libs.micronaut.serde.jackson)
+    implementation(libs.micronaut.security.session)
+    implementation(libs.micronaut.security.csrf)
+    annotationProcessor(libs.micronaut.security.processor)
     runtimeOnly(libs.logback.classic)
     runtimeOnly(libs.snakeyaml)
 
     testImplementation(libs.micronaut.http.client)
+    testImplementation(libs.micronaut.test.junit5)
+    testImplementation(libs.mockito.junit.jupiter)
+    testImplementation(libs.assertj.core)
 }
 
 application {

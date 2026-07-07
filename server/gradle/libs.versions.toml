@@ -26,6 +26,9 @@ micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway" }
 micronaut-http-client = { module = "io.micronaut:micronaut-http-client" }
 micronaut-http-server-netty = { module = "io.micronaut:micronaut-http-server-netty" }
 micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari" }
+micronaut-security-csrf = { module = "io.micronaut.security:micronaut-security-csrf" }
+micronaut-security-processor = { module = "io.micronaut.security:micronaut-security-processor" }
+micronaut-security-session = { module = "io.micronaut.security:micronaut-security-session" }
 micronaut-serde-jackson = { module = "io.micronaut.serde:micronaut-serde-jackson" }
 micronaut-test-junit5 = { module = "io.micronaut.test:micronaut-test-junit5" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter" }
