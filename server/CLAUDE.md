@@ -25,20 +25,27 @@ Run from `server/` (Gradle wrapper; Java 25 toolchain is pinned in the root
   needs a Docker daemon). Defined as a
   [JVM Test Suite](https://docs.gradle.org/current/userguide/jvm_test_suite_plugin.html)
   (`infrastructure/src/integrationTest`) that is deliberately **not** added to `check`,
-  same as `acceptance` (see below).
+  same as `application`'s and `acceptance` (see below).
+- `./gradlew :application:integrationTest` — run `application`'s in-process Micronaut
+  integration tests: full embedded-server HTTP round-trips (session auth, CSRF, idle
+  timeout) against the real `@Controller`/security wiring rather than mocks. Also a
+  JVM Test Suite (`application/src/integrationTest`), deliberately **not** added to
+  `check` — unlike `infrastructure`'s, it needs no Docker daemon, just a JVM.
 
 ## Fast feedback while iterating
 
-`./gradlew build`/`test` never runs `integrationTest` (it needs a Docker daemon and is
-kept out of `check`, see above) — running only `test` after touching an adapter gives a
-false green. Pick the narrowest command(s) that actually exercise what changed:
+`./gradlew build`/`test` never runs an `integrationTest` suite (each is deliberately
+kept out of `check`, see above) — running only `test` after touching a controller or
+an adapter gives a false green. Pick the narrowest command(s) that actually exercise
+what changed:
 
 | What changed | Run for feedback |
 | --- | --- |
 | `domain/src/main/java/**` (entities, ports, use cases) | `./gradlew :domain:test` |
 | `infrastructure/src/main/java/**` — a class implementing a `domain` port (an adapter: repository, encoder, client, …) | `./gradlew :infrastructure:test :infrastructure:integrationTest` — the unit suite alone doesn't touch the real dependency the adapter drives |
 | `infrastructure/src/main/resources/db/migration/**` (schema/migrations) | `./gradlew :infrastructure:integrationTest` |
-| `application/src/main/java/**` (REST endpoints, security config, wiring) | `./gradlew :application:test` |
+| `application/src/main/java/**` (REST endpoints, security config, wiring) | `./gradlew :application:test :application:integrationTest` — the unit suite alone doesn't boot a real embedded server/security filter chain |
+| `application/src/integrationTest/java/**` | `./gradlew :application:integrationTest` |
 | `acceptance/src/test/java/**` | Needs a running instance first (see below); then `./gradlew acceptance` |
 | Any `build.gradle`, `gradle/libs.versions.toml`, or `settings.gradle` | `./gradlew build` (full multi-module build) |
 | Before committing, regardless of scope | `./gradlew build` (see below) |
@@ -46,8 +53,10 @@ false green. Pick the narrowest command(s) that actually exercise what changed:
 ## Before committing
 
 Run `./gradlew build` from `server/` and fix any failures before committing changes
-to this module. If the change touched an `infrastructure` adapter, also run
-`./gradlew :infrastructure:integrationTest` — `build` alone won't have exercised it.
+to this module. `build` never exercises either `integrationTest` suite (see above), so
+also run `./gradlew :infrastructure:integrationTest` if the change touched an
+`infrastructure` adapter, and `./gradlew :application:integrationTest` if it touched
+`application`'s controllers, security config, or its `src/integrationTest`.
 
 ## Architecture
 

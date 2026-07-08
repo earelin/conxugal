@@ -3,6 +3,35 @@ micronaut:
     name: conxugal-server
   server:
     port: 8080
+  security:
+    enabled: true
+    authentication: session
+    redirect:
+      enabled: true
+      login-success: /
+      login-failure: /login?error=true
+      logout: /login
+      forbidden:
+        enabled: true
+        url: /forbidden
+      unauthorized:
+        enabled: true
+        url: /login
+    intercept-url-map:
+      - pattern: /login
+        access: [isAnonymous()]
+      - pattern: /api/admin/**
+        access: [ADMIN]
+      - pattern: /api/**
+        access: [isAuthenticated()]
+    csrf:
+      enabled: true
+      signature-key: ${CSRF_SIGNATURE_KEY:conxugal-dev-only-csrf-signature-key}
+  session:
+    http:
+      cookie: true
+      header: false
+    max-inactive-interval: 30m
 
 datasources:
   default:
