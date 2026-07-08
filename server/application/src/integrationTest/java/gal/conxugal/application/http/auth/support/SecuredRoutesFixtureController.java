@@ -10,21 +10,21 @@ import io.micronaut.security.rules.SecurityRule;
 @Controller("/api")
 public class SecuredRoutesFixtureController {
 
-    @Secured(SecurityRule.IS_AUTHENTICATED)
-    @Get("/data")
-    HttpResponse<?> data() {
-        return HttpResponse.ok();
-    }
+  @Secured(SecurityRule.IS_AUTHENTICATED)
+  @Get("/data")
+  HttpResponse<?> data() {
+    return HttpResponse.ok();
+  }
 
-    @Secured(SecurityRule.IS_AUTHENTICATED)
-    @Post("/data")
-    HttpResponse<?> createData() {
-        return HttpResponse.ok();
-    }
+  @Secured(SecurityRule.IS_AUTHENTICATED)
+  @Post("/data")
+  HttpResponse<?> createData() {
+    return HttpResponse.ok();
+  }
 
-    @Secured("ADMIN")
-    @Get("/admin/reports")
-    HttpResponse<?> adminReports() {
-        return HttpResponse.ok();
-    }
+  @Secured("ADMIN")
+  @Get("/admin/reports")
+  HttpResponse<?> adminReports() {
+    return HttpResponse.ok();
+  }
 }

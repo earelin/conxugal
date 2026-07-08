@@ -1,5 +1,7 @@
 package gal.conxugal.application.http.auth;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.domain.auth.Role;
 import gal.conxugal.domain.auth.User;
@@ -16,47 +18,45 @@ import io.micronaut.runtime.server.EmbeddedServer;
 import io.micronaut.security.authentication.UsernamePasswordCredentials;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @MicronautTest
 @Property(name = "micronaut.security.redirect.enabled", value = "false")
 @Property(name = "micronaut.session.max-inactive-interval", value = "1s")
 class IdleSessionTimeoutTest extends AuthenticationTestSupport {
 
-    @Inject
-    EmbeddedServer embeddedServer;
+  @Inject
+  EmbeddedServer embeddedServer;
 
-    private BlockingHttpClient client;
+  private BlockingHttpClient client;
 
-    @BeforeEach
-    void set_up() {
-        client = HttpClient.create(embeddedServer.getURL()).toBlocking();
-        seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
+  @BeforeEach
+  void setUp() {
+    client = HttpClient.create(embeddedServer.getURL()).toBlocking();
+    seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
+  }
+
+  @Test
+  void protected_request_is_rejected_after_the_session_has_been_idle_past_the_timeout()
+      throws InterruptedException {
+    HttpResponse<?> loginResponse = client.exchange(HttpRequest
+        .POST("/login", new UsernamePasswordCredentials("user@example.com", "user-password"))
+        .contentType(MediaType.APPLICATION_JSON_TYPE));
+    String sessionCookie = loginResponse.getHeaders().get(HttpHeaders.SET_COOKIE).split(";", 2)[0];
+
+    Thread.sleep(1500);
+
+    assertThat(statusOf(HttpRequest.GET("/api/data").header(HttpHeaders.COOKIE, sessionCookie)))
+        .isEqualTo(HttpStatus.UNAUTHORIZED.getCode());
+  }
+
+  private int statusOf(HttpRequest<?> request) {
+    try {
+      return client.exchange(request).getStatus().getCode();
+    } catch (HttpClientResponseException e) {
+      return e.getStatus().getCode();
     }
-
-    @Test
-    void protected_request_is_rejected_after_the_session_has_been_idle_past_the_timeout() throws InterruptedException {
-        HttpResponse<?> loginResponse = client.exchange(HttpRequest
-                .POST("/login", new UsernamePasswordCredentials("user@example.com", "user-password"))
-                .contentType(MediaType.APPLICATION_JSON_TYPE));
-        String sessionCookie = loginResponse.getHeaders().get(HttpHeaders.SET_COOKIE).split(";", 2)[0];
-
-        Thread.sleep(1500);
-
-        assertThat(statusOf(HttpRequest.GET("/api/data").header(HttpHeaders.COOKIE, sessionCookie)))
-                .isEqualTo(HttpStatus.UNAUTHORIZED.getCode());
-    }
-
-    private int statusOf(HttpRequest<?> request) {
-        try {
-            return client.exchange(request).getStatus().getCode();
-        } catch (HttpClientResponseException e) {
-            return e.getStatus().getCode();
-        }
-    }
+  }
 }

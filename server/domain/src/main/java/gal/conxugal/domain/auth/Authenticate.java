@@ -1,7 +1,6 @@
 package gal.conxugal.domain.auth;
 
 import jakarta.inject.Singleton;
-
 import java.util.Optional;
 
 /**
@@ -16,23 +15,23 @@ import java.util.Optional;
 @Singleton
 public class Authenticate {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+  private final UserRepository userRepository;
+  private final PasswordEncoder passwordEncoder;
 
-    public Authenticate(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+  public Authenticate(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    this.userRepository = userRepository;
+    this.passwordEncoder = passwordEncoder;
+  }
+
+  public Optional<User> authenticate(String email, String password) {
+    Optional<User> user = userRepository.findByEmail(email);
+
+    if (user.isEmpty()) {
+      passwordEncoder.matchAgainstDummyHash(password);
+      return Optional.empty();
     }
 
-    public Optional<User> authenticate(String email, String password) {
-        Optional<User> user = userRepository.findByEmail(email);
-
-        if (user.isEmpty()) {
-            passwordEncoder.matchAgainstDummyHash(password);
-            return Optional.empty();
-        }
-
-        boolean passwordMatches = passwordEncoder.matches(password, user.get().passwordHash());
-        return passwordMatches ? user : Optional.empty();
-    }
+    boolean passwordMatches = passwordEncoder.matches(password, user.get().passwordHash());
+    return passwordMatches ? user : Optional.empty();
+  }
 }
