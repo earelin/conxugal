@@ -1,5 +1,5 @@
 plugins {
-    id("java")
+    id("gal.conxugal.java-conventions")
 }
 
 dependencies {
