@@ -42,7 +42,7 @@ class CsrfProtectionTest extends AuthenticationTestSupport {
     HttpResponse<?> loginResponse = client.exchange(HttpRequest
         .POST("/login", new UsernamePasswordCredentials("user@example.com", "user-password"))
         .contentType(MediaType.APPLICATION_JSON_TYPE));
-    String sessionCookie = loginResponse.getHeaders().get(HttpHeaders.SET_COOKIE).split(";", 2)[0];
+    String sessionCookie = sessionCookieOf(loginResponse);
 
     HttpRequest<?> request = HttpRequest.POST("/api/data", "")
         .contentType(MediaType.APPLICATION_FORM_URLENCODED_TYPE)

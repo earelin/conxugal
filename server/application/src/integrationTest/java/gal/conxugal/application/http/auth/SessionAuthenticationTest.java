@@ -72,8 +72,7 @@ class SessionAuthenticationTest extends AuthenticationTestSupport {
 
   private String login(String email, String password) {
     HttpResponse<?> response = client.exchange(loginRequest(email, password));
-    String setCookieHeader = response.getHeaders().get(HttpHeaders.SET_COOKIE);
-    return setCookieHeader.split(";", 2)[0];
+    return sessionCookieOf(response);
   }
 
   private HttpRequest<?> loginRequest(String email, String password) {
