@@ -3,6 +3,7 @@ assertj = "3.27.7"
 assertjDb = "3.0.0"
 bouncyCastle = "1.80"
 checkstyle = "13.7.0"
+findsecbugs = "1.14.0"
 flywayCore = "12.10.0"
 jspecify = "1.0.0"
 junit = "6.1.1"
@@ -17,6 +18,7 @@ wiremock = "3.13.2"
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 assertj-db = { module = "org.assertj:assertj-db", version.ref = "assertjDb" }
 bouncycastle-provider = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncyCastle" }
+findsecbugs-plugin = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flywayCore" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flywayCore" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }

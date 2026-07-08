@@ -42,3 +42,7 @@ tasks.withType<SpotBugsTask>().configureEach {
     reports.create("html")
     reports.create("xml")
 }
+
+dependencies {
+    spotbugsPlugins(libs.findLibrary("findsecbugs-plugin").get())
+}
