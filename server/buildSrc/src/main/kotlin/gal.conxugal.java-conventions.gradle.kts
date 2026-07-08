@@ -2,11 +2,13 @@ import com.github.spotbugs.snom.Effort
 import com.github.spotbugs.snom.SpotBugsTask
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.plugins.quality.Checkstyle
+import org.gradle.api.plugins.quality.Pmd
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 plugins {
     java
     checkstyle
+    pmd
     id("com.github.spotbugs")
 }
 
@@ -28,6 +30,26 @@ checkstyle {
 
 tasks.withType<Checkstyle>().configureEach {
     exclude("**/generated/**")
+}
+
+val pmdConfigDir = rootProject.layout.projectDirectory.dir("config/pmd")
+
+pmd {
+    toolVersion = libs.findVersion("pmd").get().requiredVersion
+    isConsoleOutput = true
+    ruleSets = emptyList()
+    ruleSetFiles = files(pmdConfigDir.file("ruleset.xml"))
+}
+
+tasks.withType<Pmd>().configureEach {
+    exclude("**/generated/**")
+    if (name != "pmdMain") {
+        ruleSetFiles = files(pmdConfigDir.file("ruleset-test.xml"))
+    }
+    reports {
+        html.required = true
+        xml.required = true
+    }
 }
 
 spotbugs {
