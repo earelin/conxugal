@@ -14,32 +14,31 @@ import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.csrf.repository.CsrfLoginCookieProvider;
 import io.micronaut.security.rules.SecurityRule;
 import io.micronaut.views.ModelAndView;
-
 import java.net.URI;
 import java.util.Map;
 
 @Controller
 public class LoginController {
 
-    private final CsrfLoginCookieProvider csrfCookieProvider;
+  private final CsrfLoginCookieProvider csrfCookieProvider;
 
-    public LoginController(CsrfLoginCookieProvider csrfCookieProvider) {
-        this.csrfCookieProvider = csrfCookieProvider;
-    }
+  public LoginController(CsrfLoginCookieProvider csrfCookieProvider) {
+    this.csrfCookieProvider = csrfCookieProvider;
+  }
 
-    @Secured(SecurityRule.IS_ANONYMOUS)
-    @Produces(MediaType.TEXT_HTML)
-    @Get("/login")
-    HttpResponse<?> login(HttpRequest<?> request,
-                           @Nullable Authentication authentication,
-                           @Nullable @QueryValue("error") String error) {
-        if (authentication != null) {
-            return HttpResponse.seeOther(URI.create("/"));
-        }
-        Cookie csrfCookie = csrfCookieProvider.provideCookie(request);
-        Map<String, Object> model = Map.of(
-                "error", error != null,
-                "csrfToken", csrfCookie.getValue());
-        return HttpResponse.ok(new ModelAndView<>("login", model)).cookie(csrfCookie);
+  @Secured(SecurityRule.IS_ANONYMOUS)
+  @Produces(MediaType.TEXT_HTML)
+  @Get("/login")
+  HttpResponse<?> login(
+      HttpRequest<?> request,
+      @Nullable Authentication authentication,
+      @Nullable @QueryValue("error") String error) {
+    if (authentication != null) {
+      return HttpResponse.seeOther(URI.create("/"));
     }
+    Cookie csrfCookie = csrfCookieProvider.provideCookie(request);
+    Map<String, Object> model =
+        Map.of("error", error != null, "csrfToken", csrfCookie.getValue());
+    return HttpResponse.ok(new ModelAndView<>("login", model)).cookie(csrfCookie);
+  }
 }

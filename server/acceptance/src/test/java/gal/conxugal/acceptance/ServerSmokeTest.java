@@ -14,16 +14,16 @@ import org.junit.jupiter.api.Test;
  */
 class ServerSmokeTest {
 
-    @BeforeAll
-    static void connect() {
-        RestAssured.baseURI = ApplicationUnderTest.BASE_URI;
-    }
+  @BeforeAll
+  static void connect() {
+    RestAssured.baseURI = ApplicationUnderTest.BASE_URI;
+  }
 
-    @Test
-    void unmapped_route_returns_not_found() {
-        when()
-                .get("/does-not-exist")
+  @Test
+  void unmapped_route_returns_not_found() {
+    when()
+        .get("/does-not-exist")
         .then()
-                .statusCode(404);
-    }
+        .statusCode(404);
+  }
 }

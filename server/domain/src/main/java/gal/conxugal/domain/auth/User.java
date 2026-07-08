@@ -3,7 +3,6 @@ package gal.conxugal.domain.auth;
 import io.micronaut.data.annotation.GeneratedValue;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
-
 import java.util.Objects;
 import java.util.UUID;
 
@@ -14,15 +13,15 @@ import java.util.UUID;
 @MappedEntity("users")
 public record User(@Id @GeneratedValue UUID id, String email, String passwordHash, Role role) {
 
-    public User {
-        Objects.requireNonNull(id, "id must not be null");
-        Objects.requireNonNull(email, "email must not be null");
-        Objects.requireNonNull(passwordHash, "passwordHash must not be null");
-        Objects.requireNonNull(role, "role must not be null");
-    }
+  public User {
+    Objects.requireNonNull(id, "id must not be null");
+    Objects.requireNonNull(email, "email must not be null");
+    Objects.requireNonNull(passwordHash, "passwordHash must not be null");
+    Objects.requireNonNull(role, "role must not be null");
+  }
 
-    @Override
-    public String toString() {
-        return "User[id=%s, email=%s, passwordHash=REDACTED, role=%s]".formatted(id, email, role);
-    }
+  @Override
+  public String toString() {
+    return "User[id=%s, email=%s, passwordHash=REDACTED, role=%s]".formatted(id, email, role);
+  }
 }
