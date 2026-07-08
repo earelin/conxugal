@@ -26,7 +26,7 @@ class UserAuthenticationProviderTest {
   private UserAuthenticationProvider provider;
 
   @BeforeEach
-  void set_up() {
+  void setUp() {
     provider = new UserAuthenticationProvider(authenticate);
   }
 
@@ -62,8 +62,7 @@ class UserAuthenticationProviderTest {
 
   @Test
   void returns_credentials_do_not_match_failure_when_authenticate_use_case_rejects() {
-    when(authenticate.authenticate("ghost@example.com", "whatever"))
-        .thenReturn(Optional.empty());
+    when(authenticate.authenticate("ghost@example.com", "whatever")).thenReturn(Optional.empty());
 
     AuthenticationResponse response = provider.authenticate(
         HttpRequest.GET("/login"),

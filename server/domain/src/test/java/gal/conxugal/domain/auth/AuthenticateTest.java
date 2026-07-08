@@ -23,7 +23,7 @@ class AuthenticateTest {
   private Authenticate authenticate;
 
   @BeforeEach
-  void set_up() {
+  void setUp() {
     authenticate = new Authenticate(userRepository, passwordEncoder);
   }
 

@@ -32,17 +32,17 @@ class CsrfProtectionTest extends AuthenticationTestSupport {
   private BlockingHttpClient client;
 
   @BeforeEach
-  void set_up() {
+  void setUp() {
     client = HttpClient.create(embeddedServer.getURL()).toBlocking();
     seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
   }
 
   @Test
-  void state_changing_request_with_a_session_but_no_csrf_token_is_rejected() {
+  void state_changing_request_with_session_but_no_csrf_token_is_rejected() {
     HttpResponse<?> loginResponse = client.exchange(HttpRequest
         .POST("/login", new UsernamePasswordCredentials("user@example.com", "user-password"))
         .contentType(MediaType.APPLICATION_JSON_TYPE));
-    String sessionCookie = loginResponse.getHeaders().get(HttpHeaders.SET_COOKIE).split(";", 2)[0];
+    String sessionCookie = sessionCookieOf(loginResponse);
 
     HttpRequest<?> request = HttpRequest.POST("/api/data", "")
         .contentType(MediaType.APPLICATION_FORM_URLENCODED_TYPE)

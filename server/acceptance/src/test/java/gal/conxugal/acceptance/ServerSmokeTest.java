@@ -23,7 +23,7 @@ class ServerSmokeTest {
   void unmapped_route_returns_not_found() {
     when()
         .get("/does-not-exist")
-        .then()
+    .then()
         .statusCode(404);
   }
 }

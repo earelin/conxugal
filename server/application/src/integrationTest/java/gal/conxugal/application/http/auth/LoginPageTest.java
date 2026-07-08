@@ -37,7 +37,7 @@ class LoginPageTest extends AuthenticationTestSupport {
   private BlockingHttpClient client;
 
   @BeforeEach
-  void set_up() {
+  void setUp() {
     HttpClientConfiguration configuration = new DefaultHttpClientConfiguration();
     configuration.setFollowRedirects(false);
     client = HttpClient.create(embeddedServer.getURL(), configuration).toBlocking();
@@ -57,7 +57,7 @@ class LoginPageTest extends AuthenticationTestSupport {
   }
 
   @Test
-  void failed_login_query_param_shows_a_single_generic_error() {
+  void failed_login_query_param_shows_single_generic_error() {
     String withError = client.exchange(HttpRequest.GET("/login?error=true"), String.class).body();
     String withoutError = client.exchange(HttpRequest.GET("/login"), String.class).body();
 
@@ -98,7 +98,7 @@ class LoginPageTest extends AuthenticationTestSupport {
     HttpResponse<?> response = client.exchange(HttpRequest
         .POST("/login", new UsernamePasswordCredentials(email, password))
         .contentType(MediaType.APPLICATION_JSON_TYPE));
-    return response.getHeaders().get(HttpHeaders.SET_COOKIE).split(";", 2)[0];
+    return sessionCookieOf(response);
   }
 
   private HttpRequest<?> formLoginRequest(String email, String password) {

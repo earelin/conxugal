@@ -32,14 +32,14 @@ class SessionAuthenticationTest extends AuthenticationTestSupport {
   private BlockingHttpClient client;
 
   @BeforeEach
-  void set_up() {
+  void setUp() {
     client = HttpClient.create(embeddedServer.getURL()).toBlocking();
     seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
     seedUser(new User(UUID.randomUUID(), "admin@example.com", "admin-password", Role.ADMIN));
   }
 
   @Test
-  void valid_login_establishes_a_session_cookie() {
+  void valid_login_establishes_session_cookie() {
     HttpResponse<?> response = client.exchange(loginRequest("user@example.com", "user-password"));
 
     assertThat(response.getHeaders().get(HttpHeaders.SET_COOKIE)).isNotBlank();
@@ -72,8 +72,7 @@ class SessionAuthenticationTest extends AuthenticationTestSupport {
 
   private String login(String email, String password) {
     HttpResponse<?> response = client.exchange(loginRequest(email, password));
-    String setCookieHeader = response.getHeaders().get(HttpHeaders.SET_COOKIE);
-    return setCookieHeader.split(";", 2)[0];
+    return sessionCookieOf(response);
   }
 
   private HttpRequest<?> loginRequest(String email, String password) {

@@ -17,7 +17,7 @@ class Argon2idPasswordEncoderTest {
   }
 
   @Test
-  void rejects_a_wrong_password_against_an_encoding() {
+  void rejects_wrong_password_against_an_encoding() {
     String encoded = passwordEncoder.encode("correct horse battery staple");
 
     assertThat(passwordEncoder.matches("wrong password", encoded)).isFalse();

@@ -31,7 +31,7 @@ class ForbiddenPageTest extends AuthenticationTestSupport {
   private BlockingHttpClient client;
 
   @BeforeEach
-  void set_up() {
+  void setUp() {
     client = HttpClient.create(embeddedServer.getURL()).toBlocking();
     seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
   }
@@ -51,6 +51,6 @@ class ForbiddenPageTest extends AuthenticationTestSupport {
     HttpResponse<?> response = client.exchange(HttpRequest
         .POST("/login", new UsernamePasswordCredentials(email, password))
         .contentType(MediaType.APPLICATION_JSON_TYPE));
-    return response.getHeaders().get(HttpHeaders.SET_COOKIE).split(";", 2)[0];
+    return sessionCookieOf(response);
   }
 }

@@ -56,7 +56,7 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
   DataSource dataSource;
 
   @AfterEach
-  void clean_up() throws Exception {
+  void cleanUp() throws Exception {
     try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement()) {
       statement.execute("TRUNCATE TABLE users");
@@ -64,7 +64,7 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
-  void finds_a_stored_user_by_email() throws Exception {
+  void finds_stored_user_by_email() throws Exception {
     insertUser("ana@example.com", "hashed-password", "ADMIN");
 
     Optional<User> result = userRepository.findByEmail("ana@example.com");

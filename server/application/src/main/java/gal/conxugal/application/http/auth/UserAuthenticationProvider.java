@@ -31,9 +31,7 @@ public class UserAuthenticationProvider implements HttpRequestAuthenticationProv
     return user
         .<AuthenticationResponse>map(
             u -> AuthenticationResponse.success(u.email(), List.of(u.role().name())))
-        .orElseGet(
-            () ->
-                AuthenticationResponse.failure(
-                    AuthenticationFailureReason.CREDENTIALS_DO_NOT_MATCH));
+        .orElseGet(() -> AuthenticationResponse.failure(
+            AuthenticationFailureReason.CREDENTIALS_DO_NOT_MATCH));
   }
 }
