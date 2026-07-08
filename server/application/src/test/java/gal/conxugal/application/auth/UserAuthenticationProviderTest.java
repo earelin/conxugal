@@ -1,5 +1,6 @@
 package gal.conxugal.application.auth;
 
+import gal.conxugal.application.http.auth.UserAuthenticationProvider;
 import gal.conxugal.domain.auth.Authenticate;
 import gal.conxugal.domain.auth.Role;
 import gal.conxugal.domain.auth.User;

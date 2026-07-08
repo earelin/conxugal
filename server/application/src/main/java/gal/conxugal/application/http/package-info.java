@@ -1,1 +1,4 @@
-package gal.conxugal.application.rest;
+/**
+ * HTTP driving-side entry points of the conxugal server.
+ */
+package gal.conxugal.application.http;
