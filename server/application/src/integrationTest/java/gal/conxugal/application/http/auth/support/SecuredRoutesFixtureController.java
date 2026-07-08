@@ -1,4 +1,4 @@
-package gal.conxugal.application.auth.support;
+package gal.conxugal.application.http.auth.support;
 
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.annotation.Controller;

@@ -1,6 +1,6 @@
-package gal.conxugal.application.auth;
+package gal.conxugal.application.http.auth;
 
-import gal.conxugal.application.auth.support.InMemoryUserRepository;
+import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.domain.auth.Role;
 import gal.conxugal.domain.auth.User;
 import io.micronaut.context.annotation.Property;
@@ -25,21 +25,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @MicronautTest
 @Property(name = "micronaut.security.redirect.enabled", value = "false")
-class SessionAuthenticationTest {
+class SessionAuthenticationTest extends AuthenticationTestSupport {
 
     @Inject
     EmbeddedServer embeddedServer;
-
-    @Inject
-    InMemoryUserRepository userRepository;
 
     private BlockingHttpClient client;
 
     @BeforeEach
     void set_up() {
         client = HttpClient.create(embeddedServer.getURL()).toBlocking();
-        userRepository.save(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
-        userRepository.save(new User(UUID.randomUUID(), "admin@example.com", "admin-password", Role.ADMIN));
+        seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
+        seedUser(new User(UUID.randomUUID(), "admin@example.com", "admin-password", Role.ADMIN));
     }
 
     @Test

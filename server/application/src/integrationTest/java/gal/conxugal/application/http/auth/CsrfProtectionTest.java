@@ -1,6 +1,6 @@
-package gal.conxugal.application.auth;
+package gal.conxugal.application.http.auth;
 
-import gal.conxugal.application.auth.support.InMemoryUserRepository;
+import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.domain.auth.Role;
 import gal.conxugal.domain.auth.User;
 import io.micronaut.context.annotation.Property;
@@ -25,34 +25,31 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @MicronautTest
 @Property(name = "micronaut.security.redirect.enabled", value = "false")
-@Property(name = "micronaut.session.max-inactive-interval", value = "1s")
-class IdleSessionTimeoutTest {
+class CsrfProtectionTest extends AuthenticationTestSupport {
 
     @Inject
     EmbeddedServer embeddedServer;
-
-    @Inject
-    InMemoryUserRepository userRepository;
 
     private BlockingHttpClient client;
 
     @BeforeEach
     void set_up() {
         client = HttpClient.create(embeddedServer.getURL()).toBlocking();
-        userRepository.save(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
+        seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
     }
 
     @Test
-    void protected_request_is_rejected_after_the_session_has_been_idle_past_the_timeout() throws InterruptedException {
+    void state_changing_request_with_a_session_but_no_csrf_token_is_rejected() {
         HttpResponse<?> loginResponse = client.exchange(HttpRequest
                 .POST("/login", new UsernamePasswordCredentials("user@example.com", "user-password"))
                 .contentType(MediaType.APPLICATION_JSON_TYPE));
         String sessionCookie = loginResponse.getHeaders().get(HttpHeaders.SET_COOKIE).split(";", 2)[0];
 
-        Thread.sleep(1500);
+        HttpRequest<?> request = HttpRequest.POST("/api/data", "")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED_TYPE)
+                .header(HttpHeaders.COOKIE, sessionCookie);
 
-        assertThat(statusOf(HttpRequest.GET("/api/data").header(HttpHeaders.COOKIE, sessionCookie)))
-                .isEqualTo(HttpStatus.UNAUTHORIZED.getCode());
+        assertThat(statusOf(request)).isEqualTo(HttpStatus.FORBIDDEN.getCode());
     }
 
     private int statusOf(HttpRequest<?> request) {

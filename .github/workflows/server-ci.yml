@@ -29,5 +29,8 @@ jobs:
       # Handles dependency/build caching and Gradle Wrapper checksum validation.
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Build and test
+      - name: Build and unit test
         run: ./gradlew build
+
+      - name: Integration tests
+        run: ./gradlew integrationTest

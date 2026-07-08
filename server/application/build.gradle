@@ -33,3 +33,33 @@ micronaut {
         annotations("gal.conxugal.*")
     }
 }
+
+testing {
+    suites {
+        integrationTest(JvmTestSuite) {
+            useJUnitJupiter(libs.versions.junit.get())
+
+            dependencies {
+                implementation(project())
+                implementation(project(":domain"))
+                implementation(libs.micronaut.http.client)
+                implementation(libs.micronaut.test.junit5)
+                implementation(libs.micronaut.security.session)
+                implementation(libs.mockito.junit.jupiter)
+                implementation(libs.assertj.core)
+            }
+
+            targets {
+                all {
+                    testTask.configure {
+                        shouldRunAfter(tasks.test)
+                    }
+                }
+            }
+        }
+    }
+}
+
+configurations {
+    integrationTestAnnotationProcessor.extendsFrom(annotationProcessor, testAnnotationProcessor)
+}
