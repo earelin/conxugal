@@ -7,6 +7,8 @@ flywayCore = "12.10.0"
 junit = "6.1.1"
 micronautPlugin = "5.0.2"
 restAssured = "6.0.0"
+spotbugs = "4.10.2"
+spotbugsGradlePlugin = "6.5.8"
 testcontainers = "1.21.3"
 wiremock = "3.13.2"
 
@@ -36,6 +38,7 @@ mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter" }
 postgresql = { module = "org.postgresql:postgresql" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "restAssured" }
 snakeyaml = { module = "org.yaml:snakeyaml" }
+spotbugs-gradle-plugin = { module = "com.github.spotbugs.snom:spotbugs-gradle-plugin", version.ref = "spotbugsGradlePlugin" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
 wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
