@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="gl" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Iniciar sesión · conxugal</title>
+  </head>
+  <body>
+    <main>
+      <h1>conxugal</h1>
+      <form method="post" action="/login">
+        <input type="hidden" name="csrfToken" th:value="${csrfToken}" />
+        <p th:if="${error}">As credenciais introducidas non son correctas.</p>
+        <label for="username">Correo electrónico</label>
+        <input type="email" id="username" name="username" autocomplete="username" required autofocus />
+        <label for="password">Contrasinal</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required />
+        <button type="submit">Iniciar sesión</button>
+      </form>
+    </main>
+  </body>
+</html>

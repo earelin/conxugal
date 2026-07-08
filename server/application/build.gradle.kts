@@ -12,6 +12,7 @@ dependencies {
     implementation(libs.micronaut.serde.jackson)
     implementation(libs.micronaut.security.session)
     implementation(libs.micronaut.security.csrf)
+    implementation(libs.micronaut.views.thymeleaf)
     annotationProcessor(libs.micronaut.security.processor)
     runtimeOnly(libs.logback.classic)
     runtimeOnly(libs.snakeyaml)
@@ -46,6 +47,7 @@ testing {
                 implementation(libs.micronaut.http.client)
                 implementation(libs.micronaut.test.junit5)
                 implementation(libs.micronaut.security.session)
+                implementation(libs.micronaut.security.csrf)
                 implementation(libs.mockito.junit.jupiter)
                 implementation(libs.assertj.core)
             }
