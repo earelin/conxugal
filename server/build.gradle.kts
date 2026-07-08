@@ -10,12 +10,4 @@ subprojects {
     repositories {
         mavenCentral()
     }
-
-    plugins.withType<JavaPlugin>().configureEach {
-        configure<JavaPluginExtension> {
-            toolchain {
-                languageVersion = JavaLanguageVersion.of(25)
-            }
-        }
-    }
 }

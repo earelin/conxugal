@@ -1,4 +1,5 @@
 plugins {
+    id("gal.conxugal.java-conventions")
     alias(libs.plugins.micronaut.library)
 }
 
