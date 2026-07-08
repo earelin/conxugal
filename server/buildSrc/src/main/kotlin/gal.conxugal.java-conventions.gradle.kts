@@ -35,6 +35,7 @@ spotbugs {
     ignoreFailures = false
     showProgress = false
     effort = Effort.MAX
+    excludeFilter = rootProject.layout.projectDirectory.file("config/spotbugs/exclude.xml")
 }
 
 tasks.withType<SpotBugsTask>().configureEach {

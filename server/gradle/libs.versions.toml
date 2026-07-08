@@ -4,6 +4,7 @@ assertjDb = "3.0.0"
 bouncyCastle = "1.80"
 checkstyle = "13.7.0"
 flywayCore = "12.10.0"
+jspecify = "1.0.0"
 junit = "6.1.1"
 micronautPlugin = "5.0.2"
 restAssured = "6.0.0"
@@ -18,6 +19,7 @@ assertj-db = { module = "org.assertj:assertj-db", version.ref = "assertjDb" }
 bouncycastle-provider = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncyCastle" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flywayCore" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flywayCore" }
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
