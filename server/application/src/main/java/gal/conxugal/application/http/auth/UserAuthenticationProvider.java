@@ -1,4 +1,4 @@
-package gal.conxugal.application.auth;
+package gal.conxugal.application.rest.auth;
 
 import gal.conxugal.domain.auth.Authenticate;
 import gal.conxugal.domain.auth.User;

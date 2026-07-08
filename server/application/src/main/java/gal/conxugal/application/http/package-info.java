@@ -1,0 +1,1 @@
+package gal.conxugal.application.rest;
