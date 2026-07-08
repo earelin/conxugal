@@ -1,4 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="840" viewBox="0 0 1280 840" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <!-- soft drop shadow via blur only (feDropShadow shorthand is not honoured by
+         every renderer; feGaussianBlur is). Applied to a dedicated rect behind the
+         dialog so the dialog surface itself never depends on a filter. -->
+    <filter id="modalShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="11"/>
+    </filter>
+  </defs>
+
   <!-- ===== backdrop: the users list (context behind the dialog) ===== -->
   <rect width="1280" height="840" fill="#f8f9fa"/>
   <rect x="0" y="0" width="1280" height="60" fill="#ffffff"/>
@@ -29,8 +38,7 @@
   <rect width="1280" height="840" fill="#101113" opacity="0.55"/>
 
   <!-- ===== modal ===== -->
-  <rect x="542" y="196" width="456" height="428" rx="14" fill="#000000" opacity="0.16"/>
-  <rect x="546" y="193" width="448" height="424" rx="12" fill="#000000" opacity="0.14"/>
+  <rect x="550" y="194" width="440" height="420" rx="10" fill="#000000" opacity="0.45" filter="url(#modalShadow)"/>
   <rect x="550" y="188" width="440" height="420" rx="10" fill="#ffffff"/>
 
   <!-- header -->
