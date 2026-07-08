@@ -33,8 +33,7 @@ plus its `feat:` frontmatter. Governing decisions are cited in `adrs:`.
    architecturally significant decision with no ADR, propose the ADR first.
 3. When implementing a task, first read its parent feature, its spec, and any ADRs it
    cites; honour `depends_on:` ordering and flip `status:` as work moves.
-4. Keep scope to the single task: a small, self-contained change committed straight to
-   `trunk` (trunk-based development — no long-lived branches or pull requests).
+4. Keep scope to the single task: a small, self-contained change.
 
 ## Code style
 
