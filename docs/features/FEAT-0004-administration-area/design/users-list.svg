@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="840" viewBox="0 0 1280 840" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <!-- ===== app background & AppShell frame ===== -->
+  <rect width="1280" height="840" fill="#f8f9fa"/>
+  <rect x="0" y="0" width="1280" height="60" fill="#ffffff"/>
+  <rect x="0" y="60" width="260" height="780" fill="#ffffff"/>
+  <line x1="0" y1="60" x2="1280" y2="60" stroke="#dee2e6" stroke-width="1"/>
+  <line x1="260" y1="60" x2="260" y2="840" stroke="#dee2e6" stroke-width="1"/>
+
+  <!-- ===== header ===== -->
+  <text x="24" y="31" font-size="20" font-weight="700" fill="#212529">conxugal</text>
+  <text x="24" y="47" font-size="11" fill="#868e96">Contratos públicos da Xunta de Galicia</text>
+  <g stroke="#868e96" stroke-width="1.5" fill="none">
+    <circle cx="1116" cy="30" r="4.5"/>
+    <g stroke-linecap="round">
+      <line x1="1116" y1="21.5" x2="1116" y2="23.5"/><line x1="1116" y1="36.5" x2="1116" y2="38.5"/>
+      <line x1="1107.5" y1="30" x2="1109.5" y2="30"/><line x1="1122.5" y1="30" x2="1124.5" y2="30"/>
+      <line x1="1110" y1="24" x2="1111.4" y2="25.4"/><line x1="1120.6" y1="34.6" x2="1122" y2="36"/>
+      <line x1="1122" y1="24" x2="1120.6" y2="25.4"/><line x1="1111.4" y1="34.6" x2="1110" y2="36"/>
+    </g>
+  </g>
+  <line x1="1148" y1="16" x2="1148" y2="44" stroke="#e9ecef" stroke-width="1"/>
+  <text x="1210" y="26" text-anchor="end" font-size="13" font-weight="500" fill="#495057">ana.pereira@conxugal.gal</text>
+  <text x="1210" y="42" text-anchor="end" font-size="11" fill="#868e96">Administradora</text>
+  <circle cx="1236" cy="30" r="18" fill="#4c6ef5"/>
+  <text x="1236" y="30" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">AP</text>
+
+  <!-- ===== navbar ===== -->
+  <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M27 111 L37 102 L47 111 M29.5 108.5 V119 H44.5 V108.5" transform="translate(-3,-1)"/>
+  </g>
+  <text x="52" y="106" font-size="14" fill="#495057">Inicio</text>
+  <g stroke="#868e96" stroke-width="1.6" fill="none">
+    <circle cx="34" cy="149" r="8"/>
+    <line x1="34" y1="147" x2="34" y2="153" stroke-linecap="round"/>
+    <circle cx="34" cy="143.5" r="0.6" fill="#868e96" stroke="none"/>
+  </g>
+  <text x="52" y="154" font-size="14" fill="#495057">Acerca de</text>
+
+  <text x="24" y="192" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ADMINISTRACIÓN</text>
+
+  <!-- Panel -->
+  <g stroke="#868e96" stroke-width="1.6" fill="none">
+    <rect x="24" y="217" width="8" height="9" rx="1.5"/>
+    <rect x="36" y="217" width="8" height="5" rx="1.5"/>
+    <rect x="24" y="230" width="8" height="5" rx="1.5"/>
+    <rect x="36" y="226" width="8" height="9" rx="1.5"/>
+  </g>
+  <text x="52" y="232" font-size="14" fill="#495057">Panel</text>
+  <!-- Usuarios (active) -->
+  <rect x="12" y="254" width="236" height="42" rx="8" fill="#edf2ff"/>
+  <g stroke="#4263eb" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="31" cy="271" r="3"/>
+    <path d="M25 283 c0 -3.5 3 -5 6 -5 s6 1.5 6 5"/>
+    <circle cx="41.5" cy="273" r="2.4"/>
+    <path d="M41 279 c2.5 0 4.5 1.3 4.5 4" />
+  </g>
+  <text x="52" y="280" font-size="14" font-weight="600" fill="#3b5bdb">Usuarios</text>
+
+  <!-- ===== main: users list ===== -->
+  <text x="284" y="112" font-size="26" font-weight="700" fill="#212529">Usuarios</text>
+  <text x="284" y="138" font-size="14" fill="#868e96">Xestiona as contas con acceso ao sistema.</text>
+
+  <!-- toolbar -->
+  <rect x="284" y="162" width="300" height="40" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <g stroke="#adb5bd" stroke-width="1.6" fill="none">
+    <circle cx="306" cy="182" r="6"/>
+    <line x1="310.5" y1="186.5" x2="314" y2="190" stroke-linecap="round"/>
+  </g>
+  <text x="324" y="187" font-size="14" fill="#adb5bd">Buscar por correo</text>
+  <!-- primary action -->
+  <rect x="1094" y="162" width="162" height="40" rx="8" fill="#4c6ef5"/>
+  <g stroke="#ffffff" stroke-width="1.8" stroke-linecap="round">
+    <line x1="1116" y1="182" x2="1128" y2="182"/><line x1="1122" y1="176" x2="1122" y2="188"/>
+  </g>
+  <text x="1140" y="187" font-size="14" font-weight="600" fill="#ffffff">Novo usuario</text>
+
+  <!-- table card -->
+  <rect x="284" y="224" width="972" height="432" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="284" y="222" width="972" height="432" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <!-- header row -->
+  <rect x="284" y="222" width="972" height="48" rx="8" fill="#f8f9fa"/>
+  <rect x="284" y="246" width="972" height="24" fill="#f8f9fa"/>
+  <line x1="284" y1="270" x2="1256" y2="270" stroke="#e9ecef"/>
+  <text x="316" y="251" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">PERSOA</text>
+  <text x="732" y="251" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ROL</text>
+  <text x="892" y="251" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ESTADO</text>
+  <text x="1224" y="251" text-anchor="end" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ACCIÓNS</text>
+
+  <!-- ===== row 1: ana.pereira — admin, enabled, last admin (disable blocked) ===== -->
+  <g>
+    <circle cx="332" cy="300" r="16" fill="#4c6ef5"/>
+    <text x="332" y="300" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="600" fill="#ffffff">AP</text>
+    <text x="360" y="296" font-size="14" font-weight="500" fill="#212529">ana.pereira@conxugal.gal</text>
+    <text x="360" y="312" font-size="11" fill="#868e96">A túa conta</text>
+    <!-- rol badge -->
+    <rect x="732" y="289" width="112" height="22" rx="11" fill="#edf2ff"/>
+    <text x="788" y="301" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#3b5bdb">ADMINISTRADOR</text>
+    <!-- estado badge -->
+    <rect x="892" y="289" width="84" height="22" rx="11" fill="#ebfbee"/>
+    <text x="934" y="301" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVADA</text>
+    <!-- action: disabled -->
+    <rect x="1124" y="288" width="100" height="26" rx="8" fill="#f1f3f5"/>
+    <g stroke="#adb5bd" stroke-width="1.3" fill="none">
+      <rect x="1140" y="299" width="8" height="6" rx="1.2"/>
+      <path d="M1141.5 299 v-1.5 a2.5 2.5 0 0 1 5 0 v1.5"/>
+    </g>
+    <text x="1156" y="301" font-size="12" font-weight="500" fill="#adb5bd">Desactivar</text>
+  </g>
+  <line x1="284" y1="328" x2="1256" y2="328" stroke="#f1f3f5"/>
+
+  <!-- ===== row 2: brais.otero — user, enabled ===== -->
+  <g>
+    <circle cx="332" cy="358" r="16" fill="#12b886"/>
+    <text x="332" y="358" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="600" fill="#ffffff">BO</text>
+    <text x="360" y="362" font-size="14" font-weight="500" fill="#212529">brais.otero@conxugal.gal</text>
+    <rect x="732" y="347" width="72" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="768" y="359" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#495057">USUARIO</text>
+    <rect x="892" y="347" width="84" height="22" rx="11" fill="#ebfbee"/>
+    <text x="934" y="359" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVADA</text>
+    <rect x="1124" y="346" width="100" height="26" rx="8" fill="#ffffff" stroke="#ced4da"/>
+    <text x="1174" y="359" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Desactivar</text>
+  </g>
+  <line x1="284" y1="386" x2="1256" y2="386" stroke="#f1f3f5"/>
+
+  <!-- ===== row 3: carme.vila — user, enabled ===== -->
+  <g>
+    <circle cx="332" cy="416" r="16" fill="#ae3ec9"/>
+    <text x="332" y="416" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="600" fill="#ffffff">CV</text>
+    <text x="360" y="420" font-size="14" font-weight="500" fill="#212529">carme.vila@conxugal.gal</text>
+    <rect x="732" y="405" width="72" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="768" y="417" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#495057">USUARIO</text>
+    <rect x="892" y="405" width="84" height="22" rx="11" fill="#ebfbee"/>
+    <text x="934" y="417" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVADA</text>
+    <rect x="1124" y="404" width="100" height="26" rx="8" fill="#ffffff" stroke="#ced4da"/>
+    <text x="1174" y="417" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Desactivar</text>
+  </g>
+  <line x1="284" y1="444" x2="1256" y2="444" stroke="#f1f3f5"/>
+
+  <!-- ===== row 4: diego.senra — user, enabled ===== -->
+  <g>
+    <circle cx="332" cy="474" r="16" fill="#f76707"/>
+    <text x="332" y="474" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="600" fill="#ffffff">DS</text>
+    <text x="360" y="478" font-size="14" font-weight="500" fill="#212529">diego.senra@conxugal.gal</text>
+    <rect x="732" y="463" width="72" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="768" y="475" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#495057">USUARIO</text>
+    <rect x="892" y="463" width="84" height="22" rx="11" fill="#ebfbee"/>
+    <text x="934" y="475" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVADA</text>
+    <rect x="1124" y="462" width="100" height="26" rx="8" fill="#ffffff" stroke="#ced4da"/>
+    <text x="1174" y="475" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Desactivar</text>
+  </g>
+  <line x1="284" y1="502" x2="1256" y2="502" stroke="#f1f3f5"/>
+
+  <!-- ===== row 5: helena.mar — user, disabled ===== -->
+  <g>
+    <circle cx="332" cy="532" r="16" fill="#e9ecef"/>
+    <text x="332" y="532" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="600" fill="#adb5bd">HM</text>
+    <text x="360" y="536" font-size="14" font-weight="500" fill="#adb5bd">helena.mar@conxugal.gal</text>
+    <rect x="732" y="521" width="72" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="768" y="533" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">USUARIO</text>
+    <rect x="892" y="521" width="98" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="941" y="533" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">DESACTIVADA</text>
+    <rect x="1124" y="520" width="100" height="26" rx="8" fill="#ebfbee"/>
+    <text x="1174" y="533" text-anchor="middle" font-size="12" font-weight="600" fill="#2b8a3e">Activar</text>
+  </g>
+  <line x1="284" y1="560" x2="1256" y2="560" stroke="#f1f3f5"/>
+
+  <!-- ===== row 6: iago.franco — user, disabled ===== -->
+  <g>
+    <circle cx="332" cy="590" r="16" fill="#e9ecef"/>
+    <text x="332" y="590" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="600" fill="#adb5bd">IF</text>
+    <text x="360" y="594" font-size="14" font-weight="500" fill="#adb5bd">iago.franco@conxugal.gal</text>
+    <rect x="732" y="579" width="72" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="768" y="591" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">USUARIO</text>
+    <rect x="892" y="579" width="98" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="941" y="591" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">DESACTIVADA</text>
+    <rect x="1124" y="578" width="100" height="26" rx="8" fill="#ebfbee"/>
+    <text x="1174" y="591" text-anchor="middle" font-size="12" font-weight="600" fill="#2b8a3e">Activar</text>
+  </g>
+  <line x1="284" y1="618" x2="1256" y2="618" stroke="#f1f3f5"/>
+
+  <!-- table footer: count -->
+  <text x="316" y="640" font-size="12" fill="#868e96">6 contas · 4 activadas · 2 desactivadas</text>
+
+  <!-- helper caption -->
+  <g stroke="#adb5bd" stroke-width="1.4" fill="none">
+    <circle cx="290" cy="678" r="7"/>
+    <line x1="290" y1="676" x2="290" y2="682" stroke-linecap="round"/>
+    <circle cx="290" cy="672.5" r="0.6" fill="#adb5bd" stroke="none"/>
+  </g>
+  <text x="304" y="682" font-size="12" fill="#868e96">As contas nunca se eliminan; só se desactivan. Non se pode desactivar o último administrador activo.</text>
+</svg>

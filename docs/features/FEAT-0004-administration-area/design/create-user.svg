@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="840" viewBox="0 0 1280 840" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <!-- ===== backdrop: the users list (context behind the dialog) ===== -->
+  <rect width="1280" height="840" fill="#f8f9fa"/>
+  <rect x="0" y="0" width="1280" height="60" fill="#ffffff"/>
+  <rect x="0" y="60" width="260" height="780" fill="#ffffff"/>
+  <line x1="0" y1="60" x2="1280" y2="60" stroke="#dee2e6" stroke-width="1"/>
+  <line x1="260" y1="60" x2="260" y2="840" stroke="#dee2e6" stroke-width="1"/>
+  <text x="24" y="31" font-size="20" font-weight="700" fill="#212529">conxugal</text>
+  <text x="24" y="47" font-size="11" fill="#868e96">Contratos públicos da Xunta de Galicia</text>
+  <circle cx="1236" cy="30" r="18" fill="#4c6ef5"/>
+  <text x="1236" y="30" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">AP</text>
+  <text x="1210" y="26" text-anchor="end" font-size="13" font-weight="500" fill="#495057">ana.pereira@conxugal.gal</text>
+  <text x="1210" y="42" text-anchor="end" font-size="11" fill="#868e96">Administradora</text>
+  <text x="24" y="192" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ADMINISTRACIÓN</text>
+  <text x="52" y="232" font-size="14" fill="#495057">Panel</text>
+  <rect x="12" y="254" width="236" height="42" rx="8" fill="#edf2ff"/>
+  <text x="52" y="280" font-size="14" font-weight="600" fill="#3b5bdb">Usuarios</text>
+  <text x="284" y="112" font-size="26" font-weight="700" fill="#212529">Usuarios</text>
+  <text x="284" y="138" font-size="14" fill="#868e96">Xestiona as contas con acceso ao sistema.</text>
+  <rect x="284" y="222" width="972" height="432" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="284" y="222" width="972" height="48" rx="8" fill="#f8f9fa"/>
+  <rect x="284" y="246" width="972" height="24" fill="#f8f9fa"/>
+  <line x1="284" y1="270" x2="1256" y2="270" stroke="#e9ecef"/>
+  <line x1="284" y1="328" x2="1256" y2="328" stroke="#f1f3f5"/>
+  <line x1="284" y1="386" x2="1256" y2="386" stroke="#f1f3f5"/>
+  <line x1="284" y1="444" x2="1256" y2="444" stroke="#f1f3f5"/>
+
+  <!-- ===== dim overlay ===== -->
+  <rect width="1280" height="840" fill="#101113" opacity="0.55"/>
+
+  <!-- ===== modal ===== -->
+  <rect x="542" y="196" width="456" height="428" rx="14" fill="#000000" opacity="0.16"/>
+  <rect x="546" y="193" width="448" height="424" rx="12" fill="#000000" opacity="0.14"/>
+  <rect x="550" y="188" width="440" height="420" rx="10" fill="#ffffff"/>
+
+  <!-- header -->
+  <text x="574" y="222" font-size="18" font-weight="600" fill="#212529">Novo usuario</text>
+  <g stroke="#868e96" stroke-width="1.6" stroke-linecap="round">
+    <line x1="957" y1="211" x2="967" y2="221"/><line x1="967" y1="211" x2="957" y2="221"/>
+  </g>
+  <line x1="550" y1="240" x2="990" y2="240" stroke="#f1f3f5"/>
+
+  <!-- field: email -->
+  <text x="574" y="274" font-size="13" font-weight="600" fill="#212529">Correo electrónico<tspan fill="#fa5252"> *</tspan></text>
+  <rect x="574" y="284" width="392" height="42" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="590" y="309" font-size="14" fill="#adb5bd">persoa@dominio.gal</text>
+
+  <!-- field: rol -->
+  <text x="574" y="356" font-size="13" font-weight="600" fill="#212529">Rol<tspan fill="#fa5252"> *</tspan></text>
+  <rect x="574" y="366" width="392" height="42" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="590" y="391" font-size="14" fill="#212529">Usuario</text>
+  <path d="M944 383 l6 6 l6 -6" stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- field: password -->
+  <text x="574" y="438" font-size="13" font-weight="600" fill="#212529">Contrasinal inicial<tspan fill="#fa5252"> *</tspan></text>
+  <rect x="574" y="448" width="392" height="42" rx="8" fill="#ffffff" stroke="#4c6ef5" stroke-width="1.5"/>
+  <g fill="#495057">
+    <circle cx="592" cy="469" r="3"/><circle cx="604" cy="469" r="3"/><circle cx="616" cy="469" r="3"/>
+    <circle cx="628" cy="469" r="3"/><circle cx="640" cy="469" r="3"/><circle cx="652" cy="469" r="3"/>
+    <circle cx="664" cy="469" r="3"/><circle cx="676" cy="469" r="3"/><circle cx="688" cy="469" r="3"/>
+    <circle cx="700" cy="469" r="3"/><circle cx="712" cy="469" r="3"/><circle cx="724" cy="469" r="3"/>
+  </g>
+  <g stroke="#868e96" stroke-width="1.5" fill="none">
+    <path d="M938 469 c3 -5 9 -5 12 0 c-3 5 -9 5 -12 0 z"/>
+    <circle cx="944" cy="469" r="2" fill="#868e96" stroke="none"/>
+  </g>
+  <text x="574" y="510" font-size="12" fill="#868e96">Gárdase cifrado; nunca se mostra nin se recupera en claro.</text>
+
+  <!-- footer -->
+  <line x1="550" y1="536" x2="990" y2="536" stroke="#f1f3f5"/>
+  <rect x="762" y="552" width="96" height="40" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="810" y="573" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#495057">Cancelar</text>
+  <rect x="866" y="552" width="124" height="40" rx="8" fill="#4c6ef5"/>
+  <text x="928" y="573" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="600" fill="#ffffff">Crear conta</text>
+</svg>
