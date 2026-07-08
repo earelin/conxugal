@@ -18,12 +18,11 @@ java {
 checkstyle {
     toolVersion = libs.findVersion("checkstyle").get().requiredVersion
     configDirectory = rootProject.layout.projectDirectory.dir("config/checkstyle")
-    isIgnoreFailures = true
+    isIgnoreFailures = false
     isShowViolations = true
-    maxWarnings = Int.MAX_VALUE
+    maxWarnings = 0
 }
 
 tasks.withType<Checkstyle>().configureEach {
-    configProperties?.put("org.checkstyle.google.severity", "warning")
     exclude("**/generated/**")
 }
