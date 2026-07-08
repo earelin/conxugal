@@ -36,7 +36,7 @@ micronaut {
 
 testing {
     suites {
-        integrationTest(JvmTestSuite) {
+        register<JvmTestSuite>("integrationTest") {
             useJUnitJupiter(libs.versions.junit.get())
 
             dependencies {
@@ -60,6 +60,7 @@ testing {
     }
 }
 
-configurations {
-    integrationTestAnnotationProcessor.extendsFrom(annotationProcessor, testAnnotationProcessor)
-}
+configurations["integrationTestAnnotationProcessor"].extendsFrom(
+    configurations["annotationProcessor"],
+    configurations["testAnnotationProcessor"]
+)

@@ -13,7 +13,7 @@ Java 25, PostgreSQL), [ADR-0002](../docs/architecture/0002-hexagonal-architectur
 
 ## Requirements
 
-- **Java 25** — the toolchain is pinned in `build.gradle` and auto-provisioned by
+- **Java 25** — the toolchain is pinned in `build.gradle.kts` and auto-provisioned by
   Gradle if not installed, so no manual JDK setup is required.
 - **PostgreSQL** — the datastore ([ADR-0001](../docs/architecture/0001-backend-stack.md)).
 
@@ -37,7 +37,7 @@ Java 25, PostgreSQL), [ADR-0002](../docs/architecture/0002-hexagonal-architectur
 
 ## Structure
 
-Three-module hexagonal build (ADR-0002), wired only through `settings.gradle` and
+Three-module hexagonal build (ADR-0002), wired only through `settings.gradle.kts` and
 Micronaut's DI container:
 
 ```mermaid

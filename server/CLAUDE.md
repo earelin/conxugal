@@ -10,7 +10,7 @@ REST) and `docs/architecture/0002-hexagonal-architecture.md` (the module split b
 ## Commands
 
 Run from `server/` (Gradle wrapper; Java 25 toolchain is pinned in the root
-`build.gradle` and auto-provisioned by Gradle if not installed):
+`build.gradle.kts` and auto-provisioned by Gradle if not installed):
 
 - `./gradlew build` — compile, run all tests (`check`) and assemble all three modules
 - `./gradlew test` — run all tests without assembling
@@ -47,7 +47,7 @@ what changed:
 | `application/src/main/java/**` (REST endpoints, security config, wiring) | `./gradlew :application:test :application:integrationTest` — the unit suite alone doesn't boot a real embedded server/security filter chain |
 | `application/src/integrationTest/java/**` | `./gradlew :application:integrationTest` |
 | `acceptance/src/test/java/**` | Needs a running instance first (see below); then `./gradlew acceptance` |
-| Any `build.gradle`, `gradle/libs.versions.toml`, or `settings.gradle` | `./gradlew build` (full multi-module build) |
+| Any `build.gradle.kts`, `gradle/libs.versions.toml`, or `settings.gradle.kts` | `./gradlew build` (full multi-module build) |
 | Before committing, regardless of scope | `./gradlew build` (see below) |
 
 ## Before committing
@@ -61,7 +61,7 @@ also run `./gradlew :infrastructure:integrationTest` if the change touched an
 ## Architecture
 
 Three-module hexagonal (ports & adapters) Gradle build (ADR-0002), wired only through
-`settings.gradle` and Micronaut's DI container — there is no other cross-module glue:
+`settings.gradle.kts` and Micronaut's DI container — there is no other cross-module glue:
 
 ```mermaid
 flowchart LR
@@ -76,7 +76,7 @@ flowchart LR
 - **`application`** — the *driving side*: REST endpoints, schedulers, other triggers,
   and the use-case orchestration that coordinates `domain`. This is also the runnable
   Micronaut application (composition root: `Application.java`, `mainClass` in
-  `application/build.gradle`) and the single artifact that will serve the built UI
+  `application/build.gradle.kts`) and the single artifact that will serve the built UI
   (ADR-0003).
 - **`infrastructure`** — the *driven side*: adapters implementing `domain` ports
   against external systems (PostgreSQL, scrapers/ingestors for
@@ -84,7 +84,7 @@ flowchart LR
 
 **The dependency rule is load-bearing and intentional, not incidental:**
 `application` depends on `domain` only — `runtimeOnly(project(":infrastructure"))` in
-`application/build.gradle` means infrastructure is assembled at *runtime only*, so
+`application/build.gradle.kts` means infrastructure is assembled at *runtime only*, so
 application code cannot compile against adapter types. `infrastructure` depends on
 `domain` only and must never depend on `application`. The two outer modules meet
 solely through domain ports and Micronaut's DI container at runtime — don't add a

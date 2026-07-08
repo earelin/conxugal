@@ -42,7 +42,7 @@ Do not add unnecessary comments. Skip anything the code already states plainly;
 comment only the non-obvious — intent, trade-offs, or reasons that aren't visible
 from the code itself.
 
-- **Never comment build scripts** (Gradle `build.gradle`, version catalogs, npm
+- **Never comment build scripts** (Gradle `build.gradle.kts`, version catalogs, npm
   configs, etc.) — dependency declarations and build wiring should read for
   themselves; put rationale in the commit message instead.
 - **Never comment trivial SQL** (e.g. a `CREATE TABLE` restating its own column

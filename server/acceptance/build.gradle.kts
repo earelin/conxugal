@@ -17,11 +17,11 @@ tasks.named("test") {
     enabled = false
 }
 
-tasks.register("acceptance", Test) {
+tasks.register<Test>("acceptance") {
     group = "verification"
     description = "Black-box acceptance tests against a running application instance."
-    testClassesDirs = sourceSets.test.output.classesDirs
-    classpath = sourceSets.test.runtimeClasspath
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
     useJUnitPlatform()
     if (System.getProperty("app.baseUrl") != null) {
         systemProperty("app.baseUrl", System.getProperty("app.baseUrl"))
