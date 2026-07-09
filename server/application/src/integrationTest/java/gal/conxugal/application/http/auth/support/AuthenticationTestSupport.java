@@ -10,6 +10,7 @@ import gal.conxugal.domain.auth.UserRepository;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.test.annotation.MockBean;
+import io.restassured.response.Response;
 import jakarta.inject.Inject;
 import java.util.Objects;
 import java.util.Optional;
@@ -39,6 +40,12 @@ public abstract class AuthenticationTestSupport {
 
   protected static String sessionCookieOf(HttpResponse<?> response) {
     String setCookieHeader = response.getHeaders().get(HttpHeaders.SET_COOKIE);
+    Objects.requireNonNull(setCookieHeader, "Set-Cookie header must be present");
+    return setCookieHeader.split(";", 2)[0];
+  }
+
+  protected static String sessionCookieOf(Response response) {
+    String setCookieHeader = response.getHeader(HttpHeaders.SET_COOKIE);
     Objects.requireNonNull(setCookieHeader, "Set-Cookie header must be present");
     return setCookieHeader.split(";", 2)[0];
   }
