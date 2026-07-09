@@ -16,6 +16,7 @@ Checkstyle — `config/checkstyle/checkstyle.xml` is Google's `google_checks.xml
 no formatter is wired into the build, so checkstyle only lints, it doesn't reformat.
 Write new code matching the style directly; run `checkstyleMain`/`checkstyleTest`
 (part of `./gradlew build`) to verify.
+Multi-line vertical/staircase call chain structure.
 
 ## Commands
 
