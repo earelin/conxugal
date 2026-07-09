@@ -93,6 +93,9 @@ flowchart LR
    Server-rendered login + forbidden pages and the login form. *(SPEC-0002 #1, #3)*
 5. **[TASK-0005](TASK-0005-logout-and-spa-401-handling.md)** —
    Logout and the SPA 401-handling redirect to login. *(SPEC-0002 #7)*
+6. **[TASK-0006](TASK-0006-run-authentication-off-the-event-loop.md)** —
+   Dispatch `UserAuthenticationProvider`'s blocking credential check onto the blocking
+   executor instead of the event loop. *(SPEC-0002 #2–#3)*
 
 ## Edge cases
 - **Indistinct failure** — unknown email vs. wrong password must not be separable; the
