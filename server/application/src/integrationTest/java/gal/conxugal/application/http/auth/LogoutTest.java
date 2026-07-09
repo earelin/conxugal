@@ -19,8 +19,10 @@ import io.micronaut.runtime.server.EmbeddedServer;
 import io.micronaut.security.authentication.UsernamePasswordCredentials;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
+import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +40,11 @@ class LogoutTest extends AuthenticationTestSupport {
     configuration.setFollowRedirects(false);
     client = HttpClient.create(embeddedServer.getURL(), configuration).toBlocking();
     seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
+  }
+
+  @AfterEach
+  void tearDown() throws IOException {
+    client.close();
   }
 
   @Test

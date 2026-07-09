@@ -16,6 +16,8 @@ import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.runtime.server.EmbeddedServer;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
+import java.io.IOException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +34,11 @@ class AcceptHeaderRejectionTest extends AuthenticationTestSupport {
     HttpClientConfiguration configuration = new DefaultHttpClientConfiguration();
     configuration.setFollowRedirects(false);
     client = HttpClient.create(embeddedServer.getURL(), configuration).toBlocking();
+  }
+
+  @AfterEach
+  void tearDown() throws IOException {
+    client.close();
   }
 
   @Test
