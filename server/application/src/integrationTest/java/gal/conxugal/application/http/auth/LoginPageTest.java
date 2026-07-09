@@ -1,6 +1,7 @@
 package gal.conxugal.application.http.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.domain.auth.Role;
@@ -14,6 +15,7 @@ import io.micronaut.http.client.BlockingHttpClient;
 import io.micronaut.http.client.DefaultHttpClientConfiguration;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.HttpClientConfiguration;
+import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.runtime.server.EmbeddedServer;
 import io.micronaut.security.authentication.UsernamePasswordCredentials;
 import io.micronaut.security.csrf.CsrfConfiguration;
@@ -94,6 +96,17 @@ class LoginPageTest extends AuthenticationTestSupport {
     assertThat(response.getHeaders().get(HttpHeaders.LOCATION)).isEqualTo("/login?error=true");
   }
 
+  @Test
+  void submitting_the_html_form_with_tampered_csrf_token_is_rejected() {
+    HttpRequest<?> request =
+        formLoginRequestWithTamperedCsrfToken("user@example.com", "user-password");
+
+    assertThatThrownBy(() -> client.exchange(request))
+        .isInstanceOf(HttpClientResponseException.class)
+        .extracting(exception -> ((HttpClientResponseException) exception).getStatus().getCode())
+        .isEqualTo(HttpStatus.UNAUTHORIZED.getCode());
+  }
+
   private String login(String email, String password) {
     HttpResponse<?> response = client.exchange(HttpRequest
         .POST("/login", new UsernamePasswordCredentials(email, password))
@@ -102,15 +115,14 @@ class LoginPageTest extends AuthenticationTestSupport {
   }
 
   private HttpRequest<?> formLoginRequest(String email, String password) {
-    String cookieName = csrfConfiguration.getCookieName();
-    HttpResponse<?> loginPage = client.exchange(HttpRequest.GET("/login"));
-    String csrfCookieHeader = loginPage.getHeaders().getAll(HttpHeaders.SET_COOKIE).stream()
-        .filter(header -> header.startsWith(cookieName + "="))
-        .findFirst()
-        .orElseThrow()
-        .split(";", 2)[0];
+    String csrfCookieHeader = csrfCookieHeaderOf(client.exchange(HttpRequest.GET("/login")));
     String csrfToken = csrfCookieHeader.substring(csrfCookieHeader.indexOf('=') + 1);
 
+    return formLoginRequest(email, password, csrfCookieHeader, csrfToken);
+  }
+
+  private HttpRequest<?> formLoginRequest(
+      String email, String password, String csrfCookieHeader, String csrfToken) {
     Map<String, String> form = new HashMap<>();
     form.put("username", email);
     form.put("password", password);
@@ -119,5 +131,20 @@ class LoginPageTest extends AuthenticationTestSupport {
     return HttpRequest.POST("/login", form)
         .header(HttpHeaders.COOKIE, csrfCookieHeader)
         .contentType(MediaType.APPLICATION_FORM_URLENCODED_TYPE);
+  }
+
+  private HttpRequest<?> formLoginRequestWithTamperedCsrfToken(String email, String password) {
+    String csrfCookieHeader = csrfCookieHeaderOf(client.exchange(HttpRequest.GET("/login")));
+
+    return formLoginRequest(email, password, csrfCookieHeader, "tampered-token");
+  }
+
+  private String csrfCookieHeaderOf(HttpResponse<?> loginPage) {
+    String cookieName = csrfConfiguration.getCookieName();
+    return loginPage.getHeaders().getAll(HttpHeaders.SET_COOKIE).stream()
+        .filter(header -> header.startsWith(cookieName + "="))
+        .findFirst()
+        .orElseThrow()
+        .split(";", 2)[0];
   }
 }
