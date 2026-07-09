@@ -5,6 +5,6 @@ package gal.conxugal.domain.auth;
  * granted to {@code USER} is also granted to {@code ADMIN}.
  */
 public enum Role {
-    USER,
-    ADMIN
+  USER,
+  ADMIN
 }
