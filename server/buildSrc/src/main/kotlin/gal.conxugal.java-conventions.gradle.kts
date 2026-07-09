@@ -1,8 +1,10 @@
 import com.github.spotbugs.snom.Effort
 import com.github.spotbugs.snom.SpotBugsTask
+import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.plugins.quality.Pmd
+import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 plugins {
@@ -10,6 +12,7 @@ plugins {
     checkstyle
     pmd
     id("com.github.spotbugs")
+    id("net.ltgt.errorprone")
 }
 
 val libs = extensions.getByType(VersionCatalogsExtension::class.java).named("libs")
@@ -65,6 +68,14 @@ tasks.withType<SpotBugsTask>().configureEach {
     reports.create("xml")
 }
 
+tasks.withType<JavaCompile>().configureEach {
+    options.errorprone {
+        disableWarningsInGeneratedCode = true
+        excludedPaths = ".*/generated/.*"
+    }
+}
+
 dependencies {
     spotbugsPlugins(libs.findLibrary("findsecbugs-plugin").get())
+    errorprone(libs.findLibrary("errorprone-core").get())
 }
