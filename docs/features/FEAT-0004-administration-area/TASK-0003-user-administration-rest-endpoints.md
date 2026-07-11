@@ -10,7 +10,10 @@ depends_on: [TASK-0001, TASK-0002]
 Governed by [ADR-0006](../../architecture/0006-reserved-api-url-prefix.md) (reserved `/api/` prefix), [ADR-0005](../../architecture/0005-session-based-authentication.md) (`@Secured`) and [ADR-0010](../../architecture/0010-design-first-openapi-contract.md) (design-first OpenAPI contract). Driving adapter over the use cases from [TASK-0001](TASK-0001-account-lifecycle-domain.md); no new domain logic.
 
 ## Scope
-- `GET  /api/admin/users` — list accounts (email, role, enabled, created date).
+- `GET  /api/admin/users` — list accounts (email, role, enabled, created date, and last
+  login date). The last-login value is the `lastLoginAt` already carried on `User` (from
+  [FEAT-0002](../FEAT-0002-user-authentication/README.md), SPEC-0002 R13); the endpoint
+  only reads it, and it is null until the account's first successful login.
 - `POST /api/admin/users` — create account from email and role only; the server generates the initial password and returns it **once** in the response body.
 - `POST /api/admin/users/{id}/enabled` — set enabled true/false.
 - All endpoints carry `@Secured("ADMIN")` and conform to the [OpenAPI contract](../../api/openapi.yaml).
@@ -18,7 +21,8 @@ Governed by [ADR-0006](../../architecture/0006-reserved-api-url-prefix.md) (rese
 
 ## Acceptance criteria
 - A `USER` (or unauthenticated caller) is denied with 403; an `ADMIN` is allowed. ([SPEC-0003](../../specs/SPEC-0003-administration-area.md) #1)
-- `GET` returns every account with email, role, state, and created date. (SPEC-0003 #5)
+- `GET` returns every account with email, role, state, created date, and last login date
+  (null for an account that has never logged in successfully). (SPEC-0003 #5; SPEC-0002 #10)
 - `POST` creating a valid account returns the generated initial password once; the account then appears in the list and can authenticate with that password. (SPEC-0003 #6)
 - `POST` with an already-existing email is rejected and the existing account is unchanged. (SPEC-0003 #7)
 - The enabled endpoint disables then re-enables an account, changing whether it can authenticate. (SPEC-0003 #8, #9)

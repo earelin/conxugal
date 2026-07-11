@@ -238,6 +238,12 @@ components:
           type: string
           format: date-time
           description: When the account was created.
+        lastLoginAt:
+          type: [string, "null"]
+          format: date-time
+          description: >-
+            The account's most recent successful login, recorded per SPEC-0002 R13.
+            Null until the account's first successful login.
 
     CreateUserRequest:
       type: object

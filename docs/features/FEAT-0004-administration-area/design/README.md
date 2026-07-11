@@ -65,9 +65,11 @@ reads as part of the same product rather than a bolt-on.
   o …* timestamp and refresh affordance convey the status is live, not stale (R4). The
   runtime card shows only coarse info (version, environment, uptime, memory, OS) and
   states explicitly that **no credentials or connection strings** are ever shown (R5).
-- **User list (R6, R11):** every account is listed with email, role and state; disabled
-  rows are dimmed but present (never removed), and the caption reinforces that accounts
-  are only disabled, never deleted.
+- **User list (R6, R11):** every account is listed with email, role, state, created date
+  and last login date (the most recent successful login recorded per SPEC-0002 R13,
+  shown as *Nunca* when the account has never logged in); disabled rows are dimmed but
+  present (never removed), and the caption reinforces that accounts are only disabled,
+  never deleted.
 - **Create user (R7, R8, R13):** the *Novo usuario* dialog collects email, role and an
   initial password; the password field notes it is stored encrypted and never shown in
   clear (R13). Uniqueness (R8) surfaces at submit time as a field error (not mocked here).

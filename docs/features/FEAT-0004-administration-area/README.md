@@ -32,8 +32,9 @@ the `@Secured(ADMIN)` rules already delivered in
   runtime info) without exposing secrets.
 - **Application (driving):** `ADMIN`-only REST endpoints for user administration and for
   system status under `/api/admin/`.
-- **UI:** an admin section in the SPA — dashboard page, user-list page, create-user form,
-  and a disable/enable action — with Galician chrome, shown only to administrators.
+- **UI:** an admin section in the SPA — dashboard page, user-list page (surfacing each
+  account's last successful login alongside its created date), create-user form, and a
+  disable/enable action — with Galician chrome, shown only to administrators.
 
 **Out of scope (future specs/features):** editing an existing account's email or role,
 password reset / self-service credential change, self-registration, audit logging of
@@ -92,6 +93,17 @@ flowchart LR
 - `SetUserEnabled` refuses to disable the last enabled `ADMIN` (SPEC-0003 R12); the
   count is checked in the same transaction as the update.
 
+### Last login in the account list
+- The `User` already carries a `lastLoginAt` — the moment of its most recent successful
+  login, stamped by the authenticate use case and delivered by
+  [FEAT-0002](../FEAT-0002-user-authentication/README.md)
+  ([SPEC-0002](../../specs/SPEC-0002-user-authentication.md) R13). This feature only
+  **reads and surfaces** it in the user list; it adds no new domain state, column, or
+  write path for the value.
+- The value is nullable: an account that has never logged in successfully has none. The
+  list renders that absence explicitly (Galician *Nunca*) rather than an empty cell, so
+  "never logged in" is distinguishable from a missing render.
+
 ### System status
 - A `SystemStatusProbe` port returns overall service state plus datastore reachability,
   assembled fresh per request (SPEC-0003 R4). The adapter runs a lightweight datastore
@@ -104,7 +116,8 @@ flowchart LR
   this snapshot.
 
 ### API surface ([ADR-0006](../../architecture/0006-reserved-api-url-prefix.md))
-- `GET  /api/admin/users` — list accounts (email, role, enabled, created date).
+- `GET  /api/admin/users` — list accounts (email, role, enabled, created date, last
+  login date — the last-login value is null until the account's first successful login).
 - `POST /api/admin/users` — create account (email, role); the server generates the
   initial password and returns it once in the creation response.
 - `POST /api/admin/users/{id}/enabled` — set enabled true/false.
@@ -116,7 +129,7 @@ flowchart LR
 ### UI ([ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md))
 - A new admin section (routes + nav entry) shown only when the session role is `ADMIN`;
   the server rules remain the real gate. Pages: **Dashboard** (status), **Users** (list showing
-  email, role, state, and created date + create form + disable/enable). The create form
+  email, role, state, created date, and last login date + create form + disable/enable). The create form
   asks only for email and role (no password
   field); on success it shows the server-generated password once, with a copy affordance
   and a warning that it will not be shown again. Chrome and messages in Galician
@@ -139,9 +152,9 @@ flowchart LR
    datastore/runtime adapter, and `GET /api/admin/system-status`. *(SPEC-0003 #1–#4)*
 5. **Admin UI shell + dashboard** — admin section, admin-only nav gating, and the
    dashboard page consuming system status. *(SPEC-0003 #1, #2)*
-6. **User-administration UI** — user list (email, role, state, created date), create-user
-   form (email + role only), the one-time generated-password reveal after creation, and
-   the disable/enable action. *(SPEC-0003 #5–#7, #9, #10)*
+6. **User-administration UI** — user list (email, role, state, created date, last login
+   date), create-user form (email + role only), the one-time generated-password reveal
+   after creation, and the disable/enable action. *(SPEC-0003 #5–#7, #9, #10; SPEC-0002 #10)*
 
 ## Edge cases
 - **Disabled account is indistinct at login** — a disabled account produces the same
