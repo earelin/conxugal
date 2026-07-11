@@ -40,8 +40,9 @@ Access control for the area itself is established by SPEC-0002 (the admin area i
 ### User administration
 
 - **R6** — An administrator can view a list of all user accounts, each showing its
-  identity (email), role, account state (enabled or disabled), and the date the account
-  was created.
+  identity (email), role, account state (enabled or disabled), the date the account was
+  created, and the date of its most recent successful login (the value recorded per
+  SPEC-0002 R13, empty until the account's first successful login).
 - **R7** — An administrator can create a new user account by supplying an email and a
   role; the system generates the initial password (the administrator does not choose
   it). The new account can authenticate immediately per SPEC-0002 with that password.
@@ -103,7 +104,8 @@ Access control for the area itself is established by SPEC-0002 (the admin area i
 4. **(R5)** No secret or credential value appears anywhere in the dashboard's reported
    status.
 5. **(R6)** The user list shows every account — enabled and disabled — with its email,
-   role, state, and creation date.
+   role, state, creation date, and most-recent-login date (empty for an account that has
+   never logged in successfully).
 6. **(R7)** After an administrator creates an account with a valid email and role, the
    system returns a generated initial password, that account appears in the list, and it
    can authenticate per SPEC-0002 with the returned password.
