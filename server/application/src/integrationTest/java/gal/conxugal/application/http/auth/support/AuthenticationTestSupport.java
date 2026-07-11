@@ -51,12 +51,16 @@ public abstract class AuthenticationTestSupport {
   protected static String sessionCookieOf(HttpResponse<?> response) {
     String setCookieHeader = response.getHeaders().get(HttpHeaders.SET_COOKIE);
     Objects.requireNonNull(setCookieHeader, "Set-Cookie header must be present");
-    return setCookieHeader.split(";", 2)[0];
+    return firstCookiePairOf(setCookieHeader);
   }
 
   protected static String sessionCookieOf(Response response) {
     String setCookieHeader = response.getHeader(HttpHeaders.SET_COOKIE);
     Objects.requireNonNull(setCookieHeader, "Set-Cookie header must be present");
+    return firstCookiePairOf(setCookieHeader);
+  }
+
+  private static String firstCookiePairOf(String setCookieHeader) {
     return setCookieHeader.split(";", 2)[0];
   }
 }
