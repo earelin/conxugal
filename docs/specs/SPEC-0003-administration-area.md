@@ -38,10 +38,11 @@ Access control for the area itself is established by SPEC-0002 (the admin area i
 ### User administration
 
 - **R6** — An administrator can view a list of all user accounts, each showing its
-  identity (email), role, and account state (enabled or disabled).
-- **R7** — An administrator can create a new user account by supplying an email, a
-  role, and an initial password. The new account can authenticate immediately per
-  SPEC-0002.
+  identity (email), role, account state (enabled or disabled), and the date the account
+  was created.
+- **R7** — An administrator can create a new user account by supplying an email and a
+  role; the system generates the initial password (the administrator does not choose
+  it). The new account can authenticate immediately per SPEC-0002 with that password.
 - **R8** — Email uniquely identifies an account; an attempt to create an account with
   an email that already exists is rejected without altering the existing account.
 - **R9** — An administrator can disable an existing account. A disabled account cannot
@@ -56,9 +57,21 @@ Access control for the area itself is established by SPEC-0002 (the admin area i
 
 ### Credentials
 
-- **R13** — Passwords supplied when creating an account are handled under SPEC-0002's
-  credential rules (never stored or displayed in a recoverable form, never exposed in
-  logs, errors, or responses).
+- **R13** — A created account's password is stored under SPEC-0002's credential rules
+  (never kept or exposed in a recoverable form, never exposed in logs or errors). The
+  system-generated initial password is the one exception to non-disclosure: it is shown
+  to the creating administrator **exactly once**, in the direct response to the creation
+  request, so it can be relayed to the new user.
+- **R14** — The system generates the initial password from a cryptographically secure,
+  unpredictable source; it is not derived from the email, role, or any other guessable
+  value.
+- **R15** — Every generated password meets a fixed strength policy: at least 16
+  characters, drawn from a mix of uppercase letters, lowercase letters, digits, and
+  symbols. The policy is uniform for all generated passwords.
+- **R16** — Once the creation response is returned, the generated password is not
+  retrievable by any function of the administration area; it never appears in the user
+  list, a later read, or any subsequent response. If it is lost before being relayed,
+  there is no recovery within this area.
 
 ## Acceptance criteria
 
@@ -71,9 +84,10 @@ Access control for the area itself is established by SPEC-0002 (the admin area i
 4. **(R5)** No secret or credential value appears anywhere in the dashboard's reported
    status.
 5. **(R6)** The user list shows every account — enabled and disabled — with its email,
-   role, and state.
-6. **(R7)** After an administrator creates an account with a valid email, role, and
-   password, that account appears in the list and can authenticate per SPEC-0002.
+   role, state, and creation date.
+6. **(R7)** After an administrator creates an account with a valid email and role, the
+   system returns a generated initial password, that account appears in the list, and it
+   can authenticate per SPEC-0002 with the returned password.
 7. **(R8)** Creating an account with an already-existing email is rejected and the
    existing account is unchanged.
 8. **(R9)** After an account is disabled, an authentication attempt with its correct
@@ -84,4 +98,11 @@ Access control for the area itself is established by SPEC-0002 (the admin area i
     account is still present and can be re-enabled.
 11. **(R12)** An attempt to disable the only remaining enabled administrator is rejected
     and that account stays enabled.
-12. **(R13)** At no point is a created account's password readable in its original form.
+12. **(R13)** A created account's password is readable in its original form only in the
+    direct response to its creation request, and at no other point (not in the user list,
+    a later read, logs, or errors).
+13. **(R14, R15)** A generated initial password is at least 16 characters and includes
+    uppercase letters, lowercase letters, digits, and symbols; two accounts created in
+    succession receive different, unpredictable passwords.
+14. **(R16)** After the creation response is returned, no administration function
+    surfaces the generated password again.
