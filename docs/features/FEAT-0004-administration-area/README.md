@@ -160,10 +160,3 @@ flowchart LR
 - **UI is not the gate** — hiding the admin nav from a `USER` is cosmetic; a `USER`
   hitting an admin route or `/api/admin/*` directly is still denied by the server
   (SPEC-0003 #1).
-
-## Open questions
-- **System-status source:** adopt `micronaut-management` (health/info) or a custom probe?
-  If the management module is introduced, propose an ADR before task 4.
-- **Disabling a currently logged-in user:** should disabling also invalidate that user's
-  active session immediately, or only block the next authentication? SPEC-0003 #8 requires
-  only the latter; confirm whether stronger behaviour is wanted.
