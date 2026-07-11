@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0003
-adrs: [0002, 0003, 0004, 0006]
+adrs: [0002, 0003, 0004, 0006, 0010]
 status: draft
 ---
 
@@ -21,8 +21,10 @@ the `@Secured(ADMIN)` rules already delivered in
 ## Scope
 - **Domain (auth):** extend `User` with an `enabled` state and a creation timestamp; add the account-management
   use cases (list, create, disable, enable) and extend the `UserRepository` port; add a
-  `PasswordGenerator` domain service that produces a random initial password for new
-  accounts; make the existing `Authenticate` use case reject disabled accounts.
+  `UserFactory` that builds new `User` instances (assigning a UUID identity and stamping
+  `createdAt`) and a `PasswordGenerator` domain service that produces a random initial
+  password for new accounts; make the existing `Authenticate` use case reject disabled
+  accounts.
 - **Domain (system status):** a `SystemStatus` model and a port that reports overall
   service state and datastore reachability.
 - **Infrastructure:** a migration adding the `enabled` and `created_at` columns; extend
@@ -35,7 +37,9 @@ the `@Secured(ADMIN)` rules already delivered in
 
 **Out of scope (future specs/features):** editing an existing account's email or role,
 password reset / self-service credential change, self-registration, audit logging of
-admin actions, and any hard-delete of accounts (explicitly excluded by SPEC-0003 R11).
+admin actions, any hard-delete of accounts (explicitly excluded by SPEC-0003 R11), and
+detailed live runtime metrics (owned by
+[FEAT-0005](../FEAT-0005-admin-realtime-metrics/README.md), streamed over SSE).
 
 ## Design
 
@@ -48,6 +52,7 @@ flowchart LR
     end
     subgraph domain["domain"]
         lifecycle["ListUsers / CreateUser / SetUserEnabled"]
+        factory["UserFactory (UUID + createdAt)"]
         pwgen["PasswordGenerator (service)"]
         authuc["Authenticate (rejects disabled)"]
         status["SystemStatus + SystemStatusProbe (port)"]
@@ -65,9 +70,13 @@ flowchart LR
 - `User` gains an `enabled` boolean and a `createdAt` timestamp. The `UserRepository`
   port grows `findAll()`, an insert for new accounts, and an operation to set an
   account's `enabled` state.
-- `CreateUser` stamps `createdAt` from an injected clock at insert time (rather than
-  relying on a database default) so the value is deterministic and unit-testable. The
-  migration backfills pre-existing rows with a column default (see infrastructure task).
+- A `UserFactory` builds every new `User`, assigning the identity (a UUID) and stamping
+  `createdAt`; both the id source and the clock are injected, so construction is
+  deterministic and unit-testable and the id/timestamp policy lives in one place.
+  `CreateUser` obtains the new account from the factory rather than constructing it
+  inline (rather than relying on a database default for either value). The migration
+  backfills pre-existing rows' `created_at` with a column default (see infrastructure
+  task).
 - `Authenticate` denies a disabled account **after** the password check so the outcome
   stays indistinct from a wrong-password failure (SPEC-0002 R3): a disabled account is
   never a distinguishable signal.
@@ -88,9 +97,11 @@ flowchart LR
   assembled fresh per request (SPEC-0003 R4). The adapter runs a lightweight datastore
   connectivity check and reports coarse runtime info only — **never** connection strings,
   passwords, or other secrets (SPEC-0003 R5).
-- **Open decision:** whether to source this from Micronaut's management endpoints
-  (`micronaut-management` health/info) or a custom probe. If we adopt the management
-  module as a cross-cutting choice, record an ADR first (see *Open questions*).
+- This endpoint stays a **coarse snapshot**. Detailed, live runtime metrics for debugging
+  (SPEC-0003 R17–R21) are a separate concern, delivered over SSE by
+  [FEAT-0005](../FEAT-0005-admin-realtime-metrics/README.md)
+  ([ADR-0009](../../architecture/0009-sse-admin-realtime-metrics.md)), not by expanding
+  this snapshot.
 
 ### API surface ([ADR-0006](../../architecture/0006-reserved-api-url-prefix.md))
 - `GET  /api/admin/users` — list accounts (email, role, enabled, created date).
@@ -99,6 +110,8 @@ flowchart LR
 - `POST /api/admin/users/{id}/enabled` — set enabled true/false.
 - `GET  /api/admin/system-status` — current system status.
 - All carry `@Secured("ADMIN")`; a `USER` gets 403 (SPEC-0003 R1).
+- The full request/response contract for these endpoints is defined in the
+  [OpenAPI document](../../api/openapi.yaml).
 
 ### UI ([ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md))
 - A new admin section (routes + nav entry) shown only when the session role is `ADMIN`;
@@ -112,9 +125,10 @@ flowchart LR
 ## Sequencing (tasks, one small change each)
 1. **Account-lifecycle domain** — add `enabled` and `createdAt` to `User`; add `ListUsers`,
    `CreateUser`, `SetUserEnabled` use cases and extend `UserRepository`; add the
-   `PasswordGenerator` service and have `CreateUser` generate and return the initial
-   password once and stamp `createdAt` from an injected clock; make `Authenticate` reject
-   disabled accounts. *(SPEC-0003 #6–#9, #11, #12; SPEC-0002 #3)*
+   `UserFactory` (assigns UUID + `createdAt` from injected id source and clock) and the
+   `PasswordGenerator` service, and have `CreateUser` build the account via the factory
+   and generate and return the initial password once; make `Authenticate` reject disabled
+   accounts. *(SPEC-0003 #6–#9, #11, #12; SPEC-0002 #3)*
 2. **User-store infrastructure** — migration adding the `enabled` column (default true) and
    the `created_at` column (default current timestamp, to backfill existing rows); extend
    `JdbcUserRepository` with `findAll`, insert, and set-enabled. *(SPEC-0003 #5–#9)*

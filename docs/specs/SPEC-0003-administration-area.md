@@ -11,7 +11,9 @@ where they monitor the running system and manage the user accounts that
 [SPEC-0002](SPEC-0002-user-authentication.md) assumes already exist. It offers two
 capabilities: a **system dashboard** that reports the server's operational status, and
 **user administration** to list, create, and disable accounts. Accounts are never
-deleted — disabling is the only way to remove access.
+deleted — disabling is the only way to remove access. The dashboard also offers, for
+administrators, a **live view of detailed runtime metrics** for debugging a running
+instance; these metrics are transient and are not stored by the system.
 
 Access control for the area itself is established by SPEC-0002 (the admin area is
 `ADMIN`-only); this spec describes what the area *contains*.
@@ -73,6 +75,23 @@ Access control for the area itself is established by SPEC-0002 (the admin area i
   list, a later read, or any subsequent response. If it is lost before being relayed,
   there is no recovery within this area.
 
+### Detailed metrics
+
+- **R17** — An administrator can open a view of detailed runtime metrics of the running
+  instance (for example memory, threads, uptime, and request and datastore-pool
+  counters). This is richer than the coarse operational status of R2/R3 and is intended
+  for debugging.
+- **R18** — The detailed metrics update **live** as the instance's state changes, without
+  the viewer having to manually refresh.
+- **R19** — The detailed metrics are available only to administrators; a `USER` or an
+  unauthenticated visitor cannot obtain them (consistent with R1).
+- **R20** — The system does not store detailed metrics: they reflect the instance's
+  current state, the backend keeps no history of them, and there is no function that
+  returns past metric values. Any retained history exists only in the viewing client, for
+  that admin's debugging, and is discarded when they leave or reload the view.
+- **R21** — The detailed metrics never disclose secrets or credentials (the same rule as
+  R5).
+
 ## Acceptance criteria
 
 1. **(R1)** An authenticated `USER` who requests any administration-area screen or
@@ -106,3 +125,11 @@ Access control for the area itself is established by SPEC-0002 (the admin area i
     succession receive different, unpredictable passwords.
 14. **(R16)** After the creation response is returned, no administration function
     surfaces the generated password again.
+15. **(R17, R18)** An administrator opening the detailed-metrics view sees runtime metrics
+    that update live as the instance changes, without a manual refresh.
+16. **(R19)** A `USER` or unauthenticated visitor that requests the detailed metrics is
+    denied.
+17. **(R20)** No detailed metric value is persisted by the backend: there is no function
+    or store that returns a past metric value, and history held in the client is cleared
+    on reload.
+18. **(R21)** No secret or credential value appears anywhere in the detailed metrics.
