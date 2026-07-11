@@ -82,8 +82,10 @@
   <rect x="284" y="246" width="972" height="24" fill="#f8f9fa"/>
   <line x1="284" y1="270" x2="1256" y2="270" stroke="#e9ecef"/>
   <text x="316" y="251" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">PERSOA</text>
-  <text x="732" y="251" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ROL</text>
-  <text x="892" y="251" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ESTADO</text>
+  <text x="600" y="251" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ROL</text>
+  <text x="740" y="251" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ESTADO</text>
+  <text x="872" y="251" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">CREACIÓN</text>
+  <text x="980" y="251" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ÚLTIMO ACCESO</text>
   <text x="1224" y="251" text-anchor="end" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ACCIÓNS</text>
 
   <!-- ===== row 1: ana.pereira — admin, enabled, last admin (disable blocked) ===== -->
@@ -93,11 +95,14 @@
     <text x="360" y="296" font-size="14" font-weight="500" fill="#212529">ana.pereira@conxugal.gal</text>
     <text x="360" y="312" font-size="11" fill="#868e96">A túa conta</text>
     <!-- rol badge -->
-    <rect x="732" y="289" width="112" height="22" rx="11" fill="#edf2ff"/>
-    <text x="788" y="301" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#3b5bdb">ADMINISTRADOR</text>
+    <rect x="600" y="289" width="112" height="22" rx="11" fill="#edf2ff"/>
+    <text x="656" y="301" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#3b5bdb">ADMINISTRADOR</text>
     <!-- estado badge -->
-    <rect x="892" y="289" width="84" height="22" rx="11" fill="#ebfbee"/>
-    <text x="934" y="301" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVADA</text>
+    <rect x="740" y="289" width="84" height="22" rx="11" fill="#ebfbee"/>
+    <text x="782" y="301" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVADA</text>
+    <!-- creada / último acceso -->
+    <text x="872" y="304" font-size="13" fill="#495057">3 feb 2025</text>
+    <text x="980" y="304" font-size="13" fill="#495057">10 xul 2026</text>
     <!-- action: disabled -->
     <rect x="1124" y="288" width="100" height="26" rx="8" fill="#f1f3f5"/>
     <g stroke="#adb5bd" stroke-width="1.3" fill="none">
@@ -113,10 +118,12 @@
     <circle cx="332" cy="358" r="16" fill="#12b886"/>
     <text x="332" y="358" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="600" fill="#ffffff">BO</text>
     <text x="360" y="362" font-size="14" font-weight="500" fill="#212529">brais.otero@conxugal.gal</text>
-    <rect x="732" y="347" width="72" height="22" rx="11" fill="#f1f3f5"/>
-    <text x="768" y="359" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#495057">USUARIO</text>
-    <rect x="892" y="347" width="84" height="22" rx="11" fill="#ebfbee"/>
-    <text x="934" y="359" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVADA</text>
+    <rect x="600" y="347" width="72" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="636" y="359" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#495057">USUARIO</text>
+    <rect x="740" y="347" width="84" height="22" rx="11" fill="#ebfbee"/>
+    <text x="782" y="359" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVADA</text>
+    <text x="872" y="362" font-size="13" fill="#495057">12 mar 2025</text>
+    <text x="980" y="362" font-size="13" fill="#495057">8 xul 2026</text>
     <rect x="1124" y="346" width="100" height="26" rx="8" fill="#ffffff" stroke="#ced4da"/>
     <text x="1174" y="359" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Desactivar</text>
   </g>
@@ -127,24 +134,28 @@
     <circle cx="332" cy="416" r="16" fill="#ae3ec9"/>
     <text x="332" y="416" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="600" fill="#ffffff">CV</text>
     <text x="360" y="420" font-size="14" font-weight="500" fill="#212529">carme.vila@conxugal.gal</text>
-    <rect x="732" y="405" width="72" height="22" rx="11" fill="#f1f3f5"/>
-    <text x="768" y="417" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#495057">USUARIO</text>
-    <rect x="892" y="405" width="84" height="22" rx="11" fill="#ebfbee"/>
-    <text x="934" y="417" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVADA</text>
+    <rect x="600" y="405" width="72" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="636" y="417" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#495057">USUARIO</text>
+    <rect x="740" y="405" width="84" height="22" rx="11" fill="#ebfbee"/>
+    <text x="782" y="417" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVADA</text>
+    <text x="872" y="420" font-size="13" fill="#495057">20 abr 2025</text>
+    <text x="980" y="420" font-size="13" fill="#495057">1 xul 2026</text>
     <rect x="1124" y="404" width="100" height="26" rx="8" fill="#ffffff" stroke="#ced4da"/>
     <text x="1174" y="417" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Desactivar</text>
   </g>
   <line x1="284" y1="444" x2="1256" y2="444" stroke="#f1f3f5"/>
 
-  <!-- ===== row 4: diego.senra — user, enabled ===== -->
+  <!-- ===== row 4: diego.senra — user, enabled, never logged in ===== -->
   <g>
     <circle cx="332" cy="474" r="16" fill="#f76707"/>
     <text x="332" y="474" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="600" fill="#ffffff">DS</text>
     <text x="360" y="478" font-size="14" font-weight="500" fill="#212529">diego.senra@conxugal.gal</text>
-    <rect x="732" y="463" width="72" height="22" rx="11" fill="#f1f3f5"/>
-    <text x="768" y="475" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#495057">USUARIO</text>
-    <rect x="892" y="463" width="84" height="22" rx="11" fill="#ebfbee"/>
-    <text x="934" y="475" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVADA</text>
+    <rect x="600" y="463" width="72" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="636" y="475" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#495057">USUARIO</text>
+    <rect x="740" y="463" width="84" height="22" rx="11" fill="#ebfbee"/>
+    <text x="782" y="475" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVADA</text>
+    <text x="872" y="478" font-size="13" fill="#495057">5 mai 2026</text>
+    <text x="980" y="478" font-size="13" font-style="italic" fill="#adb5bd">Nunca</text>
     <rect x="1124" y="462" width="100" height="26" rx="8" fill="#ffffff" stroke="#ced4da"/>
     <text x="1174" y="475" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Desactivar</text>
   </g>
@@ -155,10 +166,12 @@
     <circle cx="332" cy="532" r="16" fill="#e9ecef"/>
     <text x="332" y="532" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="600" fill="#adb5bd">HM</text>
     <text x="360" y="536" font-size="14" font-weight="500" fill="#adb5bd">helena.mar@conxugal.gal</text>
-    <rect x="732" y="521" width="72" height="22" rx="11" fill="#f1f3f5"/>
-    <text x="768" y="533" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">USUARIO</text>
-    <rect x="892" y="521" width="98" height="22" rx="11" fill="#f1f3f5"/>
-    <text x="941" y="533" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">DESACTIVADA</text>
+    <rect x="600" y="521" width="72" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="636" y="533" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">USUARIO</text>
+    <rect x="740" y="521" width="98" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="789" y="533" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">DESACTIVADA</text>
+    <text x="872" y="536" font-size="13" fill="#adb5bd">18 set 2025</text>
+    <text x="980" y="536" font-size="13" fill="#adb5bd">2 mar 2026</text>
     <rect x="1124" y="520" width="100" height="26" rx="8" fill="#ebfbee"/>
     <text x="1174" y="533" text-anchor="middle" font-size="12" font-weight="600" fill="#2b8a3e">Activar</text>
   </g>
@@ -169,10 +182,12 @@
     <circle cx="332" cy="590" r="16" fill="#e9ecef"/>
     <text x="332" y="590" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="600" fill="#adb5bd">IF</text>
     <text x="360" y="594" font-size="14" font-weight="500" fill="#adb5bd">iago.franco@conxugal.gal</text>
-    <rect x="732" y="579" width="72" height="22" rx="11" fill="#f1f3f5"/>
-    <text x="768" y="591" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">USUARIO</text>
-    <rect x="892" y="579" width="98" height="22" rx="11" fill="#f1f3f5"/>
-    <text x="941" y="591" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">DESACTIVADA</text>
+    <rect x="600" y="579" width="72" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="636" y="591" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">USUARIO</text>
+    <rect x="740" y="579" width="98" height="22" rx="11" fill="#f1f3f5"/>
+    <text x="789" y="591" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">DESACTIVADA</text>
+    <text x="872" y="594" font-size="13" fill="#adb5bd">27 out 2025</text>
+    <text x="980" y="594" font-size="13" fill="#adb5bd">14 xan 2026</text>
     <rect x="1124" y="578" width="100" height="26" rx="8" fill="#ebfbee"/>
     <text x="1174" y="591" text-anchor="middle" font-size="12" font-weight="600" fill="#2b8a3e">Activar</text>
   </g>
