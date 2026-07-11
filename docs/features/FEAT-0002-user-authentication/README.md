@@ -17,8 +17,9 @@ hashing and security wiring are driven adapters; the login/logout endpoints and
 `@Secured` rules are the driving side.
 
 ## Scope
-- **Domain:** `User`, `Role` (`USER`, `ADMIN`), the authenticate use case, and the
-  `UserRepository` / `PasswordEncoder` ports.
+- **Domain:** `User`, `Role` (`USER`, `ADMIN`), the authenticate use case (which also
+  records the most recent successful login), and the `UserRepository` /
+  `PasswordEncoder` ports.
 - **Infrastructure:** a PostgreSQL user store, a salted-hash `PasswordEncoder` adapter,
   and the Micronaut Security session wiring.
 - **Application / driving side:** a server-rendered login page and forbidden page,
@@ -80,6 +81,20 @@ flowchart LR
 - Passwords are stored as **salted hashes**; verification compares hashes. Plaintext is
   never stored, logged, or returned.
 
+### Login record ([SPEC-0002](../../specs/SPEC-0002-user-authentication.md) R13)
+- On a **successful** authentication the authenticate use case stamps the user's
+  `lastLoginAt` with the current instant and persists it through the `UserRepository`
+  port; a **failed** authentication writes nothing. The instant comes from an injectable
+  clock so the behaviour is unit-testable without wall-clock dependence.
+- The column lives directly on the persisted `User`
+  (**[ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md)**) —
+  a nullable `last_login_at`, null until the first successful login — rather than a
+  shadow entity.
+- Recording on the success path only does not weaken the **indistinct-failure** rule:
+  both failure branches (unknown email, wrong password) still return the same generic
+  error and skip the write, so the extra persistence is not an observable signal of
+  which field was wrong.
+
 ## Sequencing (tasks, one small change each)
 1. **[TASK-0001](TASK-0001-auth-domain-user-role-authenticate.md)** —
    Auth domain: `User`, `Role` and the authenticate use case with its ports. *(domain only)*
@@ -96,6 +111,9 @@ flowchart LR
 6. **[TASK-0006](TASK-0006-run-authentication-off-the-event-loop.md)** —
    Dispatch `UserAuthenticationProvider`'s blocking credential check onto the blocking
    executor instead of the event loop. *(SPEC-0002 #2–#3)*
+7. **[TASK-0007](TASK-0007-record-last-login.md)** —
+   Record the most recent successful login: `lastLoginAt` on `User`, a `last_login_at`
+   column, and the authenticate use case stamping it on success. *(SPEC-0002 #10)*
 
 ## Edge cases
 - **Indistinct failure** — unknown email vs. wrong password must not be separable; the
@@ -107,3 +125,6 @@ flowchart LR
   being shown the login form again.
 - **No plaintext anywhere** — passwords never appear in storage, logs, error messages or
   responses (SPEC-0002 #9).
+- **Login timestamp only on success** — a rejected attempt (unknown email or wrong
+  password) leaves `lastLoginAt` untouched; a user who has never logged in successfully
+  has no recorded value (SPEC-0002 #10).
