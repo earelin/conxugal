@@ -50,7 +50,7 @@ testing {
                 implementation(libs.micronaut.security.csrf)
                 implementation(libs.mockito.junit.jupiter)
                 implementation(libs.assertj.core)
-                implementation(libs.rest.assured)
+                implementation(libs.micronaut.test.rest.assured)
             }
 
             targets {

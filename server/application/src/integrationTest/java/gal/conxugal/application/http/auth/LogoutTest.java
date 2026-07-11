@@ -1,7 +1,6 @@
 package gal.conxugal.application.http.auth;
 
 import static io.restassured.RestAssured.given;
-import static org.assertj.core.api.Assertions.assertThat;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.domain.auth.Role;
@@ -9,10 +8,9 @@ import gal.conxugal.domain.auth.User;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MediaType;
-import io.micronaut.runtime.server.EmbeddedServer;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.restassured.response.Response;
-import jakarta.inject.Inject;
+import io.restassured.specification.RequestSpecification;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,30 +18,29 @@ import org.junit.jupiter.api.Test;
 @MicronautTest
 class LogoutTest extends AuthenticationTestSupport {
 
-  @Inject
-  EmbeddedServer embeddedServer;
-
   @BeforeEach
   void setUp() {
     seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
   }
 
   @Test
-  void logging_out_invalidates_the_session_and_redirects_to_login() {
-    String sessionCookie = login("user@example.com", "user-password");
+  void logging_out_invalidates_the_session_and_redirects_to_login(RequestSpecification spec) {
+    String sessionCookie = login(spec, "user@example.com", "user-password");
 
-    Response response = logoutRequest(sessionCookie);
+    logoutRequest(spec, sessionCookie)
+        .then()
+            .statusCode(HttpStatus.SEE_OTHER.getCode())
+            .header(HttpHeaders.LOCATION, "/login");
 
-    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SEE_OTHER.getCode());
-    assertThat(response.getHeader(HttpHeaders.LOCATION)).isEqualTo("/login");
-    assertThat(protectedRequest(sessionCookie).getStatusCode())
-        .isEqualTo(HttpStatus.UNAUTHORIZED.getCode());
+    protectedRequest(spec, sessionCookie)
+        .then()
+            .statusCode(HttpStatus.UNAUTHORIZED.getCode());
   }
 
-  private String login(String email, String password) {
+  private String login(RequestSpecification spec, String email, String password) {
     Response response =
         given()
-            .baseUri(embeddedServer.getURL().toString())
+            .spec(spec)
             .redirects().follow(false)
             .contentType(MediaType.APPLICATION_JSON)
             .body("{\"username\":\"" + email + "\",\"password\":\"" + password + "\"}")
@@ -52,9 +49,9 @@ class LogoutTest extends AuthenticationTestSupport {
     return sessionCookieOf(response);
   }
 
-  private Response logoutRequest(String sessionCookie) {
+  private Response logoutRequest(RequestSpecification spec, String sessionCookie) {
     return given()
-        .baseUri(embeddedServer.getURL().toString())
+        .spec(spec)
         .redirects().follow(false)
         .contentType(MediaType.APPLICATION_JSON)
         .header(HttpHeaders.COOKIE, sessionCookie)
@@ -63,9 +60,9 @@ class LogoutTest extends AuthenticationTestSupport {
         .post("/logout");
   }
 
-  private Response protectedRequest(String sessionCookie) {
+  private Response protectedRequest(RequestSpecification spec, String sessionCookie) {
     return given()
-        .baseUri(embeddedServer.getURL().toString())
+        .spec(spec)
         .redirects().follow(false)
         .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON)
         .header(HttpHeaders.COOKIE, sessionCookie)
