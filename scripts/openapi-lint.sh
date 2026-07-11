@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# openapi-lint.sh — verify docs/api/openapi.yaml (the design-first REST contract,
-# ADR-0010) against the OpenAPI ruleset in .spectral.yaml using Spectral.
+# openapi-lint.sh — verify docs/api/openapi.yaml (the design-first REST contract)
+# against the OpenAPI ruleset in .spectral.yaml using Spectral.
 #
 # Usage: scripts/openapi-lint.sh
 set -uo pipefail
