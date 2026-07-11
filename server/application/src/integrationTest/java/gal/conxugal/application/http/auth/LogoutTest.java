@@ -1,7 +1,5 @@
 package gal.conxugal.application.http.auth;
 
-import static io.restassured.RestAssured.given;
-
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.domain.auth.Role;
 import gal.conxugal.domain.auth.User;
@@ -39,10 +37,7 @@ class LogoutTest extends AuthenticationTestSupport {
 
   private String login(RequestSpecification spec, String email, String password) {
     Response response =
-        given()
-            .spec(spec)
-            .redirects().follow(false)
-            .contentType(MediaType.APPLICATION_JSON)
+        given(spec)
             .body("{\"username\":\"" + email + "\",\"password\":\"" + password + "\"}")
         .when()
             .post("/login");
@@ -50,10 +45,7 @@ class LogoutTest extends AuthenticationTestSupport {
   }
 
   private Response logoutRequest(RequestSpecification spec, String sessionCookie) {
-    return given()
-        .spec(spec)
-        .redirects().follow(false)
-        .contentType(MediaType.APPLICATION_JSON)
+    return given(spec)
         .header(HttpHeaders.COOKIE, sessionCookie)
         .body("{}")
     .when()
@@ -61,9 +53,7 @@ class LogoutTest extends AuthenticationTestSupport {
   }
 
   private Response protectedRequest(RequestSpecification spec, String sessionCookie) {
-    return given()
-        .spec(spec)
-        .redirects().follow(false)
+    return given(spec)
         .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON)
         .header(HttpHeaders.COOKIE, sessionCookie)
     .when()

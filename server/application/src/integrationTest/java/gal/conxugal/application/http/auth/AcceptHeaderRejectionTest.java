@@ -1,7 +1,5 @@
 package gal.conxugal.application.http.auth;
 
-import static io.restassured.RestAssured.given;
-
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpStatus;
@@ -15,9 +13,7 @@ class AcceptHeaderRejectionTest extends AuthenticationTestSupport {
 
   @Test
   void xhr_shaped_request_without_session_is_rejected_not_redirected(RequestSpecification spec) {
-    given()
-        .spec(spec)
-        .redirects().follow(false)
+    given(spec)
         .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON)
     .when()
         .get("/api/data")
@@ -27,9 +23,7 @@ class AcceptHeaderRejectionTest extends AuthenticationTestSupport {
 
   @Test
   void browser_navigation_without_session_is_redirected_to_login(RequestSpecification spec) {
-    given()
-        .spec(spec)
-        .redirects().follow(false)
+    given(spec)
         .header(HttpHeaders.ACCEPT, MediaType.TEXT_HTML)
     .when()
         .get("/api/data")

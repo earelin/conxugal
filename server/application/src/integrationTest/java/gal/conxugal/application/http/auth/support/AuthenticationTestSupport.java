@@ -9,8 +9,11 @@ import gal.conxugal.domain.auth.User;
 import gal.conxugal.domain.auth.UserRepository;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
+import io.micronaut.http.MediaType;
 import io.micronaut.test.annotation.MockBean;
+import io.restassured.RestAssured;
 import io.restassured.response.Response;
+import io.restassured.specification.RequestSpecification;
 import jakarta.inject.Inject;
 import java.util.Objects;
 import java.util.Optional;
@@ -19,6 +22,13 @@ public abstract class AuthenticationTestSupport {
 
   @Inject
   protected UserRepository userRepository;
+
+  protected static RequestSpecification given(RequestSpecification spec) {
+    return RestAssured.given()
+        .spec(spec)
+        .redirects().follow(false)
+        .contentType(MediaType.APPLICATION_JSON);
+  }
 
   @MockBean(UserRepository.class)
   protected UserRepository userRepository() {
