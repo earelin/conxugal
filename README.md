@@ -55,12 +55,14 @@ Máis detalles de cada compoñente en [`server/README.md`](server/README.md) e
 
 ## Linters de documentación e CI
 
-Dous scripts verifican a documentación e os fluxos de traballo antes de facer commit
-(CI vólveos comprobar ao facer push):
+Tres scripts verifican a documentación, os fluxos de traballo e o contrato OpenAPI antes
+de facer commit (CI vólveos comprobar ao facer push):
 
 - `scripts/docs-lint.sh` — formato Markdown, ligazóns internas e diagramas Mermaid de
   `docs/` e dos `*.md` da raíz.
 - `scripts/actions-lint.sh` — os fluxos de GitHub Actions de `.github/workflows/`.
+- `scripts/openapi-lint.sh` — o contrato REST de `docs/api/openapi.yaml`
+  ([ADR-0010](docs/architecture/0010-design-first-openapi-contract.md)).
 
 Requiren estas ferramentas (os scripts avisan se falta algunha):
 
@@ -71,6 +73,9 @@ brew install lychee                                # ligazóns internas (https:/
 
 # actions-lint.sh
 brew install actionlint shellcheck                 # workflows + scripts `run:` embebidos
+
+# openapi-lint.sh
+npm install -g @stoplight/spectral-cli             # contrato OpenAPI (docs/api/openapi.yaml)
 ```
 
 Fóra de macOS, instala `lychee`, `actionlint` e `shellcheck` co xestor de paquetes do
