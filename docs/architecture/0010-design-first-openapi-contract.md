@@ -41,6 +41,9 @@ API.
   of the feature's design.
 - Controllers are written to **conform to** the document; the document is not generated from
   the code.
+- Conformance is **enforced by a contract test in CI**: the running API is validated against
+  `docs/api/openapi.yaml` so any drift between the document and the implementation fails the
+  build rather than relying on review alone.
 - The document covers the JSON REST surface under `/api/**`. Server-rendered flows outside
   `/api/` (the login/logout form of [ADR-0005](0005-session-based-authentication.md)) are
   not REST operations and are represented only as the security scheme.
@@ -48,16 +51,23 @@ API.
   it may be used to generate client types, mock servers, or human-readable API docs.
 
 ## Consequences
-+ A concrete, reviewable contract exists before implementation, so features, tasks, and the
+
+### Pros
+- A concrete, reviewable contract exists before implementation, so features, tasks, and the
   UI can be designed and agreed against it — consistent with the spec-first workflow.
-+ Frontend and backend can proceed in parallel against the agreed contract instead of one
+- Frontend and backend can proceed in parallel against the agreed contract instead of one
   waiting on the other.
-+ A single transport-level source of truth enables generated clients, mock servers, and
+- A single transport-level source of truth enables generated clients, mock servers, and
   published documentation from one file.
-− The document is hand-maintained and can drift from the controllers; conformance must be
-  upheld by review and, ideally, a contract test in CI — nothing enforces it automatically.
-− The response/request shapes are expressed both in the OpenAPI schemas and in the Java
+- Drift between the hand-authored document and the controllers is caught automatically: a
+  contract test in CI validates the running API against `docs/api/openapi.yaml` and fails the
+  build on any mismatch, so conformance no longer rests on review alone.
+
+### Cons
+- The document is hand-maintained, so a legitimate contract change means updating the OpenAPI
+  document, the controllers, and the contract test's expectations together.
+- The response/request shapes are expressed both in the OpenAPI schemas and in the Java
   DTOs, so a contract change must be made in two places.
-− We forgo code-first generation (`micronaut-openapi`). If drift becomes costly, revisit
+- We forgo code-first generation (`micronaut-openapi`). If drift becomes costly, revisit
   with a new ADR — for example, generating the document in CI and diffing it against this
   one, or switching to code-first with this document demoted to a generated output.

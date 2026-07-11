@@ -56,21 +56,25 @@ by `@Secured("ADMIN")`.
   coarse status; SSE is added only for the detailed live metrics.
 
 ## Consequences
-+ Administrators see metrics update live without the client polling; the server pushes on
+
+### Pros
+- Administrators see metrics update live without the client polling; the server pushes on
   its own cadence.
-+ SSE runs over plain HTTP and `EventSource` is a browser primitive with built-in
+- SSE runs over plain HTTP and `EventSource` is a browser primitive with built-in
   auto-reconnect, so the client side is small and needs no extra library.
-+ The session cookie authenticates the stream, so the ADR-0005 auth model and the
+- The session cookie authenticates the stream, so the ADR-0005 auth model and the
   `@Secured("ADMIN")` gate are reused verbatim — no new credential path on a long-lived
   connection.
-+ Not storing metrics keeps the backend stateless for this concern: no schema, migration,
+- Not storing metrics keeps the backend stateless for this concern: no schema, migration,
   retention, or data-protection surface.
-− Each open dashboard holds a long-lived server connection/thread for its lifetime; this is
+
+### Cons
+- Each open dashboard holds a long-lived server connection/thread for its lifetime; this is
   bounded (administrators are few) but is real and must be capped and closed cleanly.
-− SSE is one-directional and text-only; any future need for client→server streaming or
+- SSE is one-directional and text-only; any future need for client→server streaming or
   binary frames would not be served by this decision and would need its own record.
-− Long-lived streaming can be broken by intermediary buffering/timeouts (reverse proxies);
+- Long-lived streaming can be broken by intermediary buffering/timeouts (reverse proxies);
   response buffering must be disabled for the stream and the heartbeat relied on to keep it
   alive.
-− There is no server-side replay: a client that reconnects loses whatever it missed while
+- There is no server-side replay: a client that reconnects loses whatever it missed while
   disconnected. Acceptable because the metrics are live debugging aids, not an audit record.

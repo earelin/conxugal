@@ -66,22 +66,26 @@ flowchart LR
   (docker-compose file, CI job, local script) is left to the implementing task.
 
 ## Consequences
-+ Full-stack, deployment-shaped coverage of user scenarios, decoupled from internal
+
+### Pros
+- Full-stack, deployment-shaped coverage of user scenarios, decoupled from internal
   module boundaries — the hexagonal split can be refactored without touching these
   tests as long as the HTTP contract holds.
-+ A single, discoverable home for black-box tests, distinct from per-module unit tests
+- A single, discoverable home for black-box tests, distinct from per-module unit tests
   and the in-process integration tests already in `application`.
-+ The test suite itself stays simple — no process/container lifecycle code to write or
+- The test suite itself stays simple — no process/container lifecycle code to write or
   maintain — and mirrors how the app is actually run in CI/production: as an externally
   started, already-running instance.
-+ Mocked downstream services and fixed datasets make scenarios deterministic and
+- Mocked downstream services and fixed datasets make scenarios deterministic and
   independent of the real contratosdegalicia.gal site.
-− Requires an external orchestration mechanism (docker-compose, CI job, or documented
+
+### Cons
+- Requires an external orchestration mechanism (docker-compose, CI job, or documented
   manual steps) to exist; `acceptance` cannot run standalone from a clean checkout with
   a single Gradle command the way the other three modules' `test` tasks can.
-− The suite provides no automatic teardown/reset between runs — whatever starts the
+- The suite provides no automatic teardown/reset between runs — whatever starts the
   external environment (or the tests themselves, via admin APIs like WireMock's reset
   endpoint or a reseed script run before the suite) is responsible for known-good state.
-− Duplicate coverage risk with the existing `application`-module integration tests
+- Duplicate coverage risk with the existing `application`-module integration tests
   (e.g. the routing-matrix test in TASK-0004) until it's decided whether those move into
   `acceptance` or continue to serve a narrower, faster-feedback purpose.

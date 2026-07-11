@@ -72,15 +72,19 @@ cookie is the simpler fit, browser token storage adds an XSS token-theft surface
 server-held sessions make logout and revocation trivial.
 
 ## Consequences
-+ Single origin + session cookie is the natural fit; no browser token storage and no
+
+### Pros
+- Single origin + session cookie is the natural fit; no browser token storage and no
   cross-origin token juggling.
-+ A server-rendered login keeps credentials out of the SPA and its JavaScript.
-+ Server-held session state makes logout and revocation immediate.
-+ Micronaut Security provides session management, `@Secured` rules and CSRF out of the
+- A server-rendered login keeps credentials out of the SPA and its JavaScript.
+- Server-held session state makes logout and revocation immediate.
+- Micronaut Security provides session management, `@Secured` rules and CSRF out of the
   box, and the domain stays free of the framework behind ports ([ADR-0002](0002-hexagonal-architecture.md)).
-− Sessions are **stateful**: running more than one server instance needs a shared
+
+### Cons
+- Sessions are **stateful**: running more than one server instance needs a shared
   session store; revisit with a new ADR if the service is scaled out horizontally.
-− Two UI styles coexist: a server-rendered login/forbidden page and the SPA app.
-− Form posts require CSRF handling that a stateless token API would not.
-− If a stateless API for third-party/native clients is later required, this decision
+- Two UI styles coexist: a server-rendered login/forbidden page and the SPA app.
+- Form posts require CSRF handling that a stateless token API would not.
+- If a stateless API for third-party/native clients is later required, this decision
   must be revisited (a token mechanism added alongside, via a new ADR).
