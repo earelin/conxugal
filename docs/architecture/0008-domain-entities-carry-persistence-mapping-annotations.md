@@ -57,22 +57,26 @@ persistence *code*: JDBC/SQL, connections, dialects, and transactions stay entir
 `infrastructure`.
 
 ## Consequences
-+ Fewer classes for the common case: one domain type serves as both the business model
+
+### Pros
+- Fewer classes for the common case: one domain type serves as both the business model
   and the persisted row, removing the hand-written mapping code TASK-0002 needed for
   `UserEntity` ↔ `User`.
-+ Matches the project's preference for a simple, data-driven approach over layering
+- Matches the project's preference for a simple, data-driven approach over layering
   ceremony that isn't paying for itself yet.
-+ The repository port stays in `domain`, so the domain's public contract (what callers
+- The repository port stays in `domain`, so the domain's public contract (what callers
   depend on) is unaffected; only the concrete persisted type changes shape.
-− `domain` now takes a compile-time dependency on Micronaut Data's annotation/model
+
+### Cons
+- `domain` now takes a compile-time dependency on Micronaut Data's annotation/model
   types, which is a persistence-framework dependency — a partial reversal of ADR-0002's
   "free of persistence concerns" isolation. Domain unit tests stay framework-free at
   *runtime* (the annotations are metadata, not behavior), but the module's dependency
   surface grows.
-− If a persisted shape ever needs to diverge from its domain type, the annotations must
+- If a persisted shape ever needs to diverge from its domain type, the annotations must
   be removed from that domain class and a proper infrastructure-only entity introduced
   in its place — this ADR defers that cost until it's actually needed, it doesn't
   remove it.
-− Slightly blurs "the domain is independent of storage" from ADR-0002: the type a
+- Slightly blurs "the domain is independent of storage" from ADR-0002: the type a
   repository port returns is now visibly a database-mapped type, even though `domain`
   still has no dependency on a specific driver, connection, or SQL dialect.
