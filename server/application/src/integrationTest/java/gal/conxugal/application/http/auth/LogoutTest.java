@@ -25,6 +25,10 @@ class LogoutTest extends AuthenticationTestSupport {
   void logging_out_invalidates_the_session_and_redirects_to_login(RequestSpecification spec) {
     String sessionCookie = login(spec, "user@example.com", "user-password");
 
+    protectedRequest(spec, sessionCookie)
+        .then()
+            .statusCode(HttpStatus.OK.getCode());
+
     logoutRequest(spec, sessionCookie)
         .then()
             .statusCode(HttpStatus.SEE_OTHER.getCode())
