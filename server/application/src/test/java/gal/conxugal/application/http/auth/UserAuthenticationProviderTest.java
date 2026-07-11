@@ -3,7 +3,6 @@ package gal.conxugal.application.http.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import gal.conxugal.application.http.auth.UserAuthenticationProvider;
 import gal.conxugal.domain.auth.Authenticate;
 import gal.conxugal.domain.auth.Role;
 import gal.conxugal.domain.auth.User;

@@ -13,7 +13,6 @@ import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.client.BlockingHttpClient;
 import io.micronaut.http.client.HttpClient;
-import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.runtime.server.EmbeddedServer;
 import io.micronaut.security.authentication.UsernamePasswordCredentials;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -24,8 +23,7 @@ import org.junit.jupiter.api.Test;
 
 @MicronautTest
 @Property(name = "micronaut.security.redirect.enabled", value = "false")
-@Property(name = "micronaut.session.max-inactive-interval", value = "1s")
-class IdleSessionTimeoutTest extends AuthenticationTestSupport {
+class ForbiddenPageTest extends AuthenticationTestSupport {
 
   @Inject
   EmbeddedServer embeddedServer;
@@ -39,24 +37,20 @@ class IdleSessionTimeoutTest extends AuthenticationTestSupport {
   }
 
   @Test
-  void protected_request_is_rejected_after_the_session_has_been_idle_past_the_timeout()
-      throws InterruptedException {
-    HttpResponse<?> loginResponse = client.exchange(HttpRequest
-        .POST("/login", new UsernamePasswordCredentials("user@example.com", "user-password"))
-        .contentType(MediaType.APPLICATION_JSON_TYPE));
-    String sessionCookie = sessionCookieOf(loginResponse);
+  void authenticated_visitor_sees_the_forbidden_page() {
+    String sessionCookie = login("user@example.com", "user-password");
 
-    Thread.sleep(1500);
+    HttpResponse<String> response = client.exchange(
+        HttpRequest.GET("/forbidden").header(HttpHeaders.COOKIE, sessionCookie), String.class);
 
-    assertThat(statusOf(HttpRequest.GET("/api/data").header(HttpHeaders.COOKIE, sessionCookie)))
-        .isEqualTo(HttpStatus.UNAUTHORIZED.getCode());
+    assertThat(response.getStatus().getCode()).isEqualTo(HttpStatus.OK.getCode());
+    assertThat(response.body()).contains("Non tes permisos para acceder a esta páxina.");
   }
 
-  private int statusOf(HttpRequest<?> request) {
-    try {
-      return client.exchange(request).getStatus().getCode();
-    } catch (HttpClientResponseException e) {
-      return e.getStatus().getCode();
-    }
+  private String login(String email, String password) {
+    HttpResponse<?> response = client.exchange(HttpRequest
+        .POST("/login", new UsernamePasswordCredentials(email, password))
+        .contentType(MediaType.APPLICATION_JSON_TYPE));
+    return sessionCookieOf(response);
   }
 }

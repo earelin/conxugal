@@ -7,8 +7,11 @@ import static org.mockito.Mockito.when;
 import gal.conxugal.domain.auth.PasswordEncoder;
 import gal.conxugal.domain.auth.User;
 import gal.conxugal.domain.auth.UserRepository;
+import io.micronaut.http.HttpHeaders;
+import io.micronaut.http.HttpResponse;
 import io.micronaut.test.annotation.MockBean;
 import jakarta.inject.Inject;
+import java.util.Objects;
 import java.util.Optional;
 
 public abstract class AuthenticationTestSupport {
@@ -32,5 +35,11 @@ public abstract class AuthenticationTestSupport {
 
   protected void seedUser(User user) {
     when(userRepository.findByEmail(user.email())).thenReturn(Optional.of(user));
+  }
+
+  protected static String sessionCookieOf(HttpResponse<?> response) {
+    String setCookieHeader = response.getHeaders().get(HttpHeaders.SET_COOKIE);
+    Objects.requireNonNull(setCookieHeader, "Set-Cookie header must be present");
+    return setCookieHeader.split(";", 2)[0];
   }
 }
