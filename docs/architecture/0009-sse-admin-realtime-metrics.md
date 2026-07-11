@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-07-11
 spec: SPEC-0003
 supersedes: null
@@ -9,7 +9,7 @@ superseded_by: null
 # 0009. Stream admin real-time metrics over Server-Sent Events
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 [SPEC-0003](../specs/SPEC-0003-administration-area.md) gives administrators a system
