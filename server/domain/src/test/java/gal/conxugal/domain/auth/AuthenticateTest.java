@@ -7,10 +7,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import gal.conxugal.domain.time.Clock;
 import io.micronaut.data.exceptions.DataAccessException;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +29,7 @@ class AuthenticateTest {
   @Mock
   private PasswordEncoder passwordEncoder;
 
-  private final Clock clock = Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC);
+  private final Clock clock = () -> FIXED_INSTANT;
 
   private Authenticate authenticate;
 

@@ -1,8 +1,8 @@
 package gal.conxugal.domain.auth;
 
+import gal.conxugal.domain.time.Clock;
 import io.micronaut.data.exceptions.DataAccessException;
 import jakarta.inject.Singleton;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import org.slf4j.Logger;
