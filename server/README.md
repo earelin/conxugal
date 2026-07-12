@@ -61,6 +61,24 @@ flowchart LR
   downstreams) up first, then run `./gradlew acceptance`. Point it at a non-default
   instance with `-Dapp.baseUrl=…`.
 
+## Contract drift testing
+
+[`scripts/schemathesis-drift.sh`](../scripts/schemathesis-drift.sh) fuzzes a running
+instance with [Schemathesis](https://schemathesis.readthedocs.io/) and fails if a
+response doesn't conform to `docs/api/openapi.yaml`
+([ADR-0010](../docs/architecture/0010-design-first-openapi-contract.md)). Same
+convention as `acceptance`: bring the instance up first —
+
+```bash
+docker compose up -d postgres   # from server/
+./gradlew run
+scripts/schemathesis-drift.sh   # from the repo root
+```
+
+It seeds a fixed `ADMIN` account directly into Postgres to authenticate; see the
+script header for what's covered (currently GET operations only — see the comment
+for why) and requirements (`uv`, `psql`).
+
 ## More
 
 See [ADR-0002](../docs/architecture/0002-hexagonal-architecture.md) for the architecture
