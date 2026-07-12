@@ -6,7 +6,8 @@
   "description": "Interface web de busca e análise de contratos públicos da Xunta de Galicia.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run tsc7 -- -b && vite build",
+    "tsc7": "node ./node_modules/typescript7/bin/tsc",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -42,8 +43,9 @@
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
     "prettier": "^3.9.4",
-    "typescript": "^6.0.3",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.63.0",
+    "typescript7": "npm:typescript@^7.0.2",
     "vite": "^8.1.3",
     "vitest": "^4.1.10"
   },
