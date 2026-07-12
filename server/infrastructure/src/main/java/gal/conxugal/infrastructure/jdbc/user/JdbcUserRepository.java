@@ -1,4 +1,4 @@
-package gal.conxugal.infrastructure.auth;
+package gal.conxugal.infrastructure.jdbc.user;
 
 import gal.conxugal.domain.auth.User;
 import gal.conxugal.domain.auth.UserRepository;

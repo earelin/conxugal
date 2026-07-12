@@ -1,4 +1,4 @@
-package gal.conxugal.infrastructure.auth;
+package gal.conxugal.infrastructure.jdbc.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.db.api.Assertions.assertThat;
@@ -6,6 +6,7 @@ import static org.assertj.db.api.Assertions.assertThat;
 import gal.conxugal.domain.auth.Role;
 import gal.conxugal.domain.auth.User;
 import gal.conxugal.domain.auth.UserRepository;
+import gal.conxugal.infrastructure.crypto.Argon2idPasswordEncoder;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
