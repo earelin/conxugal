@@ -1,7 +1,6 @@
 package gal.conxugal.domain.auth;
 
 import gal.conxugal.domain.time.Clock;
-import io.micronaut.data.exceptions.DataAccessException;
 import jakarta.inject.Singleton;
 import java.time.Instant;
 import java.util.Optional;
@@ -50,11 +49,15 @@ public class Authenticate {
     return Optional.of(recordLogin(foundUser));
   }
 
+  @SuppressWarnings("PMD.AvoidCatchingGenericException")
   private User recordLogin(User user) {
     Instant loginInstant = clock.instant();
     try {
       userRepository.updateLastLoginAt(user.id(), loginInstant);
-    } catch (DataAccessException e) {
+    } catch (RuntimeException e) {
+      // Caught broadly, not as the adapter's own exception type, so the domain stays
+      // free of persistence concerns while still honouring the best-effort guarantee
+      // against any failure the port's implementation may throw.
       LOG.error("Failed to record last login for user {}", user.id(), e);
       return user;
     }

@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.domain.time.Clock;
-import io.micronaut.data.exceptions.DataAccessException;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -56,7 +55,7 @@ class AuthenticateTest {
     User user = new User(UUID.randomUUID(), "ana@example.com", "stored-hash", Role.ADMIN);
     when(userRepository.findByEmail("ana@example.com")).thenReturn(Optional.of(user));
     when(passwordEncoder.matches("correct-password", "stored-hash")).thenReturn(true);
-    doThrow(new DataAccessException("connection lost"))
+    doThrow(new RuntimeException("connection lost"))
         .when(userRepository)
         .updateLastLoginAt(user.id(), FIXED_INSTANT);
 
