@@ -17,6 +17,19 @@ no formatter is wired into the build, so checkstyle only lints, it doesn't refor
 Write new code matching the style directly; run `checkstyleMain`/`checkstyleTest`
 (part of `./gradlew build`) to verify.
 
+Long fluent call chains — notably REST-assured's `given()/when()/then()` in
+`application/src/integrationTest` — are formatted as a staircase: each stage keyword
+sits at the base indent, calls chained onto that stage indent one level (4 spaces)
+deeper, and the next stage keyword steps back out to the base indent:
+
+```java
+given(spec)
+    .header(HttpHeaders.COOKIE, sessionCookie)
+    .body("{}")
+.when()
+    .post("/logout");
+```
+
 ## Commands
 
 Run from `server/` (Gradle wrapper; Java 25 toolchain is pinned in the root

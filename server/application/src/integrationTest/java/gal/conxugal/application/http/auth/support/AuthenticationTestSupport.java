@@ -9,15 +9,29 @@ import gal.conxugal.domain.auth.User;
 import gal.conxugal.domain.auth.UserRepository;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
+import io.micronaut.http.MediaType;
 import io.micronaut.test.annotation.MockBean;
+import io.restassured.RestAssured;
+import io.restassured.response.Response;
+import io.restassured.specification.RequestSpecification;
 import jakarta.inject.Inject;
-import java.util.Objects;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 public abstract class AuthenticationTestSupport {
 
+  private static final String SESSION_COOKIE_NAME = "SESSION";
+
   @Inject
   protected UserRepository userRepository;
+
+  protected static RequestSpecification given(RequestSpecification spec) {
+    return RestAssured.given()
+        .spec(spec)
+        .redirects().follow(false)
+        .contentType(MediaType.APPLICATION_JSON);
+  }
 
   @MockBean(UserRepository.class)
   protected UserRepository userRepository() {
@@ -38,8 +52,20 @@ public abstract class AuthenticationTestSupport {
   }
 
   protected static String sessionCookieOf(HttpResponse<?> response) {
-    String setCookieHeader = response.getHeaders().get(HttpHeaders.SET_COOKIE);
-    Objects.requireNonNull(setCookieHeader, "Set-Cookie header must be present");
-    return setCookieHeader.split(";", 2)[0];
+    return sessionCookiePairOf(response.getHeaders().getAll(HttpHeaders.SET_COOKIE));
+  }
+
+  protected static String sessionCookieOf(Response response) {
+    return sessionCookiePairOf(response.getHeaders().getValues(HttpHeaders.SET_COOKIE));
+  }
+
+  private static String sessionCookiePairOf(List<String> setCookieHeaders) {
+    return setCookieHeaders.stream()
+        .map(setCookieHeader -> setCookieHeader.split(";", 2)[0])
+        .filter(cookiePair -> cookiePair.startsWith(SESSION_COOKIE_NAME + "="))
+        .findFirst()
+        .orElseThrow(
+            () -> new NoSuchElementException(
+                SESSION_COOKIE_NAME + " cookie not present in Set-Cookie headers"));
   }
 }
