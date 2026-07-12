@@ -47,14 +47,18 @@ defect. It is restated in `server/CLAUDE.md` for day-to-day visibility, but this
 the governing record.
 
 ## Consequences
-+ The fallback can unambiguously separate "no such API route" (real 404) from "an SPA
+
+### Pros
+- The fallback can unambiguously separate "no such API route" (real 404) from "an SPA
   client-side route" (serve the shell), so API clients and tests get correct status
   codes.
-+ A single, predictable namespace for the API simplifies routing, reverse proxies,
+- A single, predictable namespace for the API simplifies routing, reverse proxies,
   logging and future concerns (e.g. API-wide `@Secured` rules or rate limiting) that
   want to target all endpoints at once.
-+ Endpoint authors have one unambiguous rule with no per-endpoint decision to make.
-− Every endpoint path carries the `/api/` segment; the convention must be upheld by
+- Endpoint authors have one unambiguous rule with no per-endpoint decision to make.
+
+### Cons
+- Every endpoint path carries the `/api/` segment; the convention must be upheld by
   review/discipline, as nothing in the framework forces it by default.
-− Changing the prefix later is a breaking change to every client and would need a new
+- Changing the prefix later is a breaking change to every client and would need a new
   ADR superseding this one.

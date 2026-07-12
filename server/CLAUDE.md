@@ -54,6 +54,10 @@ Run from `server/` (Gradle wrapper; Java 25 toolchain is pinned in the root
   timeout) against the real `@Controller`/security wiring rather than mocks. Also a
   JVM Test Suite (`application/src/integrationTest`), deliberately **not** added to
   `check` — unlike `infrastructure`'s, it needs no Docker daemon, just a JVM.
+- `./gradlew :architecture:test` — run the ArchUnit rules that enforce the hexagonal
+  dependency direction, `domain`'s transport/persistence-code purity, and the `/api/`
+  URL prefix (see below). Static bytecode analysis only, no Docker/running instance
+  needed, so it's part of `check`/`build` like `domain`'s and `infrastructure`'s tests.
 
 ## Fast feedback while iterating
 
@@ -70,6 +74,7 @@ what changed:
 | `application/src/main/java/**` (REST endpoints, security config, wiring) | `./gradlew :application:test :application:integrationTest` — the unit suite alone doesn't boot a real embedded server/security filter chain |
 | `application/src/integrationTest/java/**` | `./gradlew :application:integrationTest` |
 | `acceptance/src/test/java/**` | Needs a running instance first (see below); then `./gradlew acceptance` |
+| Package layout or module dependencies anywhere under `domain`/`application`/`infrastructure` | `./gradlew :architecture:test` |
 | Any `build.gradle.kts`, `gradle/libs.versions.toml`, or `settings.gradle.kts` | `./gradlew build` (full multi-module build) |
 | Before committing, regardless of scope | `./gradlew build` (see below) |
 
@@ -104,6 +109,13 @@ flowchart LR
 - **`infrastructure`** — the *driven side*: adapters implementing `domain` ports
   against external systems (PostgreSQL, scrapers/ingestors for
   contratosdegalicia.gal, exporters).
+- **`architecture`** — test-only module with no `main` sources; holds the ArchUnit
+  rules (`./gradlew :architecture:test`) that enforce this section as executable
+  checks rather than just prose: the dependency direction below, `domain`'s
+  transport/persistence-code purity, and ADR-0006's `/api/` URL prefix. It's the one
+  place allowed to see `domain`, `application` and `infrastructure` on the same test
+  classpath, which is what lets it check the cross-module rules Gradle's own project
+  graph can't (e.g. "`application` must not depend on `infrastructure`").
 
 **The dependency rule is load-bearing and intentional, not incidental:**
 `application` depends on `domain` only — `runtimeOnly(project(":infrastructure"))` in
