@@ -94,8 +94,8 @@ flowchart TD
 - **Lint/format:** ESLint (typescript-eslint, react-hooks, react-refresh) + Prettier.
 - **Test:** Vitest + Testing Library + jsdom; one smoke test asserting the shell renders
   the product name and that the not-found route shows the Galician message.
-- **npm scripts:** `dev`, `build` (`tsc -b && vite build` → `ui/dist`), `preview`,
-  `lint`, `format`, `test`.
+- **npm scripts:** `dev`, `build` (type-checks with TypeScript 7's `tsc` then
+  `vite build` → `ui/dist`), `preview`, `lint`, `format`, `test`.
 
 ## Sequencing (tasks, one small change each)
 This foundational scaffold shipped as a single self-contained task rather than the
