@@ -61,16 +61,20 @@ flowchart LR
 ```
 
 ## Consequences
-+ Static-asset output drops straight into the single Micronaut artifact ([ADR-0003](0003-react-router-ui-served-by-backend.md))
+
+### Pros
+- Static-asset output drops straight into the single Micronaut artifact ([ADR-0003](0003-react-router-ui-served-by-backend.md))
   with no production Node runtime and no SSR server to operate.
-+ Mantine provides accessible data tables, forms, inputs, filters and navigation out
+- Mantine provides accessible data tables, forms, inputs, filters and navigation out
   of the box, plus ready-made blocks from ui.mantine.dev — fast UI delivery.
-+ Vite gives fast dev/HMR and a conventional, well-supported React+TS setup.
-+ npm needs no extra CI provisioning beyond Node.
-− Library-mode SPA forgoes server-side rendering and route-level data loaders/SSR;
+- Vite gives fast dev/HMR and a conventional, well-supported React+TS setup.
+- npm needs no extra CI provisioning beyond Node.
+
+### Cons
+- Library-mode SPA forgoes server-side rendering and route-level data loaders/SSR;
   initial load ships the app bundle and fetches data client-side. Acceptable for an
   internal/analytical tool; revisit with a new ADR if SEO or first-paint on data
   pages becomes a requirement.
-− Commits the UI to Mantine's component model and theming conventions.
-− The backend build must consume `ui/dist` and configure an SPA history fallback;
+- Commits the UI to Mantine's component model and theming conventions.
+- The backend build must consume `ui/dist` and configure an SPA history fallback;
   that wiring is owned by the server module and its governing work, not this ADR.

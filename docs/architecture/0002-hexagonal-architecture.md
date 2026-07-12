@@ -53,15 +53,19 @@ contract that diverges from the domain shape); a DTO is added only where it earn
 place, not as a default mapping layer.
 
 ## Consequences
-+ The domain and use cases are testable without a database, HTTP server or network.
-+ Infrastructure can be swapped (e.g. a different export format or scraping source)
+
+### Pros
+- The domain and use cases are testable without a database, HTTP server or network.
+- Infrastructure can be swapped (e.g. a different export format or scraping source)
   by adding/replacing adapters, not by editing core logic.
-+ Clear boundaries make the dependency rule enforceable (e.g. via module boundaries
+- Clear boundaries make the dependency rule enforceable (e.g. via module boundaries
   / build configuration).
-− More upfront structure and indirection (ports/adapters) than a single-module layered
-  app; small features cost a little more ceremony.
-+ Application and infrastructure are independently replaceable: a driving adapter (REST,
+- Application and infrastructure are independently replaceable: a driving adapter (REST,
   scheduler) and a driven adapter (DB, scraper, exporter) can change without affecting
   each other.
-− Requires discipline to keep transport and persistence types out of the domain module
+
+### Cons
+- More upfront structure and indirection (ports/adapters) than a single-module layered
+  app; small features cost a little more ceremony.
+- Requires discipline to keep transport and persistence types out of the domain module
   (Micronaut DI annotations on domain classes are allowed).

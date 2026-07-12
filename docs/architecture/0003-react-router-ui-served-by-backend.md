@@ -24,11 +24,15 @@ to bundling the UI with the backend so there is a single deployable artifact.
   for both the UI and the REST API.
 
 ## Consequences
-+ One deployable artifact and one origin: no separate front-end host and no
+
+### Pros
+- One deployable artifact and one origin: no separate front-end host and no
   cross-origin (CORS) configuration between UI and API.
-+ Simpler operations — versioning, releasing and deploying UI and API together.
-+ React Router gives standard client-side routing and data patterns for the UI.
-− Couples UI and backend release cycles; shipping a UI-only change still rebuilds/
+- Simpler operations — versioning, releasing and deploying UI and API together.
+- React Router gives standard client-side routing and data patterns for the UI.
+
+### Cons
+- Couples UI and backend release cycles; shipping a UI-only change still rebuilds/
   redeploys the server artifact.
-− The backend build must incorporate the UI build output; the build pipeline spans
+- The backend build must incorporate the UI build output; the build pipeline spans
   two toolchains (JVM + Node) and must orchestrate both.

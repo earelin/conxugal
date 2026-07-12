@@ -56,6 +56,13 @@ granted to ADMIN.
   original password can be recovered.
 - **R12** — Passwords are never exposed in logs, error messages, or responses.
 
+### Login record
+
+- **R13** — On each successful authentication the system records the moment it
+  occurred as that user's most recent login, replacing any previously recorded
+  value. A failed attempt leaves the recorded value unchanged. Before a user's
+  first successful login there is no recorded value.
+
 ## Scope
 
 - **Account provisioning is out of scope of this spec.** How users and their
@@ -85,3 +92,6 @@ granted to ADMIN.
    unauthenticated (criterion 1 applies again).
 9. **(R11, R12)** At no point is a stored or transmitted password readable in its
    original form.
+10. **(R13)** After a user logs in successfully, the user's most-recent-login value
+    reflects that login's time; a later successful login replaces it, and a rejected
+    attempt leaves it unchanged.

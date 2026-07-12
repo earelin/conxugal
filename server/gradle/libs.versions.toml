@@ -1,8 +1,11 @@
 [versions]
+archunit = "1.4.2"
 assertj = "3.27.7"
 assertjDb = "3.0.0"
 bouncyCastle = "1.80"
 checkstyle = "13.7.0"
+errorprone = "2.50.0"
+errorproneGradlePlugin = "5.1.0"
 findsecbugs = "1.14.0"
 flywayCore = "12.10.0"
 jspecify = "1.0.0"
@@ -16,9 +19,12 @@ testcontainers = "1.21.3"
 wiremock = "3.13.2"
 
 [libraries]
+archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 assertj-db = { module = "org.assertj:assertj-db", version.ref = "assertjDb" }
 bouncycastle-provider = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncyCastle" }
+errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
+errorprone-gradle-plugin = { module = "net.ltgt.errorprone:net.ltgt.errorprone.gradle.plugin", version.ref = "errorproneGradlePlugin" }
 findsecbugs-plugin = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flywayCore" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flywayCore" }
@@ -39,6 +45,7 @@ micronaut-security-processor = { module = "io.micronaut.security:micronaut-secur
 micronaut-security-session = { module = "io.micronaut.security:micronaut-security-session" }
 micronaut-serde-jackson = { module = "io.micronaut.serde:micronaut-serde-jackson" }
 micronaut-test-junit5 = { module = "io.micronaut.test:micronaut-test-junit5" }
+micronaut-test-rest-assured = { module = "io.micronaut.test:micronaut-test-rest-assured" }
 micronaut-views-thymeleaf = { module = "io.micronaut.views:micronaut-views-thymeleaf" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter" }
 postgresql = { module = "org.postgresql:postgresql" }

@@ -1,0 +1,370 @@
+openapi: 3.1.0
+
+info:
+  title: Conxugal REST API
+  version: 0.1.0
+  description: >-
+    REST API for the Conxugal administration area. All endpoints live under the reserved
+    `/api/` prefix (ADR-0006) and are restricted to administrators (SPEC-0003 R1).
+    Authentication is a server-side session established by the server-rendered `/login`
+    form (ADR-0005, outside this JSON API) and carried by a session cookie; every operation
+    below requires that cookie to identify an `ADMIN`.
+
+    This document is the design-first, authoritative contract for the API (ADR-0010):
+    endpoints are specified here before they are implemented, and controllers conform to
+    it. It currently covers the planned endpoints of FEAT-0004 (user administration and
+    system status) and FEAT-0005 (real-time metrics).
+
+servers:
+  - url: /
+    description: Same origin as the served SPA (ADR-0003).
+
+tags:
+  - name: users
+    description: User-account administration (SPEC-0003 R6-R16).
+  - name: system
+    description: System dashboard status and detailed runtime metrics (SPEC-0003 R2-R5, R17-R21).
+
+security:
+  - cookieSession: []
+
+paths:
+  /api/admin/users:
+    get:
+      tags: [users]
+      operationId: listUsers
+      summary: List all user accounts
+      description: Every account, enabled and disabled, with its email, role, state and creation date (SPEC-0003 R6).
+      responses:
+        "200":
+          description: The full list of accounts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [users]
+      operationId: createUser
+      summary: Create a user account
+      description: >-
+        Create an account from an email and a role. The server generates the initial
+        password and returns it **once** in this response (SPEC-0003 R7, R13); it is never
+        retrievable afterwards (SPEC-0003 R16).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: The account was created; the generated initial password is included exactly once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: An account with that email already exists; the existing account is unchanged (SPEC-0003 R8).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/admin/users/{id}/enabled:
+    parameters:
+      - $ref: "#/components/parameters/UserId"
+    post:
+      tags: [users]
+      operationId: setUserEnabled
+      summary: Enable or disable a user account
+      description: >-
+        Set an account's enabled state (SPEC-0003 R9, R10). Disabling the last enabled
+        administrator is refused (SPEC-0003 R12). Accounts are never deleted (SPEC-0003 R11).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetEnabledRequest"
+      responses:
+        "200":
+          description: The account's new state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The change is refused because it would disable the last enabled administrator (SPEC-0003 R12).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/admin/system-status:
+    get:
+      tags: [system]
+      operationId: getSystemStatus
+      summary: Current system status
+      description: >-
+        A coarse operational snapshot assembled fresh per request (SPEC-0003 R4): overall
+        service state and datastore reachability. Never discloses secrets or credentials
+        (SPEC-0003 R5).
+      responses:
+        "200":
+          description: The current system status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/admin/metrics:
+    get:
+      tags: [system]
+      operationId: streamMetrics
+      summary: Stream detailed runtime metrics (Server-Sent Events)
+      description: >-
+        A Server-Sent Events stream (`text/event-stream`, ADR-0009) that pushes successive
+        detailed runtime-metrics samples for debugging a running instance (SPEC-0003
+        R17-R18), interleaved with heartbeats. Each SSE event's `data` field is a JSON
+        object matching the `RuntimeMetrics` schema. Samples are assembled on demand and are
+        never stored by the backend (SPEC-0003 R20) and never contain secrets (SPEC-0003 R21).
+      responses:
+        "200":
+          description: >-
+            An open event stream. Each `message` event carries one `RuntimeMetrics` sample
+            as JSON in its `data` field; heartbeat comments keep the connection alive.
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/RuntimeMetrics"
+              # OpenAPI cannot model an SSE frame sequence; this schema documents the JSON
+              # `data` payload carried by each sample event, not a single response body.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: >-
+        Server-side session cookie established by the server-rendered login form (ADR-0005).
+        The browser sends it automatically, including on the `EventSource` metrics stream.
+
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      description: The account's UUID identity.
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: The request body is malformed or fails validation.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: No valid session; the caller is not authenticated (SPEC-0002 R7). Protected API routes return 401 rather than an HTML redirect.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: The caller is authenticated but is not an administrator (SPEC-0003 R1).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: No account with the given id exists.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Role:
+      type: string
+      enum: [USER, ADMIN]
+      description: An account's role. ADMIN is a strict superset of USER (SPEC-0002).
+
+    User:
+      type: object
+      required: [id, email, role, enabled, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          $ref: "#/components/schemas/Role"
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+          description: When the account was created.
+        lastLoginAt:
+          type: [string, "null"]
+          format: date-time
+          description: >-
+            The account's most recent successful login, recorded per SPEC-0002 R13.
+            Null until the account's first successful login.
+
+    CreateUserRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          $ref: "#/components/schemas/Role"
+      description: The password is not accepted here; the server generates it (SPEC-0003 R7).
+
+    CreatedUser:
+      type: object
+      required: [id, email, role, enabled, createdAt, initialPassword]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          $ref: "#/components/schemas/Role"
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        initialPassword:
+          type: string
+          description: >-
+            The system-generated initial password, returned only in this creation response
+            and never again (SPEC-0003 R13, R16). At least 16 characters spanning upper- and
+            lower-case letters, digits and symbols (SPEC-0003 R15).
+
+    SetEnabledRequest:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+          description: true to enable the account, false to disable it.
+
+    SystemStatus:
+      type: object
+      required: [status, datastore, checkedAt]
+      properties:
+        status:
+          type: string
+          enum: [UP, DEGRADED]
+          description: Overall service state (SPEC-0003 R3).
+        datastore:
+          type: object
+          required: [reachable]
+          properties:
+            reachable:
+              type: boolean
+              description: Whether the datastore is reachable (SPEC-0003 R3).
+        checkedAt:
+          type: string
+          format: date-time
+          description: When this snapshot was taken; it reflects the state at request time (SPEC-0003 R4).
+
+    RuntimeMetrics:
+      type: object
+      description: >-
+        One detailed runtime sample. The exact field set is illustrative and never includes
+        secrets or connection values (SPEC-0003 R21).
+      required: [timestamp]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        jvm:
+          type: object
+          properties:
+            heapUsedBytes:
+              type: integer
+              format: int64
+            heapMaxBytes:
+              type: integer
+              format: int64
+            nonHeapUsedBytes:
+              type: integer
+              format: int64
+            threadCount:
+              type: integer
+            uptimeMillis:
+              type: integer
+              format: int64
+        system:
+          type: object
+          properties:
+            cpuLoad:
+              type: number
+              format: double
+              description: Recent system/CPU load, 0.0-1.0.
+        http:
+          type: object
+          properties:
+            requestCount:
+              type: integer
+              format: int64
+            errorCount:
+              type: integer
+              format: int64
+        datastorePool:
+          type: object
+          properties:
+            active:
+              type: integer
+            idle:
+              type: integer
+            max:
+              type: integer
+
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: A human-readable, non-sensitive description of the failure.

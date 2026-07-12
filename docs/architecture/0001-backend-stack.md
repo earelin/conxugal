@@ -28,13 +28,17 @@ memory footprint, ahead-of-time compilation friendliness, and first-class testin
 - **Public contract:** a REST API.
 
 ## Consequences
-+ Micronaut's compile-time DI/AOP gives fast startup and low memory, and a smooth
+
+### Pros
+- Micronaut's compile-time DI/AOP gives fast startup and low memory, and a smooth
   path to GraalVM native images if needed later.
-+ PostgreSQL fits the relational domain and offers strong querying, JSON columns
+- PostgreSQL fits the relational domain and offers strong querying, JSON columns
   for semi-structured scraped payloads, and full-text search for analysis/export.
-+ Java 25 LTS provides a long support window and modern language features.
-+ REST is well understood, easy to consume from the UI and from external clients,
+- Java 25 LTS provides a long support window and modern language features.
+- REST is well understood, easy to consume from the UI and from external clients,
   and simple to document (OpenAPI).
-− Commits the team to the JVM/Micronaut ecosystem and its conventions.
-− REST (vs. GraphQL/RPC) may require extra endpoints for some aggregate/export
+
+### Cons
+- Commits the team to the JVM/Micronaut ecosystem and its conventions.
+- REST (vs. GraphQL/RPC) may require extra endpoints for some aggregate/export
   queries; revisit with a new ADR if query flexibility becomes a constraint.
