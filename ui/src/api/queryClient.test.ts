@@ -67,4 +67,29 @@ describe('queryClient', () => {
 
     expect(assign).not.toHaveBeenCalled();
   });
+
+  it('retries a query that fails with a transient error', async () => {
+    const queryFn = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(new HttpError(503, 'unavailable'))
+      .mockResolvedValueOnce('ok');
+
+    const result = await queryClient.fetchQuery({
+      queryKey: ['transient-failure-query'],
+      queryFn,
+    });
+
+    expect(result).toBe('ok');
+    expect(queryFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry a query that fails with a non-transient error', async () => {
+    const queryFn = vi.fn().mockRejectedValue(new HttpError(400, 'bad request'));
+
+    await queryClient
+      .fetchQuery({ queryKey: ['non-transient-failure-query'], queryFn })
+      .catch(() => undefined);
+
+    expect(queryFn).toHaveBeenCalledTimes(1);
+  });
 });
