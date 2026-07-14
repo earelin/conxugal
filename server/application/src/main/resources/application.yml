@@ -6,6 +6,8 @@ micronaut:
   security:
     enabled: true
     authentication: session
+    basic-auth:
+      enabled: false
     redirect:
       enabled: true
       login-success: /
