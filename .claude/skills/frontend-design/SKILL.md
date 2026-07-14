@@ -52,6 +52,32 @@ Rule of thumb: **reach for a Mantine prop before a style**. `c="dimmed"`, `fw={6
 `gap="sm"`, `mt="md"`, `radius="md"`, `withBorder` — not inline `style={{...}}` or raw
 hex. Spacing uses the Mantine scale (`xs/sm/md/lg/xl`), not arbitrary pixels.
 
+## Brand & logo
+
+The product mark is a **"G"** (Galicia) built from a **C** (conxugal) opening to the
+right with an **arrow** driving out through it — the arrow reads as the *export/output*
+of contract data, the last step of *extract → store → analyse → export*. The C is
+`indigo` (`#4c6ef5`, the primary token) and the arrow is `red` (`#fa5252`, the same
+token as required/destructive); on the tiled icon the C is white on an `indigo` tile.
+
+Two ready-made assets live in `ui/public/` — **use them, never redraw or recolour the
+mark**:
+
+| Asset | What it is | Use for |
+| --- | --- | --- |
+| `logo.svg` | The **icon**: white C + red arrow on a rounded `indigo` tile (radius ~23%) | Favicon and any app-badge/tiled context |
+| `logo-glyph.svg` | The **glyph**: indigo C + red arrow, transparent background | The mark on a white/light surface with no tile |
+
+- The **favicon** is wired in `ui/index.html`
+  (`<link rel="icon" type="image/svg+xml" href="/logo.svg" />`); the **header** mark is
+  the tiled icon in `AppLayout.tsx`, rendered at 36px left of the product name.
+- Reference the mark as an **`<img src="/logo.svg">` asset** — do not paste the SVG
+  paths into a component (same rule as icons: components consume assets, not raw paths).
+- The mark is **decorative** wherever the adjacent "conxugal" wordmark already names the
+  product (`alt=""`); give it a real `alt`/`aria-label` only when it stands alone.
+- It stays legible down to 16px — reach for `logo.svg` (tile) at small sizes and
+  `logo-glyph.svg` only where a tile would be wrong.
+
 ## Layout & chrome
 
 - Every authenticated screen lives inside the existing `AppShell` from `AppLayout.tsx`.

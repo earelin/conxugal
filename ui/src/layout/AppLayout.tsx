@@ -35,6 +35,7 @@ export function AppLayout() {
             size="sm"
             aria-label="Alternar a navegación"
           />
+          <img src="/logo.svg" alt="" width={36} height={36} />
           <Stack gap={0}>
             <Title order={1} size="h3" lh={1}>
               {strings.appName}
