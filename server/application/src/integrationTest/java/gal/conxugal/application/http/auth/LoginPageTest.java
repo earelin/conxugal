@@ -63,8 +63,8 @@ class LoginPageTest extends AuthenticationTestSupport {
     String withError = client.exchange(HttpRequest.GET("/login?error=true"), String.class).body();
     String withoutError = client.exchange(HttpRequest.GET("/login"), String.class).body();
 
-    assertThat(withError).contains("As credenciais introducidas non son correctas.");
-    assertThat(withoutError).doesNotContain("As credenciais introducidas non son correctas.");
+    assertThat(withError).contains("Correo electrónico ou contrasinal incorrectos.");
+    assertThat(withoutError).doesNotContain("Correo electrónico ou contrasinal incorrectos.");
   }
 
   @Test
