@@ -8,9 +8,15 @@
   <!-- ===== standalone page (outside the SPA shell) ===== -->
   <rect width="1280" height="840" fill="#f8f9fa"/>
 
-  <!-- ===== brand ===== -->
-  <text x="640" y="194" text-anchor="middle" font-size="26" font-weight="700" fill="#212529">conxugal</text>
-  <text x="640" y="216" text-anchor="middle" font-size="12" fill="#868e96">Contratos públicos da Xunta de Galicia</text>
+  <!-- ===== brand (logo tile from ui/public/logo.svg — paths unchanged) ===== -->
+  <g transform="translate(618,124) scale(0.22)">
+    <rect x="0" y="0" width="200" height="200" rx="46" fill="#4c6ef5"/>
+    <path d="M 132 55 A 56 56 0 1 0 132 145" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+    <path d="M 112 100 L 176 100" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round"/>
+    <path d="M 156 80 L 178 100 L 156 120" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="640" y="196" text-anchor="middle" font-size="26" font-weight="700" fill="#212529">conxugal</text>
+  <text x="640" y="218" text-anchor="middle" font-size="12" fill="#868e96">Contratos públicos da Xunta de Galicia</text>
 
   <!-- ===== login card ===== -->
   <rect x="430" y="256" width="420" height="400" rx="12" fill="#000000" opacity="0.10" filter="url(#cardShadow)"/>

@@ -65,6 +65,14 @@ product as the SPA, without borrowing its chrome.
   `gray.6` (`#868e96`), input borders `gray.4` (`#ced4da`).
 - **Type:** the theme's system font stack; the page/section titles at weight 600–700.
 
+### Brand mark
+
+Each page leads with the product mark — the tiled **`logo.svg`** (white "G" from a
+`conxugal` C opening to a red export arrow, on an `indigo` tile) above the *conxugal*
+wordmark. The mockups inline the mark's exact paths (a static-artifact copy of
+`ui/public/logo.svg`, never redrawn or recoloured); the implemented pages reference it as
+an `<img src="/logo.svg">` asset, as the `AppLayout` header does.
+
 ### Status semantics
 
 Following the project rule that **red is reserved for destructive/required, not for
