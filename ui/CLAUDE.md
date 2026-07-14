@@ -11,7 +11,9 @@ spec-driven workflow (`SPEC → FEAT → TASK`). This module implements
 Run from `ui/`:
 
 - `npm run dev` — Vite dev server with HMR (<http://localhost:5173>)
-- `npm run build` — type-check (`tsc -b`) then build static assets to `dist/`
+- `npm run build` — type-check with TypeScript 7's `tsc -b` then build static assets
+  to `dist/`
+- `npm run tsc7 -- <args>` — run TypeScript 7's compiler directly (e.g. `npm run tsc7 -- --version`)
 - `npm test` — run the Vitest suite once
 - `npm test -- src/App.test.tsx` — run a single test file
 - `npm test -- -t "shows the Galician not-found"` — run tests matching a name pattern
@@ -51,3 +53,13 @@ failures before committing changes to this module.
   setup in `src/test/setup.ts`). Tests render the real route tree via
   `createMemoryRouter` and assert against rendered text from `strings`, not
   hardcoded literals, so assertions stay in sync with `strings.ts` changes.
+- **TypeScript 7 / 6 split**: `devDependencies.typescript` is aliased to
+  `@typescript/typescript6` (Microsoft's compatibility shim) so anything that
+  `require`s/`import`s the `typescript` module — `typescript-eslint`, whose
+  `typescript-eslint@8.63.0` peer range is `<6.1.0` — gets the TS 6 compiler API.
+  Real TypeScript 7 is installed separately as `devDependencies.typescript7`
+  (`npm:typescript@^7`) and invoked directly via the `tsc7` script, since its `tsc`
+  binary would otherwise collide with the TS 6 shim's own bundled `tsc`. `npm run
+  build` and CI type-checking go through `tsc7`; only the programmatic compiler
+  API (e.g. ESLint's type-aware rules) should ever resolve the aliased TS 6
+  package.
