@@ -60,13 +60,17 @@ of contract data, the last step of *extract → store → analyse → export*. T
 `indigo` (`#4c6ef5`, the primary token) and the arrow is `red` (`#fa5252`, the same
 token as required/destructive); on the tiled icon the C is white on an `indigo` tile.
 
-Two ready-made assets live in `ui/public/` — **use them, never redraw or recolour the
-mark**:
+Two ready-made assets are the source of truth in `ui/public/` — **use them, never
+redraw or recolour the mark**. Reference copies also ship with this skill under
+`assets/` so the mark travels with the design language:
 
 | Asset | What it is | Use for |
 | --- | --- | --- |
 | `logo.svg` | The **icon**: white C + red arrow on a rounded `indigo` tile (radius ~23%) | Favicon and any app-badge/tiled context |
 | `logo-glyph.svg` | The **glyph**: indigo C + red arrow, transparent background | The mark on a white/light surface with no tile |
+
+Ship-time `ui/public/logo.svg` and `logo-glyph.svg` are the ones the app serves; the
+`assets/` copies are for reference — if the mark ever changes, update both.
 
 - The **favicon** is wired in `ui/index.html`
   (`<link rel="icon" type="image/svg+xml" href="/logo.svg" />`); the **header** mark is
