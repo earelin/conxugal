@@ -108,6 +108,20 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
+  void replaces_last_login_at_on_the_next_login() throws Exception {
+    insertUser("ana@example.com", "hashed-password", "USER");
+    User user = userRepository.findByEmail("ana@example.com").orElseThrow();
+    Instant firstLogin = Instant.parse("2026-07-11T10:15:30Z");
+    Instant laterLogin = Instant.parse("2026-07-12T08:00:00Z");
+    userRepository.updateLastLoginAt(user.id(), firstLogin);
+
+    userRepository.updateLastLoginAt(user.id(), laterLogin);
+
+    User updated = userRepository.findByEmail("ana@example.com").orElseThrow();
+    assertThat(updated.lastLoginAt()).isEqualTo(laterLogin);
+  }
+
+  @Test
   void never_stores_the_password_as_plaintext() throws Exception {
     Argon2idPasswordEncoder passwordEncoder = new Argon2idPasswordEncoder();
     String rawPassword = "correct horse battery staple";
