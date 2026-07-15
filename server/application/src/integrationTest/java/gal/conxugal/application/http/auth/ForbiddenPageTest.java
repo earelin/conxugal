@@ -3,6 +3,7 @@ package gal.conxugal.application.http.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
+import gal.conxugal.application.http.auth.support.RequestThreadRecorder;
 import gal.conxugal.domain.auth.Role;
 import gal.conxugal.domain.auth.User;
 import io.micronaut.context.annotation.Property;
@@ -28,6 +29,9 @@ class ForbiddenPageTest extends AuthenticationTestSupport {
   @Inject
   EmbeddedServer embeddedServer;
 
+  @Inject
+  RequestThreadRecorder requestThreadRecorder;
+
   private BlockingHttpClient client;
 
   @BeforeEach
@@ -45,6 +49,15 @@ class ForbiddenPageTest extends AuthenticationTestSupport {
 
     assertThat(response.getStatus().getCode()).isEqualTo(HttpStatus.OK.getCode());
     assertThat(response.body()).contains("Non tes permisos para acceder a esta páxina.");
+  }
+
+  @Test
+  void serves_the_forbidden_page_on_virtual_threads_not_the_event_loop() {
+    String sessionCookie = login("user@example.com", "user-password");
+
+    client.exchange(HttpRequest.GET("/forbidden").header(HttpHeaders.COOKIE, sessionCookie));
+
+    assertThat(requestThreadRecorder.lastRequestThread().isVirtual()).isTrue();
   }
 
   private String login(String email, String password) {
