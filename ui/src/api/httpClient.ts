@@ -9,7 +9,10 @@ export class HttpError extends Error {
 }
 
 export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const response = await fetch(input, init);
+  const response = await fetch(input, {
+    ...init,
+    headers: { Accept: 'application/json', ...init?.headers },
+  });
   if (!response.ok) {
     throw new HttpError(response.status, `Request failed with status ${response.status}`);
   }

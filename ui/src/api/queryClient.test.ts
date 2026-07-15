@@ -1,19 +1,20 @@
 import { MutationObserver } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpError } from './httpClient';
-import { queryClient } from './queryClient';
+import { queryClient, resetSessionRedirectGuard } from './queryClient';
 
 describe('queryClient', () => {
-  const assign = vi.fn();
+  const replace = vi.fn();
 
   beforeEach(() => {
-    vi.stubGlobal('location', { ...window.location, assign });
+    vi.stubGlobal('location', { ...window.location, replace });
   });
 
   afterEach(() => {
-    assign.mockReset();
+    replace.mockReset();
     vi.unstubAllGlobals();
     queryClient.clear();
+    resetSessionRedirectGuard();
   });
 
   it('navigates to /login when a query fails with a 401', async () => {
@@ -27,7 +28,7 @@ describe('queryClient', () => {
       })
       .catch(() => undefined);
 
-    expect(assign).toHaveBeenCalledWith('/login');
+    expect(replace).toHaveBeenCalledWith('/login');
   });
 
   it('does not navigate when a query fails with a non-401 error', async () => {
@@ -41,7 +42,7 @@ describe('queryClient', () => {
       })
       .catch(() => undefined);
 
-    expect(assign).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it('navigates to /login when a mutation fails with a 401', async () => {
@@ -53,7 +54,7 @@ describe('queryClient', () => {
 
     await observer.mutate().catch(() => undefined);
 
-    expect(assign).toHaveBeenCalledWith('/login');
+    expect(replace).toHaveBeenCalledWith('/login');
   });
 
   it('does not navigate when a mutation fails with a non-401 error', async () => {
@@ -65,7 +66,34 @@ describe('queryClient', () => {
 
     await observer.mutate().catch(() => undefined);
 
-    expect(assign).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('navigates only once when several queries fail with a 401 concurrently', async () => {
+    const failWith401 = () => {
+      throw new HttpError(401, 'unauthorized');
+    };
+
+    await Promise.all([
+      queryClient
+        .fetchQuery({ queryKey: ['session-loss-query-a'], queryFn: failWith401, retry: false })
+        .catch(() => undefined),
+      queryClient
+        .fetchQuery({ queryKey: ['session-loss-query-b'], queryFn: failWith401, retry: false })
+        .catch(() => undefined),
+    ]);
+
+    expect(replace).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry a query that fails with a 401 under the default retry policy', async () => {
+    const queryFn = vi.fn().mockRejectedValue(new HttpError(401, 'unauthorized'));
+
+    await queryClient
+      .fetchQuery({ queryKey: ['session-loss-default-retry-query'], queryFn })
+      .catch(() => undefined);
+
+    expect(queryFn).toHaveBeenCalledTimes(1);
   });
 
   it('retries a query that fails with a transient error', async () => {
@@ -77,6 +105,7 @@ describe('queryClient', () => {
     const result = await queryClient.fetchQuery({
       queryKey: ['transient-failure-query'],
       queryFn,
+      retryDelay: 0,
     });
 
     expect(result).toBe('ok');
