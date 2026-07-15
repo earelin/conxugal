@@ -6,6 +6,7 @@ plugins {
 dependencies {
     implementation(libs.micronaut.data.model)
     implementation(libs.jspecify)
+    implementation(libs.slf4j.api)
     annotationProcessor(libs.micronaut.data.processor)
 
     testImplementation(libs.assertj.core)

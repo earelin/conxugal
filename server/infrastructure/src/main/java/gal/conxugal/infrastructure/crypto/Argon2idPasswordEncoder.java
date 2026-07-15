@@ -1,4 +1,4 @@
-package gal.conxugal.infrastructure.auth;
+package gal.conxugal.infrastructure.crypto;
 
 import gal.conxugal.domain.auth.PasswordEncoder;
 import jakarta.inject.Singleton;
