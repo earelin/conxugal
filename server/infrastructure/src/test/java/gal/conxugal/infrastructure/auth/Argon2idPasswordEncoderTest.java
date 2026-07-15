@@ -48,7 +48,7 @@ class Argon2idPasswordEncoderTest {
   }
 
   @Test
-  void rejects_a_malformed_encoded_password_missing_segments() {
+  void rejects_malformed_encoded_password_missing_segments() {
     assertThatThrownBy(() -> passwordEncoder.matches("whatever", "65536:3:1:salt"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Malformed encoded password");
