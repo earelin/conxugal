@@ -23,6 +23,28 @@ describe('apiFetch', () => {
     expect(new Headers(init.headers).get('Accept')).toBe('application/json');
   });
 
+  it('preserves caller-supplied headers passed as a Headers instance', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiFetch('/api/data', { headers: new Headers({ 'X-CSRF-TOKEN': 'token' }) });
+
+    const [, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
+    const headers = new Headers(init.headers);
+    expect(headers.get('X-CSRF-TOKEN')).toBe('token');
+    expect(headers.get('Accept')).toBe('application/json');
+  });
+
+  it('does not override an explicit caller-supplied Accept header', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiFetch('/api/data', { headers: { Accept: 'text/html' } });
+
+    const [, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
+    expect(new Headers(init.headers).get('Accept')).toBe('text/html');
+  });
+
   it('throws an HttpError carrying the status when the response is not ok', async () => {
     const response = new Response(null, { status: 401 });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));

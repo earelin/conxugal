@@ -1,7 +1,7 @@
 import { MutationObserver, type QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpError } from './httpClient';
-import { createQueryClient } from './queryClient';
+import { createQueryClient, queryClient as productionQueryClient } from './queryClient';
 
 describe('queryClient', () => {
   const replace = vi.fn();
@@ -120,5 +120,18 @@ describe('queryClient', () => {
       .catch(() => undefined);
 
     expect(queryFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('wires the exported singleton with the session-loss redirect and retry policy', async () => {
+    await productionQueryClient
+      .fetchQuery({
+        queryKey: ['production-singleton-session-loss'],
+        queryFn: () => {
+          throw new HttpError(401, 'unauthorized');
+        },
+      })
+      .catch(() => undefined);
+
+    expect(replace).toHaveBeenCalledWith('/login');
   });
 });
