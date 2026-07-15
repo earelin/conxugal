@@ -64,10 +64,8 @@ class ApiUrlPrefixArchTest {
       return producesHtml(method.getAnnotationOfType(Produces.class));
     }
     JavaClass owner = method.getOwner();
-    if (owner.isAnnotatedWith(Produces.class)) {
-      return producesHtml(owner.getAnnotationOfType(Produces.class));
-    }
-    return false;
+    return owner.isAnnotatedWith(Produces.class)
+        && producesHtml(owner.getAnnotationOfType(Produces.class));
   }
 
   private static boolean producesHtml(Produces produces) {
@@ -79,7 +77,7 @@ class ApiUrlPrefixArchTest {
       @Override
       public void check(JavaClass javaClass, ConditionEvents events) {
         String basePath = javaClass.getAnnotationOfType(Controller.class).value();
-        boolean satisfied = basePath.equals("/api") || basePath.startsWith("/api/");
+        boolean satisfied = "/api".equals(basePath) || basePath.startsWith("/api/");
         String message =
             String.format(
                 "%s is @Controller(\"%s\"), which serves a non-HTML response outside /api",
