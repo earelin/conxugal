@@ -1,4 +1,4 @@
-package gal.conxugal.infrastructure.auth;
+package gal.conxugal.infrastructure.jdbc.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.db.api.Assertions.assertThat;
@@ -6,6 +6,7 @@ import static org.assertj.db.api.Assertions.assertThat;
 import gal.conxugal.domain.auth.Role;
 import gal.conxugal.domain.auth.User;
 import gal.conxugal.domain.auth.UserRepository;
+import gal.conxugal.infrastructure.crypto.Argon2idPasswordEncoder;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -13,6 +14,7 @@ import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import javax.sql.DataSource;
@@ -82,6 +84,41 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
     Optional<User> result = userRepository.findByEmail("ghost@example.com");
 
     assertThat(result).isEmpty();
+  }
+
+  @Test
+  void has_no_last_login_at_until_the_first_successful_login() throws Exception {
+    insertUser("ana@example.com", "hashed-password", "USER");
+
+    User user = userRepository.findByEmail("ana@example.com").orElseThrow();
+
+    assertThat(user.lastLoginAt()).isNull();
+  }
+
+  @Test
+  void updates_last_login_at_for_an_existing_user() throws Exception {
+    insertUser("ana@example.com", "hashed-password", "USER");
+    User user = userRepository.findByEmail("ana@example.com").orElseThrow();
+    Instant loginInstant = Instant.parse("2026-07-11T10:15:30Z");
+
+    userRepository.updateLastLoginAt(user.id(), loginInstant);
+
+    User updated = userRepository.findByEmail("ana@example.com").orElseThrow();
+    assertThat(updated.lastLoginAt()).isEqualTo(loginInstant);
+  }
+
+  @Test
+  void replaces_last_login_at_on_the_next_login() throws Exception {
+    insertUser("ana@example.com", "hashed-password", "USER");
+    User user = userRepository.findByEmail("ana@example.com").orElseThrow();
+    Instant firstLogin = Instant.parse("2026-07-11T10:15:30Z");
+    Instant laterLogin = Instant.parse("2026-07-12T08:00:00Z");
+    userRepository.updateLastLoginAt(user.id(), firstLogin);
+
+    userRepository.updateLastLoginAt(user.id(), laterLogin);
+
+    User updated = userRepository.findByEmail("ana@example.com").orElseThrow();
+    assertThat(updated.lastLoginAt()).isEqualTo(laterLogin);
   }
 
   @Test

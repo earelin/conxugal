@@ -1,4 +1,4 @@
-package gal.conxugal.infrastructure.auth;
+package gal.conxugal.infrastructure.crypto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
