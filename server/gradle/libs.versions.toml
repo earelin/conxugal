@@ -49,6 +49,7 @@ micronaut-views-thymeleaf = { module = "io.micronaut.views:micronaut-views-thyme
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter" }
 postgresql = { module = "org.postgresql:postgresql" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "restAssured" }
+slf4j-api = { module = "org.slf4j:slf4j-api" }
 snakeyaml = { module = "org.yaml:snakeyaml" }
 spotbugs-gradle-plugin = { module = "com.github.spotbugs.snom:spotbugs-gradle-plugin", version.ref = "spotbugsGradlePlugin" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
