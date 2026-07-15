@@ -58,6 +58,17 @@ Run from `server/` (Gradle wrapper; Java 25 toolchain is pinned in the root
   dependency direction, `domain`'s transport/persistence-code purity, and the `/api/`
   URL prefix (see below). Static bytecode analysis only, no Docker/running instance
   needed, so it's part of `check`/`build` like `domain`'s and `infrastructure`'s tests.
+- `./gradlew :domain:jacocoTestReport` / `:application:jacocoTestReport` /
+  `:infrastructure:jacocoTestReport` — JaCoCo code coverage report for that module
+  (`<module>/build/reports/jacoco/test/html/index.html`). For `application` and
+  `infrastructure`, this runs **both** `test` and `integrationTest` and merges their
+  coverage into one report; `domain` has no `integrationTest` suite, so it's unit-test
+  coverage only. Not part of `check`/`build` — same opt-in treatment as
+  `integrationTest` itself, so it doesn't force a Docker-dependent
+  `infrastructure:integrationTest` run into the normal build.
+- `./gradlew jacocoAggregatedReport` — combines coverage from `domain`, `application`
+  and `infrastructure` (including their `integrationTest` suites where present) into
+  one server-wide report (`build/reports/jacoco/jacocoAggregatedReport/html/index.html`).
 
 ## Fast feedback while iterating
 
