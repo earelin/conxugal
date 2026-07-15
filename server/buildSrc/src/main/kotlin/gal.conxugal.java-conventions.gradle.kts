@@ -6,11 +6,13 @@ import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.plugins.quality.Pmd
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.testing.jacoco.tasks.JacocoReport
 
 plugins {
     java
     checkstyle
     pmd
+    jacoco
     id("com.github.spotbugs")
     id("net.ltgt.errorprone")
 }
@@ -66,6 +68,21 @@ spotbugs {
 tasks.withType<SpotBugsTask>().configureEach {
     reports.create("html")
     reports.create("xml")
+}
+
+jacoco {
+    toolVersion = libs.findVersion("jacoco").get().requiredVersion
+}
+
+tasks.withType<JacocoReport>().configureEach {
+    reports {
+        html.required = true
+        xml.required = true
+    }
+}
+
+tasks.named<JacocoReport>("jacocoTestReport") {
+    dependsOn(tasks.named("test"))
 }
 
 tasks.withType<JavaCompile>().configureEach {
