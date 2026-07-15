@@ -1,3 +1,5 @@
+import org.gradle.testing.jacoco.tasks.JacocoReport
+
 plugins {
     id("gal.conxugal.java-conventions")
     alias(libs.plugins.micronaut.application)
@@ -50,6 +52,7 @@ testing {
                 implementation(libs.micronaut.security.csrf)
                 implementation(libs.mockito.junit.jupiter)
                 implementation(libs.assertj.core)
+                implementation(libs.micronaut.test.rest.assured)
             }
 
             targets {
@@ -67,6 +70,11 @@ configurations["integrationTestAnnotationProcessor"].extendsFrom(
     configurations["annotationProcessor"],
     configurations["testAnnotationProcessor"]
 )
+
+tasks.named<JacocoReport>("jacocoTestReport") {
+    dependsOn(tasks.named("integrationTest"))
+    executionData(tasks.test.get(), tasks.named("integrationTest").get())
+}
 
 val uiDir = layout.projectDirectory.dir("../../ui")
 val generatedWebResourcesDir = layout.buildDirectory.dir("generated/ui")

@@ -3,9 +3,15 @@ micronaut:
     name: conxugal-server
   server:
     port: 8080
+    thread-selection: BLOCKING
+  executors:
+    blocking:
+      virtual: true
   security:
     enabled: true
     authentication: session
+    basic-auth:
+      enabled: false
     redirect:
       enabled: true
       login-success: /
