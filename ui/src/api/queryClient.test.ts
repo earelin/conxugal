@@ -1,20 +1,20 @@
-import { MutationObserver } from '@tanstack/react-query';
+import { MutationObserver, type QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpError } from './httpClient';
-import { queryClient, resetSessionRedirectGuard } from './queryClient';
+import { createQueryClient } from './queryClient';
 
 describe('queryClient', () => {
   const replace = vi.fn();
+  let queryClient: QueryClient;
 
   beforeEach(() => {
     vi.stubGlobal('location', { ...window.location, replace });
+    queryClient = createQueryClient();
   });
 
   afterEach(() => {
     replace.mockReset();
     vi.unstubAllGlobals();
-    queryClient.clear();
-    resetSessionRedirectGuard();
   });
 
   it('navigates to /login when a query fails with a 401', async () => {
