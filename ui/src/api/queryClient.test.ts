@@ -86,6 +86,29 @@ describe('queryClient', () => {
     expect(replace).toHaveBeenCalledTimes(1);
   });
 
+  it('navigates only once when a query and a mutation fail with a 401 concurrently', async () => {
+    const observer = new MutationObserver(queryClient, {
+      mutationFn: () => {
+        throw new HttpError(401, 'unauthorized');
+      },
+    });
+
+    await Promise.all([
+      queryClient
+        .fetchQuery({
+          queryKey: ['session-loss-query-and-mutation'],
+          queryFn: () => {
+            throw new HttpError(401, 'unauthorized');
+          },
+          retry: false,
+        })
+        .catch(() => undefined),
+      observer.mutate().catch(() => undefined),
+    ]);
+
+    expect(replace).toHaveBeenCalledTimes(1);
+  });
+
   it('does not retry a query that fails with a 401 under the default retry policy', async () => {
     const queryFn = vi.fn().mockRejectedValue(new HttpError(401, 'unauthorized'));
 
@@ -122,16 +145,19 @@ describe('queryClient', () => {
     expect(queryFn).toHaveBeenCalledTimes(1);
   });
 
-  it('wires the exported singleton with the session-loss redirect and retry policy', async () => {
-    await productionQueryClient
-      .fetchQuery({
-        queryKey: ['production-singleton-session-loss'],
-        queryFn: () => {
-          throw new HttpError(401, 'unauthorized');
-        },
-      })
-      .catch(() => undefined);
+  it('wires the exported singleton with a shared session-loss handler and the retry policy', () => {
+    const queryCacheHandler = productionQueryClient.getQueryCache().config.onError;
+    const mutationCacheHandler = productionQueryClient.getMutationCache().config.onError;
 
-    expect(replace).toHaveBeenCalledWith('/login');
+    expect(queryCacheHandler).toBeTypeOf('function');
+    expect(queryCacheHandler).toBe(mutationCacheHandler);
+
+    const retry = productionQueryClient.getDefaultOptions().queries?.retry as (
+      failureCount: number,
+      error: unknown,
+    ) => boolean;
+
+    expect(retry(0, new HttpError(401, 'unauthorized'))).toBe(false);
+    expect(retry(0, new HttpError(503, 'unavailable'))).toBe(true);
   });
 });

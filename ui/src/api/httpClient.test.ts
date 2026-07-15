@@ -45,6 +45,18 @@ describe('apiFetch', () => {
     expect(new Headers(init.headers).get('Accept')).toBe('text/html');
   });
 
+  it('preserves caller-supplied headers passed as a tuple array', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiFetch('/api/data', { headers: [['X-CSRF-TOKEN', 'token']] });
+
+    const [, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
+    const headers = new Headers(init.headers);
+    expect(headers.get('X-CSRF-TOKEN')).toBe('token');
+    expect(headers.get('Accept')).toBe('application/json');
+  });
+
   it('throws an HttpError carrying the status when the response is not ok', async () => {
     const response = new Response(null, { status: 401 });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
