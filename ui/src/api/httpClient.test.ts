@@ -1,65 +1,74 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import nock from 'nock';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { apiFetch, HttpError } from './httpClient';
 
+const BASE_URL = 'http://localhost:3000';
+
 describe('apiFetch', () => {
+  beforeEach(() => {
+    nock.disableNetConnect();
+  });
+
   afterEach(() => {
-    vi.unstubAllGlobals();
+    nock.cleanAll();
+    nock.enableNetConnect();
   });
 
   it('resolves with the response when the request succeeds', async () => {
-    const response = new Response(null, { status: 200 });
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
+    nock(BASE_URL).get('/api/data').reply(200);
 
-    await expect(apiFetch('/api/data')).resolves.toBe(response);
+    const response = await apiFetch('/api/data');
+
+    expect(response.status).toBe(200);
+    expect(response.ok).toBe(true);
   });
 
   it('requests JSON by sending an Accept: application/json header', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
+    const scope = nock(BASE_URL, { reqheaders: { accept: 'application/json' } })
+      .get('/api/data')
+      .reply(200);
 
     await apiFetch('/api/data');
 
-    const [, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
-    expect(new Headers(init.headers).get('Accept')).toBe('application/json');
+    expect(scope.isDone()).toBe(true);
   });
 
   it('preserves caller-supplied headers passed as a Headers instance', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
+    const scope = nock(BASE_URL, {
+      reqheaders: { 'x-csrf-token': 'token', accept: 'application/json' },
+    })
+      .get('/api/data')
+      .reply(200);
 
     await apiFetch('/api/data', { headers: new Headers({ 'X-CSRF-TOKEN': 'token' }) });
 
-    const [, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
-    const headers = new Headers(init.headers);
-    expect(headers.get('X-CSRF-TOKEN')).toBe('token');
-    expect(headers.get('Accept')).toBe('application/json');
+    expect(scope.isDone()).toBe(true);
   });
 
   it('does not override an explicit caller-supplied Accept header', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
+    const scope = nock(BASE_URL, { reqheaders: { accept: 'text/html' } })
+      .get('/api/data')
+      .reply(200);
 
     await apiFetch('/api/data', { headers: { Accept: 'text/html' } });
 
-    const [, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
-    expect(new Headers(init.headers).get('Accept')).toBe('text/html');
+    expect(scope.isDone()).toBe(true);
   });
 
   it('preserves caller-supplied headers passed as a tuple array', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
+    const scope = nock(BASE_URL, {
+      reqheaders: { 'x-csrf-token': 'token', accept: 'application/json' },
+    })
+      .get('/api/data')
+      .reply(200);
 
     await apiFetch('/api/data', { headers: [['X-CSRF-TOKEN', 'token']] });
 
-    const [, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
-    const headers = new Headers(init.headers);
-    expect(headers.get('X-CSRF-TOKEN')).toBe('token');
-    expect(headers.get('Accept')).toBe('application/json');
+    expect(scope.isDone()).toBe(true);
   });
 
   it('throws an HttpError carrying the status when the response is not ok', async () => {
-    const response = new Response(null, { status: 401 });
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
+    nock(BASE_URL).get('/api/data').reply(401);
 
     const error = await apiFetch('/api/data').catch((caught: unknown) => caught);
 
