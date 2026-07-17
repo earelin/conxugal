@@ -27,7 +27,7 @@ jobs:
           node-version: "24"
 
       - name: Install spectral
-        run: npm install -g @stoplight/spectral-cli
+        run: npm install -g @stoplight/spectral-cli @stoplight/spectral-owasp-ruleset
 
       - name: Run openapi-lint.sh
         run: scripts/openapi-lint.sh

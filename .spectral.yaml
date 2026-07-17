@@ -1,1 +1,61 @@
-extends: spectral:oas
+extends:
+  - spectral:oas
+  - "@stoplight/spectral-owasp-ruleset"
+
+rules:
+  # --- URL style guidelines ---------------------------------------------------
+
+  paths-kebab-case:
+    description: Path segments must be kebab-case (lower-case, hyphen separated).
+    message: "{{property}} should be kebab-case (lower-case and separated with hyphens)"
+    severity: error
+    given: $.paths[*]~
+    then:
+      function: pattern
+      functionOptions:
+        match: "^(\/|[a-z0-9-.]+|{[a-zA-Z0-9_]+})+$"
+
+  path-no-trailing-slash:
+    description: Path templates must not end with a trailing slash.
+    message: "{{property}} must not end with a trailing slash"
+    severity: error
+    given: $.paths[*]~
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "\/$"
+
+  path-no-http-verbs:
+    description: >-
+      Path segments must not contain HTTP verb-like words; the HTTP method already
+      expresses the action.
+    message: "{{property}} should not contain a verb like get/list/create/update/delete/remove/fetch/retrieve"
+    severity: error
+    given: $.paths[*]~
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "\\b(get|list|create|update|delete|remove|fetch|retrieve)\\b"
+
+  path-param-camel-case:
+    description: Path parameter names must be camelCase.
+    message: "{{property}} path parameter names must be camelCase"
+    severity: error
+    given: "$..parameters[?(@.in=='path')].name"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^[a-z][a-zA-Z0-9]*$"
+
+  # --- OWASP API Security Top 10 (@stoplight/spectral-owasp-ruleset) ---------
+  #
+  # Rules the contract doesn't satisfy yet are kept at "warn" so they surface as
+  # actionable guidance without failing CI; everything else stays at the
+  # package's default "error".
+  "owasp:api4:2023-array-limit": warn
+  "owasp:api4:2023-string-limit": warn
+  "owasp:api4:2023-integer-limit": warn
+  "owasp:api4:2023-integer-format": warn
+  "owasp:api4:2023-rate-limit": warn
+  "owasp:api9:2023-inventory-access": warn
+  "owasp:api9:2023-inventory-environment": warn

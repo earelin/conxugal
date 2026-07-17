@@ -27,7 +27,7 @@ have()    { command -v "$1" >/dev/null 2>&1; }
 lint_openapi() {
   section "OpenAPI contract (spectral)"
   if ! have spectral; then
-    printf '%sSKIP%s spectral not found — install with: npm i -g @stoplight/spectral-cli\n' "$yellow" "$reset"
+    printf '%sSKIP%s spectral not found — install with: npm i -g @stoplight/spectral-cli @stoplight/spectral-owasp-ruleset\n' "$yellow" "$reset"
     FAILED+=("openapi-lint (tool missing)")
     return
   fi
