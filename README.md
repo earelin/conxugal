@@ -75,7 +75,7 @@ brew install lychee                                # ligazóns internas (https:/
 brew install actionlint shellcheck                 # workflows + scripts `run:` embebidos
 
 # openapi-lint.sh
-npm install -g @stoplight/spectral-cli             # contrato OpenAPI (docs/api/openapi.yaml)
+brew install vacuum                                # contrato OpenAPI (docs/api/openapi.yaml)
 ```
 
 Fóra de macOS, instala `lychee`, `actionlint` e `shellcheck` co xestor de paquetes do

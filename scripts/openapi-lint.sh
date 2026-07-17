@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # openapi-lint.sh — verify docs/api/openapi.yaml (the design-first REST contract)
-# against the OpenAPI ruleset in .spectral.yaml using Spectral.
+# against the OpenAPI ruleset in .vacuum.yaml using vacuum.
 #
 # Usage: scripts/openapi-lint.sh
 set -uo pipefail
@@ -10,7 +10,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 OPENAPI_DOC="docs/api/openapi.yaml"
-RULESET=".spectral.yaml"
+RULESET=".vacuum.yaml"
 
 bold=$(tput bold 2>/dev/null || true)
 red=$(tput setaf 1 2>/dev/null || true)
@@ -25,13 +25,13 @@ have()    { command -v "$1" >/dev/null 2>&1; }
 
 # --- OpenAPI contract ---------------------------------------------------------
 lint_openapi() {
-  section "OpenAPI contract (spectral)"
-  if ! have spectral; then
-    printf '%sSKIP%s spectral not found — install with: npm i -g @stoplight/spectral-cli\n' "$yellow" "$reset"
+  section "OpenAPI contract (vacuum)"
+  if ! have vacuum; then
+    printf '%sSKIP%s vacuum not found — install with: brew install vacuum\n' "$yellow" "$reset"
     FAILED+=("openapi-lint (tool missing)")
     return
   fi
-  if spectral lint "$OPENAPI_DOC" --ruleset "$RULESET"; then
+  if vacuum lint "$OPENAPI_DOC" --ruleset "$RULESET" --no-banner; then
     printf '%sOK%s openapi contract\n' "$green" "$reset"
   else
     printf '%sFAIL%s openapi contract\n' "$red" "$reset"
