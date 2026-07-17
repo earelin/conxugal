@@ -37,15 +37,69 @@ rules:
       functionOptions:
         notMatch: "\\b(get|list|create|update|delete|remove|fetch|retrieve)\\b"
 
-  path-param-camel-case:
-    description: Path parameter names must be camelCase.
-    message: "{{property}} path parameter names must be camelCase"
+  path-param-snake-case:
+    description: Path parameter names must be snake_case.
+    message: "{{property}} path parameter names must be snake_case"
     severity: error
     given: "$..parameters[?(@.in=='path')].name"
     then:
       function: pattern
       functionOptions:
-        match: "^[a-z][a-zA-Z0-9]*$"
+        match: "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
+
+  query-param-snake-case:
+    description: Query parameter names must be snake_case.
+    message: "{{property}} query parameter names must be snake_case"
+    severity: error
+    given: "$..parameters[?(@.in=='query')].name"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
+
+  path-no-query-string:
+    description: >-
+      Paths must not embed a literal query string; declare query parameters
+      separately via `parameters`.
+    message: "{{property}} must not contain a literal query string"
+    severity: error
+    given: $.paths[*]~
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "\\?"
+
+  path-no-file-extension:
+    description: >-
+      Paths must not end with a file extension (e.g. .json, .xml); use the Accept
+      header for content negotiation instead.
+    message: "{{property}} must not end with a file extension"
+    severity: error
+    given: $.paths[*]~
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "\\.[a-zA-Z0-9]+$"
+
+  path-params-at-path-level:
+    description: >-
+      Path parameters should be defined once on the path item, not repeated on
+      each operation.
+    message: "{{property}} defines a path parameter at the operation level; move it to the path item's shared parameters instead"
+    severity: error
+    given: "$.paths[*][get,put,post,delete,options,head,patch,trace].parameters[?(@.in=='path')].in"
+    then:
+      function: undefined
+
+  host-lowercase:
+    description: Server URLs must be lowercase.
+    message: "{{property}} must be lowercase"
+    severity: error
+    given: "$.servers[*].url"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "[A-Z]"
 
   # --- OWASP API Security Top 10 (@stoplight/spectral-owasp-ruleset) ---------
   #
