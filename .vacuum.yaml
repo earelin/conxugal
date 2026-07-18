@@ -1,1 +1,6 @@
 extends: [[vacuum:oas, recommended], [vacuum:owasp, recommended]]
+
+rules:
+  # The server URL is a relative path ("/"): the SPA and API are always same-origin
+  # (ADR-0003), so there is no host/scheme to enforce TLS on here.
+  owasp-security-hosts-https-oas3: off
