@@ -1,0 +1,6 @@
+flyway:
+  datasources:
+    default:
+      locations:
+        - classpath:db/migration
+        - classpath:db/migration-local

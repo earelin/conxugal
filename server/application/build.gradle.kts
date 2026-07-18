@@ -29,6 +29,10 @@ application {
     mainClass = "gal.conxugal.application.Application"
 }
 
+tasks.named<JavaExec>("run") {
+    environment("MICRONAUT_ENVIRONMENTS", "local")
+}
+
 micronaut {
     runtime("netty")
     testRuntime("junit5")
