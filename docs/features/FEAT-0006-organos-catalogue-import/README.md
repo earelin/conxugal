@@ -141,11 +141,12 @@ flowchart LR
   the controllers exist, and CI enforces conformance (ADR-0010).
 
 ### Scheduled trigger ([ADR-0011](../../architecture/0011-blocking-io-virtual-threads.md))
-- A Micronaut `@Scheduled` job in the application module runs the import on a recurring,
-  configurable interval, invoking the **same** `ImportOrganos` use case and single-run
-  guard as the endpoint (SPEC-0004 R11). It runs on the blocking/virtual-thread executor,
-  so the outbound fetch and JDBC writes block safely without occupying an event-loop
-  thread.
+- A Micronaut `@Scheduled` job in the application module runs the import on a configurable
+  schedule — defaulting to **once daily, overnight** (an early-morning run in the source's
+  Europe/Madrid time, during off-peak hours) — invoking the **same** `ImportOrganos` use
+  case and single-run guard as the endpoint (SPEC-0004 R11). It runs on the
+  blocking/virtual-thread executor, so the outbound fetch and JDBC writes block safely
+  without occupying an event-loop thread.
 
 ## Sequencing (tasks, one small change each)
 1. **Órgano domain model + repository port** — the `OrganoDeContratacion` aggregate

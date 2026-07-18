@@ -16,7 +16,9 @@ on the blocking/virtual-thread executor).
 ## Scope
 - A Micronaut `@Scheduled` job in the `application` module that invokes the **same**
   `ImportOrganos` use case and single-run guard as the manual endpoint.
-- The recurring interval is **configurable** (a configuration property), not hard-coded.
+- The schedule is **configurable** (a configuration property), defaulting to **once
+  daily, overnight** (a single early-morning run in the source's local time,
+  Europe/Madrid) so the import lands during off-peak hours.
 - Runs on the blocking/virtual-thread executor so the outbound fetch and JDBC writes block
   safely off the event loop.
 
@@ -25,4 +27,4 @@ on the blocking/virtual-thread executor).
   the catalogue reflects the source as of that run. ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #11)
 - A scheduled run overlapping another in-progress import does not start a second concurrent
   run — it honours the single-run guard. (SPEC-0004 #12)
-- The interval is set from configuration.
+- The schedule is set from configuration, defaulting to a single daily overnight run.
