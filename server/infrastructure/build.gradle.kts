@@ -1,3 +1,5 @@
+import org.gradle.testing.jacoco.tasks.JacocoReport
+
 plugins {
     id("gal.conxugal.java-conventions")
     alias(libs.plugins.micronaut.library)
@@ -58,3 +60,8 @@ configurations["integrationTestAnnotationProcessor"].extendsFrom(
     configurations["annotationProcessor"],
     configurations["testAnnotationProcessor"]
 )
+
+tasks.named<JacocoReport>("jacocoTestReport") {
+    dependsOn(tasks.named("integrationTest"))
+    executionData(tasks.test.get(), tasks.named("integrationTest").get())
+}

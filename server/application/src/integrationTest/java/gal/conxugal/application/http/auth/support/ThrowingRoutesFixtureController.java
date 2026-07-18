@@ -11,12 +11,19 @@ public class ThrowingRoutesFixtureController {
   @Secured(SecurityRule.IS_ANONYMOUS)
   @Get("/test-support/boom")
   String boom() {
-    throw new RuntimeException("boom - sensitive detail that must never reach a response body");
+    throw new BoomException();
   }
 
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @Get("/api/test-support/boom")
   String apiBoom() {
-    throw new RuntimeException("boom - sensitive detail that must never reach a response body");
+    throw new BoomException();
+  }
+
+  private static final class BoomException extends RuntimeException {
+
+    BoomException() {
+      super("boom - sensitive detail that must never reach a response body");
+    }
   }
 }

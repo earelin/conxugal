@@ -1,7 +1,8 @@
-package gal.conxugal.infrastructure.auth;
+package gal.conxugal.infrastructure.crypto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -44,5 +45,12 @@ class Argon2idPasswordEncoderTest {
   void match_against_dummy_hash_does_not_throw_for_any_input() {
     assertThatCode(() -> passwordEncoder.matchAgainstDummyHash("whatever"))
         .doesNotThrowAnyException();
+  }
+
+  @Test
+  void rejects_malformed_encoded_password_missing_segments() {
+    assertThatThrownBy(() -> passwordEncoder.matches("whatever", "65536:3:1:salt"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Malformed encoded password");
   }
 }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
+import gal.conxugal.application.http.auth.support.RequestThreadRecorder;
 import gal.conxugal.domain.auth.Role;
 import gal.conxugal.domain.auth.User;
 import io.micronaut.http.HttpHeaders;
@@ -36,6 +37,9 @@ class LoginPageTest extends AuthenticationTestSupport {
   @Inject
   CsrfConfiguration csrfConfiguration;
 
+  @Inject
+  RequestThreadRecorder requestThreadRecorder;
+
   private BlockingHttpClient client;
 
   @BeforeEach
@@ -65,6 +69,13 @@ class LoginPageTest extends AuthenticationTestSupport {
 
     assertThat(withError).contains("Correo electrónico ou contrasinal incorrectos.");
     assertThat(withoutError).doesNotContain("Correo electrónico ou contrasinal incorrectos.");
+  }
+
+  @Test
+  void serves_the_login_page_on_virtual_threads_not_the_event_loop() {
+    client.exchange(HttpRequest.GET("/login"), String.class);
+
+    assertThat(requestThreadRecorder.lastRequestThread().isVirtual()).isTrue();
   }
 
   @Test

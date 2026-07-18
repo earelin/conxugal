@@ -3,6 +3,7 @@ package gal.conxugal.application.http.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
+import gal.conxugal.application.http.auth.support.RequestThreadRecorder;
 import gal.conxugal.domain.auth.Role;
 import gal.conxugal.domain.auth.User;
 import io.micronaut.context.annotation.Property;
@@ -24,6 +25,9 @@ class ForbiddenPageTest extends AuthenticationTestSupport {
 
   @Inject
   CsrfConfiguration csrfConfiguration;
+
+  @Inject
+  RequestThreadRecorder requestThreadRecorder;
 
   @BeforeEach
   void setUp() {
@@ -47,6 +51,18 @@ class ForbiddenPageTest extends AuthenticationTestSupport {
     assertThat(body).contains("Acceso denegado");
     assertThat(body).contains("A túa conta non ten permisos para acceder a esta área.");
     assertThat(body).contains("name=\"csrfToken\"");
+  }
+
+  @Test
+  void serves_the_forbidden_page_on_virtual_threads_not_the_event_loop(RequestSpecification spec) {
+    String sessionCookie = login(spec, "user@example.com", "user-password");
+
+    given(spec)
+        .header(HttpHeaders.COOKIE, sessionCookie)
+    .when()
+        .get("/forbidden");
+
+    assertThat(requestThreadRecorder.lastRequestThread().isVirtual()).isTrue();
   }
 
   @Test
