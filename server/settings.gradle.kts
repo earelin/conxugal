@@ -1,4 +1,4 @@
-rootProject.name = "conxugal-server"
+rootProject.name = "conxugal"
 
 include("domain")
 include("application")
