@@ -1,6 +1,12 @@
 # conxugal
 
+<!-- markdownlint-disable MD033 -->
+<img src="ui/public/logo.svg" alt="Logo de conxugal" width="50" height="50" align="left">
+
 Extrae, almacena, analiza e exporta a información de contratos públicos da Xunta de Galicia.
+
+<br clear="left">
+<!-- markdownlint-enable MD033 -->
 
 ## Propósito xeral
 
