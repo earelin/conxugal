@@ -1,5 +1,7 @@
 # conxugal
 
+![Logo de conxugal](ui/public/logo.svg)
+
 Extrae, almacena, analiza e exporta a información de contratos públicos da Xunta de Galicia.
 
 ## Propósito xeral
