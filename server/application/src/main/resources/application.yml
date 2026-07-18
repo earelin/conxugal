@@ -1,9 +1,6 @@
 micronaut:
   application:
-    name: conxugal-server
-  server:
-    port: 8080
-    thread-selection: BLOCKING
+    name: conxugal
   executors:
     blocking:
       virtual: true
@@ -40,6 +37,9 @@ micronaut:
     csrf:
       enabled: true
       signature-key: ${CSRF_SIGNATURE_KEY:conxugal-dev-only-csrf-signature-key}
+  server:
+    port: 8080
+    thread-selection: BLOCKING
   session:
     http:
       cookie: true

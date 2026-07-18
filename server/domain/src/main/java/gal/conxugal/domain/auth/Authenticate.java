@@ -37,12 +37,14 @@ public class Authenticate {
     Optional<User> user = userRepository.findByEmail(email);
 
     if (user.isEmpty()) {
+      LOG.warn("No user found with email {}", email);
       passwordEncoder.matchAgainstDummyHash(password);
       return Optional.empty();
     }
 
     User foundUser = user.get();
     if (!passwordEncoder.matches(password, foundUser.passwordHash())) {
+      LOG.warn("Passwords do not match");
       return Optional.empty();
     }
 

@@ -1,0 +1,21 @@
+logger:
+  levels:
+    gal.conxugal: DEBUG
+    io.micronaut.security: DEBUG
+
+# Local dev runs over plain HTTP, but the CSRF cookie defaults to the __Host- prefix,
+# which browsers only accept over HTTPS — so the cookie is never stored and every
+# login POST fails CSRF validation with a 401. Drop the prefix and the Secure flag so
+# the double-submit cookie works locally. Production keeps the secure defaults.
+micronaut:
+  security:
+    csrf:
+      cookie-name: csrfToken
+      cookie-secure: false
+
+flyway:
+  datasources:
+    default:
+      locations:
+        - classpath:db/migration
+        - classpath:db/migration-local
