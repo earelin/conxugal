@@ -1,7 +1,7 @@
 ---
 spec: SPEC-0002
 adrs: [0002, 0005, 0008, 0011]
-status: draft
+status: implemented
 ---
 
 # FEAT-0002. User authentication
