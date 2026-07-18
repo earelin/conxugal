@@ -1,1 +1,1 @@
-extends: vacuum:oas
+extends: [[vacuum:oas, recommended], [vacuum:owasp, recommended]]
