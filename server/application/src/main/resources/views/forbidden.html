@@ -1,15 +1,45 @@
 <!doctype html>
-<html lang="gl">
+<html lang="gl" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Acceso denegado · conxugal</title>
+    <link rel="stylesheet" href="/assets/static-pages/static-pages.css" />
   </head>
   <body>
-    <main>
-      <h1>Acceso denegado</h1>
-      <p>Non tes permisos para acceder a esta páxina.</p>
-      <a href="/">Volver ao inicio</a>
+    <main class="page">
+      <div th:replace="~{fragments/brand :: brand}"></div>
+
+      <div class="status-card">
+        <div class="status-glyph">
+          <svg width="44" height="34" viewBox="0 0 44 34" fill="none" aria-hidden="true">
+            <rect x="8" y="16" width="28" height="18" rx="4" stroke="#4c6ef5" stroke-width="2.4"></rect>
+            <path
+              d="M14 16 V9 a8 8 0 0 1 16 0 v7"
+              stroke="#4c6ef5"
+              stroke-width="2.4"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+            <circle cx="22" cy="22.5" r="2" fill="#4c6ef5"></circle>
+            <line x1="22" y1="22.5" x2="22" y2="27" stroke="#4c6ef5" stroke-width="2.4" stroke-linecap="round"></line>
+          </svg>
+        </div>
+
+        <p class="status-code">ERRO 403</p>
+        <h1 class="status-title">Acceso denegado</h1>
+        <p class="status-description">A túa conta non ten permisos para acceder a esta área.</p>
+        <p class="status-description">Contacta cun administrador se cres que se trata dun erro.</p>
+
+        <div class="status-actions">
+          <a class="btn-primary" href="/">Volver ao inicio</a>
+          <form method="post" action="/logout">
+            <input type="hidden" name="csrfToken" th:value="${csrfToken}" />
+            <button type="submit" class="btn-link">Pechar sesión</button>
+          </form>
+        </div>
+      </div>
     </main>
   </body>
 </html>

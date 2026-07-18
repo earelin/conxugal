@@ -38,16 +38,29 @@ paths:
       responses:
         "200":
           description: The full list of accounts.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     post:
       tags: [users]
       operationId: createUser
@@ -58,6 +71,7 @@ paths:
         retrievable afterwards (SPEC-0003 R16).
       requestBody:
         required: true
+        description: The email and role for the new account.
         content:
           application/json:
             schema:
@@ -65,6 +79,13 @@ paths:
       responses:
         "201":
           description: The account was created; the generated initial password is included exactly once.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
           content:
             application/json:
               schema:
@@ -77,10 +98,21 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           description: An account with that email already exists; the existing account is unchanged (SPEC-0003 R8).
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /api/admin/users/{id}/enabled:
     parameters:
@@ -94,6 +126,7 @@ paths:
         administrator is refused (SPEC-0003 R12). Accounts are never deleted (SPEC-0003 R11).
       requestBody:
         required: true
+        description: The account's desired enabled state.
         content:
           application/json:
             schema:
@@ -101,6 +134,13 @@ paths:
       responses:
         "200":
           description: The account's new state.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
           content:
             application/json:
               schema:
@@ -115,10 +155,21 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           description: The change is refused because it would disable the last enabled administrator (SPEC-0003 R12).
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /api/admin/system-status:
     get:
@@ -132,14 +183,27 @@ paths:
       responses:
         "200":
           description: The current system status.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SystemStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /api/admin/metrics:
     get:
@@ -157,16 +221,29 @@ paths:
           description: >-
             An open event stream. Each `message` event carries one `RuntimeMetrics` sample
             as JSON in its `data` field; heartbeat comments keep the connection alive.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
           content:
             text/event-stream:
               schema:
                 $ref: "#/components/schemas/RuntimeMetrics"
               # OpenAPI cannot model an SSE frame sequence; this schema documents the JSON
               # `data` payload carried by each sample event, not a single response body.
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
 components:
   securitySchemes:
@@ -188,27 +265,111 @@ components:
         type: string
         format: uuid
 
+  headers:
+    RateLimitLimit:
+      description: The number of requests allowed in the current rate-limit window.
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 100000
+    RateLimitRemaining:
+      description: The number of requests remaining in the current rate-limit window.
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 100000
+    RateLimitReset:
+      description: Seconds until the current rate-limit window resets.
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 86400
+
   responses:
     BadRequest:
       description: The request body is malformed or fails validation.
+      headers:
+        RateLimit-Limit:
+          $ref: "#/components/headers/RateLimitLimit"
+        RateLimit-Remaining:
+          $ref: "#/components/headers/RateLimitRemaining"
+        RateLimit-Reset:
+          $ref: "#/components/headers/RateLimitReset"
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
     Unauthorized:
       description: No valid session; the caller is not authenticated (SPEC-0002 R7). Protected API routes return 401 rather than an HTML redirect.
+      headers:
+        RateLimit-Limit:
+          $ref: "#/components/headers/RateLimitLimit"
+        RateLimit-Remaining:
+          $ref: "#/components/headers/RateLimitRemaining"
+        RateLimit-Reset:
+          $ref: "#/components/headers/RateLimitReset"
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
     Forbidden:
       description: The caller is authenticated but is not an administrator (SPEC-0003 R1).
+      headers:
+        RateLimit-Limit:
+          $ref: "#/components/headers/RateLimitLimit"
+        RateLimit-Remaining:
+          $ref: "#/components/headers/RateLimitRemaining"
+        RateLimit-Reset:
+          $ref: "#/components/headers/RateLimitReset"
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
     NotFound:
       description: No account with the given id exists.
+      headers:
+        RateLimit-Limit:
+          $ref: "#/components/headers/RateLimitLimit"
+        RateLimit-Remaining:
+          $ref: "#/components/headers/RateLimitRemaining"
+        RateLimit-Reset:
+          $ref: "#/components/headers/RateLimitReset"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    TooManyRequests:
+      description: The caller has exceeded the allowed request rate.
+      headers:
+        RateLimit-Limit:
+          $ref: "#/components/headers/RateLimitLimit"
+        RateLimit-Remaining:
+          $ref: "#/components/headers/RateLimitRemaining"
+        RateLimit-Reset:
+          $ref: "#/components/headers/RateLimitReset"
+        Retry-After:
+          description: Seconds to wait before retrying the request.
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            maximum: 86400
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InternalServerError:
+      description: An unexpected error occurred; the failure is not disclosed beyond a generic message.
+      headers:
+        RateLimit-Limit:
+          $ref: "#/components/headers/RateLimitLimit"
+        RateLimit-Remaining:
+          $ref: "#/components/headers/RateLimitRemaining"
+        RateLimit-Reset:
+          $ref: "#/components/headers/RateLimitReset"
       content:
         application/json:
           schema:
@@ -218,29 +379,43 @@ components:
     Role:
       type: string
       enum: [USER, ADMIN]
+      example: "ADMIN"
       description: An account's role. ADMIN is a strict superset of USER (SPEC-0002).
 
     User:
       type: object
+      description: A user account and its current administration state (SPEC-0003 R6).
       required: [id, email, role, enabled, createdAt]
+      example:
+        id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        email: "admin@conxugal.gal"
+        role: "ADMIN"
+        enabled: true
+        createdAt: "2026-01-15T09:30:00Z"
+        lastLoginAt: "2026-07-10T08:12:00Z"
       properties:
         id:
           type: string
           format: uuid
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
         email:
           type: string
           format: email
+          example: "admin@conxugal.gal"
         role:
           $ref: "#/components/schemas/Role"
         enabled:
           type: boolean
+          example: true
         createdAt:
           type: string
           format: date-time
+          example: "2026-01-15T09:30:00Z"
           description: When the account was created.
         lastLoginAt:
           type: [string, "null"]
           format: date-time
+          example: "2026-07-10T08:12:00Z"
           description: >-
             The account's most recent successful login, recorded per SPEC-0002 R13.
             Null until the account's first successful login.
@@ -248,33 +423,53 @@ components:
     CreateUserRequest:
       type: object
       required: [email, role]
+      example:
+        email: "new.admin@conxugal.gal"
+        role: "ADMIN"
       properties:
         email:
           type: string
           format: email
+          example: "new.admin@conxugal.gal"
         role:
           $ref: "#/components/schemas/Role"
       description: The password is not accepted here; the server generates it (SPEC-0003 R7).
 
     CreatedUser:
       type: object
+      description: >-
+        The account just created, including its one-time system-generated initial
+        password (SPEC-0003 R7, R13).
       required: [id, email, role, enabled, createdAt, initialPassword]
+      example:
+        id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        email: "new.admin@conxugal.gal"
+        role: "ADMIN"
+        enabled: true
+        createdAt: "2026-07-18T09:30:00Z"
+        initialPassword: "Tg7#kLp2Qw9$mZxR"
       properties:
         id:
           type: string
           format: uuid
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
         email:
           type: string
           format: email
+          example: "new.admin@conxugal.gal"
         role:
           $ref: "#/components/schemas/Role"
         enabled:
           type: boolean
+          example: true
         createdAt:
           type: string
           format: date-time
+          example: "2026-07-18T09:30:00Z"
         initialPassword:
           type: string
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{16,}$"
+          example: "Tg7#kLp2Qw9$mZxR"
           description: >-
             The system-generated initial password, returned only in this creation response
             and never again (SPEC-0003 R13, R16). At least 16 characters spanning upper- and
@@ -282,30 +477,45 @@ components:
 
     SetEnabledRequest:
       type: object
+      description: The desired enabled state for an account (SPEC-0003 R9, R10).
       required: [enabled]
+      example:
+        enabled: false
       properties:
         enabled:
           type: boolean
+          example: false
           description: true to enable the account, false to disable it.
 
     SystemStatus:
       type: object
+      description: A point-in-time snapshot of overall service health (SPEC-0003 R2-R5).
       required: [status, datastore, checkedAt]
+      example:
+        status: "UP"
+        datastore:
+          reachable: true
+        checkedAt: "2026-07-18T09:30:00Z"
       properties:
         status:
           type: string
           enum: [UP, DEGRADED]
+          example: "UP"
           description: Overall service state (SPEC-0003 R3).
         datastore:
           type: object
           required: [reachable]
+          example:
+            reachable: true
           properties:
             reachable:
               type: boolean
+              example: true
               description: Whether the datastore is reachable (SPEC-0003 R3).
         checkedAt:
           type: string
           format: date-time
+          example: "2026-07-18T09:30:00Z"
           description: When this snapshot was taken; it reflects the state at request time (SPEC-0003 R4).
 
     RuntimeMetrics:
@@ -314,57 +524,130 @@ components:
         One detailed runtime sample. The exact field set is illustrative and never includes
         secrets or connection values (SPEC-0003 R21).
       required: [timestamp]
+      example:
+        timestamp: "2026-07-18T09:30:00Z"
+        jvm:
+          heapUsedBytes: 536870912
+          heapMaxBytes: 2147483648
+          nonHeapUsedBytes: 100663296
+          threadCount: 42
+          uptimeMillis: 3600000
+        system:
+          cpuLoad: 0.35
+        http:
+          requestCount: 15230
+          errorCount: 12
+        datastorePool:
+          active: 3
+          idle: 7
+          max: 10
       properties:
         timestamp:
           type: string
           format: date-time
+          example: "2026-07-18T09:30:00Z"
         jvm:
           type: object
+          example:
+            heapUsedBytes: 536870912
+            heapMaxBytes: 2147483648
+            nonHeapUsedBytes: 100663296
+            threadCount: 42
+            uptimeMillis: 3600000
           properties:
             heapUsedBytes:
               type: integer
               format: int64
+              minimum: 0
+              maximum: 549755813888
+              example: 536870912
             heapMaxBytes:
               type: integer
               format: int64
+              minimum: 0
+              maximum: 549755813888
+              example: 2147483648
             nonHeapUsedBytes:
               type: integer
               format: int64
+              minimum: 0
+              maximum: 549755813888
+              example: 100663296
             threadCount:
               type: integer
+              format: int32
+              minimum: 0
+              maximum: 100000
+              example: 42
             uptimeMillis:
               type: integer
               format: int64
+              minimum: 0
+              maximum: 315360000000
+              example: 3600000
         system:
           type: object
+          example:
+            cpuLoad: 0.35
           properties:
             cpuLoad:
               type: number
               format: double
+              example: 0.35
               description: Recent system/CPU load, 0.0-1.0.
         http:
           type: object
+          example:
+            requestCount: 15230
+            errorCount: 12
           properties:
             requestCount:
               type: integer
               format: int64
+              minimum: 0
+              maximum: 9223372036854775807
+              example: 15230
             errorCount:
               type: integer
               format: int64
+              minimum: 0
+              maximum: 9223372036854775807
+              example: 12
         datastorePool:
           type: object
+          example:
+            active: 3
+            idle: 7
+            max: 10
           properties:
             active:
               type: integer
+              format: int32
+              minimum: 0
+              maximum: 10000
+              example: 3
             idle:
               type: integer
+              format: int32
+              minimum: 0
+              maximum: 10000
+              example: 7
             max:
               type: integer
+              format: int32
+              minimum: 0
+              maximum: 10000
+              example: 10
 
     Error:
       type: object
+      description: A machine-readable error envelope returned for non-2xx responses.
       required: [message]
+      example:
+        message: "Something went wrong."
       properties:
         message:
           type: string
+          pattern: "^.{1,500}$"
+          example: "Something went wrong."
           description: A human-readable, non-sensitive description of the failure.

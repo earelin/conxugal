@@ -75,8 +75,9 @@ brew install lychee                                # ligazóns internas (https:/
 brew install actionlint shellcheck                 # workflows + scripts `run:` embebidos
 
 # openapi-lint.sh
-npm install -g @stoplight/spectral-cli             # contrato OpenAPI (docs/api/openapi.yaml)
+brew install vacuum                                # contrato OpenAPI (docs/api/openapi.yaml)
 ```
 
-Fóra de macOS, instala `lychee`, `actionlint` e `shellcheck` co xestor de paquetes do
-teu sistema ou dende as súas páxinas de publicación.
+Fóra de macOS, instala `lychee`, `actionlint`, `shellcheck` e `vacuum` co xestor de
+paquetes do teu sistema, dende as súas páxinas de publicación, ou con
+`curl -fsSL https://quobix.com/scripts/install_vacuum.sh | sh` no caso de `vacuum`.
