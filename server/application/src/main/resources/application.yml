@@ -7,6 +7,11 @@ micronaut:
   executors:
     blocking:
       virtual: true
+  router:
+    static-resources:
+      static-pages:
+        paths: classpath:static-pages
+        mapping: /assets/static-pages/**
   security:
     enabled: true
     authentication: session
@@ -25,6 +30,8 @@ micronaut:
         url: /login
     intercept-url-map:
       - pattern: /login
+        access: [isAnonymous()]
+      - pattern: /assets/static-pages/**
         access: [isAnonymous()]
       - pattern: /api/admin/**
         access: [ADMIN]
