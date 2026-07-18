@@ -1,11 +1,17 @@
 package gal.conxugal.domain.auth;
 
+import gal.conxugal.domain.time.Clock;
 import jakarta.inject.Singleton;
+import java.time.Instant;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Authenticate use case: finds the user by email and verifies the password against
  * the stored hash, returning the user on success or an indistinct failure otherwise.
+ * A successful authentication also stamps and persists the user's {@code lastLoginAt},
+ * best-effort: a failure to record it does not fail the login.
  *
  * <p>For an unknown email there is no stored hash to compare against, so the check is
  * not short-circuited: {@link PasswordEncoder#matchAgainstDummyHash} runs instead, at
@@ -15,12 +21,16 @@ import java.util.Optional;
 @Singleton
 public class Authenticate {
 
+  private static final Logger LOG = LoggerFactory.getLogger(Authenticate.class);
+
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
+  private final Clock clock;
 
-  public Authenticate(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+  public Authenticate(UserRepository userRepository, PasswordEncoder passwordEncoder, Clock clock) {
     this.userRepository = userRepository;
     this.passwordEncoder = passwordEncoder;
+    this.clock = clock;
   }
 
   public Optional<User> authenticate(String email, String password) {
@@ -31,7 +41,26 @@ public class Authenticate {
       return Optional.empty();
     }
 
-    boolean passwordMatches = passwordEncoder.matches(password, user.get().passwordHash());
-    return passwordMatches ? user : Optional.empty();
+    User foundUser = user.get();
+    if (!passwordEncoder.matches(password, foundUser.passwordHash())) {
+      return Optional.empty();
+    }
+
+    return Optional.of(recordLogin(foundUser));
+  }
+
+  @SuppressWarnings("PMD.AvoidCatchingGenericException")
+  private User recordLogin(User user) {
+    Instant loginInstant = clock.instant();
+    try {
+      userRepository.updateLastLoginAt(user.id(), loginInstant);
+    } catch (RuntimeException e) {
+      // Caught broadly, not as the adapter's own exception type, so the domain stays
+      // free of persistence concerns while still honouring the best-effort guarantee
+      // against any failure the port's implementation may throw.
+      LOG.error("Failed to record last login for user {}", user.id(), e);
+      return user;
+    }
+    return new User(user.id(), user.email(), user.passwordHash(), user.role(), loginInstant);
   }
 }

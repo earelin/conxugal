@@ -22,6 +22,7 @@ class DomainPurityArchTest {
               "io.micronaut.views..",
               "io.micronaut.jdbc..",
               "io.micronaut.data.jdbc..",
+              "io.micronaut.data.exceptions..",
               "java.sql..",
               "javax.sql..",
               "org.postgresql..",

@@ -3,6 +3,7 @@ package gal.conxugal.domain.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
+import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +18,22 @@ class UserTest {
     assertThat(user.email()).isEqualTo("ana@example.com");
     assertThat(user.passwordHash()).isEqualTo("stored-hash");
     assertThat(user.role()).isEqualTo(Role.ADMIN);
+  }
+
+  @Test
+  void has_no_last_login_at_when_constructed_without_one() {
+    User user = new User(UUID.randomUUID(), "ana@example.com", "stored-hash", Role.USER);
+
+    assertThat(user.lastLoginAt()).isNull();
+  }
+
+  @Test
+  void exposes_the_given_last_login_at() {
+    Instant lastLoginAt = Instant.parse("2026-07-11T10:15:30Z");
+    User user =
+        new User(UUID.randomUUID(), "ana@example.com", "stored-hash", Role.USER, lastLoginAt);
+
+    assertThat(user.lastLoginAt()).isEqualTo(lastLoginAt);
   }
 
   @Test

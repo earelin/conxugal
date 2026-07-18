@@ -6,10 +6,32 @@
 
   <description>PMD rules for test sources: the base rules minus common test idioms.</description>
 
-  <rule ref="ruleset.xml">
+  <rule ref="category/java/bestpractices.xml">
+    <exclude name="GuardLogStatement"/>
+    <exclude name="ImplicitFunctionalInterface"/>
+    <exclude name="UnitTestContainsTooManyAsserts"/>
+    <exclude name="UnitTestShouldIncludeAssert"/>
+    <exclude name="UnitTestAssertionsShouldIncludeMessage"/>
     <exclude name="AbstractClassWithoutAbstractMethod"/>
+  </rule>
+
+  <rule ref="category/java/errorprone.xml">
+    <exclude name="MissingSerialVersionUID"/>
+    <exclude name="TestClassWithoutTestCases"/>
+    <exclude name="AvoidFieldNameMatchingMethodName"/>
+    <exclude name="AvoidLiteralsInIfCondition"/>
+    <exclude name="AvoidDuplicateLiterals"/>
+  </rule>
+
+  <rule ref="category/java/design.xml">
+    <exclude name="LawOfDemeter"/>
+    <exclude name="LoosePackageCoupling"/>
+    <exclude name="TooManyMethods"/>
+    <exclude name="ExcessiveImports"/>
     <exclude name="MutableStaticState"/>
     <exclude name="SignatureDeclareThrowsException"/>
   </rule>
+
+  <rule ref="category/java/performance.xml"/>
 
 </ruleset>
