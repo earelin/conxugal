@@ -25,6 +25,8 @@ import jakarta.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -99,6 +101,36 @@ class LoginPageTest extends AuthenticationTestSupport {
   }
 
   @Test
+  void reloading_the_login_page_with_the_csrf_cookie_keeps_the_form_token_stable() {
+    HttpResponse<String> firstPage = client.exchange(HttpRequest.GET("/login"), String.class);
+    String csrfCookieHeader = csrfCookieHeaderOf(firstPage);
+    String firstToken = csrfTokenFromForm(firstPage.body());
+
+    HttpResponse<String> reload = client.exchange(
+        HttpRequest.GET("/login").header(HttpHeaders.COOKIE, csrfCookieHeader), String.class);
+
+    assertThat(csrfTokenFromForm(reload.body())).isEqualTo(firstToken);
+    assertThat(reload.getHeaders().getAll(HttpHeaders.SET_COOKIE))
+        .noneMatch(header -> header.startsWith(csrfConfiguration.getCookieName() + "="));
+  }
+
+  @Test
+  void submitting_the_form_after_reloading_the_login_page_still_authenticates() {
+    HttpResponse<String> firstPage = client.exchange(HttpRequest.GET("/login"), String.class);
+    String csrfCookieHeader = csrfCookieHeaderOf(firstPage);
+
+    HttpResponse<String> reload = client.exchange(
+        HttpRequest.GET("/login").header(HttpHeaders.COOKIE, csrfCookieHeader), String.class);
+    String reloadedToken = csrfTokenFromForm(reload.body());
+
+    HttpResponse<?> response = client.exchange(
+        formLoginRequest("user@example.com", "user-password", csrfCookieHeader, reloadedToken));
+
+    assertThat(response.getStatus().getCode()).isEqualTo(HttpStatus.SEE_OTHER.getCode());
+    assertThat(response.getHeaders().get(HttpHeaders.LOCATION)).isEqualTo("/");
+  }
+
+  @Test
   void submitting_the_html_form_with_an_invalid_password_redirects_to_login_with_error() {
     HttpResponse<?> response =
         client.exchange(formLoginRequest("user@example.com", "wrong-password"));
@@ -148,6 +180,15 @@ class LoginPageTest extends AuthenticationTestSupport {
     String csrfCookieHeader = csrfCookieHeaderOf(client.exchange(HttpRequest.GET("/login")));
 
     return formLoginRequest(email, password, csrfCookieHeader, "tampered-token");
+  }
+
+  private static String csrfTokenFromForm(String body) {
+    Matcher matcher =
+        Pattern.compile("name=\"csrfToken\"[^>]*value=\"([^\"]+)\"").matcher(body);
+    if (!matcher.find()) {
+      throw new AssertionError("No csrfToken hidden field found in the login form");
+    }
+    return matcher.group(1);
   }
 
   private String csrfCookieHeaderOf(HttpResponse<?> loginPage) {
