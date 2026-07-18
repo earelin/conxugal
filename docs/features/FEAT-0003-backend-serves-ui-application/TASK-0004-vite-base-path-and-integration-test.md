@@ -16,14 +16,15 @@ deferred here.
   match TASK-0002's static-resource mapping — no sub-path is currently planned, so this
   is expected to stay the Vite default, but must be verified once the real build is
   served by Micronaut rather than `vite preview`.
-- One Micronaut HTTP-client integration test (`application` module) exercising the full
-  routing matrix built across this feature's tasks end to end, against the real built
+- One acceptance test (`acceptance` module) exercising the full
+  routing matrix with authentication built across this feature's tasks end to end, against the real built
   UI assets — not mocked.
+- Use playwright for a real browser tests
 
 ## Acceptance criteria
 - Booting the packaged server (built via TASK-0001) and requesting `/` returns HTML
   whose asset references (`<script>`/`<link>` tags) resolve to assets the server
   actually serves (no broken/misresolved paths).
-- An integration test asserts: `/` → 200 HTML; `/acerca` → 200 HTML (fallback);
+- An acceptance test asserts: login of the demo user `/` → 200 HTML; `/acerca` → 200 HTML (fallback);
   `/rota-que-non-existe` → 200 HTML (fallback); `/api/rota-que-non-existe` → 404; a real
   static asset path → 200 with the asset body.
