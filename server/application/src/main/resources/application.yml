@@ -9,6 +9,9 @@ micronaut:
       static-pages:
         paths: classpath:static-pages
         mapping: /assets/static-pages/**
+      ui:
+        paths: classpath:public
+        mapping: /**
   security:
     enabled: true
     authentication: session
@@ -33,6 +36,8 @@ micronaut:
       - pattern: /api/admin/**
         access: [ADMIN]
       - pattern: /api/**
+        access: [isAuthenticated()]
+      - pattern: /**
         access: [isAuthenticated()]
     csrf:
       enabled: true

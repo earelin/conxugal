@@ -142,3 +142,18 @@ Dependency versions are centralized in `gradle/libs.versions.toml`; most
 `io.micronaut*` and driver versions are left unversioned there because the Micronaut
 platform BOM (`micronautVersion` in `gradle.properties`) resolves them at build time —
 bump that one property rather than pinning individual library versions.
+
+## HTTP routing conventions
+
+The `application` module is the single origin for both the REST API and the built UI
+(ADR-0003), so the two are split by URL prefix:
+
+- **Every REST endpoint — current and future — is mounted under `/api/`** (e.g.
+  `@Controller("/api/contracts")`), per
+  `docs/architecture/0006-reserved-api-url-prefix.md`. An endpoint outside `/api/` is a
+  defect; `./gradlew :architecture:test` enforces this for any `@Controller` that
+  serves a non-HTML response (`ApiUrlPrefixArchTest`).
+- **Everything else at `/`** is the UI: the built static assets
+  (`micronaut.router.static-resources` in `application.yml`, fed by `ui/dist` via
+  `copyUiDist` in `application/build.gradle.kts`) and, once added, the SPA
+  history-fallback to `index.html` for unmatched non-`/api/` `GET` requests.
