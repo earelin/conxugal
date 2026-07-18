@@ -4,19 +4,92 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Iniciar sesión · conxugal</title>
+    <link rel="stylesheet" href="/assets/static-pages/static-pages.css" />
   </head>
   <body>
-    <main>
-      <h1>conxugal</h1>
-      <form method="post" action="/login">
-        <input type="hidden" name="csrfToken" th:value="${csrfToken}" />
-        <p th:if="${error}">As credenciais introducidas non son correctas.</p>
-        <label for="username">Correo electrónico</label>
-        <input type="email" id="username" name="username" autocomplete="username" required autofocus />
-        <label for="password">Contrasinal</label>
-        <input type="password" id="password" name="password" autocomplete="current-password" required />
-        <button type="submit">Iniciar sesión</button>
-      </form>
+    <main class="page">
+      <div th:replace="~{fragments/brand :: brand}"></div>
+
+      <div class="card">
+        <h1 class="card-title">Inicia sesión</h1>
+        <p class="card-subtitle">Accede coa túa conta para continuar.</p>
+
+        <div class="alert-error" th:if="${error}">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path
+              d="M7 1.5 L13 12.5 H1 Z"
+              fill="none"
+              stroke="#fa5252"
+              stroke-width="1.2"
+              stroke-linejoin="round"
+            ></path>
+            <line x1="7" y1="5.5" x2="7" y2="8.5" stroke="#fa5252" stroke-width="1.2" stroke-linecap="round"></line>
+            <circle cx="7" cy="10.3" r="0.7" fill="#fa5252"></circle>
+          </svg>
+          <span>Correo electrónico ou contrasinal incorrectos.</span>
+        </div>
+
+        <form method="post" action="/login">
+          <input type="hidden" name="csrfToken" th:value="${csrfToken}" />
+
+          <div class="field">
+            <label for="username">Correo electrónico</label>
+            <div class="field-input">
+              <input
+                type="email"
+                id="username"
+                name="username"
+                placeholder="persoa@dominio.gal"
+                autocomplete="username"
+                required
+                autofocus
+              />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="password">Contrasinal</label>
+            <div class="field-input">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                autocomplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                id="password-toggle"
+                aria-label="Amosar contrasinal"
+                aria-pressed="false"
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <path
+                    d="M1 9 C3 5 6 3 9 3 C12 3 15 5 17 9 C15 13 12 15 9 15 C6 15 3 13 1 9 Z"
+                    stroke="currentColor"
+                    stroke-width="1.4"
+                    fill="none"
+                  ></path>
+                  <circle cx="9" cy="9" r="2.4" stroke="currentColor" stroke-width="1.4" fill="none"></circle>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary">Entrar</button>
+        </form>
+      </div>
     </main>
+    <script th:inline="none">
+      var toggle = document.getElementById('password-toggle');
+      var password = document.getElementById('password');
+      toggle.addEventListener('click', function () {
+        var isVisible = password.type === 'text';
+        password.type = isVisible ? 'password' : 'text';
+        toggle.setAttribute('aria-pressed', String(!isVisible));
+        toggle.setAttribute('aria-label', isVisible ? 'Amosar contrasinal' : 'Agochar contrasinal');
+      });
+    </script>
   </body>
 </html>
