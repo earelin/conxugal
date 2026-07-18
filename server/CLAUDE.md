@@ -89,6 +89,18 @@ what changed:
 | Any `build.gradle.kts`, `gradle/libs.versions.toml`, or `settings.gradle.kts` | `./gradlew build` (full multi-module build) |
 | Before committing, regardless of scope | `./gradlew build` (see below) |
 
+## Writing and editing tests
+
+When creating or editing a test in this module, invoke the matching skill from the
+`backend` plugin first and follow it — do not hand-write these tests from scratch. Each
+skill owns the tooling, structure, and conventions for its test kind:
+
+| Test kind | Where it lives | Skill (`backend` plugin) |
+| --- | --- | --- |
+| Unit — a class's logic in isolation (no context, DB, or network) | `<module>/src/test/java/**` | `/java-unit-test` |
+| Integration — crosses a process boundary (repository/DAO, controller over HTTP, client, Testcontainers-backed dependency) | `application`/`infrastructure` `src/integrationTest/java/**` | `/java-integration-test` |
+| Acceptance — black-box scenario against a running instance | `acceptance/src/test/java/**` | `/java-acceptance-test` |
+
 ## Before committing
 
 Run `./gradlew build` from `server/` and fix any failures before committing changes
@@ -155,5 +167,15 @@ The `application` module is the single origin for both the REST API and the buil
   serves a non-HTML response (`ApiUrlPrefixArchTest`).
 - **Everything else at `/`** is the UI: the built static assets
   (`micronaut.router.static-resources` in `application.yml`, fed by `ui/dist` via
-  `copyUiDist` in `application/build.gradle.kts`) and, once added, the SPA
-  history-fallback to `index.html` for unmatched non-`/api/` `GET` requests.
+  `copyUiDist` in `application/build.gradle.kts`) and the SPA history-fallback to
+  `index.html` for unmatched non-`/api/` `GET` requests (`SpaHistoryFallback`, a global
+  `@Error(status = NOT_FOUND)` handler). Fallback split for an unmatched request:
+  - **`GET` for a client-side route** (outside `/api/`, not asset-shaped) → `index.html`
+    (200) so React Router resolves it, including its own not-found page.
+  - **`GET` for an asset that missed static-resource serving** — a path under `/assets/`
+    or carrying a file extension → plain `404`, *not* the shell. Serving the shell here
+    would mask a real miss (e.g. a stale hashed chunk after a redeploy) and hand the shell
+    to anonymous callers of the public `/assets/` namespace.
+  - **Under `/api/**`** → RFC 9457 `application/problem+json` `404`, matching the
+    API-error shape `ServerErrorHandler` uses; never the shell.
+  - **Any non-`GET`** → plain `404`.
