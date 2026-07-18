@@ -169,6 +169,13 @@ The `application` module is the single origin for both the REST API and the buil
   (`micronaut.router.static-resources` in `application.yml`, fed by `ui/dist` via
   `copyUiDist` in `application/build.gradle.kts`) and the SPA history-fallback to
   `index.html` for unmatched non-`/api/` `GET` requests (`SpaHistoryFallback`, a global
-  `@Error(status = NOT_FOUND)` handler). A `GET` outside `/api/` that matches neither a
-  route nor a static asset returns `index.html` (200) so React Router resolves it
-  client-side; anything under `/api/**`, and any non-`GET`, keeps its plain 404.
+  `@Error(status = NOT_FOUND)` handler). Fallback split for an unmatched request:
+  - **`GET` for a client-side route** (outside `/api/`, not asset-shaped) → `index.html`
+    (200) so React Router resolves it, including its own not-found page.
+  - **`GET` for an asset that missed static-resource serving** — a path under `/assets/`
+    or carrying a file extension → plain `404`, *not* the shell. Serving the shell here
+    would mask a real miss (e.g. a stale hashed chunk after a redeploy) and hand the shell
+    to anonymous callers of the public `/assets/` namespace.
+  - **Under `/api/**`** → RFC 9457 `application/problem+json` `404`, matching the
+    API-error shape `ServerErrorHandler` uses; never the shell.
+  - **Any non-`GET`** → plain `404`.

@@ -34,6 +34,7 @@ class SpaHistoryFallbackTest extends AuthenticationTestSupport {
     Response response =
         given(spec)
             .header(HttpHeaders.COOKIE, sessionCookie)
+            .accept(MediaType.TEXT_HTML)
         .when()
             .get("/acerca");
 
@@ -62,19 +63,73 @@ class SpaHistoryFallbackTest extends AuthenticationTestSupport {
   }
 
   @Test
-  void unmatched_api_path_returns_plain_not_found_never_the_spa_shell(RequestSpecification spec) {
+  void missing_hashed_asset_returns_plain_not_found_never_the_spa_shell(RequestSpecification spec) {
     String sessionCookie = login(spec, "user@example.com", "user-password");
 
     Response response =
         given(spec)
             .header(HttpHeaders.COOKIE, sessionCookie)
         .when()
-            .get("/api/rota-que-non-existe");
+            .get("/assets/index-doesnotexist.js");
 
     response
         .then()
             .statusCode(HttpStatus.NOT_FOUND.getCode());
     assertThat(response.getBody().asString()).doesNotContain(SPA_SHELL_MARKER);
+  }
+
+  @Test
+  void missing_root_asset_with_extension_returns_not_found_never_the_spa_shell(
+      RequestSpecification spec) {
+    String sessionCookie = login(spec, "user@example.com", "user-password");
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+        .when()
+            .get("/does-not-exist.svg");
+
+    response
+        .then()
+            .statusCode(HttpStatus.NOT_FOUND.getCode());
+    assertThat(response.getBody().asString()).doesNotContain(SPA_SHELL_MARKER);
+  }
+
+  @Test
+  void anonymous_request_to_public_asset_namespace_is_not_served_the_spa_shell(
+      RequestSpecification spec) {
+    Response response =
+        given(spec)
+        .when()
+            .get("/assets/static-pages/does-not-exist");
+
+    response
+        .then()
+            .statusCode(HttpStatus.NOT_FOUND.getCode());
+    assertThat(response.getBody().asString()).doesNotContain(SPA_SHELL_MARKER);
+  }
+
+  @Test
+  void unmatched_api_path_returns_problem_json_not_found_never_the_spa_shell(
+      RequestSpecification spec) {
+    String sessionCookie = login(spec, "user@example.com", "user-password");
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+            .accept(MediaType.APPLICATION_JSON)
+        .when()
+            .get("/api/rota-que-non-existe");
+
+    response
+        .then()
+            .statusCode(HttpStatus.NOT_FOUND.getCode());
+    assertThat(response.getContentType()).contains("application/problem+json");
+    String body = response.getBody().asString();
+    assertThat(body).contains("\"type\":\"urn:conxugal:problem-type:not-found\"");
+    assertThat(body).contains("\"status\":404");
+    assertThat(body).contains("\"instance\":\"/api/rota-que-non-existe\"");
+    assertThat(body).doesNotContain(SPA_SHELL_MARKER);
   }
 
   @Test
