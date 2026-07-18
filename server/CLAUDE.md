@@ -89,6 +89,18 @@ what changed:
 | Any `build.gradle.kts`, `gradle/libs.versions.toml`, or `settings.gradle.kts` | `./gradlew build` (full multi-module build) |
 | Before committing, regardless of scope | `./gradlew build` (see below) |
 
+## Writing and editing tests
+
+When creating or editing a test in this module, invoke the matching skill from the
+`backend` plugin first and follow it — do not hand-write these tests from scratch. Each
+skill owns the tooling, structure, and conventions for its test kind:
+
+| Test kind | Where it lives | Skill (`backend` plugin) |
+| --- | --- | --- |
+| Unit — a class's logic in isolation (no context, DB, or network) | `<module>/src/test/java/**` | `/java-unit-test` |
+| Integration — crosses a process boundary (repository/DAO, controller over HTTP, client, Testcontainers-backed dependency) | `application`/`infrastructure` `src/integrationTest/java/**` | `/java-integration-test` |
+| Acceptance — black-box scenario against a running instance | `acceptance/src/test/java/**` | `/java-acceptance-test` |
+
 ## Before committing
 
 Run `./gradlew build` from `server/` and fix any failures before committing changes
