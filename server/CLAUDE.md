@@ -155,5 +155,8 @@ The `application` module is the single origin for both the REST API and the buil
   serves a non-HTML response (`ApiUrlPrefixArchTest`).
 - **Everything else at `/`** is the UI: the built static assets
   (`micronaut.router.static-resources` in `application.yml`, fed by `ui/dist` via
-  `copyUiDist` in `application/build.gradle.kts`) and, once added, the SPA
-  history-fallback to `index.html` for unmatched non-`/api/` `GET` requests.
+  `copyUiDist` in `application/build.gradle.kts`) and the SPA history-fallback to
+  `index.html` for unmatched non-`/api/` `GET` requests (`SpaHistoryFallback`, a global
+  `@Error(status = NOT_FOUND)` handler). A `GET` outside `/api/` that matches neither a
+  route nor a static asset returns `index.html` (200) so React Router resolves it
+  client-side; anything under `/api/**`, and any non-`GET`, keeps its plain 404.
