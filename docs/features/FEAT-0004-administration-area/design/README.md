@@ -49,9 +49,9 @@ reads as part of the same product rather than a bolt-on.
 
 ### Chrome
 
-- **Header** carries the product name + tagline and the signed-in administrator
-  (email, role, avatar) — a visible reminder that admin screens run in an `ADMIN`
-  session.
+- **Header** carries the conxugal mark (`ui/public/logo.svg`), the product name +
+  tagline, and the signed-in administrator (email, role, avatar) — a visible
+  reminder that admin screens run in an `ADMIN` session.
 - **Navbar** keeps the primary nav (*Inicio*, *Acerca de*) and adds an
   **ADMINISTRACIÓN** section (*Panel*, *Usuarios*). This section is shown only to an
   `ADMIN`; the navbar gate is cosmetic — the server rules are the real gate
