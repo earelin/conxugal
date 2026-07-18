@@ -110,8 +110,8 @@ class LoginPageTest extends AuthenticationTestSupport {
         HttpRequest.GET("/login").header(HttpHeaders.COOKIE, csrfCookieHeader), String.class);
 
     assertThat(csrfTokenFromForm(reload.body())).isEqualTo(firstToken);
-    assertThat(reload.getHeaders().getAll(HttpHeaders.SET_COOKIE))
-        .noneMatch(header -> header.startsWith(csrfConfiguration.getCookieName() + "="));
+    // The cookie is re-issued so its max-age keeps sliding, but must carry the same token.
+    assertThat(csrfCookieHeaderOf(reload)).isEqualTo(csrfCookieHeader);
   }
 
   @Test
