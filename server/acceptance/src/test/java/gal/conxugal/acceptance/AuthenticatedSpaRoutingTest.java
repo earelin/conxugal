@@ -1,6 +1,5 @@
 package gal.conxugal.acceptance;
 
-import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.microsoft.playwright.APIResponse;
@@ -9,6 +8,7 @@ import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.Response;
+import com.microsoft.playwright.assertions.PlaywrightAssertions;
 import gal.conxugal.acceptance.support.ApplicationUnderTest;
 import java.util.List;
 import org.junit.jupiter.api.AfterAll;
@@ -33,6 +33,7 @@ class AuthenticatedSpaRoutingTest {
   private static Browser browser;
 
   private BrowserContext context;
+  private Page page;
 
   @BeforeAll
   static void launchBrowser() {
@@ -47,8 +48,14 @@ class AuthenticatedSpaRoutingTest {
   }
 
   @BeforeEach
-  void openContext() {
+  void logInAsDemoUser() {
     context = browser.newContext();
+    page = context.newPage();
+    page.navigate(LOGIN_URL);
+    page.locator("#username").fill(DEMO_EMAIL);
+    page.locator("#password").fill(DEMO_PASSWORD);
+    page.locator("button[type=submit]").click();
+    page.waitForURL(ROOT_URL);
   }
 
   @AfterEach
@@ -57,43 +64,44 @@ class AuthenticatedSpaRoutingTest {
   }
 
   @Test
-  void demo_user_logs_in_and_the_spa_routing_matrix_holds_against_the_packaged_ui() {
-    try (Page page = context.newPage()) {
-      logInAsDemoUser(page);
+  void root_serves_the_spa_shell_with_its_built_assets() {
+    Response rootResponse = page.navigate(ROOT_URL);
 
-      Response rootResponse = page.navigate(ROOT_URL);
-      assertThat(rootResponse.status()).isEqualTo(200);
-      assertThat(rootResponse.headerValue("content-type")).contains("text/html");
-      assertThat(page.getByText("Benvido/a a conxugal")).isVisible();
-      assertBuiltAssetsResolve(page);
-
-      Response acercaResponse = page.navigate(ApplicationUnderTest.BASE_URI + "/acerca");
-      assertThat(acercaResponse.status()).isEqualTo(200);
-      assertThat(acercaResponse.headerValue("content-type")).contains("text/html");
-      assertThat(page.getByText("Acerca do proxecto")).isVisible();
-
-      Response unknownRouteResponse =
-          page.navigate(ApplicationUnderTest.BASE_URI + "/rota-que-non-existe");
-      assertThat(unknownRouteResponse.status()).isEqualTo(200);
-      assertThat(unknownRouteResponse.headerValue("content-type")).contains("text/html");
-      assertThat(page.getByText("Páxina non atopada")).isVisible();
-
-      APIResponse unknownApiResponse =
-          context.request().get(ApplicationUnderTest.BASE_URI + "/api/rota-que-non-existe");
-      assertThat(unknownApiResponse.status()).isEqualTo(404);
-    }
+    assertThat(rootResponse.status()).isEqualTo(200);
+    assertThat(rootResponse.headerValue("content-type")).contains("text/html");
+    PlaywrightAssertions.assertThat(page.getByText("Benvido/a a conxugal")).isVisible();
+    assertBuiltAssetsResolve();
   }
 
-  private void logInAsDemoUser(Page page) {
-    page.navigate(LOGIN_URL);
-    page.locator("#username").fill(DEMO_EMAIL);
-    page.locator("#password").fill(DEMO_PASSWORD);
-    page.locator("button[type=submit]").click();
-    page.waitForURL(ROOT_URL);
+  @Test
+  void known_client_side_route_falls_back_to_the_spa_shell() {
+    Response acercaResponse = page.navigate(ApplicationUnderTest.BASE_URI + "/acerca");
+
+    assertThat(acercaResponse.status()).isEqualTo(200);
+    assertThat(acercaResponse.headerValue("content-type")).contains("text/html");
+    PlaywrightAssertions.assertThat(page.getByText("Acerca do proxecto")).isVisible();
   }
 
-  private void assertBuiltAssetsResolve(Page page) {
-    List<String> assetUrls = builtAssetUrls(page);
+  @Test
+  void unknown_route_falls_back_to_the_spa_shell_and_renders_its_not_found_page() {
+    Response unknownRouteResponse =
+        page.navigate(ApplicationUnderTest.BASE_URI + "/rota-que-non-existe");
+
+    assertThat(unknownRouteResponse.status()).isEqualTo(200);
+    assertThat(unknownRouteResponse.headerValue("content-type")).contains("text/html");
+    PlaywrightAssertions.assertThat(page.getByText("Páxina non atopada")).isVisible();
+  }
+
+  @Test
+  void unknown_api_route_returns_not_found_never_the_spa_shell() {
+    APIResponse unknownApiResponse =
+        context.request().get(ApplicationUnderTest.BASE_URI + "/api/rota-que-non-existe");
+
+    assertThat(unknownApiResponse.status()).isEqualTo(404);
+  }
+
+  private void assertBuiltAssetsResolve() {
+    List<String> assetUrls = builtAssetUrls();
     assertThat(assetUrls).isNotEmpty();
     for (String assetUrl : assetUrls) {
       APIResponse assetResponse = context.request().get(assetUrl);
@@ -103,7 +111,7 @@ class AuthenticatedSpaRoutingTest {
   }
 
   @SuppressWarnings("unchecked")
-  private List<String> builtAssetUrls(Page page) {
+  private List<String> builtAssetUrls() {
     Object hrefs =
         page.evaluate(
             "Array.from(document.querySelectorAll("
