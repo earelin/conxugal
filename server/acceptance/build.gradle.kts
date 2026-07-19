@@ -11,6 +11,7 @@ dependencies {
     testImplementation(libs.assertj.core)
 
     testImplementation(libs.wiremock)
+    testImplementation(libs.playwright)
 }
 
 tasks.named("test") {

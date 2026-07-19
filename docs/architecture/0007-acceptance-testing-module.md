@@ -6,19 +6,18 @@ supersedes: null
 superseded_by: null
 ---
 
-# 0007. Acceptance testing module using REST-assured against a real running instance
+# 0007. Acceptance testing module: REST-assured for the API, Playwright for the served UI
 
 ## Status
 Accepted
 
 ## Context
 The server has unit tests inside each hexagonal module ([ADR-0002](0002-hexagonal-architecture.md))
-and a handful of Micronaut HTTP-client tests inside `application/src/test` (e.g.
-`ApplicationTest`, and the routing-matrix test added by
-`docs/features/FEAT-0003-backend-serves-ui-application/TASK-0004-vite-base-path-and-integration-test.md`). None of these
-exercise the *packaged* application as an outside caller would: they run inside the
-module's own test source set, in the same JVM/build context as unit tests, and can reach
-internal types directly.
+and a handful of Micronaut HTTP-client tests inside `application/src/test` and
+`application/src/integrationTest` (e.g. `ApplicationTest`, `SpaHistoryFallbackTest`).
+None of these exercise the *packaged* application as an outside caller would: they run
+inside the module's own test source set, in the same JVM/build context as unit tests,
+and can reach internal types directly.
 
 As the server grows (authentication, contract ingestion from contratosdegalicia.gal,
 exports), we want black-box coverage of high-value user scenarios — hit real HTTP
@@ -28,6 +27,12 @@ and the database seeded with a fixed dataset — independent of how the three he
 modules are internally wired. This is a new kind of test (black-box, whole-application)
 and needs its own home so it isn't confused with the per-module unit tests or the
 in-process Micronaut client tests already living in `application`.
+
+[FEAT-0003](../features/FEAT-0003-backend-serves-ui-application/README.md) adds a second
+kind of black-box scenario an HTTP client can't cover: the same instance also serves the
+built SPA (ADR-0003/ADR-0004), and the thing worth proving there — a served page's asset
+references actually resolve, and the SPA hydrates and client-side-routes correctly — can
+only be observed by an actual browser, not by asserting on raw HTTP responses.
 
 ## Decision
 Add a new top-level Gradle module, **`acceptance`**, sibling to `domain`, `application`
@@ -41,8 +46,16 @@ flowchart LR
 ```
 
 - `acceptance` has **no compile-time dependency** on `domain`, `application` or
-  `infrastructure` — it is outside the hexagonal dependency graph entirely. It only
-  depends on test tooling: REST-assured (HTTP-driving), AssertJ (assertions), JUnit 5.
+  `infrastructure` — it is outside the hexagonal dependency graph entirely. It depends
+  on test tooling scoped to what each scenario drives: **REST-assured** for every
+  `/api/**` scenario, and **Playwright** (a real, scriptable browser) for scenarios that
+  exercise the static UI shell Micronaut serves at `/` — plus AssertJ (assertions) and
+  JUnit 5 throughout.
+- **Playwright is scoped to the served UI only, never the API.** Every `/api/**`
+  scenario is driven with REST-assured, matching every other black-box HTTP test in this
+  repo; Playwright is reserved for the cases REST-assured structurally cannot cover —
+  real browser rendering, asset resolution, and client-side SPA routing — not used as a
+  general-purpose HTTP client.
 - Tests **expect the application, and any downstream mocks it's configured to call, to
   already be running externally** (docker-compose, a deployed environment, or started
   manually for a local run) before the suite executes. `acceptance` does not boot,
@@ -56,8 +69,11 @@ flowchart LR
   stubs and verify recorded requests. The database is a real PostgreSQL seeded with a
   fixed dataset per scenario, using file fixtures for canned HTTP/DB payloads; how it's
   (re)seeded before a run is the external environment's responsibility, not this module's.
-- Test method names are snake_case; assertions use AssertJ; HTTP calls use
-  REST-assured — matching this repo's `backend:java-acceptance-test` convention.
+- Test method names are snake_case; assertions use AssertJ. API scenarios drive HTTP
+  with REST-assured, matching this repo's `backend:java-acceptance-test` convention;
+  the UI scenario drives a real browser with Playwright instead, since that convention
+  assumes an HTTP-only black box and doesn't apply where the thing under test is
+  browser-rendered.
 - `acceptance` is registered in `settings.gradle` and runs via its own custom Gradle
   task, `./gradlew :acceptance:acceptance` — not the conventional `test` task. The
   built-in `test` task is disabled, so the plain `check`/`build` commands the other
@@ -78,6 +94,9 @@ flowchart LR
   started, already-running instance.
 - Mocked downstream services and fixed datasets make scenarios deterministic and
   independent of the real contratosdegalicia.gal site.
+- Playwright's browser-driven scenario catches real UI regressions — a misconfigured
+  Vite asset base path, a broken SPA hydration — that no HTTP client, REST-assured
+  included, can observe from response bytes alone.
 
 ### Cons
 - Requires an external orchestration mechanism (docker-compose, CI job, or documented
@@ -86,6 +105,11 @@ flowchart LR
 - The suite provides no automatic teardown/reset between runs — whatever starts the
   external environment (or the tests themselves, via admin APIs like WireMock's reset
   endpoint or a reseed script run before the suite) is responsible for known-good state.
-- Duplicate coverage risk with the existing `application`-module integration tests
-  (e.g. the routing-matrix test in TASK-0004) until it's decided whether those move into
-  `acceptance` or continue to serve a narrower, faster-feedback purpose.
+- A second HTTP-driving toolchain: unlike REST-assured, Playwright's first run downloads
+  a real Chromium binary (network-dependent, tens of seconds to minutes), so the module
+  is no longer JVM-only at test time. Confined to the UI scenario for now.
+- Duplicate coverage risk between `application`'s `SpaHistoryFallbackTest` integration
+  test (fast, in-process, no browser — same status-code matrix) and `acceptance`'s
+  browser-driven UI scenario (TASK-0004) — kept deliberately: the former is the
+  fast-feedback check, the latter is the one black-box proof that real asset resolution
+  and hydration work against the packaged artifact.
