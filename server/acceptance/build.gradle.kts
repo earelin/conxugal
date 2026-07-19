@@ -40,4 +40,6 @@ tasks.register<Test>("acceptance") {
     if (System.getProperty("app.baseUrl") != null) {
         systemProperty("app.baseUrl", System.getProperty("app.baseUrl"))
     }
+    outputs.cacheIf { false }
+    outputs.upToDateWhen { false }
 }
