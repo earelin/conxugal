@@ -122,6 +122,6 @@ val copyUiDist = tasks.register<Copy>("copyUiDist") {
 
 sourceSets {
     main {
-        output.dir(mapOf("builtBy" to copyUiDist), generatedWebResourcesDir)
+        resources.srcDir(files(generatedWebResourcesDir).builtBy(copyUiDist))
     }
 }
