@@ -11,10 +11,24 @@ dependencies {
     testImplementation(libs.assertj.core)
 
     testImplementation(libs.wiremock)
+    testImplementation(libs.playwright)
 }
 
 tasks.named("test") {
     enabled = false
+}
+
+// Not wired as a dependency of `acceptance`: it installs OS-level packages via sudo,
+// which CI runners have passwordless but local dev machines may not. Local runs keep
+// relying on Playwright's implicit browser-binary download on first use; CI invokes
+// this task explicitly before `acceptance` to also get the OS deps headless Chromium
+// needs on a bare runner.
+tasks.register<JavaExec>("installPlaywrightBrowsers") {
+    group = "verification"
+    description = "Installs Playwright's browser binaries and OS dependencies."
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("com.microsoft.playwright.CLI")
+    args("install", "--with-deps", "chromium")
 }
 
 tasks.register<Test>("acceptance") {
@@ -26,4 +40,6 @@ tasks.register<Test>("acceptance") {
     if (System.getProperty("app.baseUrl") != null) {
         systemProperty("app.baseUrl", System.getProperty("app.baseUrl"))
     }
+    outputs.cacheIf { false }
+    outputs.upToDateWhen { false }
 }

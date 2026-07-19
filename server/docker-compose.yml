@@ -16,5 +16,25 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    image: conxugal-application:local
+    pull_policy: never
+    profiles: ["app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MICRONAUT_ENVIRONMENTS: local
+      JDBC_URL: jdbc:postgresql://postgres:5432/conxugal
+      JDBC_USERNAME: conxugal
+      JDBC_PASSWORD: conxugal
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/8080 && printf \"GET /health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \"\\\"status\\\":\\\"UP\\\"\" <&3'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres-data:

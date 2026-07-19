@@ -34,6 +34,7 @@ Java 25, PostgreSQL), [ADR-0002](../docs/architecture/0002-hexagonal-architectur
 | `./gradlew :application:test` | Run the unit tests of a single module (`:domain:test`, `:infrastructure:test` likewise). |
 | `./gradlew :infrastructure:integrationTest` | Run `infrastructure`'s adapter tests against a real PostgreSQL (Testcontainers, needs Docker). Not part of `check`/`build`. |
 | `./gradlew acceptance` | Run the black-box acceptance suite against an **already-running** instance (see below). |
+| `docker compose --profile app up -d` | Run the packaged app (after `./gradlew :application:dockerBuild`) alongside Postgres, for a local `./gradlew acceptance` run. |
 
 ## Structure
 

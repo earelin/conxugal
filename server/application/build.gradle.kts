@@ -11,6 +11,7 @@ dependencies {
     runtimeOnly(project(":infrastructure"))
 
     implementation(libs.micronaut.http.server.netty)
+    implementation(libs.micronaut.management)
     implementation(libs.micronaut.serde.jackson)
     implementation(libs.micronaut.security.session)
     implementation(libs.micronaut.security.csrf)
@@ -27,6 +28,10 @@ dependencies {
 
 application {
     mainClass = "gal.conxugal.application.Application"
+}
+
+tasks.named<com.bmuschko.gradle.docker.tasks.image.DockerBuildImage>("dockerBuild") {
+    images.add("conxugal-application:local")
 }
 
 tasks.named<JavaExec>("run") {
@@ -117,6 +122,6 @@ val copyUiDist = tasks.register<Copy>("copyUiDist") {
 
 sourceSets {
     main {
-        output.dir(mapOf("builtBy" to copyUiDist), generatedWebResourcesDir)
+        resources.srcDir(files(generatedWebResourcesDir).builtBy(copyUiDist))
     }
 }
