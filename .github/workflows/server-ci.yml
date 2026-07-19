@@ -65,7 +65,7 @@ jobs:
         run: ./gradlew :application:dockerBuild
 
       - name: Start docker compose (app profile)
-        run: docker compose --profile app up -d
+        run: docker compose --profile app up -d --wait
 
       - name: Wait for the application to be ready
         run: |
