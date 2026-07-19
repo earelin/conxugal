@@ -16,5 +16,20 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    image: conxugal-application:local
+    pull_policy: never
+    profiles: ["app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MICRONAUT_ENVIRONMENTS: local
+      JDBC_URL: jdbc:postgresql://postgres:5432/conxugal
+      JDBC_USERNAME: conxugal
+      JDBC_PASSWORD: conxugal
+    ports:
+      - "8080:8080"
+
 volumes:
   postgres-data:

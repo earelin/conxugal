@@ -29,6 +29,10 @@ application {
     mainClass = "gal.conxugal.application.Application"
 }
 
+tasks.named<com.bmuschko.gradle.docker.tasks.image.DockerBuildImage>("dockerBuild") {
+    images.add("conxugal-application:local")
+}
+
 tasks.named<JavaExec>("run") {
     environment("MICRONAUT_ENVIRONMENTS", "local")
 }

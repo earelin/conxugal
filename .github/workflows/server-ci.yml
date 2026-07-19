@@ -39,3 +39,50 @@ jobs:
 
       - name: Integration tests
         run: ./gradlew integrationTest
+
+  acceptance:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      # ./gradlew :application:dockerBuild also runs the UI's npm build (server/application/build.gradle.kts).
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: ui/package.json
+
+      # Handles dependency/build caching and Gradle Wrapper checksum validation.
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build application docker image
+        run: ./gradlew :application:dockerBuild
+
+      - name: Start docker compose (app profile)
+        run: docker compose --profile app up -d
+
+      - name: Wait for the application to be ready
+        run: |
+          curl --fail --silent --show-error \
+            --retry 30 --retry-connrefused --retry-delay 2 \
+            http://localhost:8080/login > /dev/null
+
+      - name: Install Playwright browsers
+        run: ./gradlew :acceptance:installPlaywrightBrowsers
+
+      - name: Run acceptance tests
+        run: ./gradlew acceptance -Dapp.baseUrl=http://localhost:8080
+
+      - name: Dump docker compose logs on failure
+        if: failure()
+        run: docker compose --profile app logs
+
+      - name: Stop docker compose
+        if: always()
+        run: docker compose --profile app down -v
