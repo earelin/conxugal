@@ -77,6 +77,11 @@ jobs:
         run: ./gradlew :acceptance:installPlaywrightBrowsers
 
       - name: Run acceptance tests
+        # Chromium is already installed by the previous step; without this, Playwright
+        # Java's driver re-runs its own browser install on first Playwright.create()
+        # and downloads the full default set (Firefox, WebKit) we never use.
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
         run: ./gradlew acceptance -Dapp.baseUrl=http://localhost:8080
 
       - name: Dump docker compose logs on failure
