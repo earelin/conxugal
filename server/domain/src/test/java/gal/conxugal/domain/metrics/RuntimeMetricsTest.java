@@ -98,6 +98,27 @@ class RuntimeMetricsTest {
   }
 
   @Test
+  void accepts_figures_at_zero() {
+    RuntimeMetrics metrics =
+        new RuntimeMetrics(
+            TIMESTAMP,
+            new RuntimeMetrics.Jvm(0L, 0L, 0L, 0, 0L, 0L, 0L),
+            SYSTEM,
+            new RuntimeMetrics.Http(0L, 0L),
+            new RuntimeMetrics.DatastorePool(0, 0, 0));
+
+    assertThat(metrics.jvm().heapUsedBytes()).isZero();
+    assertThat(metrics.http().requestCount()).isZero();
+    assertThat(metrics.datastorePool().max()).isZero();
+  }
+
+  @Test
+  void accepts_cpu_load_at_both_bounds() {
+    assertThat(new RuntimeMetrics.SystemLoad(0.0).cpuLoad()).isEqualTo(0.0);
+    assertThat(new RuntimeMetrics.SystemLoad(1.0).cpuLoad()).isEqualTo(1.0);
+  }
+
+  @Test
   void accepts_absent_cpu_load() {
     assertThat(new RuntimeMetrics.SystemLoad(null).cpuLoad()).isNull();
   }
@@ -113,6 +134,13 @@ class RuntimeMetricsTest {
   void rejects_cpu_load_above_one() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> new RuntimeMetrics.SystemLoad(1.01))
+        .withMessageContaining("cpuLoad");
+  }
+
+  @Test
+  void rejects_nan_cpu_load() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> new RuntimeMetrics.SystemLoad(Double.NaN))
         .withMessageContaining("cpuLoad");
   }
 

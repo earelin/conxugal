@@ -56,7 +56,7 @@ public record RuntimeMetrics(
   public record SystemLoad(@Nullable Double cpuLoad) {
 
     public SystemLoad {
-      if (cpuLoad != null && (cpuLoad < 0.0 || cpuLoad > 1.0)) {
+      if (cpuLoad != null && (Double.isNaN(cpuLoad) || cpuLoad < 0.0 || cpuLoad > 1.0)) {
         throw new IllegalArgumentException("cpuLoad must be between 0.0 and 1.0, was " + cpuLoad);
       }
     }
