@@ -22,11 +22,7 @@ public class PasswordGenerator {
       List.of(UPPERCASE, LOWERCASE, DIGITS, SYMBOLS);
   private static final String ALL_CHARACTERS = UPPERCASE + LOWERCASE + DIGITS + SYMBOLS;
 
-  private final SecureRandom secureRandom;
-
-  public PasswordGenerator(SecureRandom secureRandom) {
-    this.secureRandom = secureRandom;
-  }
+  private final SecureRandom secureRandom = new SecureRandom();
 
   public GeneratedPassword generate() {
     List<Character> characters = new ArrayList<>(LENGTH);

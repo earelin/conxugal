@@ -133,11 +133,30 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
   @Test
   void rejects_creating_duplicate_email() throws Exception {
     insertUser("ana@example.com", "hashed-password", "USER");
+    // @MicronautTest wraps the whole test method in one shared, rolled-back-at-the-end
+    // transaction; committing here is what lets the row (and the row-unchanged assertion
+    // below) survive the rollback this test triggers on purpose further down.
+    try (Connection connection = dataSource.getConnection()) {
+      connection.commit();
+    }
     User duplicate =
         new User(UUID.randomUUID(), "ana@example.com", "other-hash", Role.ADMIN, true,
             Instant.parse("2026-01-15T09:30:00Z"));
 
     assertThatThrownBy(() -> userRepository.create(duplicate)).isInstanceOf(RuntimeException.class);
+    // The failed insert leaves the pooled connection mid-transaction; Postgres refuses
+    // further commands on it until it is rolled back, and the small test pool means the
+    // next borrowed connection is likely that same one.
+    try (Connection rollbackConnection = dataSource.getConnection()) {
+      rollbackConnection.rollback();
+    }
+
+    AssertDbConnection assertDbConnection = AssertDbConnectionFactory.of(dataSource).create();
+    Table users = assertDbConnection.table("users").build();
+    assertThat(users).hasNumberOfRows(1);
+    assertThat(users).row(0)
+        .value("password_hash").isEqualTo("hashed-password")
+        .value("role").isEqualTo("USER");
   }
 
   @Test

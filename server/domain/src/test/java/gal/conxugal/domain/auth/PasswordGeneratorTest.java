@@ -2,12 +2,11 @@ package gal.conxugal.domain.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.security.SecureRandom;
 import org.junit.jupiter.api.Test;
 
 class PasswordGeneratorTest {
 
-  private final PasswordGenerator passwordGenerator = new PasswordGenerator(new SecureRandom());
+  private final PasswordGenerator passwordGenerator = new PasswordGenerator();
 
   @Test
   void generates_password_of_at_least_sixteen_characters() {
