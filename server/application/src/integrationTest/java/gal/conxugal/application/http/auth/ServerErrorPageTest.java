@@ -3,8 +3,7 @@ package gal.conxugal.application.http.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
-import gal.conxugal.domain.auth.Role;
-import gal.conxugal.domain.auth.User;
+import gal.conxugal.application.http.auth.support.TestUserFactory;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpStatus;
@@ -12,8 +11,6 @@ import io.micronaut.http.MediaType;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
-import java.time.Instant;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,9 +20,7 @@ class ServerErrorPageTest extends AuthenticationTestSupport {
 
   @BeforeEach
   void setUp() {
-    seedUser(
-        new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER, true,
-            Instant.parse("2026-01-01T00:00:00Z")));
+    seedUser(TestUserFactory.normalUser());
   }
 
   @Test
