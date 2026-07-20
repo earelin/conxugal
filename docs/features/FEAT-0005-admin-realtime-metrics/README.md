@@ -67,11 +67,20 @@ flowchart LR
   from the running JVM and the datastore pool and **omits every secret** — no connection
   strings, credentials, tokens, or keys ever enter a sample (SPEC-0003 R21, same rule as
   the status probe).
+- The figures are read **directly** — `java.lang.management` MXBeans for JVM and system
+  values, the connection pool's own gauges for pool usage — with **no metrics library**. The
+  sample set is small and fixed, so adopting a cross-cutting metrics module (Micrometer)
+  is not warranted here; doing so later would need its own ADR.
+- The instance keeps no HTTP counters of its own, so the request/error totals come from a
+  lightweight in-memory counter fed by a server filter, added alongside the adapter.
 
 ### SSE endpoint ([ADR-0009](../../architecture/0009-sse-admin-realtime-metrics.md))
 - `GET /api/admin/metrics` produces `text/event-stream`. It emits an initial sample
   immediately, then a fresh sample on a fixed interval, interleaved with a periodic
   **heartbeat** comment so a dropped connection is detected and the browser can reconnect.
+- The interval is **server-chosen** — a configuration property with a sane default. The
+  client cannot request a different cadence, and the OpenAPI operation exposes no parameter
+  for one; making it client-selectable would be a contract change.
 - The endpoint carries `@Secured("ADMIN")`; a `USER` or unauthenticated request is denied
   like any other `/api/admin/**` call (SPEC-0003 R19). The session cookie authenticates the
   `EventSource` connection, so no new credential path is introduced (ADR-0009).
@@ -93,17 +102,23 @@ flowchart LR
   SPEC-0001 R6).
 
 ## Sequencing (tasks, one small change each)
-1. **Metrics domain** — add the `RuntimeMetrics` model and the `RuntimeMetricsSource` port
-   that assembles the current sample on demand (no storage). *(SPEC-0003 #17)*
-2. **Metrics source adapter** — a driven adapter that fills a `RuntimeMetrics` sample from
-   the JVM runtime and datastore pool, asserting no secret/credential value is included.
-   *(SPEC-0003 #17, #18)*
-3. **Metrics SSE endpoint** — `@Secured(ADMIN)` `GET /api/admin/metrics` producing
-   `text/event-stream`: initial sample, periodic samples, heartbeat, and clean teardown on
-   disconnect. *(SPEC-0003 #15, #16)*
-4. **Metrics UI panel** — an admin dashboard panel that subscribes via `EventSource`,
-   renders samples live, keeps a bounded client-side history cleared on reload, and closes
-   the stream on unmount. *(SPEC-0003 #15, #17)*
+1. **[TASK-0001](TASK-0001-runtime-metrics-domain.md) — Metrics domain** *(backend)*: the
+   `RuntimeMetrics` model and the `RuntimeMetricsSource` port that assembles the current
+   sample on demand (no storage). *(SPEC-0003 #17, #18)*
+2. **[TASK-0002](TASK-0002-http-request-error-counters.md) — HTTP request/error counters**
+   *(backend)*: in-memory totals fed by a server filter, since the instance produces none.
+   *(SPEC-0003 #15, #17, #18)*
+3. **[TASK-0003](TASK-0003-runtime-metrics-source-adapter.md) — Metrics source adapter**
+   *(backend)*: a driven adapter filling a sample from the JVM MXBeans, the datastore pool's
+   gauges and those counters, asserting no secret/credential value is included.
+   *(SPEC-0003 #15, #17, #18)*
+4. **[TASK-0004](TASK-0004-metrics-sse-endpoint.md) — Metrics SSE endpoint** *(backend)*:
+   `@Secured(ADMIN)` `GET /api/admin/metrics` producing `text/event-stream` — initial sample,
+   periodic samples, heartbeat, and clean teardown on disconnect. *(SPEC-0003 #15, #16, #17, #18)*
+5. **[TASK-0005](TASK-0005-metrics-ui-panel.md) — Metrics UI panel** *(frontend)*: an admin
+   dashboard panel that subscribes via `EventSource`, renders samples live, keeps a bounded
+   client-side history cleared on reload, and closes the stream on unmount.
+   *(SPEC-0003 #15, #16, #17, #18)*
 
 ## Edge cases
 - **Non-admin subscribing** — a `USER` or unauthenticated request to `/api/admin/metrics`
@@ -120,11 +135,11 @@ flowchart LR
   server cancels the subscription and releases the timer on client disconnect, and the
   concurrent-stream count stays bounded because only administrators can open one (ADR-0009).
 
-## Open questions
-- **Sample cadence:** what fixed interval balances "live enough for debugging" against
-  connection/CPU cost — and is a single server-chosen interval enough, or should the client
-  be able to request a coarser one?
-- **Metrics library:** read the JVM/HTTP/pool figures directly via `java.lang.management`
-  and the pool's own gauges, or introduce a metrics library (e.g. Micrometer via
-  `micronaut-micrometer`)? Adopting a metrics module is a cross-cutting choice — record an
-  ADR before task 2 if we go that way.
+## Resolved questions
+- **Sample cadence** — a single **server-chosen** interval, set by a configuration property
+  with a sane default. The client cannot request a coarser one; the OpenAPI operation exposes
+  no parameter for it, so making the cadence client-selectable would be a contract change.
+- **Metrics library** — none. The figures are read directly via `java.lang.management`, the
+  pool's own gauges, and a small in-house HTTP counter. The sample set is small and fixed, so
+  adopting a cross-cutting metrics module is not justified; introducing Micrometer later would
+  need its own ADR.
