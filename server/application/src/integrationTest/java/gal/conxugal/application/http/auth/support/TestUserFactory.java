@@ -1,7 +1,7 @@
 package gal.conxugal.application.http.auth.support;
 
-import gal.conxugal.domain.auth.Role;
-import gal.conxugal.domain.auth.User;
+import gal.conxugal.domain.user.Role;
+import gal.conxugal.domain.user.User;
 import java.time.Instant;
 import java.util.UUID;
 

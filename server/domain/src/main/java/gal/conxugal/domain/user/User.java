@@ -1,4 +1,4 @@
-package gal.conxugal.domain.auth;
+package gal.conxugal.domain.user;
 
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;

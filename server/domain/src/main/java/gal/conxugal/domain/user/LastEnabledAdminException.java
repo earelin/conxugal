@@ -1,4 +1,4 @@
-package gal.conxugal.domain.auth;
+package gal.conxugal.domain.user;
 
 import java.util.UUID;
 

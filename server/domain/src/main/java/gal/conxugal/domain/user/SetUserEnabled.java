@@ -1,6 +1,8 @@
-package gal.conxugal.domain.auth;
+package gal.conxugal.domain.user;
 
 import jakarta.inject.Singleton;
+import jakarta.transaction.Transactional;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -19,6 +21,7 @@ public class SetUserEnabled {
     this.userRepository = userRepository;
   }
 
+  @Transactional
   public void setEnabled(UUID userId, boolean enabled) {
     if (!enabled && isLastEnabledAdmin(userId)) {
       throw new LastEnabledAdminException(userId);

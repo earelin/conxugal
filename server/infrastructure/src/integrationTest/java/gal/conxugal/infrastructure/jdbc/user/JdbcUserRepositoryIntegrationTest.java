@@ -6,9 +6,9 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.db.api.Assertions.assertThat;
 
 import gal.conxugal.domain.auth.Authenticate;
-import gal.conxugal.domain.auth.Role;
-import gal.conxugal.domain.auth.User;
-import gal.conxugal.domain.auth.UserRepository;
+import gal.conxugal.domain.user.Role;
+import gal.conxugal.domain.user.User;
+import gal.conxugal.domain.user.UserRepository;
 import gal.conxugal.infrastructure.crypto.Argon2idPasswordEncoder;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;

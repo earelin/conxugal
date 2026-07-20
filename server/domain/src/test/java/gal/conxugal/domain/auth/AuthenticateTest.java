@@ -11,6 +11,11 @@ import gal.conxugal.domain.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+
+import gal.conxugal.domain.user.PasswordEncoder;
+import gal.conxugal.domain.user.Role;
+import gal.conxugal.domain.user.User;
+import gal.conxugal.domain.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

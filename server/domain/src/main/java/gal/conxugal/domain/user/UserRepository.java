@@ -1,4 +1,4 @@
-package gal.conxugal.domain.auth;
+package gal.conxugal.domain.user;
 
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.Insert;
@@ -14,6 +14,8 @@ import java.util.UUID;
 public interface UserRepository {
 
   Optional<User> findByEmail(String email);
+
+  List<User> findByRole(UUID id);
 
   List<User> findAll();
 

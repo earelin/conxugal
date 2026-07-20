@@ -1,10 +1,11 @@
-package gal.conxugal.domain.auth;
+package gal.conxugal.domain.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import java.time.Instant;
 import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 
 class UserTest {

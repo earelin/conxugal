@@ -7,6 +7,7 @@ dependencies {
     implementation(libs.micronaut.data.model)
     implementation(libs.jspecify)
     implementation(libs.slf4j.api)
+    implementation(libs.jakarta.transaction.api)
     annotationProcessor(libs.micronaut.data.processor)
 
     testImplementation(libs.assertj.core)

@@ -1,6 +1,9 @@
 package gal.conxugal.domain.auth;
 
 import gal.conxugal.domain.time.Clock;
+import gal.conxugal.domain.user.PasswordEncoder;
+import gal.conxugal.domain.user.User;
+import gal.conxugal.domain.user.UserRepository;
 import jakarta.inject.Singleton;
 import java.time.Instant;
 import java.util.Optional;

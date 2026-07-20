@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.domain.auth.Authenticate;
-import gal.conxugal.domain.auth.Role;
-import gal.conxugal.domain.auth.User;
+import gal.conxugal.domain.user.Role;
+import gal.conxugal.domain.user.User;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.security.authentication.AuthenticationResponse;
 import io.micronaut.security.authentication.UsernamePasswordCredentials;
