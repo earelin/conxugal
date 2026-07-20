@@ -27,7 +27,7 @@ jobs:
           java-version: "25"
 
       # ./gradlew build now also runs the UI's npm build (server/application/build.gradle.kts).
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ui/package.json
 
@@ -54,7 +54,7 @@ jobs:
           java-version: "25"
 
       # ./gradlew :application:dockerBuild also runs the UI's npm build (server/application/build.gradle.kts).
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ui/package.json
 
