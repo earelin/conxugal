@@ -4,4 +4,10 @@
   <Match>
     <Annotation name="io.micronaut.core.annotation.Generated"/>
   </Match>
+  <Match>
+    <!-- SecureRandom is injected by design (testable, shared across calls); there is
+         no meaningful copy to make instead. -->
+    <Class name="gal.conxugal.domain.auth.PasswordGenerator"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
 </FindBugsFilter>

@@ -17,6 +17,9 @@ import org.slf4j.LoggerFactory;
  * not short-circuited: {@link PasswordEncoder#matchAgainstDummyHash} runs instead, at
  * the adapter's normalized cost, so an unknown email and a wrong password are not
  * separable by execution time.
+ *
+ * <p>A disabled account is rejected only after the password check succeeds, so that
+ * outcome is likewise indistinct from a wrong password.
  */
 @Singleton
 public class Authenticate {
@@ -48,6 +51,11 @@ public class Authenticate {
       return Optional.empty();
     }
 
+    if (!foundUser.enabled()) {
+      LOG.warn("Account for {} is disabled", email);
+      return Optional.empty();
+    }
+
     return Optional.of(recordLogin(foundUser));
   }
 
@@ -63,6 +71,8 @@ public class Authenticate {
       LOG.error("Failed to record last login for user {}", user.id(), e);
       return user;
     }
-    return new User(user.id(), user.email(), user.passwordHash(), user.role(), loginInstant);
+    return new User(
+        user.id(), user.email(), user.passwordHash(), user.role(), user.enabled(),
+        user.createdAt(), loginInstant);
   }
 }

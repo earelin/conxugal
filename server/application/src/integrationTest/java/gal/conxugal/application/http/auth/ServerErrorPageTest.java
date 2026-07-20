@@ -12,6 +12,7 @@ import io.micronaut.http.MediaType;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
+import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,9 @@ class ServerErrorPageTest extends AuthenticationTestSupport {
 
   @BeforeEach
   void setUp() {
-    seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
+    seedUser(
+        new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER, true,
+            Instant.parse("2026-01-01T00:00:00Z")));
   }
 
   @Test

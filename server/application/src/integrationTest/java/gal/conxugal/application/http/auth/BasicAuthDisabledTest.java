@@ -16,6 +16,7 @@ import io.micronaut.runtime.server.EmbeddedServer;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +33,9 @@ class BasicAuthDisabledTest extends AuthenticationTestSupport {
   @BeforeEach
   void setUp() {
     client = HttpClient.create(embeddedServer.getURL()).toBlocking();
-    seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
+    seedUser(
+        new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER, true,
+            Instant.parse("2026-01-01T00:00:00Z")));
   }
 
   @Test
