@@ -13,11 +13,13 @@ import java.util.UUID;
  */
 public interface UserRepository {
 
+  Optional<User> findById(UUID id);
+
   Optional<User> findByEmail(String email);
 
-  List<User> findByRole(UUID id);
-
   List<User> findAll();
+
+  long countByRoleAndEnabled(Role role, boolean enabled);
 
   void updateLastLoginAt(@Id UUID id, Instant lastLoginAt);
 

@@ -6,9 +6,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
-import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +41,7 @@ class SetUserEnabledTest {
   @Test
   void disables_non_admin_account() {
     User user = user(Role.USER, true);
-    when(userRepository.findAll()).thenReturn(List.of(user));
+    when(userRepository.findById(user.id())).thenReturn(Optional.of(user));
 
     setUserEnabled.setEnabled(user.id(), false);
 
@@ -52,8 +51,8 @@ class SetUserEnabledTest {
   @Test
   void disables_an_admin_when_another_enabled_admin_remains() {
     User target = user(Role.ADMIN, true);
-    User otherAdmin = user(Role.ADMIN, true);
-    when(userRepository.findAll()).thenReturn(List.of(target, otherAdmin));
+    when(userRepository.findById(target.id())).thenReturn(Optional.of(target));
+    when(userRepository.countByRoleAndEnabled(Role.ADMIN, true)).thenReturn(2L);
 
     setUserEnabled.setEnabled(target.id(), false);
 
@@ -63,8 +62,8 @@ class SetUserEnabledTest {
   @Test
   void refuses_to_disable_the_only_remaining_enabled_admin() {
     User onlyAdmin = user(Role.ADMIN, true);
-    User disabledAdmin = user(Role.ADMIN, false);
-    when(userRepository.findAll()).thenReturn(List.of(onlyAdmin, disabledAdmin));
+    when(userRepository.findById(onlyAdmin.id())).thenReturn(Optional.of(onlyAdmin));
+    when(userRepository.countByRoleAndEnabled(Role.ADMIN, true)).thenReturn(1L);
 
     assertThatThrownBy(() -> setUserEnabled.setEnabled(onlyAdmin.id(), false))
         .isInstanceOf(LastEnabledAdminException.class);
@@ -74,7 +73,7 @@ class SetUserEnabledTest {
   @Test
   void disabling_an_already_disabled_admin_does_not_trip_the_guard() {
     User alreadyDisabled = user(Role.ADMIN, false);
-    when(userRepository.findAll()).thenReturn(List.of(alreadyDisabled));
+    when(userRepository.findById(alreadyDisabled.id())).thenReturn(Optional.of(alreadyDisabled));
 
     setUserEnabled.setEnabled(alreadyDisabled.id(), false);
 
