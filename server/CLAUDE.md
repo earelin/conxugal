@@ -111,19 +111,23 @@ also run `./gradlew :infrastructure:integrationTest` if the change touched an
 
 ## Architecture
 
-Three-module hexagonal (ports & adapters) Gradle build (ADR-0002), wired only through
-`settings.gradle.kts` and Micronaut's DI container — there is no other cross-module glue:
+Four-module hexagonal (ports & adapters) Gradle build (ADR-0002, narrowed by ADR-0013),
+wired only through `settings.gradle.kts` and Micronaut's DI container — there is no
+other cross-module glue:
 
 ```mermaid
 flowchart LR
     application --> domain
     infrastructure --> domain
+    application --> commons
+    domain --> commons
+    infrastructure --> commons
 ```
 
 - **`domain`** — the core model, business rules, and the *ports* (interfaces) the
-  other two modules implement/drive. Depends on nothing else. Free of transport and
-  persistence concerns, though domain classes may still carry Micronaut DI
-  annotations.
+  other two modules implement/drive. Depends on nothing but `commons`. Free of
+  transport and persistence concerns, though domain classes may still carry Micronaut
+  DI annotations.
 - **`application`** — the *driving side*: REST endpoints, schedulers, other triggers,
   and the use-case orchestration that coordinates `domain`. This is also the runnable
   Micronaut application (composition root: `Application.java`, `mainClass` in
@@ -132,11 +136,14 @@ flowchart LR
 - **`infrastructure`** — the *driven side*: adapters implementing `domain` ports
   against external systems (PostgreSQL, scrapers/ingestors for
   contratosdegalicia.gal, exporters).
+- **`commons`** (ADR-0013) — small, pure, framework-free utility code shared across
+  the other modules (e.g. argument-validation helpers). No transport, persistence, DI
+  or business-rule content. Depends on nothing.
 - **`architecture`** — test-only module with no `main` sources; holds the ArchUnit
   rules (`./gradlew :architecture:test`) that enforce this section as executable
-  checks rather than just prose: the dependency direction below, `domain`'s
-  transport/persistence-code purity, and ADR-0006's `/api/` URL prefix. It's the one
-  place allowed to see `domain`, `application` and `infrastructure` on the same test
+  checks rather than just prose: the dependency direction below, `domain`'s and
+  `commons`' purity, and ADR-0006's `/api/` URL prefix. It's the one place allowed to
+  see `domain`, `application`, `infrastructure` and `commons` on the same test
   classpath, which is what lets it check the cross-module rules Gradle's own project
   graph can't (e.g. "`application` must not depend on `infrastructure`").
 
@@ -148,7 +155,9 @@ application code cannot compile against adapter types. `infrastructure` depends 
 solely through domain ports and Micronaut's DI container at runtime — don't add a
 compile-time edge between them. Domain types cross module boundaries directly; don't
 add a DTO/mapping layer unless a concrete need arises (e.g. an external contract that
-diverges from the domain shape).
+diverges from the domain shape). `commons` is the one dependency every module —
+including `domain` — may take without breaking this rule; it must never depend back
+on `domain`, `application` or `infrastructure`.
 
 Dependency versions are centralized in `gradle/libs.versions.toml`; most
 `io.micronaut*` and driver versions are left unversioned there because the Micronaut

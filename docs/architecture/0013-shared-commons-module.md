@@ -1,15 +1,15 @@
 ---
-status: proposed
+status: accepted
 date: 2026-07-21
 spec: null
-supersedes: 0002
+supersedes: null
 superseded_by: null
 ---
 
 # 0013. Shared commons module for cross-cutting utility code
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 [ADR-0002](0002-hexagonal-architecture.md) splits the server into three modules —

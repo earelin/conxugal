@@ -7,22 +7,19 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
 @AnalyzeClasses(packages = "gal.conxugal")
-class DomainPurityArchTest {
+class CommonsPurityArchTest {
 
   @ArchTest
-  static final ArchRule DOMAIN_IS_FREE_OF_TRANSPORT_AND_PERSISTENCE_CODE =
+  static final ArchRule COMMONS_IS_FREE_OF_FRAMEWORK_CODE =
       noClasses()
           .that()
-          .resideInAPackage("gal.conxugal.domain..")
+          .resideInAPackage("gal.conxugal.commons..")
           .should()
           .dependOnClassesThat()
           .resideInAnyPackage(
-              "io.micronaut.http..",
-              "io.micronaut.security..",
-              "io.micronaut.views..",
-              "io.micronaut.jdbc..",
-              "io.micronaut.data.jdbc..",
-              "io.micronaut.data.exceptions..",
+              "io.micronaut..",
+              "jakarta.inject..",
+              "javax.inject..",
               "java.sql..",
               "javax.sql..",
               "org.postgresql..",
