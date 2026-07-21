@@ -145,16 +145,16 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
-  void creates_an_account_persisting_the_id_and_created_at_supplied_by_the_domain() {
-    UUID id = UUID.randomUUID();
+  void creates_an_account_with_database_generated_id_and_domain_supplied_created_at() {
     Instant createdAt = Instant.parse("2026-01-15T09:30:00Z");
-    User newUser = new User(id, "nova@example.com", "hashed-password", Role.USER, true, createdAt);
+    User newUser =
+        new User(null, "nova@example.com", "hashed-password", Role.USER, true, createdAt);
 
     User created = userRepository.create(newUser);
 
-    assertThat(created.id()).isEqualTo(id);
+    assertThat(created.id()).isNotNull();
     User found = userRepository.findByEmail("nova@example.com").orElseThrow();
-    assertThat(found.id()).isEqualTo(id);
+    assertThat(found.id()).isEqualTo(created.id());
     assertThat(found.passwordHash()).isEqualTo("hashed-password");
     assertThat(found.role()).isEqualTo(Role.USER);
     assertThat(found.enabled()).isTrue();
@@ -171,7 +171,7 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
       connection.commit();
     }
     User duplicate =
-        new User(UUID.randomUUID(), "ana@example.com", "other-hash", Role.ADMIN, true,
+        new User(null, "ana@example.com", "other-hash", Role.ADMIN, true,
             Instant.parse("2026-01-15T09:30:00Z"));
 
     assertThatThrownBy(() -> userRepository.create(duplicate)).isInstanceOf(RuntimeException.class);

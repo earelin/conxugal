@@ -25,7 +25,10 @@ public interface UserRepository {
 
   void updateEnabled(@Id UUID id, boolean enabled);
 
-  /** Persists a new account, including the id and {@code createdAt} the domain supplied. */
+  /**
+   * Persists a new account, using the {@code createdAt} the domain supplied. The returned
+   * instance carries the id the database generated; {@code user.id()} is ignored.
+   */
   @Insert
   User create(User user);
 }

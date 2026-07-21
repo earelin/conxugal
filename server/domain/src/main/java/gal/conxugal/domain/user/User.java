@@ -1,5 +1,6 @@
 package gal.conxugal.domain.user;
 
+import io.micronaut.data.annotation.GeneratedValue;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
 import java.time.Instant;
@@ -10,13 +11,13 @@ import org.jspecify.annotations.Nullable;
 /**
  * A registered user: their identity (email), stored password hash, role, enabled
  * state and creation date. {@code passwordHash} is never plaintext. {@code id} is
- * assigned by the domain (not the database) before an account is persisted, so it is
+ * assigned by the database (its {@code DEFAULT uuidv7()}) on insert, so it is
  * {@code null} only until that assignment happens. {@code lastLoginAt} is {@code null}
  * until the user's first successful login.
  */
 @MappedEntity("users")
 public record User(
-    @Id @Nullable UUID id,
+    @Id @GeneratedValue @Nullable UUID id,
     String email,
     String passwordHash,
     Role role,
