@@ -4,8 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
-import gal.conxugal.domain.auth.Role;
-import gal.conxugal.domain.auth.User;
+import gal.conxugal.application.http.auth.support.TestUserFactory;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
@@ -17,7 +16,6 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +30,7 @@ class BasicAuthDisabledTest extends AuthenticationTestSupport {
   @BeforeEach
   void setUp() {
     client = HttpClient.create(embeddedServer.getURL()).toBlocking();
-    seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
+    seedUser(TestUserFactory.normalUser());
   }
 
   @Test

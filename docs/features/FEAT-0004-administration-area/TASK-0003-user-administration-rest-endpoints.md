@@ -18,6 +18,17 @@ Governed by [ADR-0006](../../architecture/0006-reserved-api-url-prefix.md) (rese
 - `POST /api/admin/users/{id}/enabled` — set enabled true/false.
 - All endpoints carry `@Secured("ADMIN")` and conform to the [OpenAPI contract](../../api/openapi.yaml).
 - Map domain outcomes to HTTP: duplicate email and last-admin refusal to distinct client errors; only the create response carries the generated password, and no other response echoes it.
+- Close the atomicity gap `SetUserEnabled` (TASK-0001) explicitly defers: its last-admin
+  guard reads the enabled-admin count and writes the new state as two separate repository
+  calls, so two concurrent disable requests could each pass the guard and drop enabled
+  admins to zero. Wiring this endpoint to a real transactional boundary (or an atomic
+  conditional update in the repository) must close that race before this ships.
+
+## Open questions
+- **How to make the last-admin guard atomic.** Candidates: wrap the count-check-then-update
+  in a single DB transaction spanning both `SetUserEnabled` calls, or replace them with one
+  atomic conditional `UPDATE ... WHERE` in the repository that only succeeds when disabling
+  wouldn't drop enabled admins to zero. Decide during this task's design.
 
 ## Acceptance criteria
 - A `USER` (or unauthenticated caller) is denied with 403; an `ADMIN` is allowed. ([SPEC-0003](../../specs/SPEC-0003-administration-area.md) #1)
@@ -28,5 +39,7 @@ Governed by [ADR-0006](../../architecture/0006-reserved-api-url-prefix.md) (rese
 - The enabled endpoint disables then re-enables an account, changing whether it can authenticate. (SPEC-0003 #8, #9)
 - No endpoint deletes an account; a disabled account remains listed. (SPEC-0003 #10)
 - Disabling the only remaining enabled `ADMIN` is refused and that account stays enabled. (SPEC-0003 #11)
+- Two concurrent requests disabling the last two enabled `ADMIN` accounts cannot both
+  succeed; at least one enabled `ADMIN` always remains. (SPEC-0003 #11)
 - The create request accepts no password; the generated password appears only in the create response and in no other request or response body. (SPEC-0003 #12, #14)
 - Integration-tested at the controller boundary, including the `USER`-forbidden case.

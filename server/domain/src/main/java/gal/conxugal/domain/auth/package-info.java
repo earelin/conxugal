@@ -1,6 +1,6 @@
 /**
- * Authentication: the {@link gal.conxugal.domain.auth.User} entity, its
- * {@link gal.conxugal.domain.auth.Role}, and the {@link gal.conxugal.domain.auth.Authenticate}
+ * Authentication: the {@link User} entity, its
+ * {@link Role}, and the {@link gal.conxugal.domain.auth.Authenticate}
  * use case with the ports it drives.
  *
  * <p>{@code @NullMarked}: every type, field, parameter and return value in this package is
@@ -9,4 +9,6 @@
 @NullMarked
 package gal.conxugal.domain.auth;
 
+import gal.conxugal.domain.user.Role;
+import gal.conxugal.domain.user.User;
 import org.jspecify.annotations.NullMarked;
