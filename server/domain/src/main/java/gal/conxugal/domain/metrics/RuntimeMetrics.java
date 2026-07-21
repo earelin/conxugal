@@ -1,5 +1,7 @@
 package gal.conxugal.domain.metrics;
 
+import static gal.conxugal.commons.validation.Preconditions.requireNotNegative;
+
 import java.time.Instant;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -78,12 +80,6 @@ public record RuntimeMetrics(
       requireNotNegative(active, "active");
       requireNotNegative(idle, "idle");
       requireNotNegative(max, "max");
-    }
-  }
-
-  private static void requireNotNegative(long value, String name) {
-    if (value < 0) {
-      throw new IllegalArgumentException(name + " must not be negative, was " + value);
     }
   }
 }

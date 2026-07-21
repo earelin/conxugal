@@ -13,7 +13,7 @@ class DomainPurityArchTest {
   static final ArchRule DOMAIN_IS_FREE_OF_TRANSPORT_AND_PERSISTENCE_CODE =
       noClasses()
           .that()
-          .resideInAPackage("gal.conxugal.domain..")
+          .resideInAnyPackage("gal.conxugal.domain..", "gal.conxugal.commons..")
           .should()
           .dependOnClassesThat()
           .resideInAnyPackage(

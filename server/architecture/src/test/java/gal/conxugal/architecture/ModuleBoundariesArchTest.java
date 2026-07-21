@@ -19,6 +19,18 @@ class ModuleBoundariesArchTest {
           .resideInAnyPackage("gal.conxugal.application..", "gal.conxugal.infrastructure..");
 
   @ArchTest
+  static final ArchRule COMMONS_DOES_NOT_DEPEND_ON_OTHER_MODULES =
+      noClasses()
+          .that()
+          .resideInAPackage("gal.conxugal.commons..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAnyPackage(
+              "gal.conxugal.domain..",
+              "gal.conxugal.application..",
+              "gal.conxugal.infrastructure..");
+
+  @ArchTest
   static final ArchRule APPLICATION_DOES_NOT_DEPEND_ON_INFRASTRUCTURE =
       noClasses()
           .that()
