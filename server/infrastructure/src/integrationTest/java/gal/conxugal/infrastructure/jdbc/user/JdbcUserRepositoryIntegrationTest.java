@@ -114,6 +114,37 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
+  void finds_stored_user_by_id() throws Exception {
+    insertUser("ana@example.com", "hashed-password", "ADMIN");
+    UUID id = userRepository.findByEmail("ana@example.com").orElseThrow().id();
+
+    Optional<User> result = userRepository.findById(id);
+
+    assertThat(result).isPresent();
+    assertThat(result.get().email()).isEqualTo("ana@example.com");
+  }
+
+  @Test
+  void returns_empty_for_an_unknown_id() {
+    Optional<User> result = userRepository.findById(UUID.randomUUID());
+
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  void counts_enabled_users_by_role() throws Exception {
+    insertUser("ana@example.com", "hashed-password", "ADMIN");
+    insertUser("breogan@example.com", "hashed-password", "ADMIN");
+    insertUser("iago@example.com", "hashed-password", "USER");
+    UUID breoganId = userRepository.findByEmail("breogan@example.com").orElseThrow().id();
+    userRepository.updateEnabled(breoganId, false);
+
+    assertThat(userRepository.countByRoleAndEnabled(Role.ADMIN, true)).isEqualTo(1L);
+    assertThat(userRepository.countByRoleAndEnabled(Role.ADMIN, false)).isEqualTo(1L);
+    assertThat(userRepository.countByRoleAndEnabled(Role.USER, true)).isEqualTo(1L);
+  }
+
+  @Test
   void creates_an_account_persisting_the_id_and_created_at_supplied_by_the_domain() {
     UUID id = UUID.randomUUID();
     Instant createdAt = Instant.parse("2026-01-15T09:30:00Z");
