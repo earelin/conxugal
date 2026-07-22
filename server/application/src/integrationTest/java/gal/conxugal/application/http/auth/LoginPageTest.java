@@ -5,8 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.RequestThreadRecorder;
-import gal.conxugal.domain.auth.Role;
-import gal.conxugal.domain.auth.User;
+import gal.conxugal.application.http.auth.support.TestUserFactory;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -24,7 +23,6 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,7 +47,7 @@ class LoginPageTest extends AuthenticationTestSupport {
     HttpClientConfiguration configuration = new DefaultHttpClientConfiguration();
     configuration.setFollowRedirects(false);
     client = HttpClient.create(embeddedServer.getURL(), configuration).toBlocking();
-    seedUser(new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER));
+    seedUser(TestUserFactory.normalUser());
   }
 
   @Test

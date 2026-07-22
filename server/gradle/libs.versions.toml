@@ -30,6 +30,7 @@ errorprone-gradle-plugin = { module = "net.ltgt.errorprone:net.ltgt.errorprone.g
 findsecbugs-plugin = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flywayCore" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flywayCore" }
+jakarta-transaction-api = { module = "jakarta.transaction:jakarta.transaction-api" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }

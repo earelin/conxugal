@@ -4,9 +4,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import gal.conxugal.domain.auth.PasswordEncoder;
-import gal.conxugal.domain.auth.User;
-import gal.conxugal.domain.auth.UserRepository;
+import gal.conxugal.domain.user.PasswordEncoder;
+import gal.conxugal.domain.user.User;
+import gal.conxugal.domain.user.UserRepository;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.MediaType;

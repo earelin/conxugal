@@ -1,7 +1,7 @@
 ---
 feat: FEAT-0004
 adrs: [0002, 0005, 0008]
-status: todo
+status: done
 depends_on: []
 ---
 

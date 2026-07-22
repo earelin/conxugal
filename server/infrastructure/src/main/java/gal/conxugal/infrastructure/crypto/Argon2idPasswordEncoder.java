@@ -1,6 +1,6 @@
 package gal.conxugal.infrastructure.crypto;
 
-import gal.conxugal.domain.auth.PasswordEncoder;
+import gal.conxugal.domain.user.PasswordEncoder;
 import jakarta.inject.Singleton;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
