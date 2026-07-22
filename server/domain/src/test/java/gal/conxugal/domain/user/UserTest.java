@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import java.time.Instant;
 import java.util.UUID;
-
 import org.junit.jupiter.api.Test;
 
 class UserTest {
