@@ -1,15 +1,16 @@
 package gal.conxugal.application.http.admin.users;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
+import gal.conxugal.domain.user.CreateUser;
+import gal.conxugal.domain.user.CreatedAccount;
+import gal.conxugal.domain.user.DuplicateEmailException;
+import gal.conxugal.domain.user.GeneratedPassword;
 import gal.conxugal.domain.user.LastEnabledAdminException;
-import gal.conxugal.domain.user.PasswordEncoder;
 import gal.conxugal.domain.user.Role;
 import gal.conxugal.domain.user.SetUserEnabled;
 import gal.conxugal.domain.user.User;
@@ -23,13 +24,12 @@ import io.restassured.specification.RequestSpecification;
 import jakarta.inject.Inject;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-// SetUserEnabled is @Transactional and needs a real datasource, which application-test.yml
-// deliberately disables (this suite mocks the repository and needs no live database) — so
-// it is mocked here directly rather than exercised through the real domain use case.
+// CreateUser and SetUserEnabled are both @Transactional and need a real datasource, which
+// application-test.yml deliberately disables (this suite mocks the repository and needs no
+// live database) — so both use cases are mocked here directly rather than exercised for real.
 @MicronautTest
 class UsersControllerIntegrationTest extends AuthenticationTestSupport {
 
@@ -37,11 +37,16 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
   SetUserEnabled setUserEnabled;
 
   @Inject
-  PasswordEncoder passwordEncoder;
+  CreateUser createUser;
 
   @MockBean(SetUserEnabled.class)
   SetUserEnabled setUserEnabledMock() {
     return mock(SetUserEnabled.class);
+  }
+
+  @MockBean(CreateUser.class)
+  CreateUser createUserMock() {
+    return mock(CreateUser.class);
   }
 
   @Test
@@ -93,14 +98,12 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
   void admin_creates_user(RequestSpecification spec) {
     User admin = TestUserFactory.adminUser();
     seedUser(admin);
-    when(userRepository.findByEmail("new.admin@example.com")).thenReturn(Optional.empty());
-    when(passwordEncoder.encode(anyString())).thenReturn("hashed-password");
-    when(userRepository.create(any(User.class))).thenAnswer(invocation -> {
-      User submitted = invocation.getArgument(0);
-      return new User(
-          UUID.randomUUID(), submitted.email(), submitted.passwordHash(), submitted.role(),
-          submitted.enabled(), submitted.createdAt());
-    });
+    User created = new User(
+        UUID.randomUUID(), "new.admin@example.com", "hashed-password", Role.ADMIN, true,
+        Instant.parse("2026-07-18T09:30:00Z"));
+    GeneratedPassword initialPassword = new GeneratedPassword("Tg7#kLp2Qw9$mZxR");
+    when(createUser.create("new.admin@example.com", Role.ADMIN))
+        .thenReturn(new CreatedAccount(created, initialPassword));
     String sessionCookie = loginAs(spec, admin);
 
     Response response =
@@ -112,14 +115,15 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
 
     response.then().statusCode(HttpStatus.CREATED.getCode());
     assertThat(response.jsonPath().getString("email")).isEqualTo("new.admin@example.com");
-    assertThat(response.jsonPath().getString("initialPassword")).isNotBlank();
+    assertThat(response.jsonPath().getString("initialPassword")).isEqualTo("Tg7#kLp2Qw9$mZxR");
   }
 
   @Test
   void create_with_existing_email_is_conflict(RequestSpecification spec) {
     User admin = TestUserFactory.adminUser();
     seedUser(admin);
-    when(userRepository.findByEmail("ana@example.com")).thenReturn(Optional.of(admin));
+    when(createUser.create("ana@example.com", Role.USER))
+        .thenThrow(new DuplicateEmailException("ana@example.com"));
     String sessionCookie = loginAs(spec, admin);
 
     Response response =

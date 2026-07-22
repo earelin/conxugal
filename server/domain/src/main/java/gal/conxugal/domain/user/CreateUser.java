@@ -1,6 +1,7 @@
 package gal.conxugal.domain.user;
 
 import gal.conxugal.domain.time.Clock;
+import io.micronaut.transaction.annotation.Transactional;
 import jakarta.inject.Singleton;
 
 /**
@@ -25,6 +26,7 @@ public class CreateUser {
     this.clock = clock;
   }
 
+  @Transactional
   public CreatedAccount create(String email, Role role) {
     if (userRepository.findByEmail(email).isPresent()) {
       throw new DuplicateEmailException(email);

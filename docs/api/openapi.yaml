@@ -666,13 +666,12 @@ components:
       description: >-
         An RFC 9457 Problem Details error envelope (`application/problem+json`) returned for
         non-2xx responses.
-      required: [type, title, status, detail, instance]
+      required: [type, title, status]
       example:
         type: "urn:conxugal:problem-type:duplicate-email"
         title: "Conflict"
         status: 409
         detail: "An account with email new.admin@conxugal.gal already exists."
-        instance: "/api/admin/users"
       properties:
         type:
           type: string
@@ -692,12 +691,9 @@ components:
           example: 409
           description: The HTTP status code, repeated from the response status.
         detail:
-          type: string
+          type: [string, "null"]
           pattern: "^.{1,500}$"
           example: "An account with email new.admin@conxugal.gal already exists."
-          description: A human-readable, non-sensitive description of this occurrence.
-        instance:
-          type: string
-          pattern: "^.{1,500}$"
-          example: "/api/admin/users"
-          description: The request path that produced this problem.
+          description: >-
+            A human-readable, non-sensitive description of this occurrence. Null when the
+            problem type carries no further detail beyond its title.
