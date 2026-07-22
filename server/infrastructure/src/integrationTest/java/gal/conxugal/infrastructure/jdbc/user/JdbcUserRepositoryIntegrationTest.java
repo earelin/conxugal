@@ -132,19 +132,6 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
-  void counts_enabled_users_by_role() throws Exception {
-    insertUser("ana@example.com", "hashed-password", "ADMIN");
-    insertUser("breogan@example.com", "hashed-password", "ADMIN");
-    insertUser("iago@example.com", "hashed-password", "USER");
-    UUID breoganId = userRepository.findByEmail("breogan@example.com").orElseThrow().id();
-    userRepository.updateEnabled(breoganId, false);
-
-    assertThat(userRepository.countByRoleAndEnabled(Role.ADMIN, true)).isEqualTo(1L);
-    assertThat(userRepository.countByRoleAndEnabled(Role.ADMIN, false)).isEqualTo(1L);
-    assertThat(userRepository.countByRoleAndEnabled(Role.USER, true)).isEqualTo(1L);
-  }
-
-  @Test
   void creates_an_account_with_database_generated_id_and_domain_supplied_created_at() {
     Instant createdAt = Instant.parse("2026-01-15T09:30:00Z");
     User newUser =

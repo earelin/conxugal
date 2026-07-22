@@ -106,7 +106,7 @@ paths:
             RateLimit-Reset:
               $ref: "#/components/headers/RateLimitReset"
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -163,7 +163,7 @@ paths:
             RateLimit-Reset:
               $ref: "#/components/headers/RateLimitReset"
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -299,7 +299,7 @@ components:
         RateLimit-Reset:
           $ref: "#/components/headers/RateLimitReset"
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Error"
     Unauthorized:
@@ -312,7 +312,7 @@ components:
         RateLimit-Reset:
           $ref: "#/components/headers/RateLimitReset"
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Error"
     Forbidden:
@@ -325,7 +325,7 @@ components:
         RateLimit-Reset:
           $ref: "#/components/headers/RateLimitReset"
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Error"
     NotFound:
@@ -338,7 +338,7 @@ components:
         RateLimit-Reset:
           $ref: "#/components/headers/RateLimitReset"
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Error"
     TooManyRequests:
@@ -358,7 +358,7 @@ components:
             minimum: 0
             maximum: 86400
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Error"
     InternalServerError:
@@ -371,7 +371,7 @@ components:
         RateLimit-Reset:
           $ref: "#/components/headers/RateLimitReset"
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Error"
 
@@ -697,3 +697,12 @@ components:
           description: >-
             A human-readable, non-sensitive description of this occurrence. Null when the
             problem type carries no further detail beyond its title.
+        instance:
+          type: [string, "null"]
+          pattern: "^.{1,500}$"
+          example: "/api/admin/users"
+          description: >-
+            The request path that produced this problem. Populated for generic/fallback
+            failures (e.g. an unexpected server error); absent (or null) for the specific
+            business-outcome problems (e.g. duplicate email, last-admin refusal) that don't
+            set it.

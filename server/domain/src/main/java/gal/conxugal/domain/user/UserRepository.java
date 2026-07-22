@@ -19,8 +19,6 @@ public interface UserRepository {
 
   List<User> findAll();
 
-  long countByRoleAndEnabled(Role role, boolean enabled);
-
   /**
    * Locks and returns every account with the given role and enabled state ({@code SELECT
    * ... FOR UPDATE}), so a concurrent call for the same role/state blocks until this
