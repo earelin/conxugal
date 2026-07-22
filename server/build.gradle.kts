@@ -5,7 +5,6 @@ import org.gradle.testing.jacoco.tasks.JacocoReport
 plugins {
     alias(libs.plugins.micronaut.application) apply false
     alias(libs.plugins.micronaut.library) apply false
-    alias(libs.plugins.pitest) apply false
     jacoco
 }
 

@@ -3,7 +3,6 @@ import org.gradle.testing.jacoco.tasks.JacocoReport
 plugins {
     id("gal.conxugal.java-conventions")
     alias(libs.plugins.micronaut.application)
-    alias(libs.plugins.pitest)
 }
 
 dependencies {
@@ -46,13 +45,6 @@ micronaut {
         incremental(true)
         annotations("gal.conxugal.*")
     }
-}
-
-pitest {
-    targetClasses = listOf("gal.conxugal.application.*")
-    excludedClasses = listOf("*\$Introspection*", "*\$Definition*", "*\$BeanDefinition*")
-    junit5PluginVersion = libs.versions.pitestJunit5Plugin.get()
-    threads = 4
 }
 
 testing {

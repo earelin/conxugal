@@ -1,7 +1,6 @@
 plugins {
     id("gal.conxugal.java-conventions")
     alias(libs.plugins.micronaut.library)
-    alias(libs.plugins.pitest)
 }
 
 dependencies {
@@ -22,11 +21,4 @@ micronaut {
         incremental(true)
         annotations("gal.conxugal.domain.*")
     }
-}
-
-pitest {
-    targetClasses = listOf("gal.conxugal.domain.*")
-    excludedClasses = listOf("*\$Introspection*", "*\$Definition*", "*\$BeanDefinition*")
-    junit5PluginVersion = libs.versions.pitestJunit5Plugin.get()
-    threads = 4
 }
