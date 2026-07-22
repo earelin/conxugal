@@ -18,4 +18,11 @@ public record CreatedUserResponse(
         createdAccount.user().enabled(), createdAccount.user().createdAt(),
         createdAccount.initialPassword().value());
   }
+
+  @Override
+  public String toString() {
+    return ("CreatedUserResponse[id=%s, email=%s, role=%s, enabled=%s, createdAt=%s, "
+            + "initialPassword=REDACTED]")
+        .formatted(id, email, role, enabled, createdAt);
+  }
 }
