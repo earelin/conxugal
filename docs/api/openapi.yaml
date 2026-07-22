@@ -663,13 +663,41 @@ components:
 
     Error:
       type: object
-      description: A machine-readable error envelope returned for non-2xx responses.
-      required: [message]
+      description: >-
+        An RFC 9457 Problem Details error envelope (`application/problem+json`) returned for
+        non-2xx responses.
+      required: [type, title, status, detail, instance]
       example:
-        message: "Something went wrong."
+        type: "urn:conxugal:problem-type:duplicate-email"
+        title: "Conflict"
+        status: 409
+        detail: "An account with email new.admin@conxugal.gal already exists."
+        instance: "/api/admin/users"
       properties:
-        message:
+        type:
+          type: string
+          format: uri
+          example: "urn:conxugal:problem-type:duplicate-email"
+          description: A URI identifying the problem type.
+        title:
+          type: string
+          pattern: "^.{1,100}$"
+          example: "Conflict"
+          description: A short, human-readable summary of the problem type.
+        status:
+          type: integer
+          format: int32
+          minimum: 100
+          maximum: 599
+          example: 409
+          description: The HTTP status code, repeated from the response status.
+        detail:
           type: string
           pattern: "^.{1,500}$"
-          example: "Something went wrong."
-          description: A human-readable, non-sensitive description of the failure.
+          example: "An account with email new.admin@conxugal.gal already exists."
+          description: A human-readable, non-sensitive description of this occurrence.
+        instance:
+          type: string
+          pattern: "^.{1,500}$"
+          example: "/api/admin/users"
+          description: The request path that produced this problem.

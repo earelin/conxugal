@@ -1,11 +1,13 @@
 package gal.conxugal.domain.user;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,11 +33,13 @@ class SetUserEnabledTest {
 
   @Test
   void enables_an_account_regardless_of_role_or_admin_counts() {
-    UUID userId = UUID.randomUUID();
+    User user = user(Role.USER, false);
+    when(userRepository.findById(user.id())).thenReturn(Optional.of(user));
 
-    setUserEnabled.setEnabled(userId, true);
+    User result = setUserEnabled.setEnabled(user.id(), true);
 
-    verify(userRepository).updateEnabled(userId, true);
+    verify(userRepository).updateEnabled(user.id(), true);
+    assertThat(result.enabled()).isTrue();
   }
 
   @Test
@@ -43,16 +47,19 @@ class SetUserEnabledTest {
     User user = user(Role.USER, true);
     when(userRepository.findById(user.id())).thenReturn(Optional.of(user));
 
-    setUserEnabled.setEnabled(user.id(), false);
+    User result = setUserEnabled.setEnabled(user.id(), false);
 
     verify(userRepository).updateEnabled(user.id(), false);
+    assertThat(result.enabled()).isFalse();
   }
 
   @Test
   void disables_an_admin_when_another_enabled_admin_remains() {
     User target = user(Role.ADMIN, true);
+    User otherAdmin = user(Role.ADMIN, true);
     when(userRepository.findById(target.id())).thenReturn(Optional.of(target));
-    when(userRepository.countByRoleAndEnabled(Role.ADMIN, true)).thenReturn(2L);
+    when(userRepository.findByRoleAndEnabledForUpdate(Role.ADMIN, true))
+        .thenReturn(List.of(target, otherAdmin));
 
     setUserEnabled.setEnabled(target.id(), false);
 
@@ -63,7 +70,8 @@ class SetUserEnabledTest {
   void refuses_to_disable_the_only_remaining_enabled_admin() {
     User onlyAdmin = user(Role.ADMIN, true);
     when(userRepository.findById(onlyAdmin.id())).thenReturn(Optional.of(onlyAdmin));
-    when(userRepository.countByRoleAndEnabled(Role.ADMIN, true)).thenReturn(1L);
+    when(userRepository.findByRoleAndEnabledForUpdate(Role.ADMIN, true))
+        .thenReturn(List.of(onlyAdmin));
 
     assertThatThrownBy(() -> setUserEnabled.setEnabled(onlyAdmin.id(), false))
         .isInstanceOf(LastEnabledAdminException.class);
@@ -78,6 +86,17 @@ class SetUserEnabledTest {
     setUserEnabled.setEnabled(alreadyDisabled.id(), false);
 
     verify(userRepository).updateEnabled(alreadyDisabled.id(), false);
+    verify(userRepository, never()).findByRoleAndEnabledForUpdate(Role.ADMIN, true);
+  }
+
+  @Test
+  void throws_when_the_account_does_not_exist() {
+    UUID unknownId = UUID.randomUUID();
+    when(userRepository.findById(unknownId)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> setUserEnabled.setEnabled(unknownId, false))
+        .isInstanceOf(UserNotFoundException.class);
+    verify(userRepository, never()).updateEnabled(unknownId, false);
   }
 
   private static User user(Role role, boolean enabled) {
