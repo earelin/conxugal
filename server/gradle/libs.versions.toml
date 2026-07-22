@@ -12,6 +12,8 @@ jacoco = "0.8.15"
 jspecify = "1.0.0"
 junit = "6.1.2"
 micronautPlugin = "5.0.2"
+pitestGradlePlugin = "1.19.0"
+pitestJunit5Plugin = "1.2.2"
 playwright = "1.61.0"
 pmd = "7.13.0"
 restAssured = "6.0.1"
@@ -52,6 +54,7 @@ micronaut-test-junit5 = { module = "io.micronaut.test:micronaut-test-junit5" }
 micronaut-test-rest-assured = { module = "io.micronaut.test:micronaut-test-rest-assured" }
 micronaut-views-thymeleaf = { module = "io.micronaut.views:micronaut-views-thymeleaf" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter" }
+pitest-gradle-plugin = { module = "info.solidsoft.pitest:info.solidsoft.pitest.gradle.plugin", version.ref = "pitestGradlePlugin" }
 playwright = { module = "com.microsoft.playwright:playwright", version.ref = "playwright" }
 postgresql = { module = "org.postgresql:postgresql" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "restAssured" }

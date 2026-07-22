@@ -15,6 +15,7 @@ plugins {
     jacoco
     id("com.github.spotbugs")
     id("net.ltgt.errorprone")
+    id("info.solidsoft.pitest")
 }
 
 val libs = extensions.getByType(VersionCatalogsExtension::class.java).named("libs")
@@ -83,6 +84,15 @@ tasks.withType<JacocoReport>().configureEach {
 
 tasks.named<JacocoReport>("jacocoTestReport") {
     dependsOn(tasks.named("test"))
+}
+
+pitest {
+    junit5PluginVersion = libs.findVersion("pitestJunit5Plugin").get().requiredVersion
+    threads = 4
+    excludedClasses = listOf("*\$Introspection*", "*\$Definition*", "*\$BeanDefinition*")
+    // architecture/acceptance carry no main sources, so they'd otherwise fail with
+    // zero mutations; commons/domain/application/infrastructure still get a real report.
+    failWhenNoMutations = false
 }
 
 tasks.withType<JavaCompile>().configureEach {
