@@ -36,7 +36,7 @@ public final class HttpRequestCounterFilter implements Ordered {
   @ResponseFilter
   void countOutcome(@Nullable HttpResponse<?> response, @Nullable Throwable failure) {
     counter.recordRequest();
-    if (failure != null || (response != null && response.getStatus().getCode() >= 500)) {
+    if (failure != null || (response != null && response.code() >= 500)) {
       counter.recordError();
     }
   }
