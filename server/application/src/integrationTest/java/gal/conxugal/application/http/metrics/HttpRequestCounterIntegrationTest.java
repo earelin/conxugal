@@ -10,6 +10,7 @@ import gal.conxugal.domain.metrics.RuntimeMetrics;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.MediaType;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
@@ -72,6 +73,22 @@ class HttpRequestCounterIntegrationTest extends AuthenticationTestSupport {
         .get("/api/rota-que-non-existe")
     .then()
         .statusCode(HttpStatus.NOT_FOUND.getCode());
+
+    RuntimeMetrics.Http after = counter.snapshot();
+    assertThat(after.requestCount()).isEqualTo(before.requestCount() + 1);
+    assertThat(after.errorCount()).isEqualTo(before.errorCount() + 1);
+  }
+
+  @Test
+  void security_denied_request_moves_both_request_and_error_count(RequestSpecification spec) {
+    RuntimeMetrics.Http before = counter.snapshot();
+
+    given(spec)
+        .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON)
+    .when()
+        .get("/api/data")
+    .then()
+        .statusCode(HttpStatus.UNAUTHORIZED.getCode());
 
     RuntimeMetrics.Http after = counter.snapshot();
     assertThat(after.requestCount()).isEqualTo(before.requestCount() + 1);
