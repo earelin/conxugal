@@ -4,6 +4,7 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":commons"))
     implementation(libs.micronaut.data.model)
     implementation(libs.jspecify)
     implementation(libs.slf4j.api)

@@ -6,6 +6,7 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testRuntimeOnly(libs.junit.platform.launcher)
 
+    testImplementation(project(":commons"))
     testImplementation(project(":domain"))
     testImplementation(project(":application"))
     testImplementation(project(":infrastructure"))

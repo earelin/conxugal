@@ -532,6 +532,8 @@ components:
           nonHeapUsedBytes: 100663296
           threadCount: 42
           uptimeMillis: 3600000
+          gcCollectionCount: 17
+          gcCollectionTimeMillis: 250
         system:
           cpuLoad: 0.35
         http:
@@ -554,6 +556,8 @@ components:
             nonHeapUsedBytes: 100663296
             threadCount: 42
             uptimeMillis: 3600000
+            gcCollectionCount: 17
+            gcCollectionTimeMillis: 250
           properties:
             heapUsedBytes:
               type: integer
@@ -585,16 +589,34 @@ components:
               minimum: 0
               maximum: 315360000000
               example: 3600000
+            gcCollectionCount:
+              type: integer
+              format: int64
+              minimum: 0
+              maximum: 9223372036854775807
+              example: 17
+              description: Collections performed by the garbage collectors since startup.
+            gcCollectionTimeMillis:
+              type: integer
+              format: int64
+              minimum: 0
+              maximum: 315360000000
+              example: 250
+              description: Accumulated garbage-collection time since startup, in milliseconds.
         system:
           type: object
           example:
             cpuLoad: 0.35
           properties:
             cpuLoad:
-              type: number
+              type: [number, "null"]
               format: double
+              minimum: 0
+              maximum: 1
               example: 0.35
-              description: Recent system/CPU load, 0.0-1.0.
+              description: >-
+                Recent system/CPU load, 0.0-1.0, or null on platforms where the running
+                instance does not report it.
         http:
           type: object
           example:
