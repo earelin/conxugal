@@ -1,7 +1,7 @@
 package gal.conxugal.application.http.auth;
 
 import gal.conxugal.domain.auth.Authenticate;
-import gal.conxugal.domain.auth.User;
+import gal.conxugal.domain.user.User;
 import io.micronaut.core.annotation.Blocking;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.security.authentication.AuthenticationFailureReason;

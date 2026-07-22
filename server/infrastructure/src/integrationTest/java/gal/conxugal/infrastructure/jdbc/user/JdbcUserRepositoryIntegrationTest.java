@@ -1,11 +1,14 @@
 package gal.conxugal.infrastructure.jdbc.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.db.api.Assertions.assertThat;
 
-import gal.conxugal.domain.auth.Role;
-import gal.conxugal.domain.auth.User;
-import gal.conxugal.domain.auth.UserRepository;
+import gal.conxugal.domain.auth.Authenticate;
+import gal.conxugal.domain.user.Role;
+import gal.conxugal.domain.user.User;
+import gal.conxugal.domain.user.UserRepository;
 import gal.conxugal.infrastructure.crypto.Argon2idPasswordEncoder;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -15,8 +18,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import javax.sql.DataSource;
 import org.assertj.db.type.AssertDbConnection;
 import org.assertj.db.type.AssertDbConnectionFactory;
@@ -77,6 +82,142 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(user.email()).isEqualTo("ana@example.com");
     assertThat(user.passwordHash()).isEqualTo("hashed-password");
     assertThat(user.role()).isEqualTo(Role.ADMIN);
+    assertThat(user.enabled()).isTrue();
+    assertThat(user.createdAt()).isNotNull();
+  }
+
+  @Test
+  void defaults_enabled_and_created_at_when_not_supplied() throws Exception {
+    insertUser("ana@example.com", "hashed-password", "USER");
+
+    User user = userRepository.findByEmail("ana@example.com").orElseThrow();
+
+    assertThat(user.enabled()).isTrue();
+    assertThat(user.createdAt()).isNotNull();
+  }
+
+  @Test
+  void finds_all_accounts_enabled_and_disabled() throws Exception {
+    insertUser("ana@example.com", "hashed-password", "ADMIN");
+    insertUser("iago@example.com", "hashed-password", "USER");
+    UUID iagoId = userRepository.findByEmail("iago@example.com").orElseThrow().id();
+    userRepository.updateEnabled(iagoId, false);
+
+    List<User> users = userRepository.findAll();
+
+    assertThat(users).hasSize(2);
+    assertThat(users)
+        .extracting(User::email, User::role, User::enabled)
+        .containsExactlyInAnyOrder(
+            tuple("ana@example.com", Role.ADMIN, true),
+            tuple("iago@example.com", Role.USER, false));
+  }
+
+  @Test
+  void finds_stored_user_by_id() throws Exception {
+    insertUser("ana@example.com", "hashed-password", "ADMIN");
+    UUID id = userRepository.findByEmail("ana@example.com").orElseThrow().id();
+
+    Optional<User> result = userRepository.findById(id);
+
+    assertThat(result).isPresent();
+    assertThat(result.get().email()).isEqualTo("ana@example.com");
+  }
+
+  @Test
+  void returns_empty_for_an_unknown_id() {
+    Optional<User> result = userRepository.findById(UUID.randomUUID());
+
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  void counts_enabled_users_by_role() throws Exception {
+    insertUser("ana@example.com", "hashed-password", "ADMIN");
+    insertUser("breogan@example.com", "hashed-password", "ADMIN");
+    insertUser("iago@example.com", "hashed-password", "USER");
+    UUID breoganId = userRepository.findByEmail("breogan@example.com").orElseThrow().id();
+    userRepository.updateEnabled(breoganId, false);
+
+    assertThat(userRepository.countByRoleAndEnabled(Role.ADMIN, true)).isEqualTo(1L);
+    assertThat(userRepository.countByRoleAndEnabled(Role.ADMIN, false)).isEqualTo(1L);
+    assertThat(userRepository.countByRoleAndEnabled(Role.USER, true)).isEqualTo(1L);
+  }
+
+  @Test
+  void creates_an_account_with_database_generated_id_and_domain_supplied_created_at() {
+    Instant createdAt = Instant.parse("2026-01-15T09:30:00Z");
+    User newUser =
+        new User(null, "nova@example.com", "hashed-password", Role.USER, true, createdAt);
+
+    User created = userRepository.create(newUser);
+
+    assertThat(created.id()).isNotNull();
+    User found = userRepository.findByEmail("nova@example.com").orElseThrow();
+    assertThat(found.id()).isEqualTo(created.id());
+    assertThat(found.passwordHash()).isEqualTo("hashed-password");
+    assertThat(found.role()).isEqualTo(Role.USER);
+    assertThat(found.enabled()).isTrue();
+    assertThat(found.createdAt()).isEqualTo(createdAt);
+  }
+
+  @Test
+  void rejects_creating_duplicate_email() throws Exception {
+    insertUser("ana@example.com", "hashed-password", "USER");
+    // @MicronautTest wraps the whole test method in one shared, rolled-back-at-the-end
+    // transaction; committing here is what lets the row (and the row-unchanged assertion
+    // below) survive the rollback this test triggers on purpose further down.
+    try (Connection connection = dataSource.getConnection()) {
+      connection.commit();
+    }
+    User duplicate =
+        new User(null, "ana@example.com", "other-hash", Role.ADMIN, true,
+            Instant.parse("2026-01-15T09:30:00Z"));
+
+    assertThatThrownBy(() -> userRepository.create(duplicate)).isInstanceOf(RuntimeException.class);
+    // The failed insert leaves the pooled connection mid-transaction; Postgres refuses
+    // further commands on it until it is rolled back, and the small test pool means the
+    // next borrowed connection is likely that same one.
+    try (Connection rollbackConnection = dataSource.getConnection()) {
+      rollbackConnection.rollback();
+    }
+
+    AssertDbConnection assertDbConnection = AssertDbConnectionFactory.of(dataSource).create();
+    Table users = assertDbConnection.table("users").build();
+    assertThat(users).hasNumberOfRows(1);
+    assertThat(users).row(0)
+        .value("password_hash").isEqualTo("hashed-password")
+        .value("role").isEqualTo("USER");
+  }
+
+  @Test
+  void toggles_the_enabled_state() throws Exception {
+    insertUser("ana@example.com", "hashed-password", "USER");
+    User user = userRepository.findByEmail("ana@example.com").orElseThrow();
+
+    userRepository.updateEnabled(user.id(), false);
+    assertThat(userRepository.findByEmail("ana@example.com").orElseThrow().enabled()).isFalse();
+
+    userRepository.updateEnabled(user.id(), true);
+    assertThat(userRepository.findByEmail("ana@example.com").orElseThrow().enabled()).isTrue();
+  }
+
+  @Test
+  void denies_authentication_for_disabled_account_and_allows_it_once_re_enabled()
+      throws Exception {
+    Argon2idPasswordEncoder passwordEncoder = new Argon2idPasswordEncoder();
+    String rawPassword = "correct horse battery staple";
+    insertUser("ana@example.com", passwordEncoder.encode(rawPassword), "USER");
+    UUID id = userRepository.findByEmail("ana@example.com").orElseThrow().id();
+    Instant fixedInstant = Instant.parse("2026-07-20T00:00:00Z");
+    Authenticate authenticate =
+        new Authenticate(userRepository, passwordEncoder, () -> fixedInstant);
+
+    userRepository.updateEnabled(id, false);
+    assertThat(authenticate.authenticate("ana@example.com", rawPassword)).isEmpty();
+
+    userRepository.updateEnabled(id, true);
+    assertThat(authenticate.authenticate("ana@example.com", rawPassword)).isPresent();
   }
 
   @Test

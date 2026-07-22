@@ -1,4 +1,4 @@
-package gal.conxugal.domain.auth;
+package gal.conxugal.domain.user;
 
 /**
  * Port for hashing and verifying passwords. Implemented by a salted-hash adapter in
