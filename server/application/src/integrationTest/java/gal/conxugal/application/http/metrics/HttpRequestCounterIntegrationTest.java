@@ -60,7 +60,7 @@ class HttpRequestCounterIntegrationTest extends AuthenticationTestSupport {
   }
 
   @Test
-  void non_throwing_not_found_response_moves_both_request_and_error_count(
+  void non_throwing_not_found_response_moves_request_count_but_not_error_count(
       RequestSpecification spec) {
     String sessionCookie = login(spec, "user@example.com", "user-password");
     RuntimeMetrics.Http before = counter.snapshot();
@@ -74,11 +74,12 @@ class HttpRequestCounterIntegrationTest extends AuthenticationTestSupport {
 
     RuntimeMetrics.Http after = counter.snapshot();
     assertThat(after.requestCount()).isEqualTo(before.requestCount() + 1);
-    assertThat(after.errorCount()).isEqualTo(before.errorCount() + 1);
+    assertThat(after.errorCount()).isEqualTo(before.errorCount());
   }
 
   @Test
-  void security_denied_request_moves_both_request_and_error_count(RequestSpecification spec) {
+  void security_denied_request_moves_request_count_but_not_error_count(
+      RequestSpecification spec) {
     RuntimeMetrics.Http before = counter.snapshot();
 
     given(spec)
@@ -90,7 +91,7 @@ class HttpRequestCounterIntegrationTest extends AuthenticationTestSupport {
 
     RuntimeMetrics.Http after = counter.snapshot();
     assertThat(after.requestCount()).isEqualTo(before.requestCount() + 1);
-    assertThat(after.errorCount()).isEqualTo(before.errorCount() + 1);
+    assertThat(after.errorCount()).isEqualTo(before.errorCount());
   }
 
   private String login(RequestSpecification spec, String email, String password) {

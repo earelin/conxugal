@@ -4,8 +4,8 @@ import jakarta.inject.Singleton;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
- * Process-lifetime totals of HTTP requests served and responses that failed (a {@code 4xx}/
- * {@code 5xx} status or a thrown error), fed by a filter in the {@code application} module and
+ * Process-lifetime totals of HTTP requests served and responses that failed (a {@code 5xx}
+ * status or a thrown error), fed by a filter in the {@code application} module and
  * read into a {@link RuntimeMetrics.Http} snapshot by an adapter in {@code infrastructure}.
  *
  * <p>Held only in memory: nothing here is persisted, and there is no reset or query for a past
