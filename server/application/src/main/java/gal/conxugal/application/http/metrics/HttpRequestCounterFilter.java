@@ -10,8 +10,10 @@ import io.micronaut.http.filter.ServerFilterPhase;
 
 /**
  * Feeds {@link HttpRequestCounter} for every request, including requests to the metrics stream
- * itself. This response-filter signature is invoked for both a normal response and a thrown
- * error, so one method covers both outcomes without touching the response itself.
+ * itself. This response-filter signature accepts both the response and a thrown failure, so one
+ * method covers both outcomes without touching the response itself — in practice an exception
+ * handler has already turned a thrown error into a {@code 5xx} response by the time this filter
+ * runs, so the {@code failure} parameter is a defensive fallback rather than the normal path.
  *
  * <p>Ordered at the {@link ServerFilterPhase#METRICS} phase, ahead of
  * {@link ServerFilterPhase#SECURITY}, so a request the security filter rejects before it reaches

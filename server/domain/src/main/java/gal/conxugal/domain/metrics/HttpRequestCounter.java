@@ -26,6 +26,11 @@ public final class HttpRequestCounter {
   }
 
   public RuntimeMetrics.Http snapshot() {
-    return new RuntimeMetrics.Http(requests.sum(), errors.sum());
+    // Read errors before requests: recordRequest() always happens-before its matching
+    // recordError(), so this order can't observe an error whose request isn't yet visible,
+    // keeping requestCount >= errorCount even under concurrent updates.
+    long errorCount = errors.sum();
+    long requestCount = requests.sum();
+    return new RuntimeMetrics.Http(requestCount, errorCount);
   }
 }
