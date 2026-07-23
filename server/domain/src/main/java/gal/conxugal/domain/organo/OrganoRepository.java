@@ -11,7 +11,7 @@ import org.jspecify.annotations.Nullable;
  * Port for reading and reconciling the Órgano catalogue. Implemented by the
  * {@code infrastructure} module. Reconciliation is always update-in-place: an existing
  * row is matched by {@code sourceKey} and written to via {@link #update} or
- * {@link #setActive}, never deleted and reinserted.
+ * {@link #updateActive}, never deleted and reinserted.
  */
 public interface OrganoRepository {
 
@@ -26,5 +26,5 @@ public interface OrganoRepository {
   void update(@Id UUID id, String name, @Nullable String acronym, boolean active);
 
   /** Flips an existing row's active state, without touching name or acronym. */
-  void setActive(@Id UUID id, boolean active);
+  void updateActive(@Id UUID id, boolean active);
 }
