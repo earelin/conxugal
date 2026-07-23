@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
  * {@code id} is a separate system-assigned identity, so a source-side rename never
  * changes it. {@code id} is {@code null} only until the database assigns it on insert.
  */
-@MappedEntity("organo_de_contratacion")
+@MappedEntity("organo_contratacion")
 public record OrganoDeContratacion(
     @Id @GeneratedValue @Nullable UUID id,
     String sourceKey,
