@@ -115,9 +115,11 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
   void rejects_inserting_duplicate_source_key_without_altering_the_existing_row()
       throws Exception {
     insertOrgano("consorcio-x", "Consorcio X", "CX", true);
-    // @MicronautTest wraps the whole test method in one shared, rolled-back-at-the-end
-    // transaction; committing here is what lets the row (and the row-unchanged assertion
-    // below) survive the rollback this test triggers on purpose further down.
+    // The injected DataSource is Micronaut Data's connection-context-aware proxy, so
+    // dataSource.getConnection() here shares the same underlying connection as the
+    // repository call below, not a fresh one from the pool. Committing now is what lets
+    // this row survive the rollback the aborted duplicate insert forces on that shared
+    // connection.
     try (Connection connection = dataSource.getConnection()) {
       connection.commit();
     }
@@ -126,9 +128,9 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
     assertThatThrownBy(() -> organoRepository.insert(duplicate))
         .isInstanceOf(RuntimeException.class);
-    // The failed insert leaves the pooled connection mid-transaction; Postgres refuses
-    // further commands on it until it is rolled back, and the small test pool means the
-    // next borrowed connection is likely that same one.
+    // Postgres refuses further commands on that connection until the aborted transaction
+    // is rolled back; AssertJ DB below reuses the same shared connection, so it would
+    // otherwise fail with "current transaction is aborted".
     try (Connection rollbackConnection = dataSource.getConnection()) {
       rollbackConnection.rollback();
     }
