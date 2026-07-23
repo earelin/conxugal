@@ -1,4 +1,4 @@
-package gal.conxugal.application.http.admin.users;
+package gal.conxugal.application.rest.admin.users;
 
 import java.net.URI;
 import java.util.UUID;

@@ -1,4 +1,4 @@
-package gal.conxugal.application.http.admin.users;
+package gal.conxugal.application.rest.admin.users;
 
 import io.micronaut.serde.annotation.Serdeable;
 import jakarta.validation.constraints.NotNull;
