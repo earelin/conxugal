@@ -19,7 +19,13 @@ public interface UserRepository {
 
   List<User> findAll();
 
-  long countByRoleAndEnabled(Role role, boolean enabled);
+  /**
+   * Locks and returns every account with the given role and enabled state ({@code SELECT
+   * ... FOR UPDATE}), so a concurrent call for the same role/state blocks until this
+   * transaction commits. Used to serialize concurrent {@code enabled} changes against the
+   * last-enabled-admin guard.
+   */
+  List<User> findByRoleAndEnabledForUpdate(Role role, boolean enabled);
 
   void updateLastLoginAt(@Id UUID id, Instant lastLoginAt);
 
