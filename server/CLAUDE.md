@@ -69,6 +69,13 @@ Run from `server/` (Gradle wrapper; Java 25 toolchain is pinned in the root
 - `./gradlew jacocoAggregatedReport` — combines coverage from `domain`, `application`
   and `infrastructure` (including their `integrationTest` suites where present) into
   one server-wide report (`build/reports/jacoco/jacocoAggregatedReport/html/index.html`).
+- `./gradlew :domain:pitest` (likewise `:application:`, `:infrastructure:`, `:commons:`)
+  — PIT mutation testing for that module (`<module>/build/reports/pitest/index.html`),
+  wired via the shared `gal.conxugal.java-conventions` plugin so it's available
+  everywhere, scoped to that module's own package and its unit `test` source set only
+  (not `integrationTest`). Manually-invoked only — not part of `check`/`build`, same
+  opt-in treatment as `integrationTest`/`jacocoTestReport`. `architecture`/`acceptance`
+  also carry the task but have no `main` sources to mutate, so it's a no-op there.
 
 ## Fast feedback while iterating
 

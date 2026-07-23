@@ -10,4 +10,5 @@ repositories {
 dependencies {
     implementation(libs.spotbugs.gradle.plugin)
     implementation(libs.errorprone.gradle.plugin)
+    implementation(libs.pitest.gradle.plugin)
 }

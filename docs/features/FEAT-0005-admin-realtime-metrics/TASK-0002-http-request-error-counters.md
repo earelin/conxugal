@@ -2,7 +2,7 @@
 feat: FEAT-0005
 domain: backend
 adrs: [0002, 0006]
-status: todo
+status: done
 depends_on: [TASK-0001]
 ---
 
@@ -14,7 +14,7 @@ come from somewhere. Adds a lightweight in-memory counter fed by a server filter
 without pulling in a metrics framework.
 
 ## Scope
-- A counter component holding two monotonic totals (requests served, responses with a `4xx`/`5xx`
+- A counter component holding two monotonic totals (requests served, responses with a `5xx`
   status or a thrown error), incremented with non-blocking atomics.
 - An HTTP server filter that increments them for every request, including requests to the
   metrics stream itself.
