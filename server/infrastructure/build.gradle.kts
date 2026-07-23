@@ -38,6 +38,7 @@ testing {
             dependencies {
                 implementation(project())
                 implementation(project(":domain"))
+                implementation(libs.micronaut.jdbc.hikari)
                 implementation(libs.micronaut.test.junit5)
                 implementation(libs.testcontainers.junit.jupiter)
                 implementation(libs.testcontainers.postgresql)
