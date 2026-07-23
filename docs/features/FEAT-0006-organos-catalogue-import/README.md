@@ -154,7 +154,7 @@ flowchart LR
    annotations, and the `OrganoRepository` port (find all, find by source key, insert,
    update in place, set active). *(SPEC-0004 #3, #8)*
 2. **Catalogue store infrastructure** — a migration creating the
-   `organo_de_contratacion` table (UUID id, unique `source_key`, name, nullable acronym,
+   `organo_contratacion` table (UUID id, unique `source_key`, name, nullable acronym,
    `active` default true) and the Micronaut Data JDBC implementation of
    `OrganoRepository`. *(SPEC-0004 #3, #4, #6, #7)*
 3. **Source port + contratosdegalicia adapter** — the `OrganoSource` port and its driven

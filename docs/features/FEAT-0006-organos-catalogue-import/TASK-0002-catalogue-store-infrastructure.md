@@ -15,7 +15,7 @@ The schema and driven adapter for the port added in
 JDBC/SQL stays entirely in `infrastructure`.
 
 ## Scope
-- Migration creating the `organo_de_contratacion` table: UUID primary key, `source_key`
+- Migration creating the `organo_contratacion` table: UUID primary key, `source_key`
   (`NOT NULL`, **unique**), `name` (`NOT NULL`), nullable `acronym`, `active` (`NOT NULL`,
   default `true`).
 - Micronaut Data JDBC implementation of `OrganoRepository`: `findAll`, `findBySourceKey`
