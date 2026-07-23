@@ -1,11 +1,8 @@
 package gal.conxugal.application.rest.admin.users;
 
 import gal.conxugal.domain.user.CreateUser;
-import gal.conxugal.domain.user.DuplicateEmailException;
-import gal.conxugal.domain.user.LastEnabledAdminException;
 import gal.conxugal.domain.user.ListUsers;
 import gal.conxugal.domain.user.SetUserEnabled;
-import gal.conxugal.domain.user.UserNotFoundException;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
@@ -39,26 +36,12 @@ class UsersController {
 
   @Post
   @Status(HttpStatus.CREATED)
-  @SuppressWarnings("PMD.PreserveStackTrace")
   CreatedUserResponse create(@Valid @Body CreateUserRequest request) {
-    // Business-outcome translation, not failure handling: the domain exception carries no
-    // stack trace worth preserving beyond what the Problem's own message already states.
-    try {
-      return CreatedUserResponse.of(createUser.create(request.email(), request.role()));
-    } catch (DuplicateEmailException e) {
-      throw new DuplicateEmailProblem(request.email());
-    }
+    return CreatedUserResponse.of(createUser.create(request.email(), request.role()));
   }
 
   @Post("/{id}/enabled")
-  @SuppressWarnings("PMD.PreserveStackTrace")
   UserResponse setEnabled(@PathVariable UUID id, @Valid @Body SetEnabledRequest request) {
-    try {
-      return UserResponse.of(setUserEnabled.setEnabled(id, request.enabled()));
-    } catch (UserNotFoundException e) {
-      throw new UserNotFoundProblem(id);
-    } catch (LastEnabledAdminException e) {
-      throw new LastEnabledAdminProblem(id);
-    }
+    return UserResponse.of(setUserEnabled.setEnabled(id, request.enabled()));
   }
 }
