@@ -6,10 +6,15 @@ import io.micronaut.http.HttpResponse;
 import io.micronaut.http.server.exceptions.ExceptionHandler;
 import io.micronaut.problem.ThrowableProblemHandler;
 import jakarta.inject.Singleton;
+import java.net.URI;
+import org.zalando.problem.Problem;
+import org.zalando.problem.Status;
 
 @Singleton
 class LastEnabledAdminExceptionHandler
     implements ExceptionHandler<LastEnabledAdminException, HttpResponse<?>> {
+
+  private static final URI TYPE = URI.create("urn:conxugal:problem-type:last-enabled-admin");
 
   private final ThrowableProblemHandler throwableProblemHandler;
 
@@ -20,6 +25,14 @@ class LastEnabledAdminExceptionHandler
   @Override
   public HttpResponse<?> handle(HttpRequest request, LastEnabledAdminException exception) {
     return throwableProblemHandler.handle(
-        request, new LastEnabledAdminProblem(exception.getUserId()));
+        request,
+        Problem.builder()
+            .withType(TYPE)
+            .withTitle("Conflict")
+            .withStatus(Status.CONFLICT)
+            .withDetail(
+                "Cannot disable the only remaining enabled ADMIN account: "
+                    + exception.getUserId())
+            .build());
   }
 }

@@ -6,10 +6,15 @@ import io.micronaut.http.HttpResponse;
 import io.micronaut.http.server.exceptions.ExceptionHandler;
 import io.micronaut.problem.ThrowableProblemHandler;
 import jakarta.inject.Singleton;
+import java.net.URI;
+import org.zalando.problem.Problem;
+import org.zalando.problem.Status;
 
 @Singleton
 class UserNotFoundExceptionHandler
     implements ExceptionHandler<UserNotFoundException, HttpResponse<?>> {
+
+  private static final URI TYPE = URI.create("urn:conxugal:problem-type:user-not-found");
 
   private final ThrowableProblemHandler throwableProblemHandler;
 
@@ -20,6 +25,12 @@ class UserNotFoundExceptionHandler
   @Override
   public HttpResponse<?> handle(HttpRequest request, UserNotFoundException exception) {
     return throwableProblemHandler.handle(
-        request, new UserNotFoundProblem(exception.getUserId()));
+        request,
+        Problem.builder()
+            .withType(TYPE)
+            .withTitle("Not Found")
+            .withStatus(Status.NOT_FOUND)
+            .withDetail("No account exists with id: " + exception.getUserId())
+            .build());
   }
 }

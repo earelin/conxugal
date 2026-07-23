@@ -6,10 +6,15 @@ import io.micronaut.http.HttpResponse;
 import io.micronaut.http.server.exceptions.ExceptionHandler;
 import io.micronaut.problem.ThrowableProblemHandler;
 import jakarta.inject.Singleton;
+import java.net.URI;
+import org.zalando.problem.Problem;
+import org.zalando.problem.Status;
 
 @Singleton
 class DuplicateEmailExceptionHandler
     implements ExceptionHandler<DuplicateEmailException, HttpResponse<?>> {
+
+  private static final URI TYPE = URI.create("urn:conxugal:problem-type:duplicate-email");
 
   private final ThrowableProblemHandler throwableProblemHandler;
 
@@ -20,6 +25,12 @@ class DuplicateEmailExceptionHandler
   @Override
   public HttpResponse<?> handle(HttpRequest request, DuplicateEmailException exception) {
     return throwableProblemHandler.handle(
-        request, new DuplicateEmailProblem(exception.getEmail()));
+        request,
+        Problem.builder()
+            .withType(TYPE)
+            .withTitle("Conflict")
+            .withStatus(Status.CONFLICT)
+            .withDetail("An account with email " + exception.getEmail() + " already exists.")
+            .build());
   }
 }
