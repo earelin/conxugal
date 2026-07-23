@@ -15,8 +15,11 @@ dependencies {
     implementation(libs.micronaut.serde.jackson)
     implementation(libs.micronaut.security.session)
     implementation(libs.micronaut.security.csrf)
+    implementation(libs.micronaut.validation)
+    implementation(libs.micronaut.problem.json)
     implementation(libs.micronaut.views.thymeleaf)
     annotationProcessor(libs.micronaut.security.processor)
+    annotationProcessor(libs.micronaut.validation.processor)
     runtimeOnly(libs.logback.classic)
     runtimeOnly(libs.snakeyaml)
 

@@ -9,7 +9,14 @@ import java.util.UUID;
  */
 public class LastEnabledAdminException extends RuntimeException {
 
+  private final UUID userId;
+
   public LastEnabledAdminException(UUID userId) {
     super("Cannot disable the only remaining enabled ADMIN account: " + userId);
+    this.userId = userId;
+  }
+
+  public UUID getUserId() {
+    return userId;
   }
 }
