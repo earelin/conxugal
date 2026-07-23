@@ -11,12 +11,4 @@ import java.util.UUID;
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public interface JdbcOrganoRepository
     extends OrganoRepository, GenericRepository<OrganoDeContratacion, UUID> {
-
-  /**
-   * {@code setActive}'s name doesn't fit Micronaut Data's {@code updateXxx} derivation
-   * convention, so its update statement is spelled out explicitly rather than derived.
-   */
-  @Override
-  @Query("UPDATE organo_contratacion SET active = :active WHERE id = :id")
-  void setActive(UUID id, boolean active);
 }

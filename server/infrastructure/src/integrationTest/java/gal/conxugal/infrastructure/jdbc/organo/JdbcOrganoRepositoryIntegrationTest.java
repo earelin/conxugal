@@ -186,7 +186,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
   void toggles_the_active_state_without_touching_name_or_acronym() throws Exception {
     UUID id = insertOrgano("consorcio-x", "Consorcio X", "CX", true);
 
-    organoRepository.setActive(id, false);
+    organoRepository.updateActive(id, false);
 
     OrganoDeContratacion deactivated =
         organoRepository.findAllBySourceKeyIn(List.of("consorcio-x")).get(0);
@@ -194,7 +194,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(deactivated.name()).isEqualTo("Consorcio X");
     assertThat(deactivated.acronym()).isEqualTo("CX");
 
-    organoRepository.setActive(id, true);
+    organoRepository.updateActive(id, true);
 
     OrganoDeContratacion reactivated =
         organoRepository.findAllBySourceKeyIn(List.of("consorcio-x")).get(0);
@@ -206,7 +206,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     UUID id = insertOrgano("consorcio-x", "Consorcio X", "CX", true);
     insertOrgano("axencia-y", "Axencia Y", null, true);
 
-    organoRepository.setActive(id, false);
+    organoRepository.updateActive(id, false);
 
     OrganoDeContratacion untouched =
         organoRepository.findAllBySourceKeyIn(List.of("axencia-y")).get(0);
