@@ -104,7 +104,7 @@ public class RuntimeMetricsAdapter implements RuntimeMetricsSource {
     if (operatingSystem
         instanceof com.sun.management.OperatingSystemMXBean hotSpotOperatingSystem) {
       double cpuLoad = hotSpotOperatingSystem.getCpuLoad();
-      if (cpuLoad >= 0.0) {
+      if (cpuLoad >= 0.0 && cpuLoad <= 1.0) {
         return new RuntimeMetrics.SystemLoad(cpuLoad);
       }
     }

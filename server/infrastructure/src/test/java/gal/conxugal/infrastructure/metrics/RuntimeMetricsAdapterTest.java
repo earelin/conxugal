@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.zaxxer.hikari.HikariPoolMXBean;
 import gal.conxugal.domain.metrics.HttpRequestCounter;
 import gal.conxugal.domain.metrics.RuntimeMetrics;
-import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
@@ -102,13 +101,19 @@ class RuntimeMetricsAdapterTest {
   }
 
   @Test
-  void reads_bounded_cpu_load_when_the_platform_mxbean_reports_one() {
+  void reads_cpu_load_reported_within_bounds_by_hotspot_platform_mxbean() {
     RuntimeMetrics.SystemLoad systemLoad =
-        RuntimeMetricsAdapter.systemLoadFrom(ManagementFactory.getOperatingSystemMXBean());
+        RuntimeMetricsAdapter.systemLoadFrom(new FakeHotSpotOperatingSystem(0.42));
 
-    assertThat(systemLoad.cpuLoad()).satisfiesAnyOf(
-        cpuLoad -> assertThat(cpuLoad).isNull(),
-        cpuLoad -> assertThat(cpuLoad).isBetween(0.0, 1.0));
+    assertThat(systemLoad.cpuLoad()).isEqualTo(0.42);
+  }
+
+  @Test
+  void reports_absent_cpu_load_when_hotspot_platform_mxbean_reports_above_valid_range() {
+    RuntimeMetrics.SystemLoad systemLoad =
+        RuntimeMetricsAdapter.systemLoadFrom(new FakeHotSpotOperatingSystem(1.5));
+
+    assertThat(systemLoad.cpuLoad()).isNull();
   }
 
   private static void park() {
@@ -166,6 +171,86 @@ class RuntimeMetricsAdapterTest {
   }
 
   private static final class PlainOperatingSystem implements OperatingSystemMXBean {
+
+    @Override
+    public String getName() {
+      return "test";
+    }
+
+    @Override
+    public String getArch() {
+      return "test";
+    }
+
+    @Override
+    public String getVersion() {
+      return "test";
+    }
+
+    @Override
+    public int getAvailableProcessors() {
+      return 1;
+    }
+
+    @Override
+    public double getSystemLoadAverage() {
+      return -1.0;
+    }
+
+    @Override
+    public ObjectName getObjectName() {
+      return null;
+    }
+  }
+
+  private static final class FakeHotSpotOperatingSystem
+      implements com.sun.management.OperatingSystemMXBean {
+
+    private final double cpuLoad;
+
+    private FakeHotSpotOperatingSystem(double cpuLoad) {
+      this.cpuLoad = cpuLoad;
+    }
+
+    @Override
+    public double getCpuLoad() {
+      return cpuLoad;
+    }
+
+    @Override
+    public double getProcessCpuLoad() {
+      return 0.0;
+    }
+
+    @Override
+    public long getCommittedVirtualMemorySize() {
+      return 0L;
+    }
+
+    @Override
+    public long getTotalSwapSpaceSize() {
+      return 0L;
+    }
+
+    @Override
+    public long getFreeSwapSpaceSize() {
+      return 0L;
+    }
+
+    @Override
+    public long getProcessCpuTime() {
+      return 0L;
+    }
+
+    @Override
+    public long getFreeMemorySize() {
+      return 0L;
+    }
+
+    @Override
+    public long getTotalMemorySize() {
+      return 0L;
+    }
 
     @Override
     public String getName() {

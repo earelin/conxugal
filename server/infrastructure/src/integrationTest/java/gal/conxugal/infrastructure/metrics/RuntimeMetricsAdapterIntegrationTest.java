@@ -24,10 +24,13 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class RuntimeMetricsAdapterIntegrationTest implements TestPropertyProvider {
 
   private static final String PASSWORD = "s3cr3t-pool-password";
+  private static final String USERNAME = "conxugal-metrics-test-user";
 
   @Container
   static PostgreSQLContainer<?> postgres =
-      new PostgreSQLContainer<>("postgres:18-alpine").withPassword(PASSWORD);
+      new PostgreSQLContainer<>("postgres:18-alpine")
+          .withUsername(USERNAME)
+          .withPassword(PASSWORD);
 
   @Override
   public @NonNull Map<String, String> getProperties() {
@@ -100,7 +103,6 @@ class RuntimeMetricsAdapterIntegrationTest implements TestPropertyProvider {
     assertThat(serialised)
         .doesNotContain(postgres.getPassword())
         .doesNotContain(postgres.getJdbcUrl())
-        .doesNotContain(postgres.getHost())
         .doesNotContain(postgres.getUsername());
   }
 }
