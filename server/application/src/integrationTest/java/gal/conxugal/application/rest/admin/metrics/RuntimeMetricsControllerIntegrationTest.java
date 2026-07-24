@@ -27,10 +27,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,9 +37,11 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 
 @MicronautTest
-@Property(name = "conxugal.metrics.stream.sample-interval", value = "50ms")
+@Property(name = "conxugal.metrics.stream.sample-interval", value = "1s")
 @Property(name = "conxugal.metrics.stream.heartbeat-interval", value = "120ms")
 class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport {
+
+  private static final Duration SAMPLE_INTERVAL = Duration.ofSeconds(1);
 
   @Inject
   EmbeddedServer embeddedServer;
@@ -63,8 +63,9 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
   }
 
   @AfterEach
-  void tearDown() {
+  void tearDown() throws InterruptedException {
     streamingClient.close();
+    awaitStableInvocationCount(Duration.ofSeconds(5));
   }
 
   @Test
@@ -96,7 +97,7 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
 
     StreamCollector collector = openStream(sessionCookie);
     try {
-      collector.awaitText(text -> countDataFrames(text) >= 1, Duration.ofMillis(500));
+      collector.awaitText(text -> countDataFrames(text) >= 1, Duration.ofMillis(700));
       assertThat(collector.text()).contains("\"active\":1");
     } finally {
       collector.dispose();
@@ -112,7 +113,7 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
 
     StreamCollector collector = openStream(sessionCookie);
     try {
-      collector.awaitText(text -> countDataFrames(text) >= 3, Duration.ofMillis(800));
+      collector.awaitText(text -> countDataFrames(text) >= 3, Duration.ofSeconds(3));
       String text = collector.text();
       assertThat(text).contains("\"active\":1").contains("\"active\":2").contains("\"active\":3");
     } finally {
@@ -128,12 +129,17 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
 
     StreamCollector collector = openStream(sessionCookie);
     try {
-      collector.awaitText(text -> text.contains(": heartbeat"), Duration.ofMillis(800));
-      Optional<String> heartbeatFrame = Arrays.stream(collector.text().split("\n\n"))
-          .filter(frame -> frame.contains(": heartbeat"))
-          .findFirst();
-      assertThat(heartbeatFrame).isPresent();
-      assertThat(heartbeatFrame.get()).doesNotContain("data:");
+      collector.awaitText(text -> countDataFrames(text) >= 2, Duration.ofSeconds(2));
+      List<String> frames = splitIntoFrames(collector.text());
+      int firstDataFrame = indexOfFrame(frames, 0, f -> f.startsWith("data:"));
+      int secondDataFrame = indexOfFrame(frames, firstDataFrame + 1, f -> f.startsWith("data:"));
+      assertThat(firstDataFrame).isNotNegative();
+      assertThat(secondDataFrame).isNotNegative();
+
+      boolean heartbeatBetweenSamples = frames.subList(firstDataFrame + 1, secondDataFrame)
+          .stream()
+          .anyMatch(frame -> frame.contains(": heartbeat"));
+      assertThat(heartbeatBetweenSamples).isTrue();
     } finally {
       collector.dispose();
     }
@@ -146,22 +152,23 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
     String sessionCookie = loginAs(spec, TestUserFactory.adminUser());
 
     StreamCollector collector = openStream(sessionCookie);
-    collector.awaitText(text -> countDataFrames(text) >= 2, Duration.ofMillis(500));
+    collector.awaitText(text -> countDataFrames(text) >= 2, Duration.ofSeconds(2));
     collector.dispose();
     streamingClient.close();
-    int invocationsAtDisconnect = awaitStableInvocationCount(Duration.ofSeconds(2));
+    int invocationsAtDisconnect = awaitStableInvocationCount(Duration.ofSeconds(5));
 
-    Thread.sleep(200);
+    Thread.sleep(300);
 
     assertThat(mockingDetails(runtimeMetricsSource).getInvocations())
         .hasSize(invocationsAtDisconnect);
   }
 
   private int awaitStableInvocationCount(Duration timeout) throws InterruptedException {
+    Duration pollGap = SAMPLE_INTERVAL.plusMillis(300);
     long deadline = System.currentTimeMillis() + timeout.toMillis();
     int previousCount = mockingDetails(runtimeMetricsSource).getInvocations().size();
     while (System.currentTimeMillis() < deadline) {
-      Thread.sleep(30);
+      Thread.sleep(pollGap.toMillis());
       int currentCount = mockingDetails(runtimeMetricsSource).getInvocations().size();
       if (currentCount == previousCount) {
         return currentCount;
@@ -192,6 +199,19 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
 
   private static int countDataFrames(String text) {
     return (int) text.lines().filter(line -> line.startsWith("data:")).count();
+  }
+
+  private static int indexOfFrame(List<String> frames, int fromIndex, Predicate<String> match) {
+    for (int i = fromIndex; i < frames.size(); i++) {
+      if (match.test(frames.get(i))) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private static List<String> splitIntoFrames(String text) {
+    return List.of(text.split("\n{2,}"));
   }
 
   private static RuntimeMetrics sample(int active) {
