@@ -1,6 +1,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AboutPage } from './routes/AboutPage';
+import { AdminRoute } from './routes/admin/AdminRoute';
 import { DashboardPage } from './routes/admin/DashboardPage';
 import { UsersPage } from './routes/admin/UsersPage';
 import { HomePage } from './routes/HomePage';
@@ -22,6 +23,7 @@ export const routes: RouteObject[] = [
       { path: 'acerca', Component: AboutPage },
       {
         path: 'administracion',
+        Component: AdminRoute,
         children: [
           { index: true, Component: DashboardPage },
           { path: 'usuarios', Component: UsersPage },
