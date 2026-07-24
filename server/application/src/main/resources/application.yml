@@ -1,3 +1,7 @@
+conxugal:
+  contratosdegalicia:
+    base-url: https://www.contratosdegalicia.gal
+
 micronaut:
   application:
     name: conxugal
