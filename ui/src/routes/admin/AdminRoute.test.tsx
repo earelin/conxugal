@@ -1,91 +1,64 @@
-import { MantineProvider } from '@mantine/core';
-import { render, screen } from '@testing-library/react';
-import { createMemoryRouter } from 'react-router';
-import { RouterProvider } from 'react-router/dom';
-import { describe, expect, it, vi } from 'vitest';
-import { useCurrentUser } from '../../api/currentUser';
+import { screen, waitFor } from '@testing-library/react';
+import nock from 'nock';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { BASE_URL, mockCurrentUser, renderApp } from '../../test/renderApp';
 import { strings } from '../../strings';
-import { theme } from '../../theme';
-import { AdminRoute } from './AdminRoute';
 
-vi.mock('../../api/currentUser', () => ({ useCurrentUser: vi.fn() }));
-
-const mockedUseCurrentUser = vi.mocked(useCurrentUser);
-
-function mockCurrentUserResult(result: Partial<ReturnType<typeof useCurrentUser>>) {
-  mockedUseCurrentUser.mockReturnValue(result as ReturnType<typeof useCurrentUser>);
-}
-
-function renderAdminRoute() {
-  const router = createMemoryRouter(
-    [
-      {
-        path: '/',
-        children: [
-          {
-            path: 'administracion',
-            Component: AdminRoute,
-            children: [{ index: true, Component: () => <div>Admin content</div> }],
-          },
-        ],
+function mockSystemStatus() {
+  return nock(BASE_URL)
+    .get('/api/admin/system-status')
+    .reply(200, {
+      status: 'UP',
+      datastore: { reachable: true },
+      checkedAt: '2026-07-18T09:30:00Z',
+      application: { version: '0.1.0-SNAPSHOT', environment: 'production' },
+      runtime: {
+        javaVersion: '21.0.3',
+        javaVendor: 'Eclipse Adoptium',
+        uptimeMillis: 266_320_000,
+        memoryUsedBytes: 536_870_912,
+        memoryMaxBytes: 1_073_741_824,
+        osName: 'Linux',
+        osArch: 'amd64',
       },
-    ],
-    { initialEntries: ['/administracion'] },
-  );
-  return render(
-    <MantineProvider theme={theme}>
-      <RouterProvider router={router} />
-    </MantineProvider>,
-  );
+    });
 }
 
 describe('AdminRoute', () => {
-  it('shows a loader while the session is resolving', () => {
-    mockCurrentUserResult({ data: undefined, isPending: true });
-    const { container } = renderAdminRoute();
-
-    expect(container.querySelector('.mantine-Loader-root')).toBeInTheDocument();
-    expect(screen.queryByText('Admin content')).not.toBeInTheDocument();
+  beforeEach(() => {
+    nock.disableNetConnect();
   });
 
-  it('renders the nested route for an ADMIN session', () => {
-    mockCurrentUserResult({
-      isPending: false,
-      data: {
-        id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        email: 'admin@conxugal.gal',
-        role: 'ADMIN',
-        createdAt: '2026-01-15T09:30:00Z',
-        lastLoginAt: null,
-      },
-    });
-    renderAdminRoute();
-
-    expect(screen.getByText('Admin content')).toBeInTheDocument();
+  afterEach(() => {
+    nock.cleanAll();
+    nock.enableNetConnect();
   });
 
-  it('renders the not-found page instead of the nested route for a USER session', () => {
-    mockCurrentUserResult({
-      isPending: false,
-      data: {
-        id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        email: 'user@conxugal.gal',
-        role: 'USER',
-        createdAt: '2026-01-15T09:30:00Z',
-        lastLoginAt: null,
-      },
-    });
-    renderAdminRoute();
+  it('renders the dashboard for an ADMIN session', async () => {
+    mockCurrentUser('ADMIN');
+    mockSystemStatus();
+    renderApp('/administracion');
 
-    expect(screen.getByText(strings.notFound.title)).toBeInTheDocument();
-    expect(screen.queryByText('Admin content')).not.toBeInTheDocument();
+    expect(await screen.findByText(strings.admin.dashboard.title)).toBeInTheDocument();
   });
 
-  it('renders the not-found page when the session failed to resolve', () => {
-    mockCurrentUserResult({ isPending: false, data: undefined });
-    renderAdminRoute();
+  it('does not render the dashboard for a USER session, showing the not-found page instead', async () => {
+    const scope = mockCurrentUser('USER');
+    renderApp('/administracion');
 
-    expect(screen.getByText(strings.notFound.title)).toBeInTheDocument();
-    expect(screen.queryByText('Admin content')).not.toBeInTheDocument();
+    await waitFor(() => expect(scope.isDone()).toBe(true));
+
+    expect(await screen.findByText(strings.notFound.title)).toBeInTheDocument();
+    expect(screen.queryByText(strings.admin.dashboard.title)).not.toBeInTheDocument();
+  });
+
+  it('does not render the Usuarios placeholder for a USER session', async () => {
+    const scope = mockCurrentUser('USER');
+    renderApp('/administracion/usuarios');
+
+    await waitFor(() => expect(scope.isDone()).toBe(true));
+
+    expect(await screen.findByText(strings.notFound.title)).toBeInTheDocument();
+    expect(screen.queryByText(strings.admin.users.title)).not.toBeInTheDocument();
   });
 });
