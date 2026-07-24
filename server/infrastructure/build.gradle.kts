@@ -57,6 +57,27 @@ testing {
     }
 }
 
+val generatedVersionDir = layout.buildDirectory.dir("generated/version")
+
+val generateVersionProperties = tasks.register("generateVersionProperties") {
+    description = "Writes the project's version onto the runtime classpath, for the system-status probe."
+    val outputFile = generatedVersionDir.map { it.file("conxugal-version.properties") }
+    val projectVersion = project.version.toString()
+    outputs.file(outputFile)
+    doLast {
+        outputFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText("version=$projectVersion\n")
+        }
+    }
+}
+
+sourceSets {
+    main {
+        resources.srcDir(files(generatedVersionDir).builtBy(generateVersionProperties))
+    }
+}
+
 configurations["integrationTestAnnotationProcessor"].extendsFrom(
     configurations["annotationProcessor"],
     configurations["testAnnotationProcessor"]
