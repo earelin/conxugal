@@ -55,6 +55,24 @@ function DashboardError({ error }: { error: unknown }) {
   );
 }
 
+function StatCard({ label, value, healthy }: { label: string; value: string; healthy: boolean }) {
+  return (
+    <Card withBorder radius="md" padding="lg">
+      <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+        {label}
+      </Text>
+      <Group justify="space-between" mt="xs">
+        <Text size="xl" fw={600}>
+          {value}
+        </Text>
+        <Badge color={healthy ? 'green' : 'red'} variant="light">
+          {value}
+        </Badge>
+      </Group>
+    </Card>
+  );
+}
+
 function DashboardContent({
   status,
   isRefreshing,
@@ -112,32 +130,16 @@ function DashboardContent({
       </Card>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
-        <Card withBorder radius="md" padding="lg">
-          <Text size="xs" fw={700} c="dimmed" tt="uppercase">
-            {strings.admin.dashboard.serviceLabel}
-          </Text>
-          <Group justify="space-between" mt="xs">
-            <Text size="xl" fw={600}>
-              {serviceLabel}
-            </Text>
-            <Badge color={isUp ? 'green' : 'red'} variant="light">
-              {serviceLabel}
-            </Badge>
-          </Group>
-        </Card>
-        <Card withBorder radius="md" padding="lg">
-          <Text size="xs" fw={700} c="dimmed" tt="uppercase">
-            {strings.admin.dashboard.datastoreLabel}
-          </Text>
-          <Group justify="space-between" mt="xs">
-            <Text size="xl" fw={600}>
-              {datastoreLabel}
-            </Text>
-            <Badge color={status.datastore.reachable ? 'green' : 'red'} variant="light">
-              {datastoreLabel}
-            </Badge>
-          </Group>
-        </Card>
+        <StatCard
+          label={strings.admin.dashboard.serviceLabel}
+          value={serviceLabel}
+          healthy={isUp}
+        />
+        <StatCard
+          label={strings.admin.dashboard.datastoreLabel}
+          value={datastoreLabel}
+          healthy={status.datastore.reachable}
+        />
       </SimpleGrid>
 
       <Card withBorder radius="md" padding="lg">
