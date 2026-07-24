@@ -2,15 +2,15 @@
 feat: FEAT-0004
 adrs: [0003, 0004, 0005]
 status: todo
-depends_on: [TASK-0004]
+depends_on: [TASK-0004, TASK-0007]
 ---
 
 # Admin UI shell + dashboard
 
-Governed by [ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md) (Vite + Mantine SPA). Adds the admin section and the dashboard page consuming [TASK-0004](TASK-0004-system-status-probe-and-endpoint.md)'s status endpoint. Visual target: [`design/dashboard.svg`](design/dashboard.svg).
+Governed by [ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md) (Vite + Mantine SPA). Adds the admin section and the dashboard page consuming [TASK-0004](TASK-0004-system-status-probe-and-endpoint.md)'s status endpoint and [TASK-0007](TASK-0007-current-user-endpoint.md)'s `GET /api/me` for the session role used to gate the nav. Visual target: [`design/dashboard.svg`](design/dashboard.svg).
 
 ## Scope
-- Admin routes and an **ADMINISTRACIÓN** nav section (Panel, Usuarios), shown only when the session role is `ADMIN`.
+- Admin routes and an **ADMINISTRACIÓN** nav section (Panel, Usuarios), shown only when the session role — read from `GET /api/me` (TASK-0007) — is `ADMIN`.
 - Dashboard page fetching `GET /api/admin/system-status` and rendering overall service state and datastore reachability.
 - Galician chrome and copy in `strings.ts`, consistent with the existing shell.
 

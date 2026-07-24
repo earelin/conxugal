@@ -31,7 +31,9 @@ the `@Secured(ADMIN)` rules already delivered in
   `JdbcUserRepository`; a driven adapter that assembles system status (datastore probe +
   runtime info) without exposing secrets.
 - **Application (driving):** `ADMIN`-only REST endpoints for user administration and for
-  system status under `/api/admin/`.
+  system status under `/api/admin/`; a `GET /api/me` endpoint, available to any
+  authenticated user (not `ADMIN`-gated), returning the caller's own identity so the
+  SPA can gate its admin nav ([SPEC-0002](../../specs/SPEC-0002-user-authentication.md) R14).
 - **UI:** an admin section in the SPA — dashboard page, user-list page (surfacing each
   account's last successful login alongside its created date), create-user form, and a
   disable/enable action — with Galician chrome, shown only to administrators.
@@ -123,6 +125,9 @@ flowchart LR
 - `POST /api/admin/users/{id}/enabled` — set enabled true/false.
 - `GET  /api/admin/system-status` — current system status.
 - All carry `@Secured("ADMIN")`; a `USER` gets 403 (SPEC-0003 R1).
+- `GET  /api/me` — the caller's own account (id, email, role, created date, last
+  login). Carries `@Secured(IS_AUTHENTICATED)`, not `ADMIN`: any authenticated
+  `USER` or `ADMIN` gets 200 (SPEC-0002 R14).
 - The full request/response contract for these endpoints is defined in the
   [OpenAPI document](../../api/openapi.yaml).
 
@@ -150,9 +155,13 @@ flowchart LR
    password once. *(SPEC-0003 #1, #5–#8, #11, #12)*
 4. **System-status probe + endpoint** — `SystemStatus` model, `SystemStatusProbe` port,
    datastore/runtime adapter, and `GET /api/admin/system-status`. *(SPEC-0003 #1–#4)*
-5. **Admin UI shell + dashboard** — admin section, admin-only nav gating, and the
-   dashboard page consuming system status. *(SPEC-0003 #1, #2)*
-6. **User-administration UI** — user list (email, role, state, created date, last login
+5. **Current-user endpoint** ([TASK-0007](TASK-0007-current-user-endpoint.md)) —
+   `FindCurrentUser` use case and `GET /api/me`, available to any authenticated user
+   (not `ADMIN`-gated); needed by the admin UI shell to gate the nav client-side.
+   *(SPEC-0002 #11)*
+6. **Admin UI shell + dashboard** — admin section, admin-only nav gating (read from
+   `GET /api/me`), and the dashboard page consuming system status. *(SPEC-0003 #1, #2)*
+7. **User-administration UI** — user list (email, role, state, created date, last login
    date), create-user form (email + role only), the one-time generated-password reveal
    after creation, and the disable/enable action. *(SPEC-0003 #5–#7, #9, #10; SPEC-0002 #10)*
 
