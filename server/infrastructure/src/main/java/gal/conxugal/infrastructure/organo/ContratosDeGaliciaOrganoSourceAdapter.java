@@ -7,10 +7,10 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.BlockingHttpClient;
 import io.micronaut.http.client.HttpClient;
-import io.micronaut.http.client.annotation.Client;
 import io.micronaut.http.client.exceptions.HttpClientException;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -53,7 +53,7 @@ public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
 
   @Inject
   public ContratosDeGaliciaOrganoSourceAdapter(
-      @Client("${conxugal.contratosdegalicia.base-url}") HttpClient httpClient) {
+      @Named(ContratosDeGaliciaHttpClientFactory.CLIENT_NAME) HttpClient httpClient) {
     this.httpClient = httpClient.toBlocking();
   }
 
