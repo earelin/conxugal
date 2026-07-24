@@ -178,8 +178,9 @@ paths:
       summary: Current system status
       description: >-
         A coarse operational snapshot assembled fresh per request (SPEC-0003 R4): overall
-        service state and datastore reachability. Never discloses secrets or credentials
-        (SPEC-0003 R5).
+        service state, datastore reachability, and coarse application/runtime info (build
+        version, environment, Java runtime, uptime, memory, OS). Never discloses secrets or
+        credentials (SPEC-0003 R5).
       responses:
         "200":
           description: The current system status.
@@ -490,12 +491,23 @@ components:
     SystemStatus:
       type: object
       description: A point-in-time snapshot of overall service health (SPEC-0003 R2-R5).
-      required: [status, datastore, checkedAt]
+      required: [status, datastore, checkedAt, application, runtime]
       example:
         status: "UP"
         datastore:
           reachable: true
         checkedAt: "2026-07-18T09:30:00Z"
+        application:
+          version: "0.1.0-SNAPSHOT"
+          environment: "production"
+        runtime:
+          javaVersion: "21.0.3"
+          javaVendor: "Eclipse Adoptium"
+          uptimeMillis: 266320000
+          memoryUsedBytes: 536870912
+          memoryMaxBytes: 1073741824
+          osName: "Linux"
+          osArch: "amd64"
       properties:
         status:
           type: string
@@ -517,6 +529,81 @@ components:
           format: date-time
           example: "2026-07-18T09:30:00Z"
           description: When this snapshot was taken; it reflects the state at request time (SPEC-0003 R4).
+        application:
+          type: object
+          description: Coarse build/deployment identity (SPEC-0003 R2).
+          required: [version, environment]
+          example:
+            version: "0.1.0-SNAPSHOT"
+            environment: "production"
+          properties:
+            version:
+              type: string
+              maxLength: 64
+              pattern: "^[\x20-\x7E]{1,64}$"
+              example: "0.1.0-SNAPSHOT"
+              description: The running build's version.
+            environment:
+              type: string
+              maxLength: 64
+              pattern: "^[\x20-\x7E]{1,64}$"
+              example: "production"
+              description: The active environment name(s), or "production" when none is set.
+        runtime:
+          type: object
+          description: >-
+            Coarse JVM/OS figures for the running instance (SPEC-0003 R2). Never carries a
+            connection string, credential, host or key (SPEC-0003 R5).
+          required:
+            [javaVersion, javaVendor, uptimeMillis, memoryUsedBytes, memoryMaxBytes, osName, osArch]
+          example:
+            javaVersion: "21.0.3"
+            javaVendor: "Eclipse Adoptium"
+            uptimeMillis: 266320000
+            memoryUsedBytes: 536870912
+            memoryMaxBytes: 1073741824
+            osName: "Linux"
+            osArch: "amd64"
+          properties:
+            javaVersion:
+              type: string
+              maxLength: 64
+              pattern: "^[\x20-\x7E]{1,64}$"
+              example: "21.0.3"
+            javaVendor:
+              type: string
+              maxLength: 64
+              pattern: "^[\x20-\x7E]{1,64}$"
+              example: "Eclipse Adoptium"
+            uptimeMillis:
+              type: integer
+              format: int64
+              minimum: 0
+              maximum: 315360000000
+              example: 266320000
+              description: Milliseconds since the JVM started.
+            memoryUsedBytes:
+              type: integer
+              format: int64
+              minimum: 0
+              maximum: 549755813888
+              example: 536870912
+            memoryMaxBytes:
+              type: integer
+              format: int64
+              minimum: 0
+              maximum: 549755813888
+              example: 1073741824
+            osName:
+              type: string
+              maxLength: 64
+              pattern: "^[\x20-\x7E]{1,64}$"
+              example: "Linux"
+            osArch:
+              type: string
+              maxLength: 64
+              pattern: "^[\x20-\x7E]{1,64}$"
+              example: "amd64"
 
     RuntimeMetrics:
       type: object
