@@ -1,0 +1,208 @@
+import {
+  ActionIcon,
+  Alert,
+  Badge,
+  Card,
+  Group,
+  Loader,
+  SimpleGrid,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
+import {
+  IconAlertCircle,
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconLock,
+  IconRefresh,
+} from '@tabler/icons-react';
+import { HttpError } from '../../api/httpClient';
+import { useSystemStatus, type SystemStatus } from '../../api/systemStatus';
+import { strings } from '../../strings';
+
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('gl-ES', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function formatUptime(uptimeMillis: number): string {
+  const totalMinutes = Math.floor(uptimeMillis / 60_000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  return `${days} d ${String(hours).padStart(2, '0')} h ${String(minutes).padStart(2, '0')} m`;
+}
+
+function formatBytes(usedBytes: number, maxBytes: number): string {
+  const toMb = (bytes: number) => Math.round(bytes / (1024 * 1024));
+  return `${toMb(usedBytes)} / ${toMb(maxBytes)} MB`;
+}
+
+function DashboardError({ error }: { error: unknown }) {
+  const message =
+    error instanceof HttpError && error.status === 403
+      ? strings.admin.dashboard.errorForbidden
+      : strings.admin.dashboard.errorGeneric;
+
+  return (
+    <Alert
+      color="red"
+      icon={<IconAlertCircle size={18} />}
+      title={strings.admin.dashboard.errorTitle}
+    >
+      {message}
+    </Alert>
+  );
+}
+
+function DashboardContent({ status, onRefresh }: { status: SystemStatus; onRefresh: () => void }) {
+  const isUp = status.status === 'UP';
+  const serviceLabel = isUp
+    ? strings.admin.dashboard.serviceUp
+    : strings.admin.dashboard.serviceDegraded;
+  const datastoreLabel = status.datastore.reachable
+    ? strings.admin.dashboard.datastoreReachable
+    : strings.admin.dashboard.datastoreUnreachable;
+
+  return (
+    <Stack gap="md">
+      <Card withBorder radius="md" padding="lg">
+        <Group justify="space-between" wrap="nowrap">
+          <Group gap="sm" wrap="nowrap">
+            {isUp ? (
+              <IconCircleCheck size={32} color="var(--mantine-color-green-6)" />
+            ) : (
+              <IconAlertTriangle size={32} color="var(--mantine-color-red-6)" />
+            )}
+            <Stack gap={0}>
+              <Text fw={700} size="lg">
+                {isUp
+                  ? strings.admin.dashboard.statusUpTitle
+                  : strings.admin.dashboard.statusDegradedTitle}
+              </Text>
+              <Text size="sm" c="dimmed">
+                {isUp
+                  ? strings.admin.dashboard.statusUpDescription
+                  : strings.admin.dashboard.statusDegradedDescription}
+              </Text>
+            </Stack>
+          </Group>
+          <Group gap="xs" wrap="nowrap">
+            <Text size="xs" c="dimmed">
+              {strings.admin.dashboard.checkedAtLabel} {formatDateTime(status.checkedAt)}
+            </Text>
+            <ActionIcon
+              variant="light"
+              onClick={onRefresh}
+              aria-label={strings.admin.dashboard.refresh}
+            >
+              <IconRefresh size={16} />
+            </ActionIcon>
+          </Group>
+        </Group>
+      </Card>
+
+      <SimpleGrid cols={{ base: 1, sm: 2 }}>
+        <Card withBorder radius="md" padding="lg">
+          <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+            {strings.admin.dashboard.serviceLabel}
+          </Text>
+          <Group justify="space-between" mt="xs">
+            <Text size="xl" fw={600}>
+              {serviceLabel}
+            </Text>
+            <Badge color={isUp ? 'green' : 'red'} variant="light">
+              {serviceLabel}
+            </Badge>
+          </Group>
+        </Card>
+        <Card withBorder radius="md" padding="lg">
+          <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+            {strings.admin.dashboard.datastoreLabel}
+          </Text>
+          <Group justify="space-between" mt="xs">
+            <Text size="xl" fw={600}>
+              {datastoreLabel}
+            </Text>
+            <Badge color={status.datastore.reachable ? 'green' : 'red'} variant="light">
+              {datastoreLabel}
+            </Badge>
+          </Group>
+        </Card>
+      </SimpleGrid>
+
+      <Card withBorder radius="md" padding="lg">
+        <Text fw={700} mb="sm">
+          {strings.admin.dashboard.systemInfoTitle}
+        </Text>
+        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg">
+          <Stack gap={0}>
+            <Text size="xs" c="dimmed" tt="uppercase">
+              {strings.admin.dashboard.applicationVersionLabel}
+            </Text>
+            <Text>{status.application.version}</Text>
+          </Stack>
+          <Stack gap={0}>
+            <Text size="xs" c="dimmed" tt="uppercase">
+              {strings.admin.dashboard.environmentLabel}
+            </Text>
+            <Text>{status.application.environment}</Text>
+          </Stack>
+          <Stack gap={0}>
+            <Text size="xs" c="dimmed" tt="uppercase">
+              {strings.admin.dashboard.runtimeLabel}
+            </Text>
+            <Text>
+              {status.runtime.javaVersion} ({status.runtime.javaVendor})
+            </Text>
+          </Stack>
+          <Stack gap={0}>
+            <Text size="xs" c="dimmed" tt="uppercase">
+              {strings.admin.dashboard.uptimeLabel}
+            </Text>
+            <Text>{formatUptime(status.runtime.uptimeMillis)}</Text>
+          </Stack>
+          <Stack gap={0}>
+            <Text size="xs" c="dimmed" tt="uppercase">
+              {strings.admin.dashboard.memoryLabel}
+            </Text>
+            <Text>
+              {formatBytes(status.runtime.memoryUsedBytes, status.runtime.memoryMaxBytes)}
+            </Text>
+          </Stack>
+          <Stack gap={0}>
+            <Text size="xs" c="dimmed" tt="uppercase">
+              {strings.admin.dashboard.osLabel}
+            </Text>
+            <Text>
+              {status.runtime.osName} ({status.runtime.osArch})
+            </Text>
+          </Stack>
+        </SimpleGrid>
+        <Group gap="xs" mt="md">
+          <IconLock size={14} color="var(--mantine-color-gray-6)" />
+          <Text size="xs" c="dimmed">
+            {strings.admin.dashboard.privacyNote}
+          </Text>
+        </Group>
+      </Card>
+    </Stack>
+  );
+}
+
+export function DashboardPage() {
+  const { data, isPending, isError, error, refetch } = useSystemStatus();
+
+  return (
+    <Stack gap="md">
+      <Stack gap={0}>
+        <Title order={2}>{strings.admin.dashboard.title}</Title>
+        <Text c="dimmed">{strings.admin.dashboard.subtitle}</Text>
+      </Stack>
+
+      {isPending && <Loader />}
+      {isError && <DashboardError error={error} />}
+      {data && <DashboardContent status={data} onRefresh={() => void refetch()} />}
+    </Stack>
+  );
+}
