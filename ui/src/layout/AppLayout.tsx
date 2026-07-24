@@ -15,7 +15,7 @@ import { visibleNavSections } from '../nav';
 import { strings } from '../strings';
 
 function initialsOf(email: string): string {
-  return email.slice(0, 2).toUpperCase();
+  return email.split('@')[0].slice(0, 2).toUpperCase();
 }
 
 /**

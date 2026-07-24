@@ -56,6 +56,15 @@ describe('AppLayout admin navigation', () => {
     expect(screen.getByRole('link', { name: strings.nav.about })).toBeInTheDocument();
   });
 
+  it("shows the signed-in user's email, role label and avatar initials in the header", async () => {
+    mockCurrentUser('ADMIN');
+    renderShell();
+
+    expect(await screen.findByText('admin@conxugal.gal')).toBeInTheDocument();
+    expect(screen.getByText(strings.roleLabel.ADMIN)).toBeInTheDocument();
+    expect(screen.getByText('AD')).toBeInTheDocument();
+  });
+
   it('hides the administration section for a USER session', async () => {
     const scope = mockCurrentUser('USER');
     renderShell();

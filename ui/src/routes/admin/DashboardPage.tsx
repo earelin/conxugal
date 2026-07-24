@@ -55,7 +55,15 @@ function DashboardError({ error }: { error: unknown }) {
   );
 }
 
-function DashboardContent({ status, onRefresh }: { status: SystemStatus; onRefresh: () => void }) {
+function DashboardContent({
+  status,
+  isRefreshing,
+  onRefresh,
+}: {
+  status: SystemStatus;
+  isRefreshing: boolean;
+  onRefresh: () => void;
+}) {
   const isUp = status.status === 'UP';
   const serviceLabel = isUp
     ? strings.admin.dashboard.serviceUp
@@ -94,6 +102,7 @@ function DashboardContent({ status, onRefresh }: { status: SystemStatus; onRefre
             <ActionIcon
               variant="light"
               onClick={onRefresh}
+              loading={isRefreshing}
               aria-label={strings.admin.dashboard.refresh}
             >
               <IconRefresh size={16} />
@@ -191,7 +200,7 @@ function DashboardContent({ status, onRefresh }: { status: SystemStatus; onRefre
 }
 
 export function DashboardPage() {
-  const { data, isPending, isError, error, refetch } = useSystemStatus();
+  const { data, isPending, isError, error, isFetching, refetch } = useSystemStatus();
 
   return (
     <Stack gap="md">
@@ -201,8 +210,14 @@ export function DashboardPage() {
       </Stack>
 
       {isPending && <Loader />}
-      {isError && <DashboardError error={error} />}
-      {data && <DashboardContent status={data} onRefresh={() => void refetch()} />}
+      {isError && !data && <DashboardError error={error} />}
+      {data && (
+        <DashboardContent
+          status={data}
+          isRefreshing={isFetching}
+          onRefresh={() => void refetch()}
+        />
+      )}
     </Stack>
   );
 }

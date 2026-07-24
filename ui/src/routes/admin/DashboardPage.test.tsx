@@ -1,6 +1,6 @@
 import { MantineProvider } from '@mantine/core';
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createQueryClient } from '../../api/queryClient';
@@ -84,6 +84,29 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByText(strings.admin.dashboard.errorForbidden)).toBeInTheDocument();
     expect(screen.queryByText(strings.admin.dashboard.serviceLabel)).not.toBeInTheDocument();
+  });
+
+  it('shows a generic Galician error message for a non-403 failure', async () => {
+    nock(BASE_URL).get('/api/admin/system-status').reply(500);
+    renderDashboard();
+
+    expect(await screen.findByText(strings.admin.dashboard.errorGeneric)).toBeInTheDocument();
+    expect(screen.queryByText(strings.admin.dashboard.errorForbidden)).not.toBeInTheDocument();
+  });
+
+  it('keeps showing the last-good status instead of an error banner when a refresh fails', async () => {
+    mockSystemStatus({ status: 'UP', reachable: true });
+    renderDashboard();
+    await screen.findByText(strings.admin.dashboard.statusUpTitle);
+
+    const scope = nock(BASE_URL).get('/api/admin/system-status').reply(500);
+    screen.getByRole('button', { name: strings.admin.dashboard.refresh }).click();
+
+    await waitFor(() => expect(scope.isDone()).toBe(true));
+    await waitFor(() => {
+      expect(screen.getByText(strings.admin.dashboard.statusUpTitle)).toBeInTheDocument();
+      expect(screen.queryByText(strings.admin.dashboard.errorTitle)).not.toBeInTheDocument();
+    });
   });
 
   it('renders only endpoint-returned fields, never fabricated stats', async () => {
