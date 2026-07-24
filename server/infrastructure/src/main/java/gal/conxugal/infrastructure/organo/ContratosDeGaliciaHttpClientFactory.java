@@ -2,6 +2,7 @@ package gal.conxugal.infrastructure.organo;
 
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.http.client.DefaultHttpClientConfiguration;
 import io.micronaut.http.client.HttpClient;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -19,6 +20,8 @@ class ContratosDeGaliciaHttpClientFactory {
   @Bean(preDestroy = "close")
   HttpClient contratosDeGaliciaHttpClient(ContratosDeGaliciaConfiguration configuration)
       throws MalformedURLException {
-    return HttpClient.create(URI.create(configuration.baseUrl()).toURL());
+    DefaultHttpClientConfiguration httpClientConfiguration = new DefaultHttpClientConfiguration();
+    httpClientConfiguration.setReadTimeout(configuration.readTimeout());
+    return HttpClient.create(URI.create(configuration.baseUrl()).toURL(), httpClientConfiguration);
   }
 }

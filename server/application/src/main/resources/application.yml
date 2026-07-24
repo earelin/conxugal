@@ -1,6 +1,7 @@
 conxugal:
   contratosdegalicia:
     base-url: https://www.contratosdegalicia.gal
+    read-timeout: 10s
 
 micronaut:
   application:

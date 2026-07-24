@@ -31,8 +31,9 @@ import org.wiremock.integrations.testcontainers.WireMockContainer;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ContratosDeGaliciaOrganoSourceAdapterIntegrationTest implements TestPropertyProvider {
 
-  private static final int MIN_EXPECTED_ORGANOS = 50;
-  private static final String PORTADA_PATH = "/portada.jsp";
+  private static final int MIN_EXPECTED_ORGANOS =
+      ContratosDeGaliciaOrganoSourceAdapter.MIN_EXPECTED_ORGANOS;
+  private static final String PORTADA_PATH = ContratosDeGaliciaOrganoSourceAdapter.PORTADA_PATH;
   private static final String PLACEHOLDER =
       option("", "Seleccione o organismo que desexa consultar");
 

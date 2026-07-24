@@ -31,7 +31,7 @@ import org.jsoup.nodes.Element;
 @Singleton
 public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
 
-  private static final String PORTADA_PATH = "/portada.jsp";
+  static final String PORTADA_PATH = "/portada.jsp";
   private static final String SELECT_SELECTOR = "select#organoA";
 
   /**
@@ -39,7 +39,7 @@ public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
    * this signals a source glitch or truncated response, not a genuinely shrunk catalogue, so it
    * fails the run instead of letting a reconciliation use case mass-deactivate real bodies.
    */
-  private static final int MIN_EXPECTED_ORGANOS = 50;
+  static final int MIN_EXPECTED_ORGANOS = 50;
 
   private final BlockingHttpClient httpClient;
 

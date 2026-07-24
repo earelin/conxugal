@@ -2,7 +2,7 @@ package gal.conxugal.infrastructure.organo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
@@ -24,7 +24,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ContratosDeGaliciaOrganoSourceAdapterTest {
 
-  private static final int MIN_EXPECTED_ORGANOS = 50;
+  private static final int MIN_EXPECTED_ORGANOS =
+      ContratosDeGaliciaOrganoSourceAdapter.MIN_EXPECTED_ORGANOS;
   private static final String PLACEHOLDER =
       option("", "Seleccione o organismo que desexa consultar");
 
@@ -93,7 +94,7 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
   @Test
   void throws_when_the_source_responds_with_an_error_status() {
     when(httpClient.toBlocking()).thenReturn(blockingHttpClient);
-    when(blockingHttpClient.exchange(any(HttpRequest.class), eq(byte[].class)))
+    when(blockingHttpClient.exchange(portadaRequest(), eq(byte[].class)))
         .thenThrow(new HttpClientResponseException("Not Found", HttpResponse.notFound()));
     ContratosDeGaliciaOrganoSourceAdapter adapter =
         new ContratosDeGaliciaOrganoSourceAdapter(httpClient);
@@ -106,7 +107,7 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
   @Test
   void throws_when_the_source_is_unreachable() {
     when(httpClient.toBlocking()).thenReturn(blockingHttpClient);
-    when(blockingHttpClient.exchange(any(HttpRequest.class), eq(byte[].class)))
+    when(blockingHttpClient.exchange(portadaRequest(), eq(byte[].class)))
         .thenThrow(new HttpClientException("Connect Error: Connection refused"));
     ContratosDeGaliciaOrganoSourceAdapter adapter =
         new ContratosDeGaliciaOrganoSourceAdapter(httpClient);
@@ -138,10 +139,15 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
 
   private ContratosDeGaliciaOrganoSourceAdapter adapterReturning(String html) {
     when(httpClient.toBlocking()).thenReturn(blockingHttpClient);
-    when(blockingHttpClient.exchange(any(HttpRequest.class), eq(byte[].class)))
+    when(blockingHttpClient.exchange(portadaRequest(), eq(byte[].class)))
         .thenReturn(response);
     when(response.body()).thenReturn(html.getBytes(StandardCharsets.ISO_8859_1));
     return new ContratosDeGaliciaOrganoSourceAdapter(httpClient);
+  }
+
+  private static HttpRequest<?> portadaRequest() {
+    return argThat(
+        request -> ContratosDeGaliciaOrganoSourceAdapter.PORTADA_PATH.equals(request.getPath()));
   }
 
   private static String portadaHtml(String optionsHtml) {
