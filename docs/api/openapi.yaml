@@ -4,16 +4,16 @@ info:
   title: Conxugal REST API
   version: 0.1.0
   description: >-
-    REST API for the Conxugal administration area. All endpoints live under the reserved
-    `/api/` prefix (ADR-0006) and are restricted to administrators (SPEC-0003 R1).
-    Authentication is a server-side session established by the server-rendered `/login`
-    form (ADR-0005, outside this JSON API) and carried by a session cookie; every operation
-    below requires that cookie to identify an `ADMIN`.
+    REST API for the Conxugal application. All endpoints live under the reserved `/api/`
+    prefix (ADR-0006). Authentication is a server-side session established by the
+    server-rendered `/login` form (ADR-0005, outside this JSON API) and carried by a
+    session cookie. Most operations are restricted to administrators (SPEC-0003 R1); the
+    one exception is `GET /api/me`, available to any authenticated user (SPEC-0002 R14).
 
     This document is the design-first, authoritative contract for the API (ADR-0010):
     endpoints are specified here before they are implemented, and controllers conform to
-    it. It currently covers the planned endpoints of FEAT-0004 (user administration and
-    system status) and FEAT-0005 (real-time metrics).
+    it. It currently covers the planned endpoints of FEAT-0004 (user administration,
+    system status, and the current-user lookup) and FEAT-0005 (real-time metrics).
 
 servers:
   - url: /
@@ -24,6 +24,8 @@ tags:
     description: User-account administration (SPEC-0003 R6-R16).
   - name: system
     description: System dashboard status and detailed runtime metrics (SPEC-0003 R2-R5, R17-R21).
+  - name: account
+    description: The authenticated caller's own account (SPEC-0002 R14).
 
 security:
   - cookieSession: []
@@ -246,6 +248,39 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /api/me:
+    get:
+      tags: [account]
+      operationId: getCurrentUser
+      summary: The current authenticated user
+      description: >-
+        The caller's own account: identity, role, creation date, and last login
+        (SPEC-0002 R14). Available to any authenticated user — `USER` or `ADMIN` — unlike
+        the `/api/admin/*` endpoints, which are `ADMIN`-only. Never includes the enabled
+        state (a live session already implies it) or the password.
+      responses:
+        "200":
+          description: The caller's own account.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
 components:
   securitySchemes:
     cookieSession:
@@ -408,6 +443,40 @@ components:
         enabled:
           type: boolean
           example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-15T09:30:00Z"
+          description: When the account was created.
+        lastLoginAt:
+          type: [string, "null"]
+          format: date-time
+          example: "2026-07-10T08:12:00Z"
+          description: >-
+            The account's most recent successful login, recorded per SPEC-0002 R13.
+            Null until the account's first successful login.
+
+    CurrentUser:
+      type: object
+      description: The authenticated caller's own account (SPEC-0002 R14).
+      required: [id, email, role, createdAt]
+      example:
+        id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        email: "user@conxugal.gal"
+        role: "USER"
+        createdAt: "2026-01-15T09:30:00Z"
+        lastLoginAt: "2026-07-10T08:12:00Z"
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        email:
+          type: string
+          format: email
+          example: "user@conxugal.gal"
+        role:
+          $ref: "#/components/schemas/Role"
         createdAt:
           type: string
           format: date-time

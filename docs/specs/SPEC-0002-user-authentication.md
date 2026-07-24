@@ -63,6 +63,13 @@ granted to ADMIN.
   value. A failed attempt leaves the recorded value unchanged. Before a user's
   first successful login there is no recorded value.
 
+### Self-lookup
+
+- **R14** — An authenticated user can retrieve their own account identity, role,
+  creation date, and last login (id, email, role, createdAt, lastLoginAt). The
+  enabled state is not included: a live authenticated session already implies
+  the account is enabled, and the password hash is never exposed (R11, R12).
+
 ## Scope
 
 - **Account provisioning is out of scope of this spec.** How users and their
@@ -95,3 +102,6 @@ granted to ADMIN.
 10. **(R13)** After a user logs in successfully, the user's most-recent-login value
     reflects that login's time; a later successful login replaces it, and a rejected
     attempt leaves it unchanged.
+11. **(R14)** An authenticated user requesting their own account data receives
+    their id, email, role, creation date, and last login (no enabled state, no
+    password); an unauthenticated caller is denied (criterion 1 applies).
