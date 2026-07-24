@@ -53,6 +53,12 @@ micronaut:
       header: false
     max-inactive-interval: 30m
 
+conxugal:
+  metrics:
+    stream:
+      sample-interval: 5s
+      heartbeat-interval: 15s
+
 datasources:
   default:
     url: ${JDBC_URL:`jdbc:postgresql://localhost:5432/conxugal`}
