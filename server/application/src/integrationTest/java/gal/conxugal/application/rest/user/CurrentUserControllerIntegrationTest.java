@@ -35,6 +35,7 @@ class CurrentUserControllerIntegrationTest extends AuthenticationTestSupport {
     assertThat(response.jsonPath().getString("createdAt")).isNotNull();
     assertThat(response.jsonPath().getString("lastLoginAt")).isNull();
     assertThat(response.jsonPath().getObject("enabled", Boolean.class)).isNull();
+    assertThat(response.jsonPath().getString("passwordHash")).isNull();
   }
 
   @Test
