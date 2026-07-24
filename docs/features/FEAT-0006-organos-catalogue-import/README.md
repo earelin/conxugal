@@ -31,12 +31,11 @@ contract-first in the [OpenAPI document](../../api/openapi.yaml)
 
 ## Scope
 - **Domain:** an `OrganoDeContratacion` aggregate — a system-assigned identity (UUID), a
-  **stable source key** used to recognise the same body across imports, its name, its
-  optional acronym, and an active/inactive state — plus the `OrganoRepository` port
-  (read all, look up by source key, insert, update in place, set active).
+  **stable source key** used to recognise the same body across imports, its name, and an
+  active/inactive state — plus the `OrganoRepository` port (read all, look up by source
+  key, insert, update in place, set active).
 - **Domain (source port):** an `OrganoSource` port returning the flat list of source
-  entries (source key, name, acronym) as domain values, independent of how they are
-  fetched.
+  entries (source key, name) as domain values, independent of how they are fetched.
 - **Domain (use case):** an `ImportOrganos` use case that pulls from the source and
   **reconciles** it against the repository — add new, refresh existing attributes in
   place, mark absent bodies inactive, reactivate returning ones — idempotently and
@@ -44,9 +43,9 @@ contract-first in the [OpenAPI document](../../api/openapi.yaml)
   import executes at a time.
 - **Infrastructure:** a migration creating the catalogue table; the Micronaut Data JDBC
   implementation of `OrganoRepository`; and the `OrganoSource` adapter that retrieves and
-  parses the published list from contratosdegalicia.gal (charset ISO-8859-1; the list is
-  served dynamically, not from the static `portada.jsp`), failing cleanly when the source
-  is unreachable or its response is unusable.
+  parses the published list from contratosdegalicia.gal — embedded, charset ISO-8859-1,
+  in the static `portada.jsp` HTML itself — failing cleanly when the source is
+  unreachable or its response is unusable.
 - **Application (driving):**
   - `POST /api/admin/organos/import` — **`ADMIN`-only**: runs an import and returns its
     outcome (SPEC-0004 R1, R10).
@@ -61,9 +60,9 @@ contract-first in the [OpenAPI document](../../api/openapi.yaml)
   admin management tree, the catalogue table, the import-trigger button, and the outcome
   display (SPEC-0004 R1 write ops, R14–R18) — belong to a separate feature, *FEAT-0007.
   Órganos taxonomy & classification*. This feature stops at the backend contract those
-  screens consume. In particular, `GET /api/organos` here returns each Órgano's name,
-  acronym, and active state; the **taxonomy-placement** field of the R8 view is added by
-  FEAT-0007 when the placement itself exists.
+  screens consume. In particular, `GET /api/organos` here returns each Órgano's name and
+  active state; the **taxonomy-placement** field of the R8 view is added by FEAT-0007
+  when the placement itself exists.
 - Importing **contracts/tenders** themselves (a different spec), and authentication /
   the `USER`/`ADMIN` roles (delivered by
   [FEAT-0002](../FEAT-0002-user-authentication/README.md)).
@@ -94,20 +93,17 @@ flowchart LR
 ```
 
 ### Stable identity and reconciliation
-- The published source gives each body a **name** and sometimes an **acronym**, with no
-  system-visible id. Reconciliation therefore keys on a **stable source key** the adapter
-  derives per entry: the identifier the source itself uses for the organism when the
-  retrieval exposes one, otherwise a normalised form of the name (case- and
-  accent-folded, collapsed whitespace). The domain treats the source key as opaque; how
-  it is derived is the adapter's concern. Two source entries that reduce to the same key
-  are the same Órgano; the adapter must not let two genuinely distinct bodies collapse to
-  one key (a real risk with a name-only fallback — see edge cases).
+- The published source gives each body a **name** and its own numeric id (the `value` of
+  its `<option>` in the source's HTML). Reconciliation keys on that id as the **stable
+  source key**; the domain treats it as opaque, and the adapter's concern is only how it
+  is read off the source. Two source entries with the same source key are the same
+  Órgano.
 - The system's own identity is a separate UUID assigned on first import; downstream
   references (a future taxonomy placement) point at the UUID, not the source key, so a
   source-side rename never breaks them.
 - Reconciliation is **update-in-place, never delete-and-reinsert**: an existing row is
-  matched by source key and its name/acronym/active fields are updated on the same row.
-  This is what preserves everything else attached to that row — critically the **taxonomy
+  matched by source key and its name/active fields are updated on the same row. This is
+  what preserves everything else attached to that row — critically the **taxonomy
   placement** a later feature will add as a column here — across every re-import (SPEC-0004
   R5, R6). A new source key inserts a new row; a stored key missing from the source flips
   `active` to false; a previously-inactive key that reappears flips it back to true.
@@ -134,8 +130,8 @@ flowchart LR
   `ImportOutcome` (success + added/refreshed/deactivated counts, or "already running").
   A `USER` or anonymous caller gets 403 (SPEC-0004 R1).
 - `GET  /api/organos` — `@Secured(IS_AUTHENTICATED)`: list the stored catalogue — each
-  body's name, acronym (when present), and active/inactive state — for any authenticated
-  user; an anonymous caller gets 401 (SPEC-0004 R2, R8). It is deliberately **not** under
+  body's name and active/inactive state — for any authenticated user; an anonymous
+  caller gets 401 (SPEC-0004 R2, R8). It is deliberately **not** under
   `/api/admin/`, because reading the catalogue is a user capability, not an admin one.
 - Both contracts are authored in [`docs/api/openapi.yaml`](../../api/openapi.yaml) before
   the controllers exist, and CI enforces conformance (ADR-0010).
@@ -150,17 +146,18 @@ flowchart LR
 
 ## Sequencing (tasks, one small change each)
 1. **Órgano domain model + repository port** — the `OrganoDeContratacion` aggregate
-   (UUID identity, source key, name, nullable acronym, active flag) with its persistence
-   annotations, and the `OrganoRepository` port (find all, find by source key, insert,
-   update in place, set active). *(SPEC-0004 #3, #8)*
+   (UUID identity, source key, name, active flag) with its persistence annotations, and
+   the `OrganoRepository` port (find all, find by source key, insert, update in place,
+   set active). *(SPEC-0004 #3, #8)*
 2. **Catalogue store infrastructure** — a migration creating the
-   `organo_contratacion` table (UUID id, unique `source_key`, name, nullable acronym,
-   `active` default true) and the Micronaut Data JDBC implementation of
-   `OrganoRepository`. *(SPEC-0004 #3, #4, #6, #7)*
+   `organo_contratacion` table (UUID id, unique `source_key`, name, `active` default
+   true) and the Micronaut Data JDBC implementation of `OrganoRepository`. *(SPEC-0004
+   #3, #4, #6, #7)*
 3. **Source port + contratosdegalicia adapter** — the `OrganoSource` port and its driven
-   adapter that retrieves and parses the published list (ISO-8859-1; dynamically served),
-   deriving each entry's stable source key, and reports a clear failure when the source
-   is unreachable or the response is unusable. *(SPEC-0004 #3, #13)*
+   adapter that retrieves and parses the published list (ISO-8859-1, embedded in the
+   static `portada.jsp`), reading each entry's stable source key off the source's own
+   id, and reports a clear failure when the source is unreachable or the response is
+   unusable. *(SPEC-0004 #3, #13)*
 4. **Import & reconciliation use case** — `ImportOrganos`: fetch-then-reconcile in one
    atomic transaction (add / refresh-in-place / deactivate / reactivate), idempotent,
    with the single-run guard, returning an `ImportOutcome`. *(SPEC-0004 #4, #5, #6, #7,
@@ -185,20 +182,16 @@ flowchart LR
 - **Body disappears then returns** — an entry absent from one import is marked inactive
   and kept; a later import that includes it again reactivates the **same** row, preserving
   its UUID and placement (SPEC-0004 #6).
-- **Name or acronym changes at source** — matched by source key and updated in place; the
-  UUID identity and any taxonomy placement on that row are untouched (SPEC-0004 #4, #5).
+- **Name changes at source** — matched by source key and updated in place; the UUID
+  identity and any taxonomy placement on that row are untouched (SPEC-0004 #4, #5).
 - **Idempotent re-run** — importing the same list twice adds nothing and creates no
   duplicate, enforced by both the reconcile logic and the `source_key` unique constraint
   (SPEC-0004 #7).
 - **Concurrent triggers** — a manual trigger overlapping a running import (manual or
   scheduled), or two scheduled ticks overlapping, do not run two imports at once; the
   extra trigger returns "already running" (SPEC-0004 #12).
-- **Distinct bodies, colliding key** — with the name-only fallback key, two genuinely
-  different Órganos whose names normalise identically must not be merged into one row; the
-  key-derivation strategy must keep them distinct (guards the integrity assumed by
-  SPEC-0004 #3/#7).
-- **Accented names** — the source is ISO-8859-1; names and acronyms are decoded and
-  stored without mojibake so the catalogue and its keys are stable.
+- **Accented names** — the source is ISO-8859-1; names are decoded and stored without
+  mojibake so the catalogue is stable.
 - **Read access is by role, not by path obscurity** — `GET /api/organos` is denied to an
   anonymous caller and allowed to any authenticated `USER`/`ADMIN`; the import endpoint is
   denied to a `USER` at the server (SPEC-0004 #1, #2).

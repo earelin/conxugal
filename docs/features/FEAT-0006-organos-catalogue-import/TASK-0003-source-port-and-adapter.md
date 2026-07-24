@@ -15,22 +15,21 @@ executor per [ADR-0011](../../architecture/0011-blocking-io-virtual-threads.md).
 
 ## Scope
 - `OrganoSource` port (in `domain`) returning the flat list of source entries — each a
-  (`sourceKey`, `name`, optional `acronym`) value — independent of how they are fetched.
+  (`sourceKey`, `name`) value — independent of how they are fetched.
 - Driven adapter that retrieves and parses the Órganos list published by
-  contratosdegalicia.gal. The list is served **dynamically** (it is not present in the
-  static `portada.jsp`) and the source encodes text as **ISO-8859-1**.
-- Derive each entry's stable `sourceKey`: the identifier the source itself uses for the
-  organism when the retrieval exposes one, otherwise an accent- and case-folded,
-  whitespace-collapsed normalisation of the name.
+  contratosdegalicia.gal. The list is embedded directly in the static `portada.jsp`
+  page's HTML (a `<select id="organoA">` of `<option>`s, one per body) and the source
+  encodes text as **ISO-8859-1**.
+- Derive each entry's stable `sourceKey` from the source's own identifier for the
+  organism (the `<option>`'s `value`).
 - Signal a clear, typed failure when the source is unreachable or returns an unusable
   response (including an empty or implausibly small list — see the feature's edge cases),
   rather than returning a partial/empty success.
 
 ## Acceptance criteria
-- The adapter returns each published Órgano as (`sourceKey`, `name`, optional `acronym`),
-  decoding ISO-8859-1 so accented names and acronyms are stored without mojibake.
+- The adapter returns each published Órgano as (`sourceKey`, `name`), decoding
+  ISO-8859-1 so accented names are stored without mojibake.
   ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #3)
-- Two genuinely distinct bodies never reduce to the same `sourceKey`. (SPEC-0004 #3, #7)
 - An unreachable source, or an unusable / empty / implausibly small response, surfaces as
   a failure — not an empty success that could later deactivate the catalogue. (SPEC-0004
   #13)

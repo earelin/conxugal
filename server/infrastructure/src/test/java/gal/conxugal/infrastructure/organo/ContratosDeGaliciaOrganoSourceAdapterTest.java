@@ -33,10 +33,10 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
   @Mock private HttpResponse<byte[]> response;
 
   @Test
-  void parses_organos_including_entries_with_and_without_an_acronym() {
+  void parses_organos_from_the_organoa_select() {
     String optionsHtml =
         PLACEHOLDER
-            + option("48", "Academia Galega de Seguridade Pública (AGASP)")
+            + option("48", "Academia Galega de Seguridade Pública")
             + option(
                 "397", "Agrupación Europea de Cooperación Territorial Galicia-Norte de Portugal")
             + paddingOptions(MIN_EXPECTED_ORGANOS);
@@ -46,11 +46,23 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
 
     assertThat(entries)
         .contains(
-            new OrganoSourceEntry("48", "Academia Galega de Seguridade Pública", "AGASP"),
+            new OrganoSourceEntry("48", "Academia Galega de Seguridade Pública"),
             new OrganoSourceEntry(
-                "397",
-                "Agrupación Europea de Cooperación Territorial Galicia-Norte de Portugal",
-                null));
+                "397", "Agrupación Europea de Cooperación Territorial Galicia-Norte de Portugal"));
+  }
+
+  @Test
+  void uses_the_option_value_as_the_source_key() {
+    String optionsHtml =
+        PLACEHOLDER + option("512", "Consorcio Galego") + paddingOptions(MIN_EXPECTED_ORGANOS);
+    ContratosDeGaliciaOrganoSourceAdapter adapter = adapterReturning(portadaHtml(optionsHtml));
+
+    List<OrganoSourceEntry> entries = adapter.fetchAll();
+
+    assertThat(entries)
+        .filteredOn(entry -> "Consorcio Galego".equals(entry.name()))
+        .extracting(OrganoSourceEntry::sourceKey)
+        .containsExactly("512");
   }
 
   @Test
@@ -75,49 +87,7 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
 
     List<OrganoSourceEntry> entries = adapter.fetchAll();
 
-    assertThat(entries)
-        .extracting(OrganoSourceEntry::sourceKey, OrganoSourceEntry::name)
-        .contains(org.assertj.core.groups.Tuple.tuple("512", accentedName));
-  }
-
-  @Test
-  void non_leading_blank_value_option_falls_back_to_normalised_name_source_key() {
-    String optionsHtml =
-        PLACEHOLDER + option("", "Órgano De Proba") + paddingOptions(MIN_EXPECTED_ORGANOS);
-    ContratosDeGaliciaOrganoSourceAdapter adapter = adapterReturning(portadaHtml(optionsHtml));
-
-    List<OrganoSourceEntry> entries = adapter.fetchAll();
-
-    assertThat(entries)
-        .filteredOn(entry -> "Órgano De Proba".equals(entry.name()))
-        .extracting(OrganoSourceEntry::sourceKey)
-        .containsExactly("organo de proba");
-  }
-
-  @Test
-  void distinct_names_normalise_to_different_source_keys_when_no_id_is_present() {
-    String optionsHtml =
-        PLACEHOLDER
-            + option("", "Consorcio Uno")
-            + option("", "Consorcio Dous")
-            + paddingOptions(MIN_EXPECTED_ORGANOS);
-    ContratosDeGaliciaOrganoSourceAdapter adapter = adapterReturning(portadaHtml(optionsHtml));
-
-    List<OrganoSourceEntry> entries = adapter.fetchAll();
-
-    String keyUno =
-        entries.stream()
-            .filter(entry -> "Consorcio Uno".equals(entry.name()))
-            .findFirst()
-            .orElseThrow()
-            .sourceKey();
-    String keyDous =
-        entries.stream()
-            .filter(entry -> "Consorcio Dous".equals(entry.name()))
-            .findFirst()
-            .orElseThrow()
-            .sourceKey();
-    assertThat(keyUno).isNotEqualTo(keyDous);
+    assertThat(entries).contains(new OrganoSourceEntry("512", accentedName));
   }
 
   @Test

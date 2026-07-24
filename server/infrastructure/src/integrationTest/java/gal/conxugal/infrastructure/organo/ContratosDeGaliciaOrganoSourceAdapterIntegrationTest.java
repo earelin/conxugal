@@ -69,7 +69,7 @@ class ContratosDeGaliciaOrganoSourceAdapterIntegrationTest implements TestProper
 
     List<OrganoSourceEntry> entries = organoSource.fetchAll();
 
-    assertThat(entries).contains(new OrganoSourceEntry("512", accentedName, null));
+    assertThat(entries).contains(new OrganoSourceEntry("512", accentedName));
   }
 
   @Test

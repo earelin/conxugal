@@ -16,7 +16,7 @@ atomically and idempotently, behind a single-run guard. Governed by
 ## Scope
 - `ImportOrganos` use case: fetch the **entire** source list via `OrganoSource`, then
   reconcile against `OrganoRepository` within a **single transaction** — insert entries
-  with a new source key, refresh matched entries' name/acronym **in place**, mark stored
+  with a new source key, refresh matched entries' name **in place**, mark stored
   entries absent from the source **inactive**, and **reactivate** ones that reappear.
 - A **single-run guard** owned by the use case so at most one import runs at a time; a
   trigger arriving while an import is in progress returns an "already running" result

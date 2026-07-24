@@ -16,22 +16,17 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jspecify.annotations.Nullable;
 
 /**
  * {@link OrganoSource} adapter for contratosdegalicia.gal: the published Órganos list is embedded
  * directly in the (ISO-8859-1) static HTML of {@code /portada.jsp} as a {@code <select
- * id="organoA">}, one {@code <option value='sourceId'>Name (ACRONYM)</option>} per body — no
- * separate dynamic endpoint exists for it.
+ * id="organoA">}, one {@code <option value='sourceId'>Name</option>} per body — no separate
+ * dynamic endpoint exists for it.
  */
 @Singleton
 public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
@@ -45,9 +40,6 @@ public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
    * fails the run instead of letting a reconciliation use case mass-deactivate real bodies.
    */
   private static final int MIN_EXPECTED_ORGANOS = 50;
-
-  private static final Pattern ACRONYM_SUFFIX = Pattern.compile("^(.+)\\s\\(([^()]+)\\)$");
-  private static final Pattern DIACRITIC_MARK = Pattern.compile("\\p{M}+");
 
   private final BlockingHttpClient httpClient;
 
@@ -107,45 +99,19 @@ public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
   /**
    * The first option of the {@code <select>} is the source's own "Seleccione o organismo..."
    * placeholder prompt (a blank {@code value}), not a real entry, and is skipped; every other
-   * option is a real Órgano even if — hypothetically, for a different source — it also carried a
-   * blank {@code value}.
+   * option's {@code value} is the source's own stable id for that Órgano.
    */
   private static List<OrganoSourceEntry> parseEntries(Element select) {
     List<Element> options = select.select("option");
     List<OrganoSourceEntry> entries = new ArrayList<>();
     for (int i = 0; i < options.size(); i++) {
       Element option = options.get(i);
-      String rawValue = option.attr("value").trim();
-      if (i == 0 && rawValue.isEmpty()) {
+      String sourceKey = option.attr("value").trim();
+      if (i == 0 && sourceKey.isEmpty()) {
         continue;
       }
-      entries.add(toEntry(rawValue, option.text()));
+      entries.add(new OrganoSourceEntry(sourceKey, option.text().trim()));
     }
     return entries;
   }
-
-  private static OrganoSourceEntry toEntry(String rawValue, String rawText) {
-    NameAndAcronym nameAndAcronym = splitNameAndAcronym(rawText);
-    String sourceKey = rawValue.isEmpty() ? normalize(nameAndAcronym.name()) : rawValue;
-    return new OrganoSourceEntry(sourceKey, nameAndAcronym.name(), nameAndAcronym.acronym());
-  }
-
-  private static NameAndAcronym splitNameAndAcronym(String rawText) {
-    String text = rawText.trim();
-    Matcher matcher = ACRONYM_SUFFIX.matcher(text);
-    if (matcher.matches() && !matcher.group(1).isBlank()) {
-      return new NameAndAcronym(matcher.group(1).trim(), matcher.group(2).trim());
-    }
-    return new NameAndAcronym(text, null);
-  }
-
-  /** Accent- and case-folded, whitespace-collapsed normalisation, for a source with no own id. */
-  private static String normalize(String name) {
-    String decomposed = Normalizer.normalize(name, Normalizer.Form.NFD);
-    String withoutDiacritics = DIACRITIC_MARK.matcher(decomposed).replaceAll("");
-    String collapsed = withoutDiacritics.trim().replaceAll("\\s+", " ");
-    return collapsed.toLowerCase(Locale.ROOT);
-  }
-
-  private record NameAndAcronym(String name, @Nullable String acronym) {}
 }
