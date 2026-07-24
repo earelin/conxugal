@@ -17,6 +17,7 @@ import {
   IconLock,
   IconRefresh,
 } from '@tabler/icons-react';
+import type { ReactNode } from 'react';
 import { HttpError } from '../../api/httpClient';
 import { useSystemStatus, type SystemStatus } from '../../api/systemStatus';
 import { strings } from '../../strings';
@@ -70,6 +71,17 @@ function StatCard({ label, value, healthy }: { label: string; value: string; hea
         </Badge>
       </Group>
     </Card>
+  );
+}
+
+function InfoField({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <Stack gap={0}>
+      <Text size="xs" c="dimmed" tt="uppercase">
+        {label}
+      </Text>
+      <Text>{value}</Text>
+    </Stack>
   );
 }
 
@@ -147,48 +159,38 @@ function DashboardContent({
           {strings.admin.dashboard.systemInfoTitle}
         </Text>
         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg">
-          <Stack gap={0}>
-            <Text size="xs" c="dimmed" tt="uppercase">
-              {strings.admin.dashboard.applicationVersionLabel}
-            </Text>
-            <Text>{status.application.version}</Text>
-          </Stack>
-          <Stack gap={0}>
-            <Text size="xs" c="dimmed" tt="uppercase">
-              {strings.admin.dashboard.environmentLabel}
-            </Text>
-            <Text>{status.application.environment}</Text>
-          </Stack>
-          <Stack gap={0}>
-            <Text size="xs" c="dimmed" tt="uppercase">
-              {strings.admin.dashboard.runtimeLabel}
-            </Text>
-            <Text>
-              {status.runtime.javaVersion} ({status.runtime.javaVendor})
-            </Text>
-          </Stack>
-          <Stack gap={0}>
-            <Text size="xs" c="dimmed" tt="uppercase">
-              {strings.admin.dashboard.uptimeLabel}
-            </Text>
-            <Text>{formatUptime(status.runtime.uptimeMillis)}</Text>
-          </Stack>
-          <Stack gap={0}>
-            <Text size="xs" c="dimmed" tt="uppercase">
-              {strings.admin.dashboard.memoryLabel}
-            </Text>
-            <Text>
-              {formatBytes(status.runtime.memoryUsedBytes, status.runtime.memoryMaxBytes)}
-            </Text>
-          </Stack>
-          <Stack gap={0}>
-            <Text size="xs" c="dimmed" tt="uppercase">
-              {strings.admin.dashboard.osLabel}
-            </Text>
-            <Text>
-              {status.runtime.osName} ({status.runtime.osArch})
-            </Text>
-          </Stack>
+          <InfoField
+            label={strings.admin.dashboard.applicationVersionLabel}
+            value={status.application.version}
+          />
+          <InfoField
+            label={strings.admin.dashboard.environmentLabel}
+            value={status.application.environment}
+          />
+          <InfoField
+            label={strings.admin.dashboard.runtimeLabel}
+            value={
+              <>
+                {status.runtime.javaVersion} ({status.runtime.javaVendor})
+              </>
+            }
+          />
+          <InfoField
+            label={strings.admin.dashboard.uptimeLabel}
+            value={formatUptime(status.runtime.uptimeMillis)}
+          />
+          <InfoField
+            label={strings.admin.dashboard.memoryLabel}
+            value={formatBytes(status.runtime.memoryUsedBytes, status.runtime.memoryMaxBytes)}
+          />
+          <InfoField
+            label={strings.admin.dashboard.osLabel}
+            value={
+              <>
+                {status.runtime.osName} ({status.runtime.osArch})
+              </>
+            }
+          />
         </SimpleGrid>
         <Group gap="xs" mt="md">
           <IconLock size={14} color="var(--mantine-color-gray-6)" />
