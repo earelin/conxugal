@@ -5,7 +5,6 @@
     <Annotation name="io.micronaut.core.annotation.Generated"/>
   </Match>
   <Match>
-    <Class name="gal.conxugal.infrastructure.organo.ContratosDeGaliciaOrganoSourceAdapterIntegrationTest"/>
     <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
   </Match>
 </FindBugsFilter>
