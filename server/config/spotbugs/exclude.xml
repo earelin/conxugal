@@ -7,4 +7,10 @@
   <Match>
     <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
   </Match>
+  <!-- False positive: OrganoRepository is a stateless port, constructor-stored like every
+       other use case's collaborators, not a leaked mutable data holder. -->
+  <Match>
+    <Class name="gal.conxugal.domain.organo.ImportOrganos"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
 </FindBugsFilter>
