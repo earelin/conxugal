@@ -21,7 +21,9 @@ arrives later as the Órgano filter of the contratos list.
 - The taxonomy tree with its management controls: create a node at the root or under a
   parent, rename, move, delete.
 - The catalogue with each Órgano's name, active state and placement, an assign-to-node
-  action and a clear action, plus the **unclassified** worklist as the filing queue.
+  action and a clear action, plus the **unclassified** worklist as the filing queue. All of
+  it comes from the single `GET /api/organos/taxonomy` response — the worklist is that
+  response's unclassified collection, not a separate admin call.
 - An **import** button calling FEAT-0006's `POST /api/admin/organos/import`, showing the
   returned outcome — added / refreshed / deactivated counts, or "already running" — and
   refreshing the catalogue afterwards.

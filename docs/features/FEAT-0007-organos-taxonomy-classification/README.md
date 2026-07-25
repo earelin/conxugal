@@ -45,16 +45,16 @@ Galician.
 - **Domain (use cases):** taxonomy management (`CreateNode`, `RenameNode`, `MoveNode` with
   the cycle guard, `DeleteNode` with the child/reassignment rules) and classification
   (`AssignOrganoToNode`, `ClearOrganoNode`), plus a read that assembles the tree with the
-  Órganos in each node.
+  Órganos in each node **and the unclassified ones alongside it**.
 - **Infrastructure:** a migration adding the `taxonomy_node` table (self-referencing
   parent) and a nullable `taxonomy_node_id` on the catalogue table; the Micronaut Data JDBC
   `TaxonomyNodeRepository` and the `OrganoRepository` placement operations.
 - **Application (driving):**
-  - **Read (any authenticated user):** `GET /api/organos/taxonomy` — the tree of nodes
-    with the Órganos in each (SPEC-0004 R2, R9); and the placement field added to the
-    `GET /api/organos` catalogue response (SPEC-0004 R8).
-  - **Manage (`ADMIN` only):** node create/rename/move/delete, Órgano assign/clear, and
-    the unclassified listing (SPEC-0004 R1, R14–R18).
+  - **Read (any authenticated user):** `GET /api/organos/taxonomy` — the tree of nodes with
+    the Órganos in each, plus the unclassified Órganos. It is the **only** read of the
+    catalogue, covering both the R8 view and the R9 tree (SPEC-0004 R2, R8, R9).
+  - **Manage (`ADMIN` only):** node create/rename/move/delete and Órgano assign/clear
+    (SPEC-0004 R1, R14–R18).
 - **UI — taxonomy admin (`ADMIN` only):** manage the tree (create, rename, move, delete),
   classify Órganos, work the unclassified set, and trigger an import (reusing FEAT-0006's
   endpoint) with its outcome shown (SPEC-0004 R1, R10 surfacing, R14–R18). This is the
@@ -118,23 +118,28 @@ flowchart LR
   **in place**, an import never disturbs it (SPEC-0004 R5, R6).
 - `AssignOrganoToNode` sets the placement (replacing any current one — never additive);
   `ClearOrganoNode` removes it. An Órgano with no placement is **unclassified**; every
-  newly imported Órgano starts there, and the unclassified set is a first-class listing so
-  admins can find and file them (SPEC-0004 R18).
+  newly imported Órgano starts there, and the unclassified set travels in the read response
+  beside the tree, so admins can find and file them and users can still see them
+  (SPEC-0004 R8, R18).
 - When the target node is deleted, the reassignment rule above returns its Órganos to
   unclassified rather than orphaning them against a missing node.
 
 ### API surface ([ADR-0006](../../architecture/0006-reserved-api-url-prefix.md), [ADR-0010](../../architecture/0010-design-first-openapi-contract.md))
-- `GET /api/organos/taxonomy` — `@Secured(IS_AUTHENTICATED)`: the tree of nodes, each node
-  carrying its child nodes **and the Órganos placed in it** (id, name, active state), so a
-  single call fills a filter tree (SPEC-0004 R2, R9). The catalogue is therefore
-  serialisable from two endpoints; that is accepted deliberately — the filter's one-request
-  shape wins over avoiding the overlap with `GET /api/organos`, which stays the flat
-  catalogue view including unclassified Órganos.
-- `GET /api/organos` — the FEAT-0006 catalogue list, its response **extended here** to
-  carry each Órgano's placement (node, or unclassified) (SPEC-0004 R8).
+- `GET /api/organos/taxonomy` — `@Secured(IS_AUTHENTICATED)`: the **only** read of the
+  catalogue. It returns the tree of nodes — each node carrying its child nodes and the
+  Órganos placed in it (id, name, active state) — **plus the unclassified Órganos** as a
+  sibling collection. One call fills a filter tree, and every Órgano appears exactly once,
+  either under its node or in the unclassified set (SPEC-0004 R2, R8, R9).
+- There is **no flat `GET /api/organos`**. A second endpoint listing the same Órganos in a
+  different shape would have to be kept in step with this one for no gain: the placement is
+  the structure clients want, and the unclassified collection already carries the Órganos
+  that have none. This is also what keeps R8 whole — drop the unclassified collection and a
+  `USER` could no longer see an unclassified Órgano at all.
 - `/api/admin/taxonomy/**` and the Órgano-classification operations — `@Secured("ADMIN")`:
-  create/rename/move/delete nodes, assign/clear an Órgano's node, and list the unclassified
-  set (SPEC-0004 R1, R14–R18). A `USER` gets 403.
+  create/rename/move/delete nodes and assign/clear an Órgano's node (SPEC-0004 R1,
+  R14–R18). A `USER` gets 403. There is no separate admin unclassified listing either — the
+  worklist an admin files from is the unclassified collection every authenticated caller
+  already receives (SPEC-0004 R18).
 - All contracts are authored in [`docs/api/openapi.yaml`](../../api/openapi.yaml) before the
   controllers, and CI enforces conformance (ADR-0010).
 
@@ -166,13 +171,13 @@ flowchart LR
    *(SPEC-0004 #14, #15, #16)*
 4. **[TASK-0004](TASK-0004-organo-classification-use-cases.md) — Órgano classification use
    cases** *(backend)*: `AssignOrganoToNode` (single placement, replaces any current),
-   `ClearOrganoNode`, the unclassified listing, and `GetTaxonomyTree`.
-   *(SPEC-0004 #9, #17, #18)*
+   `ClearOrganoNode`, and `GetTaxonomyTree` assembling the tree plus the unclassified
+   Órganos. *(SPEC-0004 #8, #9, #17, #18)*
 5. **[TASK-0005](TASK-0005-taxonomy-and-classification-rest-endpoints.md) — Taxonomy &
-   classification REST endpoints** *(backend)*: OpenAPI-first — read tree
-   (`GET /api/organos/taxonomy`, authenticated, nodes with their Órganos embedded), the
-   placement field on `GET /api/organos`, and the `ADMIN` management + classify +
-   unclassified endpoints under `/api/admin`. *(SPEC-0004 #1, #2, #8, #9, #14–#18)*
+   classification REST endpoints** *(backend)*: OpenAPI-first — the single authenticated
+   read (`GET /api/organos/taxonomy`: nodes with their Órganos embedded, plus the
+   unclassified ones) and the `ADMIN` management + classify endpoints under `/api/admin`.
+   *(SPEC-0004 #1, #2, #8, #9, #14–#18)*
 6. **[TASK-0006](TASK-0006-taxonomy-admin-ui.md) — Taxonomy admin UI** *(frontend)*: the
    `ADMIN` section — manage the tree, classify Órganos, work the unclassified set, and
    trigger an import with its outcome. *(SPEC-0004 #1, #10, #14–#18)*
@@ -188,15 +193,18 @@ flowchart LR
   inactive keeps its placement (SPEC-0004 #5, #6).
 - **Reassignment is a move, not a copy** — assigning an already-classified Órgano to a new
   node leaves it in only the new node; it is never in two at once (SPEC-0004 #17).
-- **Newly imported Órgano is unclassified** — it appears in the unclassified worklist until
-  an admin files it (SPEC-0004 #18).
+- **Newly imported Órgano is unclassified** — it appears in the read response's unclassified
+  collection until an admin files it, so it is visible to users and to the admin worklist
+  from the same payload (SPEC-0004 #8, #18).
 - **Read is read-only for a USER** — every mutation endpoint is `ADMIN`-gated at the
   server, so a `USER` calling the API directly cannot change the taxonomy or a placement;
   they can only `GET /api/organos/taxonomy`. With no `USER` UI here, the server gate is the
   whole story (SPEC-0004 #1, #9).
 - **Empty taxonomy** — until an admin creates the first node, `GET /api/organos/taxonomy`
-  returns an empty tree and every Órgano is unclassified. The endpoint ships before its
-  consumer, so it must be well-defined in that state rather than assumed non-empty.
+  returns an empty tree with **every** Órgano in the unclassified collection. Since this is
+  the only read of the catalogue, that state is not a degenerate case to tolerate but the
+  normal state right after the first import: the whole catalogue must be readable through
+  it with no node in existence (SPEC-0004 #8).
 - **Concurrent edits to the tree** — two admins moving/deleting overlapping nodes must not
   corrupt the tree or strand a placement against a just-deleted node; node moves/deletes and
   the reassignment they trigger are applied atomically.

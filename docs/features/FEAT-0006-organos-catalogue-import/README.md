@@ -11,9 +11,13 @@ Build the backend that imports the list of **Órganos de Contratación** publish
 contratosdegalicia.gal and maintains it as the system's own catalogue, per
 **[SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md)**. It delivers
 the source-retrieval adapter, the stored catalogue, the reconciliation rules that keep
-administrators' work safe across runs, the two ways the import is triggered — an
-`ADMIN`-only manual endpoint and a recurring scheduler — and the **read endpoint any
-authenticated user uses to fetch the catalogue** when querying contracts.
+administrators' work safe across runs, and the two ways the import is triggered — an
+`ADMIN`-only manual endpoint and a recurring scheduler.
+
+It exposes **no user-facing read endpoint**: authenticated users read the catalogue
+through FEAT-0007's `GET /api/organos/taxonomy`, which returns the Órganos in their
+taxonomy positions plus the unclassified ones, so there is no second, flat view of the
+same catalogue.
 
 The design sits in the hexagonal server of
 **[ADR-0002](../../architecture/0002-hexagonal-architecture.md)**: the scraper is a
@@ -49,21 +53,20 @@ contract-first in the [OpenAPI document](../../api/openapi.yaml)
 - **Application (driving):**
   - `POST /api/admin/organos/import` — **`ADMIN`-only**: runs an import and returns its
     outcome (SPEC-0004 R1, R10).
-  - `GET /api/organos` — **any authenticated user** (`USER` or `ADMIN`): lists the stored
-    catalogue so users can pick an Órgano when querying contracts (SPEC-0004 R2, R8).
   - a scheduled trigger that runs the import on a recurring interval through the same use
     case and guard (SPEC-0004 R11).
 
 **Out of scope (owned by future features):**
-- The **taxonomy of categories, classifying Órganos into it, the unclassified set, its
-  read endpoint, and the admin UI** — the tree read contract of SPEC-0004 R9, the admin
-  management tree, the catalogue table, the import-trigger button, and the outcome
-  display (SPEC-0004 R1 write ops, R14–R18) — belong to a separate feature, *FEAT-0007.
-  Órganos taxonomy & classification*. This feature stops at the backend contract those
-  screens consume. The `USER`-facing tree of R9 is built later still, as the Órgano filter
-  of the contratos list. In particular, `GET /api/organos` here returns each Órgano's name and
-  active state; the **taxonomy-placement** field of the R8 view is added by FEAT-0007
-  when the placement itself exists.
+- The **taxonomy of categories, classifying Órganos into it, the unclassified set, the
+  authenticated read endpoint, and the admin UI** — the read contract of SPEC-0004 R2, R8
+  and R9, the admin management tree, the catalogue table, the import-trigger button, and
+  the outcome display (SPEC-0004 R1 write ops, R14–R18) — belong to a separate feature,
+  *FEAT-0007. Órganos taxonomy & classification*. This feature stops at the stored
+  catalogue those screens consume. In particular, the **entire** authenticated read is
+  FEAT-0007's `GET /api/organos/taxonomy`: a catalogue view without the placement would not
+  satisfy R8 anyway, so the read ships with the placement rather than here. The
+  `USER`-facing tree of R9 is built later still, as the Órgano filter of the contratos
+  list.
 - Importing **contracts/tenders** themselves (a different spec), and authentication /
   the `USER`/`ADMIN` roles (delivered by
   [FEAT-0002](../FEAT-0002-user-authentication/README.md)).
@@ -75,7 +78,6 @@ contract-first in the [OpenAPI document](../../api/openapi.yaml)
 flowchart LR
     subgraph application["application (driving)"]
         importApi["POST /api/admin/organos/import (ADMIN)"]
-        listApi["GET /api/organos (authenticated)"]
         scheduler["scheduled import trigger"]
     end
     subgraph domain["domain"]
@@ -131,12 +133,11 @@ flowchart LR
 - `POST /api/admin/organos/import` — `@Secured("ADMIN")`: trigger an import; returns the
   `ImportOutcome` (success + added/refreshed/deactivated counts, or "already running").
   A `USER` or anonymous caller gets 403 (SPEC-0004 R1).
-- `GET  /api/organos` — `@Secured(IS_AUTHENTICATED)`: list the stored catalogue — each
-  body's name and active/inactive state — for any authenticated user; an anonymous
-  caller gets 401 (SPEC-0004 R2, R8). It is deliberately **not** under
-  `/api/admin/`, because reading the catalogue is a user capability, not an admin one.
-- Both contracts are authored in [`docs/api/openapi.yaml`](../../api/openapi.yaml) before
-  the controllers exist, and CI enforces conformance (ADR-0010).
+- **No read endpoint.** The single authenticated read of the catalogue is FEAT-0007's
+  `GET /api/organos/taxonomy`, so an Órgano is never serialised by two endpoints in two
+  shapes and there is no flat list to keep in step with the tree.
+- The contract is authored in [`docs/api/openapi.yaml`](../../api/openapi.yaml) before the
+  controller exists, and CI enforces conformance (ADR-0010).
 
 ### Scheduled trigger ([ADR-0011](../../architecture/0011-blocking-io-virtual-threads.md))
 - A Micronaut `@Scheduled` job in the application module runs the import on a configurable
@@ -164,9 +165,8 @@ flowchart LR
    atomic transaction (add / refresh-in-place / deactivate / reactivate), idempotent,
    with the single-run guard, returning an `ImportOutcome`. *(SPEC-0004 #4, #5, #6, #7,
    #12, #13)*
-5. **Import + catalogue REST endpoints** — OpenAPI-first `POST /api/admin/organos/import`
-   (`ADMIN`-only, returns the outcome) and `GET /api/organos` (any authenticated user,
-   lists the catalogue). *(SPEC-0004 #1, #2, #3, #8, #10, #12)*
+5. **Import REST endpoint** — OpenAPI-first `POST /api/admin/organos/import`
+   (`ADMIN`-only, returns the outcome). *(SPEC-0004 #1, #10, #12)*
 6. **Scheduled import trigger** — a `@Scheduled` job running the import on a recurring,
    configurable interval through the same use case and guard. *(SPEC-0004 #11, #12)*
 
@@ -194,6 +194,8 @@ flowchart LR
   extra trigger returns "already running" (SPEC-0004 #12).
 - **Accented names** — the source is ISO-8859-1; names are decoded and stored without
   mojibake so the catalogue is stable.
-- **Read access is by role, not by path obscurity** — `GET /api/organos` is denied to an
-  anonymous caller and allowed to any authenticated `USER`/`ADMIN`; the import endpoint is
-  denied to a `USER` at the server (SPEC-0004 #1, #2).
+- **Nothing here is user-readable** — this feature's only endpoint is the `ADMIN` import
+  trigger, denied to a `USER` at the server; the authenticated read that SPEC-0004 #2 and
+  #8 call for arrives with FEAT-0007's taxonomy endpoint. Until then the catalogue is
+  populated but unreadable over HTTP, which is deliberate: both features land before the
+  system is user-complete for SPEC-0004 (SPEC-0004 #1, #2).
