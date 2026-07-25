@@ -150,24 +150,32 @@ flowchart LR
   when the contratos-list filter arrives.
 
 ## Sequencing (tasks, one small change each)
-1. **Taxonomy node domain model + repository port** — the `TaxonomyNode` aggregate (UUID,
-   name, optional parent) and the `TaxonomyNodeRepository` port (read tree, insert, rename,
-   re-parent, delete). *(SPEC-0004 #14, #15)*
-2. **Taxonomy store infrastructure** — a migration adding the `taxonomy_node` table
+1. **[TASK-0001](TASK-0001-taxonomy-node-domain-model-and-placement.md) — Taxonomy node
+   domain model + Órgano placement** *(backend)*: the `TaxonomyNode` aggregate (UUID, name,
+   optional parent) and the `TaxonomyNodeRepository` port (read tree, insert, rename,
+   re-parent, delete, child check), plus the placement field on `OrganoDeContratacion` and
+   the matching `OrganoRepository` operations. *(SPEC-0004 #14, #15, #17, #18)*
+2. **[TASK-0002](TASK-0002-taxonomy-store-infrastructure.md) — Taxonomy store
+   infrastructure** *(backend)*: a migration adding the `taxonomy_node` table
    (self-referencing parent) and a nullable `taxonomy_node_id` on the catalogue table; the
-   JDBC `TaxonomyNodeRepository` and the `OrganoRepository` placement operations
-   (set/clear node, list by node, list unclassified). *(SPEC-0004 #14, #17, #18)*
-3. **Taxonomy management use cases** — `CreateNode`, `RenameNode`, `MoveNode` (cycle
-   guard), `DeleteNode` (reject with children; return directly-assigned Órganos to
-   unclassified). *(SPEC-0004 #14, #15, #16)*
-4. **Órgano classification use cases** — `AssignOrganoToNode` (single placement, replaces
-   any current), `ClearOrganoNode`, and the unclassified listing. *(SPEC-0004 #17, #18)*
-5. **Taxonomy & classification REST endpoints** — OpenAPI-first: read tree
+   JDBC `TaxonomyNodeRepository` and the `OrganoRepository` placement operations (set/clear
+   node, list by node, list unclassified). *(SPEC-0004 #14, #17, #18)*
+3. **[TASK-0003](TASK-0003-taxonomy-management-use-cases.md) — Taxonomy management use
+   cases** *(backend)*: `CreateNode`, `RenameNode`, `MoveNode` (cycle guard), `DeleteNode`
+   (reject with children; return directly-assigned Órganos to unclassified).
+   *(SPEC-0004 #14, #15, #16)*
+4. **[TASK-0004](TASK-0004-organo-classification-use-cases.md) — Órgano classification use
+   cases** *(backend)*: `AssignOrganoToNode` (single placement, replaces any current),
+   `ClearOrganoNode`, the unclassified listing, and `GetTaxonomyTree`.
+   *(SPEC-0004 #9, #17, #18)*
+5. **[TASK-0005](TASK-0005-taxonomy-and-classification-rest-endpoints.md) — Taxonomy &
+   classification REST endpoints** *(backend)*: OpenAPI-first — read tree
    (`GET /api/organos/taxonomy`, authenticated, nodes with their Órganos embedded), the
    placement field on `GET /api/organos`, and the `ADMIN` management + classify +
    unclassified endpoints under `/api/admin`. *(SPEC-0004 #1, #2, #8, #9, #14–#18)*
-6. **Taxonomy admin UI** — the `ADMIN` section: manage the tree, classify Órganos, work the
-   unclassified set, and trigger an import with its outcome. *(SPEC-0004 #1, #10, #14–#18)*
+6. **[TASK-0006](TASK-0006-taxonomy-admin-ui.md) — Taxonomy admin UI** *(frontend)*: the
+   `ADMIN` section — manage the tree, classify Órganos, work the unclassified set, and
+   trigger an import with its outcome. *(SPEC-0004 #1, #10, #14–#18)*
 
 ## Edge cases
 - **Cycle on move** — re-parenting a node under itself or a descendant is rejected and the
