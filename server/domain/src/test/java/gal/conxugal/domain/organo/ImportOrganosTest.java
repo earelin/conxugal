@@ -16,8 +16,7 @@ class ImportOrganosTest {
   void adds_new_source_entry_as_inactive() {
     FakeOrganoRepository repository = new FakeOrganoRepository();
     ImportOrganos importOrganos =
-        new ImportOrganos(
-            () -> List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X")), repository);
+        new ImportOrganos(sourceReturning("consorcio-x", "Consorcio X"), repository);
 
     ImportOutcome outcome = importOrganos.run();
 
@@ -38,8 +37,7 @@ class ImportOrganosTest {
     FakeOrganoRepository repository = new FakeOrganoRepository();
     OrganoDeContratacion stored = repository.seed("consorcio-x", "Old Name", true);
     ImportOrganos importOrganos =
-        new ImportOrganos(
-            () -> List.of(new OrganoSourceEntry("consorcio-x", "New Name")), repository);
+        new ImportOrganos(sourceReturning("consorcio-x", "New Name"), repository);
 
     ImportOutcome outcome = importOrganos.run();
 
@@ -58,8 +56,7 @@ class ImportOrganosTest {
     FakeOrganoRepository repository = new FakeOrganoRepository();
     OrganoDeContratacion stored = repository.seed("consorcio-x", "Old Name", false);
     ImportOrganos importOrganos =
-        new ImportOrganos(
-            () -> List.of(new OrganoSourceEntry("consorcio-x", "New Name")), repository);
+        new ImportOrganos(sourceReturning("consorcio-x", "New Name"), repository);
 
     ImportOutcome outcome = importOrganos.run();
 
@@ -79,8 +76,7 @@ class ImportOrganosTest {
     FakeOrganoRepository repository = new FakeOrganoRepository();
     OrganoDeContratacion stored = repository.seed("consorcio-x", "Consorcio X", false);
     ImportOrganos importOrganos =
-        new ImportOrganos(
-            () -> List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X")), repository);
+        new ImportOrganos(sourceReturning("consorcio-x", "Consorcio X"), repository);
 
     ImportOutcome outcome = importOrganos.run();
 
@@ -136,8 +132,7 @@ class ImportOrganosTest {
   void reimporting_the_same_list_adds_nothing_and_changes_no_state() {
     FakeOrganoRepository repository = new FakeOrganoRepository();
     ImportOrganos importOrganos =
-        new ImportOrganos(
-            () -> List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X")), repository);
+        new ImportOrganos(sourceReturning("consorcio-x", "Consorcio X"), repository);
     importOrganos.run();
 
     ImportOutcome outcome = importOrganos.run();
@@ -207,6 +202,10 @@ class ImportOrganosTest {
 
     assertThat(nestedOutcome.get().status()).isEqualTo(ImportOutcome.Status.ALREADY_RUNNING);
     assertThat(outcome.status()).isEqualTo(ImportOutcome.Status.SUCCESS);
+  }
+
+  private static OrganoSource sourceReturning(String sourceKey, String name) {
+    return () -> List.of(new OrganoSourceEntry(sourceKey, name));
   }
 
   private static final class FakeOrganoRepository implements OrganoRepository {
