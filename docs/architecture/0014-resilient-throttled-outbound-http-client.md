@@ -128,13 +128,39 @@ The order is load-bearing, not incidental:
 - **Retry is outermost**, which is also Resilience4j's own aspect ordering, so a retried
   attempt re-enters the breaker and re-acquires a permit rather than bypassing either.
 
+That ordering has one cost, and it is paid explicitly: because the breaker encloses the
+limiter, **every duration the breaker records includes the time spent waiting for a permit**.
+So **this breaker uses failure-rate detection only; slow-call detection is deliberately not
+used.** A breaker asking "was this call slow?" through a component whose entire job is to
+make calls slow would be instrumenting our own design as though it were a symptom — set
+`slowCallDurationThreshold` anywhere below the permit wait and a correctly functioning rate
+limiter produces a permanent 100% slow-call rate and a circuit that never closes. It would
+also add no signal: genuine slowness is already bounded by the connect and read timeouts,
+which turn a hung call into a *failure* that failure-rate detection catches. This matches
+Resilience4j's defaults, and is recorded so that enabling it later is understood as
+reopening this decision rather than tuning a knob.
+
 **The decorator sits below parsing, above transport.** Source adapters keep the contract
 they have today: they parse and validate the response, and the domain-level failure
 (`OrganoSourceUnavailableException` and its future siblings) remains the only exception
-type that escapes them. This placement also settles what is retryable for free — an adapter's
-content judgements, such as the Órganos adapter rejecting an implausibly small list, happen
-*above* the decorator and are never retried, because a source that answers successfully with
-the wrong content is not having a transient fault.
+type that escapes them.
+
+**"Retryable" and "counts as a breaker failure" are separate properties, and a response can
+be the second without being the first.** A source that answers successfully with the wrong
+content is not having a transient fault, so retrying it is pointless — but it does not follow
+that the breaker should record it as a success. The case that matters is the one this whole
+record exists for: a site defending itself against a scraper typically answers `200` with a
+block or challenge page rather than `429`. Judged only on status that is a success; judged on
+content it is the source telling us to stop. Treating it as a plain content error would leave
+the breaker blind to the single signal it most needs, and under fan-out we would keep
+hammering a site that has already refused us.
+
+So a call **carries the adapter's acceptability check, and the decorator applies it**. A
+response the adapter judges unusable — an implausibly small Órganos list, a page missing the
+structure it must have — is recorded against the breaker as a failure and is **not** retried.
+The check travels into the decorator rather than the breaker travelling out to the adapter:
+the adapter supplies a judgement about its own payload, which is knowledge it alone has,
+while Resilience4j stays wholly inside the decorator and no adapter names a circuit breaker.
 
 **No Resilience4j type crosses the decorator boundary, and no transport type reaches the
 domain.** The library signals its own outcomes with exceptions that are neither transport
@@ -153,6 +179,18 @@ new adapter cannot forget a translation step that happens beneath it.
 **A refused permit and an open circuit are never retried.** Retrying either re-enters the
 policy that just rejected the call, converting a deliberate fail-fast into a fail-slow that
 waits out the whole backoff schedule before reporting what was known at the first attempt.
+
+**Adapters do not construct or name an HTTP client, and an ArchUnit rule enforces it.**
+Raw client construction moves into the shared `infrastructure` HTTP package; every source
+adapter receives the decorated client and never sees `HttpClient` or `BlockingHttpClient`.
+Without this, "every adapter inherits the policy" would be a hope rather than a property —
+a new adapter calling `HttpClient.create(url)` would compile, pass every test, and reach the
+source with no pacing, no retry and no breaker, and nothing would say so. Structuring it this
+way makes the bypass unavailable rather than merely discouraged, and a rule in the
+`architecture` module — in the same idiom as the existing module-boundary rules and
+[ADR-0006](0006-reserved-api-url-prefix.md)'s URL-prefix rule, and scoped to main sources so
+tests may still drive clients directly — turns an adapter that reaches for the raw client
+into a build failure.
 
 **Retryability is declared by the adapter, not inferred from the HTTP method.**
 contratosdegalicia exposes its contract searches over `POST` with the query in the request
@@ -209,14 +247,34 @@ satisfy explicitly rather than by hope. Under this bound a refused permit is no 
 routine outcome; it means the configuration itself is inconsistent, and failing the run
 loudly is the correct response.
 
-**All of it is configurable per source**: requests per period, the period, the maximum wait
-for a permit, the concurrency bound, retry attempts, initial backoff and multiplier, the
-`Retry-After` clamp, and the breaker's thresholds and open-state duration. Exact defaults
-belong to the implementing task — the site publishes no limits, so the first values are
+**The rate is expressed as one request per interval, not as a quantum over a window.**
+`AtomicRateLimiter` refills its whole allowance at each refresh boundary, so `10` per `10s`
+permits ten simultaneous requests and then nine seconds of silence — a burst wearing a rate
+limit's clothing, and indistinguishable from an attack in the only place it matters, the
+operator's access log. Configurations therefore hold `limitForPeriod` at **1** and set the
+pace with `limitRefreshPeriod`.
+
+**All of it is configurable per source**: the refresh interval, the maximum wait for a
+permit, the concurrency bound, connect and read timeouts, retry attempts, initial backoff and
+multiplier, the `Retry-After` clamp, and the breaker's failure-rate threshold and open-state
+duration. The connect timeout in particular is currently unset and inherits whatever the OS
+does — which after this decision is multiplied by the attempt count, and which bites hardest
+in the blackholed-IP case that is the exact symptom of the blocking this record exists to
+prevent. Exact defaults belong to the implementing task — the site publishes no limits, so the first values are
 estimates to be tuned against observed behaviour without a code change — but this record
 fixes their ceiling: **at most one request in flight per source, and a default rate no
 faster than one request per second**. Tuning below those bounds is a task's business;
 exceeding either is a new decision.
+
+**No overall deadline is imposed on a single logical call.** Each individual wait is bounded
+— permit, connect, read, backoff, `Retry-After` clamp — but their sum is not, and in the
+worst case one logical call costs roughly
+`attempts × (maxWait + connectTimeout + readTimeout) + Σ backoff`. Enforcing a true ceiling
+would mean interrupting a blocking call in flight, which needs an executor and a future that
+this deliberately blocking client does not have; adding that machinery to solve a budgeting
+problem is the wrong layer. The formula is recorded instead so that whoever tunes the knobs
+can see what they are buying, and any job-level timeout stays the scheduled trigger's own
+responsibility.
 
 **Deliberately out of scope**, to be decided if and when they are needed: rate limiting
 shared across processes (irrelevant while ingestion runs in one JVM, and a new decision the
@@ -239,8 +297,12 @@ here.
   more than any particular rate value.
 - Honouring `Retry-After` means that when the source does tell us what it wants, we obey it
   instead of guessing, which is both more effective and more defensible than our own curve.
-- One policy every future source adapter inherits. Contract ingestion gets resilience and
-  politeness by construction, with no per-adapter decision to re-make.
+- One policy every future source adapter inherits, and "by construction" means it: with the
+  raw client unreachable from adapter packages and a build rule saying so, shipping an
+  adapter that bypasses the pacing is not a mistake someone can quietly make.
+- The breaker can see the failure that matters. Because an unusable response counts against
+  it without being retried, a source that blocks us behind a `200` eventually opens the
+  circuit instead of being absorbed silently as a content error.
 - The domain stays free of transport concerns. Resilience4j's vocabulary is contained within
   the decorator and never reaches a port, so adopting, tuning or one day replacing the
   library is an `infrastructure` change that no domain code can observe.
@@ -283,6 +345,21 @@ here.
 - **Errors are translated twice** before anything reaches a use case. That is what keeps the
   domain isolated, but it also means a failure's original cause is two hops from where it is
   read, and each hop is a chance to lose detail that would have helped diagnose a bad run.
+- **What is genuinely reusable is the policy and the decorator, not the wiring.** Each source
+  still declares its own configuration record and its own factory; nothing here produces a
+  client per configured source automatically. Micronaut's `@EachProperty`/`@EachBean` would,
+  but it is unverified against records on this framework version and would replace the
+  `@Named` qualifier pattern the codebase uses today — a pattern this project has already
+  been bitten by. Committing the decision to an unproven mechanism was the worse risk, so
+  "reusable across sources" should be read as *the policy is written once*, not *a new source
+  is free*.
+- **No ceiling on a whole logical call**, only on its parts. The worst-case formula above is
+  minutes for a single request, and nothing enforces it — a badly tuned set of knobs produces
+  a slow run rather than a rejected configuration.
+- **Adapters now carry a judgement with weight.** An acceptability check that is too strict
+  opens the circuit against a source that is merely returning something unusual, and one that
+  is too lax leaves the breaker as blind as it was. That judgement sits in each adapter,
+  where the payload knowledge is, which is also where it is easiest to get subtly wrong.
 - Retryability being an adapter-declared property rather than a mechanical rule puts a
   correctness burden on each adapter author: a `POST` wrongly declared idempotent would be
   retried, and nothing but review catches that.
