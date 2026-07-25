@@ -19,10 +19,11 @@ variables, e.g. `"%s/%s".formatted(base, path)`.
 Prefer a text block (`"""..."""`) over a regular string literal whenever it avoids
 escape characters — e.g. a literal containing `"` (JSON, HTML, quoted attributes).
 
-Long fluent call chains with multiple distinct stages — e.g. REST-assured's
-`given()/when()/then()` — are formatted as a staircase: each stage keyword sits at
-the base indent, calls chained onto that stage indent one level (4 spaces) deeper,
-and the next stage keyword steps back out to the base indent:
+Fluent call chains with multiple distinct stages — e.g. REST-assured's
+`given()/when()/then()` — are formatted as a staircase, regardless of chain length:
+each stage keyword sits at the base indent, calls chained onto that stage indent one
+level (4 spaces) deeper, and the next stage keyword steps back out to the base
+indent:
 
 ```java
 given(spec)
