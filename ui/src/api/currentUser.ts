@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from './httpClient';
 
-export type Role = 'USER' | 'ADMIN';
+export const ROLES = ['USER', 'ADMIN'] as const;
+
+export type Role = (typeof ROLES)[number];
 
 export interface CurrentUser {
   id: string;

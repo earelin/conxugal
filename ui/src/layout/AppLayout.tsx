@@ -11,12 +11,9 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import { NavLink, Outlet } from 'react-router';
 import { useCurrentUser } from '../api/currentUser';
+import { initialsOf } from '../commons/avatar';
 import { visibleNavSections } from '../nav';
 import { strings } from '../strings';
-
-function initialsOf(email: string): string {
-  return email.split('@')[0].slice(0, 2).toUpperCase();
-}
 
 /**
  * Persistent application shell: a header with the product name and a navbar
