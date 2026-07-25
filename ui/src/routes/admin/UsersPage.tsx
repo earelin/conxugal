@@ -1,10 +1,11 @@
-import { Alert, Button, Group, Loader, Stack, Text, Title } from '@mantine/core';
-import { IconAlertCircle, IconPlus } from '@tabler/icons-react';
+import { Button, Group, Loader, Stack, Text, Title } from '@mantine/core';
+import { IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useUsers } from '../../api/users';
 import { isHttpStatus } from '../../commons/httpError';
 import { strings } from '../../strings';
 import { CreateUserModal } from './CreateUserModal';
+import { ErrorAlert } from './ErrorAlert';
 import { UsersTable } from './UsersTable';
 
 function UsersError({ error }: { error: unknown }) {
@@ -12,11 +13,7 @@ function UsersError({ error }: { error: unknown }) {
     ? strings.admin.users.errorForbidden
     : strings.admin.users.errorGeneric;
 
-  return (
-    <Alert color="red" icon={<IconAlertCircle size={18} />} title={strings.admin.users.errorTitle}>
-      {message}
-    </Alert>
-  );
+  return <ErrorAlert title={strings.admin.users.errorTitle}>{message}</ErrorAlert>;
 }
 
 export function UsersPage() {

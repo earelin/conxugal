@@ -1,22 +1,11 @@
-import {
-  Alert,
-  Avatar,
-  Badge,
-  Button,
-  Card,
-  Group,
-  Stack,
-  Table,
-  Text,
-  Tooltip,
-} from '@mantine/core';
-import { IconAlertCircle } from '@tabler/icons-react';
+import { Avatar, Badge, Button, Card, Group, Stack, Table, Text, Tooltip } from '@mantine/core';
 import { useState } from 'react';
 import { type UserAccount, useSetUserEnabled } from '../../api/users';
 import { initialsOf } from '../../commons/avatar';
 import { formatDate } from '../../commons/date';
 import { isHttpStatus } from '../../commons/httpError';
 import { strings } from '../../strings';
+import { ErrorAlert } from './ErrorAlert';
 
 interface UserRowProps {
   user: UserAccount;
@@ -111,11 +100,7 @@ export function UsersTable({ users }: { users: UserAccount[] }) {
 
   return (
     <Stack gap="sm">
-      {actionError && (
-        <Alert color="red" icon={<IconAlertCircle size={18} />}>
-          {actionError}
-        </Alert>
-      )}
+      {actionError && <ErrorAlert>{actionError}</ErrorAlert>}
       <Card withBorder radius="md" padding={0}>
         <Table aria-label={strings.admin.users.title}>
           <Table.Thead>
