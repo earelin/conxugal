@@ -50,6 +50,7 @@ micronaut-http-server-netty = { module = "io.micronaut:micronaut-http-server-net
 micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari" }
 micronaut-management = { module = "io.micronaut:micronaut-management" }
 micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json" }
+micronaut-reactor = { module = "io.micronaut.reactor:micronaut-reactor" }
 micronaut-security-csrf = { module = "io.micronaut.security:micronaut-security-csrf" }
 micronaut-security-processor = { module = "io.micronaut.security:micronaut-security-processor" }
 micronaut-security-session = { module = "io.micronaut.security:micronaut-security-session" }
