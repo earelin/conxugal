@@ -112,32 +112,41 @@ class ContratosDeGaliciaOrganoSourceAdapterIntegrationTest implements TestProper
     byte[] body = html.getBytes(StandardCharsets.ISO_8859_1);
     String base64Body = Base64.getEncoder().encodeToString(body);
     String json =
-        "{ \"request\": { \"method\": \"GET\", \"url\": \""
-            + PORTADA_PATH
-            + "\" }, \"response\": { \"status\": 200, \"headers\": "
-            + "{ \"Content-Type\": \"text/html;charset=ISO-8859-1\" }, \"base64Body\": \""
-            + base64Body
-            + "\" } }";
+        """
+        { "request": { "method": "GET", "url": "%%PATH%%" },
+          "response": {
+            "status": 200,
+            "headers": { "Content-Type": "text/html;charset=ISO-8859-1" },
+            "base64Body": "%%BODY%%"
+          }
+        }
+        """
+            .replace("%%PATH%%", PORTADA_PATH)
+            .replace("%%BODY%%", base64Body);
     registerMapping(json);
   }
 
   private void stubPortadaWithStatus(int status) throws Exception {
     String json =
-        "{ \"request\": { \"method\": \"GET\", \"url\": \""
-            + PORTADA_PATH
-            + "\" }, \"response\": { \"status\": "
-            + status
-            + " } }";
+        """
+        { "request": { "method": "GET", "url": "%%PATH%%" },
+          "response": { "status": %%STATUS%% }
+        }
+        """
+            .replace("%%PATH%%", PORTADA_PATH)
+            .replace("%%STATUS%%", String.valueOf(status));
     registerMapping(json);
   }
 
   private void stubPortadaWithFault(String fault) throws Exception {
     String json =
-        "{ \"request\": { \"method\": \"GET\", \"url\": \""
-            + PORTADA_PATH
-            + "\" }, \"response\": { \"fault\": \""
-            + fault
-            + "\" } }";
+        """
+        { "request": { "method": "GET", "url": "%%PATH%%" },
+          "response": { "fault": "%%FAULT%%" }
+        }
+        """
+            .replace("%%PATH%%", PORTADA_PATH)
+            .replace("%%FAULT%%", fault);
     registerMapping(json);
   }
 
