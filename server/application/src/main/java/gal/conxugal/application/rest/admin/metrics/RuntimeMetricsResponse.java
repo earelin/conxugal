@@ -17,33 +17,50 @@ record RuntimeMetricsResponse(
       int threadCount,
       long uptimeMillis,
       long gcCollectionCount,
-      long gcCollectionTimeMillis) {}
+      long gcCollectionTimeMillis) {
+
+    static Jvm of(RuntimeMetrics.Jvm jvm) {
+      return new Jvm(
+          jvm.heapUsedBytes(),
+          jvm.heapMaxBytes(),
+          jvm.nonHeapUsedBytes(),
+          jvm.threadCount(),
+          jvm.uptimeMillis(),
+          jvm.gcCollectionCount(),
+          jvm.gcCollectionTimeMillis());
+    }
+  }
 
   @Serdeable
-  record SystemLoad(Double cpuLoad) {}
+  record SystemLoad(Double cpuLoad) {
+
+    static SystemLoad of(RuntimeMetrics.SystemLoad systemLoad) {
+      return new SystemLoad(systemLoad.cpuLoad());
+    }
+  }
 
   @Serdeable
-  record Http(long requestCount, long errorCount) {}
+  record Http(long requestCount, long errorCount) {
+
+    static Http of(RuntimeMetrics.Http http) {
+      return new Http(http.requestCount(), http.errorCount());
+    }
+  }
 
   @Serdeable
-  record DatastorePool(int active, int idle, int max) {}
+  record DatastorePool(int active, int idle, int max) {
+
+    static DatastorePool of(RuntimeMetrics.DatastorePool datastorePool) {
+      return new DatastorePool(datastorePool.active(), datastorePool.idle(), datastorePool.max());
+    }
+  }
 
   static RuntimeMetricsResponse of(RuntimeMetrics sample) {
     return new RuntimeMetricsResponse(
         sample.timestamp(),
-        new Jvm(
-            sample.jvm().heapUsedBytes(),
-            sample.jvm().heapMaxBytes(),
-            sample.jvm().nonHeapUsedBytes(),
-            sample.jvm().threadCount(),
-            sample.jvm().uptimeMillis(),
-            sample.jvm().gcCollectionCount(),
-            sample.jvm().gcCollectionTimeMillis()),
-        new SystemLoad(sample.system().cpuLoad()),
-        new Http(sample.http().requestCount(), sample.http().errorCount()),
-        new DatastorePool(
-            sample.datastorePool().active(),
-            sample.datastorePool().idle(),
-            sample.datastorePool().max()));
+        Jvm.of(sample.jvm()),
+        SystemLoad.of(sample.system()),
+        Http.of(sample.http()),
+        DatastorePool.of(sample.datastorePool()));
   }
 }
