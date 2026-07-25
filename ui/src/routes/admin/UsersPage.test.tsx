@@ -57,6 +57,11 @@ function rowFor(email: string): HTMLElement {
   return screen.getByText(email).closest('tr') as HTMLElement;
 }
 
+async function openCreateModal(user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
+  await user.click(screen.getByRole('button', { name: strings.admin.users.createButton }));
+  return screen.findByRole('textbox', { name: strings.admin.users.emailLabel });
+}
+
 describe('UsersPage', () => {
   beforeEach(() => {
     nock.disableNetConnect();
@@ -101,11 +106,7 @@ describe('UsersPage', () => {
         initialPassword: 'Tg7#kLp2Qw9$mZxR',
       });
 
-    await user.click(screen.getByRole('button', { name: strings.admin.users.createButton }));
-    await user.type(
-      await screen.findByRole('textbox', { name: strings.admin.users.emailLabel }),
-      'new.user@conxugal.gal',
-    );
+    await user.type(await openCreateModal(user), 'new.user@conxugal.gal');
     await user.click(screen.getByRole('button', { name: strings.admin.users.submit }));
 
     expect(await screen.findByDisplayValue('Tg7#kLp2Qw9$mZxR')).toBeInTheDocument();
@@ -125,15 +126,12 @@ describe('UsersPage', () => {
 
     const createScope = nock(BASE_URL).post('/api/admin/users').reply(201);
 
-    await user.click(screen.getByRole('button', { name: strings.admin.users.createButton }));
-    await user.click(await screen.findByRole('button', { name: strings.admin.users.submit }));
+    const emailInput = await openCreateModal(user);
+    await user.click(screen.getByRole('button', { name: strings.admin.users.submit }));
 
     expect(await screen.findByText(strings.admin.users.emailRequired)).toBeInTheDocument();
 
-    await user.type(
-      screen.getByRole('textbox', { name: strings.admin.users.emailLabel }),
-      'not-an-email',
-    );
+    await user.type(emailInput, 'not-an-email');
     await user.click(screen.getByRole('button', { name: strings.admin.users.submit }));
 
     expect(await screen.findByText(strings.admin.users.emailInvalid)).toBeInTheDocument();
@@ -155,11 +153,7 @@ describe('UsersPage', () => {
         detail: `An account with email ${adminUser.email} already exists.`,
       });
 
-    await user.click(screen.getByRole('button', { name: strings.admin.users.createButton }));
-    await user.type(
-      await screen.findByRole('textbox', { name: strings.admin.users.emailLabel }),
-      adminUser.email,
-    );
+    await user.type(await openCreateModal(user), adminUser.email);
     await user.click(screen.getByRole('button', { name: strings.admin.users.submit }));
 
     expect(await screen.findByText(strings.admin.users.duplicateEmailError)).toBeInTheDocument();
