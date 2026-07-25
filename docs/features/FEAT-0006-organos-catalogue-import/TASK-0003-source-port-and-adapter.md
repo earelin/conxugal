@@ -27,8 +27,10 @@ executor per [ADR-0011](../../architecture/0011-blocking-io-virtual-threads.md).
   rather than returning a partial/empty success.
 - A follow-up migration on the `organo_contratacion` table (created by TASK-0002) drops
   the `acronym` column — the source's trailing `(XXXX)` convention has no deterministic
-  rule for telling an acronym apart from an ordinary parenthetical qualifier — and flips
-  `active`'s default to `false`, so a newly discovered Órgano starts inactive.
+  rule for telling an acronym apart from an ordinary parenthetical qualifier — and, at the
+  time, flipped `active`'s default to `false`. A later migration reverts that default back
+  to `true`: SPEC-0004 R5 settled on a newly discovered Órgano starting **active** instead
+  (see TASK-0004).
 
 ## Acceptance criteria
 - The adapter returns each published Órgano as (`sourceKey`, `name`), decoding

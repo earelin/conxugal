@@ -16,7 +16,7 @@ atomically and idempotently, behind a single-run guard. Governed by
 ## Scope
 - `ImportOrganos` use case: fetch the **entire** source list via `OrganoSource`, then
   reconcile against `OrganoRepository` within a **single transaction** — insert entries
-  with a new source key **starting inactive**, refresh matched entries' name **in
+  with a new source key **starting active**, refresh matched entries' name **in
   place**, mark stored entries absent from the source **inactive**, and **reactivate**
   ones that reappear.
 - A **single-run guard** owned by the use case so at most one import runs at a time; a
@@ -28,7 +28,7 @@ atomically and idempotently, behind a single-run guard. Governed by
   failure that writes **nothing**, leaving the catalogue untouched.
 
 ## Acceptance criteria
-- A source entry with a new key is added **inactive**; an entry matching a stored key
+- A source entry with a new key is added **active**; an entry matching a stored key
   refreshes that row's attributes **in place**, preserving its UUID identity and any
   taxonomy placement.
   ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #3, #4, #5)

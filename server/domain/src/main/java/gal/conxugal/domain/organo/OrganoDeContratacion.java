@@ -22,7 +22,8 @@ public record OrganoDeContratacion(
     Objects.requireNonNull(name, "name must not be null");
   }
 
+  /** A newly discovered Órgano: active until a later import shows it's no longer there. */
   public OrganoDeContratacion(String sourceKey, String name) {
-    this(null, sourceKey, name, false);
+    this(null, sourceKey, name, true);
   }
 }

@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 class ImportOrganosTest {
 
   @Test
-  void adds_new_source_entry_as_inactive() {
+  void adds_new_source_entry_as_active() {
     FakeOrganoRepository repository = new FakeOrganoRepository();
     ImportOrganos importOrganos =
         new ImportOrganos(sourceReturning("consorcio-x", "Consorcio X"), repository);
@@ -28,7 +28,7 @@ class ImportOrganosTest {
             organo -> {
               assertThat(organo.sourceKey()).isEqualTo("consorcio-x");
               assertThat(organo.name()).isEqualTo("Consorcio X");
-              assertThat(organo.active()).isFalse();
+              assertThat(organo.active()).isTrue();
             });
   }
 
@@ -52,7 +52,7 @@ class ImportOrganosTest {
   }
 
   @Test
-  void refreshing_an_inactive_matched_entrys_name_does_not_reactivate_it() {
+  void refreshing_deactivated_matched_entrys_name_also_reactivates_it() {
     FakeOrganoRepository repository = new FakeOrganoRepository();
     OrganoDeContratacion stored = repository.seed("consorcio-x", "Old Name", false);
     ImportOrganos importOrganos =
@@ -67,14 +67,33 @@ class ImportOrganosTest {
             organo -> {
               assertThat(organo.id()).isEqualTo(stored.id());
               assertThat(organo.name()).isEqualTo("New Name");
-              assertThat(organo.active()).isFalse();
+              assertThat(organo.active()).isTrue();
             });
   }
 
   @Test
-  void matching_an_entry_with_an_unchanged_name_writes_nothing_and_leaves_its_state_untouched() {
+  void matching_deactivated_entry_with_unchanged_name_reactivates_it() {
     FakeOrganoRepository repository = new FakeOrganoRepository();
     OrganoDeContratacion stored = repository.seed("consorcio-x", "Consorcio X", false);
+    ImportOrganos importOrganos =
+        new ImportOrganos(sourceReturning("consorcio-x", "Consorcio X"), repository);
+
+    ImportOutcome outcome = importOrganos.run();
+
+    assertThat(outcome.refreshed()).isEqualTo(1);
+    assertThat(repository.findAll())
+        .singleElement()
+        .satisfies(
+            organo -> {
+              assertThat(organo.id()).isEqualTo(stored.id());
+              assertThat(organo.active()).isTrue();
+            });
+  }
+
+  @Test
+  void matching_an_active_entry_with_an_unchanged_name_writes_nothing() {
+    FakeOrganoRepository repository = new FakeOrganoRepository();
+    OrganoDeContratacion stored = repository.seed("consorcio-x", "Consorcio X", true);
     ImportOrganos importOrganos =
         new ImportOrganos(sourceReturning("consorcio-x", "Consorcio X"), repository);
 
@@ -86,7 +105,7 @@ class ImportOrganosTest {
         .satisfies(
             organo -> {
               assertThat(organo.id()).isEqualTo(stored.id());
-              assertThat(organo.active()).isFalse();
+              assertThat(organo.active()).isTrue();
             });
   }
 
@@ -142,7 +161,7 @@ class ImportOrganosTest {
     assertThat(outcome.deactivated()).isZero();
     assertThat(repository.findAll())
         .singleElement()
-        .satisfies(organo -> assertThat(organo.active()).isFalse());
+        .satisfies(organo -> assertThat(organo.active()).isTrue());
   }
 
   @Test

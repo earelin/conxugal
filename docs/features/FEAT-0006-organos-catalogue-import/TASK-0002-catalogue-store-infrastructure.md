@@ -17,8 +17,9 @@ JDBC/SQL stays entirely in `infrastructure`.
 ## Scope
 - Migration creating the `organo_contratacion` table: UUID primary key, `source_key`
   (`NOT NULL`, **unique**), `name` (`NOT NULL`), nullable `acronym`, `active`
-  (`NOT NULL`, default `true`). *(Superseded by TASK-0003's follow-up migration, which
-  drops `acronym` and flips the default to `false` — see that task.)*
+  (`NOT NULL`, default `true`). *(TASK-0003's follow-up migration drops `acronym` and
+  briefly flips the default to `false`; a later migration reverts it to `true` once
+  SPEC-0004 R5 settled on a newly discovered Órgano starting active — see that task.)*
 - Micronaut Data JDBC implementation of `OrganoRepository`: `findAll`, `findBySourceKey`
   / bulk lookup, insert, update-in-place (name/active on the matched row), and
   `setActive`.
