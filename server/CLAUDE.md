@@ -18,10 +18,7 @@ Write new code matching the style directly; run `checkstyleMain`/`checkstyleTest
 (part of `./gradlew build`) to verify.
 
 Prefer `.formatted()` over `+` concatenation for strings mixing literal text and
-variables, e.g. `"%s/%s".formatted(base, path)` (Java has no string templates —
-withdrawn before JDK 23, never reinstated). A text block + `.formatted()` can trip
-Spotbugs' `VA_FORMAT_STRING_USES_NEWLINE`; exclude that pattern in
-`config/spotbugs/exclude.xml` rather than reverting to concatenation.
+variables, e.g. `"%s/%s".formatted(base, path)`.
 
 Long fluent call chains — notably REST-assured's `given()/when()/then()` in
 `application/src/integrationTest` — are formatted as a staircase: each stage keyword
