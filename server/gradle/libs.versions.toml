@@ -9,6 +9,7 @@ errorproneGradlePlugin = "5.1.0"
 findsecbugs = "1.14.0"
 flywayCore = "13.0.0"
 jacoco = "0.8.15"
+jsoup = "1.22.2"
 jspecify = "1.0.0"
 junit = "6.1.2"
 micronautPlugin = "5.0.2"
@@ -21,6 +22,7 @@ spotbugs = "4.10.2"
 spotbugsGradlePlugin = "6.5.8"
 testcontainers = "1.21.4"
 wiremock = "3.13.2"
+wiremockTestcontainers = "1.0-alpha-15"
 
 [libraries]
 archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
@@ -32,6 +34,7 @@ errorprone-gradle-plugin = { module = "net.ltgt.errorprone:net.ltgt.errorprone.g
 findsecbugs-plugin = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flywayCore" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flywayCore" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
@@ -47,6 +50,7 @@ micronaut-http-server-netty = { module = "io.micronaut:micronaut-http-server-net
 micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari" }
 micronaut-management = { module = "io.micronaut:micronaut-management" }
 micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json" }
+micronaut-reactor = { module = "io.micronaut.reactor:micronaut-reactor" }
 micronaut-security-csrf = { module = "io.micronaut.security:micronaut-security-csrf" }
 micronaut-security-processor = { module = "io.micronaut.security:micronaut-security-processor" }
 micronaut-security-session = { module = "io.micronaut.security:micronaut-security-session" }
@@ -67,6 +71,7 @@ spotbugs-gradle-plugin = { module = "com.github.spotbugs.snom:spotbugs-gradle-pl
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
 wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
+wiremock-testcontainers = { module = "org.wiremock.integrations.testcontainers:wiremock-testcontainers-module", version.ref = "wiremockTestcontainers" }
 
 [plugins]
 micronaut-application = { id = "io.micronaut.application", version.ref = "micronautPlugin" }
