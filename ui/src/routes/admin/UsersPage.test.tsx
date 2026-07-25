@@ -117,6 +117,29 @@ describe('UsersPage', () => {
     expect(screen.getByText('new.user@conxugal.gal')).toBeInTheDocument();
   });
 
+  it('rejects an empty or malformed email client-side without calling the API', async () => {
+    const user = userEvent.setup();
+    mockUsersList([adminUser]);
+    renderUsersPage();
+    await screen.findByText(adminUser.email);
+
+    const createScope = nock(BASE_URL).post('/api/admin/users').reply(201);
+
+    await user.click(screen.getByRole('button', { name: strings.admin.users.createButton }));
+    await user.click(await screen.findByRole('button', { name: strings.admin.users.submit }));
+
+    expect(await screen.findByText(strings.admin.users.emailRequired)).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: strings.admin.users.emailLabel }),
+      'not-an-email',
+    );
+    await user.click(screen.getByRole('button', { name: strings.admin.users.submit }));
+
+    expect(await screen.findByText(strings.admin.users.emailInvalid)).toBeInTheDocument();
+    expect(createScope.isDone()).toBe(false);
+  });
+
   it('surfaces a duplicate-email create as a form error without changing the existing account', async () => {
     const user = userEvent.setup();
     mockUsersList([adminUser]);

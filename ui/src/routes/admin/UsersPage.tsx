@@ -24,8 +24,10 @@ import {
   IconCopy,
   IconPlus,
 } from '@tabler/icons-react';
-import { type FormEvent, useState } from 'react';
-import type { Role } from '../../api/currentUser';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { HttpError } from '../../api/httpClient';
 import {
   type CreatedUser,
@@ -46,10 +48,6 @@ function formatDate(iso: string): string {
 
 function initialsOf(email: string): string {
   return email.split('@')[0].slice(0, 2).toUpperCase();
-}
-
-function isEmailValid(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function isHttpStatus(error: unknown, status: number): boolean {
@@ -102,70 +100,77 @@ function PasswordReveal({ created, onDone }: { created: CreatedUser; onDone: () 
   );
 }
 
+const createUserSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, strings.admin.users.emailRequired)
+    .email(strings.admin.users.emailInvalid),
+  role: z.enum(['USER', 'ADMIN']),
+});
+
+type CreateUserFormValues = z.infer<typeof createUserSchema>;
+
 interface CreateUserFormProps {
   onCreated: (created: CreatedUser) => void;
   onCancel: () => void;
 }
 
 function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<Role>('USER');
-  const [emailError, setEmailError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const createUser = useCreateUser();
+  const {
+    register,
+    handleSubmit,
+    control,
+    setError,
+    formState: { errors },
+  } = useForm<CreateUserFormValues>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: { email: '', role: 'USER' },
+  });
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  function onSubmit(values: CreateUserFormValues) {
     setFormError(null);
-
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setEmailError(strings.admin.users.emailRequired);
-      return;
-    }
-    if (!isEmailValid(trimmedEmail)) {
-      setEmailError(strings.admin.users.emailInvalid);
-      return;
-    }
-    setEmailError(null);
-
-    createUser.mutate(
-      { email: trimmedEmail, role },
-      {
-        onSuccess: onCreated,
-        onError: (error) => {
-          if (isHttpStatus(error, 409)) {
-            setEmailError(strings.admin.users.duplicateEmailError);
-          } else {
-            setFormError(strings.admin.users.createGenericError);
-          }
-        },
+    createUser.mutate(values, {
+      onSuccess: onCreated,
+      onError: (error) => {
+        if (isHttpStatus(error, 409)) {
+          setError('email', { message: strings.admin.users.duplicateEmailError });
+        } else {
+          setFormError(strings.admin.users.createGenericError);
+        }
       },
-    );
+    });
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
+    <form onSubmit={(event) => void handleSubmit(onSubmit)(event)} noValidate>
       <Stack gap="md">
         {formError && <Alert color="red">{formError}</Alert>}
         <TextInput
           label={strings.admin.users.emailLabel}
           placeholder={strings.admin.users.emailPlaceholder}
           required
-          value={email}
-          onChange={(event) => setEmail(event.currentTarget.value)}
-          error={emailError}
+          error={errors.email?.message}
+          {...register('email')}
         />
-        <Select
-          label={strings.admin.users.roleFieldLabel}
-          required
-          allowDeselect={false}
-          data={[
-            { value: 'USER', label: strings.roleLabel.USER },
-            { value: 'ADMIN', label: strings.roleLabel.ADMIN },
-          ]}
-          value={role}
-          onChange={(value) => setRole(value === 'ADMIN' ? 'ADMIN' : 'USER')}
+        <Controller
+          name="role"
+          control={control}
+          render={({ field }) => (
+            <Select
+              label={strings.admin.users.roleFieldLabel}
+              required
+              allowDeselect={false}
+              data={[
+                { value: 'USER', label: strings.roleLabel.USER },
+                { value: 'ADMIN', label: strings.roleLabel.ADMIN },
+              ]}
+              value={field.value}
+              onChange={(value) => field.onChange(value === 'ADMIN' ? 'ADMIN' : 'USER')}
+            />
+          )}
         />
         <Group justify="flex-end" mt="sm">
           <Button variant="default" onClick={onCancel}>
