@@ -7,14 +7,17 @@ status: draft
 # FEAT-0007. Órganos taxonomy & classification
 
 ## Goal
-Let administrators organise the imported catalogue into a **multilevel taxonomy** and let
-every authenticated user browse it, per
+Let administrators organise the imported catalogue into a **multilevel taxonomy**, and
+expose that taxonomy to any authenticated user as a read endpoint, per
 **[SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md)** (R1 write
-operations, R9, R14–R18, and the taxonomy-placement part of R8). It adds the taxonomy of
-category nodes, the single-node classification of Órganos, the unclassified set, and the
-two user interfaces: a **read-only Órganos browser** any user opens to explore the tree
-and pick an Órgano, and an **admin management** section to build the taxonomy, classify
-Órganos, and run imports.
+operations, the read contract of R9, R14–R18, and the taxonomy-placement part of R8). It
+adds the taxonomy of category nodes, the single-node classification of Órganos, the
+unclassified set, the `GET /api/organos/taxonomy` read endpoint, and one user interface:
+an **admin management** section to build the taxonomy, classify Órganos, and run imports.
+
+No user-facing Órganos browser is built here. The read endpoint's first consumer is the
+**Órgano filter of the contratos list**, delivered by the future contract-querying
+feature; this feature stops at the contract that filter will call.
 
 It builds directly on **[FEAT-0006](../FEAT-0006-organos-catalogue-import/README.md)**,
 which delivers the stored catalogue, the `GET /api/organos` read endpoint, and the import
@@ -52,18 +55,19 @@ Galician.
     `GET /api/organos` catalogue response (SPEC-0004 R8).
   - **Manage (`ADMIN` only):** node create/rename/move/delete, Órgano assign/clear, and
     the unclassified listing (SPEC-0004 R1, R14–R18).
-- **UI:**
-  - **Órganos browser (any authenticated user):** a main-app section that shows the
-    read-only taxonomy tree and the catalogue, from which a user selects an Órgano
-    (SPEC-0004 R9). Read-only: no create/rename/move/delete/reassign controls.
-  - **Taxonomy admin (`ADMIN` only):** manage the tree (create, rename, move, delete),
-    classify Órganos, work the unclassified set, and trigger an import (reusing FEAT-0006's
-    endpoint) with its outcome shown (SPEC-0004 R1, R10 surfacing, R14–R18).
+- **UI — taxonomy admin (`ADMIN` only):** manage the tree (create, rename, move, delete),
+  classify Órganos, work the unclassified set, and trigger an import (reusing FEAT-0006's
+  endpoint) with its outcome shown (SPEC-0004 R1, R10 surfacing, R14–R18). This is the
+  only UI in this feature.
 
 **Out of scope (owned by other specs/features):**
-- The **contract-query screens** that consume a selected Órgano to filter contracts — a
-  future contract-browsing spec/feature. This feature delivers the reusable Órgano
-  selector and the browse view; wiring it into contract search is not here.
+- The **user-facing taxonomy browsing UI** — SPEC-0004 R9's *presentation* for a `USER`.
+  There is no Órganos browser section: the tree a user navigates to pick an Órgano is the
+  **Órgano filter of the contratos list**, so it is built by the future contract-querying
+  feature, against the endpoint delivered here. No reusable Órgano-selector component is
+  built in advance — it has no consumer yet, and its shape is the filter's to decide. The
+  R9 *read contract* (`GET /api/organos/taxonomy`, authenticated) is in scope here.
+- The **contract-query screens** themselves — a future contract-browsing spec/feature.
 - **Importing and reconciling** the catalogue and the import endpoint/scheduler — owned by
   [FEAT-0006](../FEAT-0006-organos-catalogue-import/README.md). This feature only *drives*
   the existing import endpoint from the admin UI and *reads* the catalogue it maintains.
@@ -120,8 +124,12 @@ flowchart LR
   unclassified rather than orphaning them against a missing node.
 
 ### API surface ([ADR-0006](../../architecture/0006-reserved-api-url-prefix.md), [ADR-0010](../../architecture/0010-design-first-openapi-contract.md))
-- `GET /api/organos/taxonomy` — `@Secured(IS_AUTHENTICATED)`: the tree of nodes with the
-  Órganos in each, for the read-only browser (SPEC-0004 R2, R9).
+- `GET /api/organos/taxonomy` — `@Secured(IS_AUTHENTICATED)`: the tree of nodes, each node
+  carrying its child nodes **and the Órganos placed in it** (id, name, active state), so a
+  single call fills a filter tree (SPEC-0004 R2, R9). The catalogue is therefore
+  serialisable from two endpoints; that is accepted deliberately — the filter's one-request
+  shape wins over avoiding the overlap with `GET /api/organos`, which stays the flat
+  catalogue view including unclassified Órganos.
 - `GET /api/organos` — the FEAT-0006 catalogue list, its response **extended here** to
   carry each Órgano's placement (node, or unclassified) (SPEC-0004 R8).
 - `/api/admin/taxonomy/**` and the Órgano-classification operations — `@Secured("ADMIN")`:
@@ -131,17 +139,15 @@ flowchart LR
   controllers, and CI enforces conformance (ADR-0010).
 
 ### UI ([ADR-0003](../../architecture/0003-react-router-ui-served-by-backend.md), [ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md))
-- **Órganos browser** — a new main-app section (route + nav entry) available to any
-  authenticated user: a read-only tree of the taxonomy with the Órganos under each node and
-  the catalogue, from which the user selects an Órgano. The selector is built as a reusable
-  component so the future contract-query screens can embed it. No mutation controls are
-  rendered for a `USER`; the server rules remain the real gate (SPEC-0004 R9).
-- **Taxonomy admin** — an `ADMIN`-only section: the tree with create/rename/move/delete
+- **Taxonomy admin** — the only UI here, an `ADMIN`-only section: the tree with create/rename/move/delete
   controls, an assign-to-node action and the unclassified worklist for classifying Órganos,
   and an **import** button that calls FEAT-0006's `POST /api/admin/organos/import` and shows
   the returned outcome (added/refreshed/deactivated, or "already running"). Chrome and
   messages in Galician (SPEC-0001 R6). Admin-only nav gating is cosmetic; `/api/admin/**`
   stays server-gated.
+- **No `USER` section** — a `USER` gains no new route or nav entry from this feature. They
+  reach the taxonomy only through `GET /api/organos/taxonomy`, and will see it rendered
+  when the contratos-list filter arrives.
 
 ## Sequencing (tasks, one small change each)
 1. **Taxonomy node domain model + repository port** — the `TaxonomyNode` aggregate (UUID,
@@ -157,12 +163,10 @@ flowchart LR
 4. **Órgano classification use cases** — `AssignOrganoToNode` (single placement, replaces
    any current), `ClearOrganoNode`, and the unclassified listing. *(SPEC-0004 #17, #18)*
 5. **Taxonomy & classification REST endpoints** — OpenAPI-first: read tree
-   (`GET /api/organos/taxonomy`, authenticated), the placement field on `GET /api/organos`,
-   and the `ADMIN` management + classify + unclassified endpoints under `/api/admin`.
-   *(SPEC-0004 #1, #2, #8, #9, #14–#18)*
-6. **Órganos browser UI** — a read-only main-app section (tree + catalogue + reusable
-   Órgano selector) for any authenticated user. *(SPEC-0004 #2, #8, #9)*
-7. **Taxonomy admin UI** — the `ADMIN` section: manage the tree, classify Órganos, work the
+   (`GET /api/organos/taxonomy`, authenticated, nodes with their Órganos embedded), the
+   placement field on `GET /api/organos`, and the `ADMIN` management + classify +
+   unclassified endpoints under `/api/admin`. *(SPEC-0004 #1, #2, #8, #9, #14–#18)*
+6. **Taxonomy admin UI** — the `ADMIN` section: manage the tree, classify Órganos, work the
    unclassified set, and trigger an import with its outcome. *(SPEC-0004 #1, #10, #14–#18)*
 
 ## Edge cases
@@ -178,9 +182,13 @@ flowchart LR
   node leaves it in only the new node; it is never in two at once (SPEC-0004 #17).
 - **Newly imported Órgano is unclassified** — it appears in the unclassified worklist until
   an admin files it (SPEC-0004 #18).
-- **Read is read-only for a USER** — the browser renders no mutation controls, and every
-  mutation endpoint is `ADMIN`-gated at the server, so a `USER` cannot change the taxonomy
-  or a placement even by calling the API directly (SPEC-0004 #1, #9).
+- **Read is read-only for a USER** — every mutation endpoint is `ADMIN`-gated at the
+  server, so a `USER` calling the API directly cannot change the taxonomy or a placement;
+  they can only `GET /api/organos/taxonomy`. With no `USER` UI here, the server gate is the
+  whole story (SPEC-0004 #1, #9).
+- **Empty taxonomy** — until an admin creates the first node, `GET /api/organos/taxonomy`
+  returns an empty tree and every Órgano is unclassified. The endpoint ships before its
+  consumer, so it must be well-defined in that state rather than assumed non-empty.
 - **Concurrent edits to the tree** — two admins moving/deleting overlapping nodes must not
   corrupt the tree or strand a placement against a just-deleted node; node moves/deletes and
   the reassignment they trigger are applied atomically.

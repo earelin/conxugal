@@ -55,12 +55,13 @@ contract-first in the [OpenAPI document](../../api/openapi.yaml)
     case and guard (SPEC-0004 R11).
 
 **Out of scope (owned by future features):**
-- The **taxonomy of categories, classifying Órganos into it, the unclassified set, and
-  the UI** — the read-only tree a `USER` browses to select an Órgano (SPEC-0004 R9), the
-  admin management tree, the catalogue table, the import-trigger button, and the outcome
+- The **taxonomy of categories, classifying Órganos into it, the unclassified set, its
+  read endpoint, and the admin UI** — the tree read contract of SPEC-0004 R9, the admin
+  management tree, the catalogue table, the import-trigger button, and the outcome
   display (SPEC-0004 R1 write ops, R14–R18) — belong to a separate feature, *FEAT-0007.
   Órganos taxonomy & classification*. This feature stops at the backend contract those
-  screens consume. In particular, `GET /api/organos` here returns each Órgano's name and
+  screens consume. The `USER`-facing tree of R9 is built later still, as the Órgano filter
+  of the contratos list. In particular, `GET /api/organos` here returns each Órgano's name and
   active state; the **taxonomy-placement** field of the R8 view is added by FEAT-0007
   when the placement itself exists.
 - Importing **contracts/tenders** themselves (a different spec), and authentication /
