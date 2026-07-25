@@ -23,6 +23,6 @@ public record OrganoDeContratacion(
   }
 
   public OrganoDeContratacion(String sourceKey, String name) {
-    this(null, sourceKey, name, true);
+    this(null, sourceKey, name, false);
   }
 }

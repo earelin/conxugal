@@ -16,8 +16,9 @@ atomically and idempotently, behind a single-run guard. Governed by
 ## Scope
 - `ImportOrganos` use case: fetch the **entire** source list via `OrganoSource`, then
   reconcile against `OrganoRepository` within a **single transaction** — insert entries
-  with a new source key, refresh matched entries' name **in place**, mark stored
-  entries absent from the source **inactive**, and **reactivate** ones that reappear.
+  with a new source key **starting inactive**, refresh matched entries' name **in
+  place**, mark stored entries absent from the source **inactive**, and **reactivate**
+  ones that reappear.
 - A **single-run guard** owned by the use case so at most one import runs at a time; a
   trigger arriving while an import is in progress returns an "already running" result
   instead of starting a second run.
@@ -27,9 +28,10 @@ atomically and idempotently, behind a single-run guard. Governed by
   failure that writes **nothing**, leaving the catalogue untouched.
 
 ## Acceptance criteria
-- A source entry with a new key is added; an entry matching a stored key refreshes that
-  row's attributes **in place**, preserving its UUID identity and any taxonomy placement.
-  ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #4, #5)
+- A source entry with a new key is added **inactive**; an entry matching a stored key
+  refreshes that row's attributes **in place**, preserving its UUID identity and any
+  taxonomy placement.
+  ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #3, #4, #5)
 - A stored Órgano absent from the source is marked inactive and kept; when it reappears in
   a later run the **same** row is reactivated. (SPEC-0004 #6)
 - Importing the same source list twice adds nothing, creates no duplicate, and changes no

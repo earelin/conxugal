@@ -105,7 +105,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(created.id()).isNotNull();
     assertThat(organoRepository.findAll())
         .extracting(OrganoDeContratacion::sourceKey, OrganoDeContratacion::active)
-        .containsExactly(tuple("consorcio-x", true));
+        .containsExactly(tuple("consorcio-x", false));
   }
 
   @Test

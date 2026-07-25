@@ -44,13 +44,13 @@ class OrganoDeContratacionTest {
   }
 
   @Test
-  void newly_discovered_organo_has_no_id_and_starts_active() {
+  void newly_discovered_organo_has_no_id_and_starts_inactive() {
     OrganoDeContratacion organo =
         new OrganoDeContratacion("xunta-consorcio-galego", "Consorcio Galego");
 
     assertThat(organo.id()).isNull();
     assertThat(organo.sourceKey()).isEqualTo("xunta-consorcio-galego");
     assertThat(organo.name()).isEqualTo("Consorcio Galego");
-    assertThat(organo.active()).isTrue();
+    assertThat(organo.active()).isFalse();
   }
 }
