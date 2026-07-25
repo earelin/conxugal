@@ -25,9 +25,10 @@ import {
   IconPlus,
 } from '@tabler/icons-react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { ROLES } from '../../api/currentUser';
 import { HttpError } from '../../api/httpClient';
 import {
   type CreatedUser,
@@ -67,12 +68,19 @@ function UsersError({ error }: { error: unknown }) {
 }
 
 function PasswordReveal({ created, onDone }: { created: CreatedUser; onDone: () => void }) {
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    passwordInputRef.current?.focus();
+  }, []);
+
   return (
     <Stack gap="md">
       <Alert color="yellow" icon={<IconAlertTriangle size={18} />}>
         {strings.admin.users.passwordWarning}
       </Alert>
       <TextInput
+        ref={passwordInputRef}
         label={strings.admin.users.passwordLabel}
         value={created.initialPassword}
         readOnly
@@ -105,8 +113,8 @@ const createUserSchema = z.object({
     .string()
     .trim()
     .min(1, strings.admin.users.emailRequired)
-    .email(strings.admin.users.emailInvalid),
-  role: z.enum(['USER', 'ADMIN']),
+    .pipe(z.email(strings.admin.users.emailInvalid)),
+  role: z.enum(ROLES),
 });
 
 type CreateUserFormValues = z.infer<typeof createUserSchema>;
@@ -127,7 +135,7 @@ function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
     formState: { errors },
   } = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserSchema),
-    defaultValues: { email: '', role: 'USER' },
+    defaultValues: { email: '', role: ROLES[0] },
   });
 
   function onSubmit(values: CreateUserFormValues) {
@@ -163,12 +171,9 @@ function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
               label={strings.admin.users.roleFieldLabel}
               required
               allowDeselect={false}
-              data={[
-                { value: 'USER', label: strings.roleLabel.USER },
-                { value: 'ADMIN', label: strings.roleLabel.ADMIN },
-              ]}
+              data={ROLES.map((role) => ({ value: role, label: strings.roleLabel[role] }))}
               value={field.value}
-              onChange={(value) => field.onChange(value === 'ADMIN' ? 'ADMIN' : 'USER')}
+              onChange={(value) => field.onChange(value ?? ROLES[0])}
             />
           )}
         />
@@ -236,9 +241,11 @@ function UserRow({ user, isLastEnabledAdmin, isMutating, onToggle }: UserRowProp
     </Button>
   );
 
+  const dimmedCellStyle = user.enabled ? undefined : { opacity: 0.6 };
+
   return (
-    <Table.Tr style={{ opacity: user.enabled ? 1 : 0.6 }}>
-      <Table.Td>
+    <Table.Tr>
+      <Table.Td style={dimmedCellStyle}>
         <Group gap="sm" wrap="nowrap">
           <Avatar radius="xl" color={user.enabled ? 'indigo' : 'gray'}>
             {initialsOf(user.email)}
@@ -246,18 +253,18 @@ function UserRow({ user, isLastEnabledAdmin, isMutating, onToggle }: UserRowProp
           <Text>{user.email}</Text>
         </Group>
       </Table.Td>
-      <Table.Td>
+      <Table.Td style={dimmedCellStyle}>
         <Badge variant="light" color={user.role === 'ADMIN' ? 'indigo' : 'gray'}>
           {strings.roleLabel[user.role]}
         </Badge>
       </Table.Td>
-      <Table.Td>
+      <Table.Td style={dimmedCellStyle}>
         <Badge variant="light" color={user.enabled ? 'green' : 'gray'}>
           {user.enabled ? strings.admin.users.stateEnabled : strings.admin.users.stateDisabled}
         </Badge>
       </Table.Td>
-      <Table.Td>{formatDate(user.createdAt)}</Table.Td>
-      <Table.Td>
+      <Table.Td style={dimmedCellStyle}>{formatDate(user.createdAt)}</Table.Td>
+      <Table.Td style={dimmedCellStyle}>
         {user.lastLoginAt ? (
           formatDate(user.lastLoginAt)
         ) : (
@@ -306,7 +313,7 @@ function UsersTable({ users }: { users: UserAccount[] }) {
         </Alert>
       )}
       <Card withBorder radius="md" padding={0}>
-        <Table>
+        <Table aria-label={strings.admin.users.title}>
           <Table.Thead>
             <Table.Tr>
               <Table.Th>{strings.admin.users.columnPerson}</Table.Th>
