@@ -176,7 +176,8 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
       previousCount = currentCount;
     }
     throw new AssertionError(
-        "Invocation count never stabilised within " + timeout + ", last seen: " + previousCount);
+        "Invocation count never stabilised within %s, last seen: %d"
+            .formatted(timeout, previousCount));
   }
 
   private StreamCollector openStream(String sessionCookie) {
@@ -189,9 +190,8 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
     seedUser(user);
     Response response =
         given(spec)
-            .body(
-                "{\"username\":\"" + user.email() + "\",\"password\":\"" + user.passwordHash()
-                    + "\"}")
+            .body("{\"username\":\"%s\",\"password\":\"%s\"}"
+                .formatted(user.email(), user.passwordHash()))
         .when()
             .post("/login");
     return sessionCookieOf(response);
@@ -249,7 +249,7 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
         Thread.sleep(20);
       }
       throw new AssertionError(
-          "Condition not met within " + timeout + ". Stream so far:\n" + text());
+          "Condition not met within %s. Stream so far:%n%s".formatted(timeout, text()));
     }
 
     void dispose() {
