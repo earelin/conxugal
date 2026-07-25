@@ -51,11 +51,14 @@ function isEmailValid(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function isHttpStatus(error: unknown, status: number): boolean {
+  return error instanceof HttpError && error.status === status;
+}
+
 function UsersError({ error }: { error: unknown }) {
-  const message =
-    error instanceof HttpError && error.status === 403
-      ? strings.admin.users.errorForbidden
-      : strings.admin.users.errorGeneric;
+  const message = isHttpStatus(error, 403)
+    ? strings.admin.users.errorForbidden
+    : strings.admin.users.errorGeneric;
 
   return (
     <Alert color="red" icon={<IconAlertCircle size={18} />} title={strings.admin.users.errorTitle}>
@@ -130,7 +133,7 @@ function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
       {
         onSuccess: onCreated,
         onError: (error) => {
-          if (error instanceof HttpError && error.status === 409) {
+          if (isHttpStatus(error, 409)) {
             setEmailError(strings.admin.users.duplicateEmailError);
           } else {
             setFormError(strings.admin.users.createGenericError);
@@ -280,7 +283,7 @@ function UsersTable({ users }: { users: UserAccount[] }) {
       {
         onError: (error) => {
           setActionError(
-            error instanceof HttpError && error.status === 409
+            isHttpStatus(error, 409)
               ? strings.admin.users.lastAdminError
               : strings.admin.users.toggleGenericError,
           );
