@@ -2,6 +2,10 @@ conxugal:
   contratosdegalicia:
     base-url: https://www.contratosdegalicia.gal
     read-timeout: 10s
+  metrics:
+    stream:
+      sample-interval: 5s
+      heartbeat-interval: 15s
 
 micronaut:
   application:
@@ -57,12 +61,6 @@ micronaut:
       cookie: true
       header: false
     max-inactive-interval: 30m
-
-conxugal:
-  metrics:
-    stream:
-      sample-interval: 5s
-      heartbeat-interval: 15s
 
 datasources:
   default:
