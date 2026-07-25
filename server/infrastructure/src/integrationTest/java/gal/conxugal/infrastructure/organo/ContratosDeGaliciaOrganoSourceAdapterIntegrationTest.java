@@ -113,40 +113,37 @@ class ContratosDeGaliciaOrganoSourceAdapterIntegrationTest implements TestProper
     String base64Body = Base64.getEncoder().encodeToString(body);
     String json =
         """
-        { "request": { "method": "GET", "url": "%%PATH%%" },
+        { "request": { "method": "GET", "url": "%s" },
           "response": {
             "status": 200,
             "headers": { "Content-Type": "text/html;charset=ISO-8859-1" },
-            "base64Body": "%%BODY%%"
+            "base64Body": "%s"
           }
         }
         """
-            .replace("%%PATH%%", PORTADA_PATH)
-            .replace("%%BODY%%", base64Body);
+            .formatted(PORTADA_PATH, base64Body);
     registerMapping(json);
   }
 
   private void stubPortadaWithStatus(int status) throws Exception {
     String json =
         """
-        { "request": { "method": "GET", "url": "%%PATH%%" },
-          "response": { "status": %%STATUS%% }
+        { "request": { "method": "GET", "url": "%s" },
+          "response": { "status": %d }
         }
         """
-            .replace("%%PATH%%", PORTADA_PATH)
-            .replace("%%STATUS%%", String.valueOf(status));
+            .formatted(PORTADA_PATH, status);
     registerMapping(json);
   }
 
   private void stubPortadaWithFault(String fault) throws Exception {
     String json =
         """
-        { "request": { "method": "GET", "url": "%%PATH%%" },
-          "response": { "fault": "%%FAULT%%" }
+        { "request": { "method": "GET", "url": "%s" },
+          "response": { "fault": "%s" }
         }
         """
-            .replace("%%PATH%%", PORTADA_PATH)
-            .replace("%%FAULT%%", fault);
+            .formatted(PORTADA_PATH, fault);
     registerMapping(json);
   }
 
