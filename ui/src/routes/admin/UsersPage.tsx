@@ -200,6 +200,74 @@ function CreateUserModal({ opened, onClose }: { opened: boolean; onClose: () => 
   );
 }
 
+interface UserRowProps {
+  user: UserAccount;
+  isLastEnabledAdmin: boolean;
+  isMutating: boolean;
+  onToggle: (user: UserAccount) => void;
+}
+
+function UserRow({ user, isLastEnabledAdmin, isMutating, onToggle }: UserRowProps) {
+  const toggleButton = (
+    <Button
+      size="xs"
+      variant={user.enabled ? 'default' : 'light'}
+      color={user.enabled ? undefined : 'green'}
+      loading={isMutating}
+      aria-disabled={isLastEnabledAdmin}
+      style={isLastEnabledAdmin ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+      onClick={() => {
+        if (isLastEnabledAdmin) {
+          return;
+        }
+        onToggle(user);
+      }}
+    >
+      {user.enabled ? strings.admin.users.disable : strings.admin.users.enable}
+    </Button>
+  );
+
+  return (
+    <Table.Tr style={{ opacity: user.enabled ? 1 : 0.6 }}>
+      <Table.Td>
+        <Group gap="sm" wrap="nowrap">
+          <Avatar radius="xl" color={user.enabled ? 'indigo' : 'gray'}>
+            {initialsOf(user.email)}
+          </Avatar>
+          <Text>{user.email}</Text>
+        </Group>
+      </Table.Td>
+      <Table.Td>
+        <Badge variant="light" color={user.role === 'ADMIN' ? 'indigo' : 'gray'}>
+          {strings.roleLabel[user.role]}
+        </Badge>
+      </Table.Td>
+      <Table.Td>
+        <Badge variant="light" color={user.enabled ? 'green' : 'gray'}>
+          {user.enabled ? strings.admin.users.stateEnabled : strings.admin.users.stateDisabled}
+        </Badge>
+      </Table.Td>
+      <Table.Td>{formatDate(user.createdAt)}</Table.Td>
+      <Table.Td>
+        {user.lastLoginAt ? (
+          formatDate(user.lastLoginAt)
+        ) : (
+          <Text fs="italic" c="dimmed">
+            {strings.admin.users.never}
+          </Text>
+        )}
+      </Table.Td>
+      <Table.Td ta="right">
+        {isLastEnabledAdmin ? (
+          <Tooltip label={strings.admin.users.lastAdminTooltip}>{toggleButton}</Tooltip>
+        ) : (
+          toggleButton
+        )}
+      </Table.Td>
+    </Table.Tr>
+  );
+}
+
 function UsersTable({ users }: { users: UserAccount[] }) {
   const setEnabled = useSetUserEnabled();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -241,73 +309,15 @@ function UsersTable({ users }: { users: UserAccount[] }) {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {users.map((user) => {
-              const isLastEnabledAdmin =
-                user.role === 'ADMIN' && user.enabled && enabledAdminCount <= 1;
-              const isMutatingThisRow =
-                setEnabled.isPending && setEnabled.variables?.id === user.id;
-
-              const toggleButton = (
-                <Button
-                  size="xs"
-                  variant={user.enabled ? 'default' : 'light'}
-                  color={user.enabled ? undefined : 'green'}
-                  loading={isMutatingThisRow}
-                  aria-disabled={isLastEnabledAdmin}
-                  style={isLastEnabledAdmin ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
-                  onClick={() => {
-                    if (isLastEnabledAdmin) {
-                      return;
-                    }
-                    toggleEnabled(user);
-                  }}
-                >
-                  {user.enabled ? strings.admin.users.disable : strings.admin.users.enable}
-                </Button>
-              );
-
-              return (
-                <Table.Tr key={user.id} style={{ opacity: user.enabled ? 1 : 0.6 }}>
-                  <Table.Td>
-                    <Group gap="sm" wrap="nowrap">
-                      <Avatar radius="xl" color={user.enabled ? 'indigo' : 'gray'}>
-                        {initialsOf(user.email)}
-                      </Avatar>
-                      <Text>{user.email}</Text>
-                    </Group>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge variant="light" color={user.role === 'ADMIN' ? 'indigo' : 'gray'}>
-                      {strings.roleLabel[user.role]}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge variant="light" color={user.enabled ? 'green' : 'gray'}>
-                      {user.enabled
-                        ? strings.admin.users.stateEnabled
-                        : strings.admin.users.stateDisabled}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>{formatDate(user.createdAt)}</Table.Td>
-                  <Table.Td>
-                    {user.lastLoginAt ? (
-                      formatDate(user.lastLoginAt)
-                    ) : (
-                      <Text fs="italic" c="dimmed">
-                        {strings.admin.users.never}
-                      </Text>
-                    )}
-                  </Table.Td>
-                  <Table.Td ta="right">
-                    {isLastEnabledAdmin ? (
-                      <Tooltip label={strings.admin.users.lastAdminTooltip}>{toggleButton}</Tooltip>
-                    ) : (
-                      toggleButton
-                    )}
-                  </Table.Td>
-                </Table.Tr>
-              );
-            })}
+            {users.map((user) => (
+              <UserRow
+                key={user.id}
+                user={user}
+                isLastEnabledAdmin={user.role === 'ADMIN' && user.enabled && enabledAdminCount <= 1}
+                isMutating={setEnabled.isPending && setEnabled.variables?.id === user.id}
+                onToggle={toggleEnabled}
+              />
+            ))}
           </Table.Tbody>
         </Table>
       </Card>
