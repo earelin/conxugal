@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-07-25
 spec: null
 supersedes: null
@@ -9,7 +9,7 @@ superseded_by: null
 # 0014. Wrap outbound source calls in a retrying, self-throttling HTTP client
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 Substantially all of conxugal's data comes from one external site it does not control,
