@@ -7,29 +7,6 @@ spec-driven workflow (`SPEC → FEAT → TASK`). This module implements the back
 decided in `docs/architecture/0001-backend-stack.md` (Micronaut, Java 25, PostgreSQL,
 REST) and `docs/architecture/0002-hexagonal-architecture.md` (the module split below).
 
-## Code style
-
-Java code follows [Google Java Format](https://google.github.io/styleguide/javaguide.html):
-2-space indentation, 100-column line length, no wildcard imports, K&R brace style
-(same-line `{`, `case`/`default` bodies on a new line). This is enforced by
-Checkstyle — `config/checkstyle/checkstyle.xml` is Google's `google_checks.xml` — but
-no formatter is wired into the build, so checkstyle only lints, it doesn't reformat.
-Write new code matching the style directly; run `checkstyleMain`/`checkstyleTest`
-(part of `./gradlew build`) to verify.
-
-Long fluent call chains — notably REST-assured's `given()/when()/then()` in
-`application/src/integrationTest` — are formatted as a staircase: each stage keyword
-sits at the base indent, calls chained onto that stage indent one level (4 spaces)
-deeper, and the next stage keyword steps back out to the base indent:
-
-```java
-given(spec)
-    .header(HttpHeaders.COOKIE, sessionCookie)
-    .body("{}")
-.when()
-    .post("/logout");
-```
-
 ## Commands
 
 Run from `server/` (Gradle wrapper; Java 25 toolchain is pinned in the root

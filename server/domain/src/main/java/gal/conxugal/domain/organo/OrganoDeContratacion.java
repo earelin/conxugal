@@ -15,18 +15,14 @@ import org.jspecify.annotations.Nullable;
  */
 @MappedEntity("organo_contratacion")
 public record OrganoDeContratacion(
-    @Id @GeneratedValue @Nullable UUID id,
-    String sourceKey,
-    String name,
-    @Nullable String acronym,
-    boolean active) {
+    @Id @GeneratedValue @Nullable UUID id, String sourceKey, String name, boolean active) {
 
   public OrganoDeContratacion {
     Objects.requireNonNull(sourceKey, "sourceKey must not be null");
     Objects.requireNonNull(name, "name must not be null");
   }
 
-  public OrganoDeContratacion(String sourceKey, String name, @Nullable String acronym) {
-    this(null, sourceKey, name, acronym, true);
+  public OrganoDeContratacion(String sourceKey, String name) {
+    this(null, sourceKey, name, false);
   }
 }
