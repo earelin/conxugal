@@ -29,7 +29,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ROLES } from '../../api/currentUser';
-import { HttpError } from '../../api/httpClient';
 import {
   type CreatedUser,
   type UserAccount,
@@ -37,23 +36,10 @@ import {
   useSetUserEnabled,
   useUsers,
 } from '../../api/users';
+import { initialsOf } from '../../commons/avatar';
+import { formatDate } from '../../commons/date';
+import { isHttpStatus } from '../../commons/httpError';
 import { strings } from '../../strings';
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('gl-ES', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-function initialsOf(email: string): string {
-  return email.split('@')[0].slice(0, 2).toUpperCase();
-}
-
-function isHttpStatus(error: unknown, status: number): boolean {
-  return error instanceof HttpError && error.status === status;
-}
 
 function UsersError({ error }: { error: unknown }) {
   const message = isHttpStatus(error, 403)
