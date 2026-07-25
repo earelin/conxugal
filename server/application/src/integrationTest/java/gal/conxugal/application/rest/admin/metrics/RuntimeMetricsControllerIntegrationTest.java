@@ -190,8 +190,10 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
     seedUser(user);
     Response response =
         given(spec)
-            .body("{\"username\":\"%s\",\"password\":\"%s\"}"
-                .formatted(user.email(), user.passwordHash()))
+            .body(
+                """
+                {"username":"%s","password":"%s"}\
+                """.formatted(user.email(), user.passwordHash()))
         .when()
             .post("/login");
     return sessionCookieOf(response);
