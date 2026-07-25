@@ -55,7 +55,7 @@ class ContratosDeGaliciaOrganoSourceAdapterIntegrationTest implements TestProper
   @BeforeEach
   void resetStubs() throws Exception {
     adminClient.send(
-        HttpRequest.newBuilder(URI.create(wireMock.getBaseUrl() + "/__admin/reset"))
+        HttpRequest.newBuilder(URI.create("%s/__admin/reset".formatted(wireMock.getBaseUrl())))
             .POST(HttpRequest.BodyPublishers.noBody())
             .build(),
         HttpResponse.BodyHandlers.discarding());
@@ -65,7 +65,9 @@ class ContratosDeGaliciaOrganoSourceAdapterIntegrationTest implements TestProper
   void returns_the_organos_list_decoded_from_the_stubbed_source() throws Exception {
     String accentedName = "Consello Galego de Relacións Laborais e Función Pública";
     String optionsHtml =
-        PLACEHOLDER + option("512", accentedName) + paddingOptions(MIN_EXPECTED_ORGANOS);
+        "%s%s%s"
+            .formatted(
+                PLACEHOLDER, option("512", accentedName), paddingOptions(MIN_EXPECTED_ORGANOS));
     stubPortadaWithBody(portadaHtml(optionsHtml));
 
     List<OrganoSourceEntry> entries = organoSource.fetchAll();
@@ -100,7 +102,7 @@ class ContratosDeGaliciaOrganoSourceAdapterIntegrationTest implements TestProper
 
   @Test
   void throws_when_the_stubbed_organos_list_is_implausibly_small() throws Exception {
-    String optionsHtml = PLACEHOLDER + option("48", "Academia Galega");
+    String optionsHtml = "%s%s".formatted(PLACEHOLDER, option("48", "Academia Galega"));
     stubPortadaWithBody(portadaHtml(optionsHtml));
 
     assertThatThrownBy(organoSource::fetchAll)
@@ -149,7 +151,7 @@ class ContratosDeGaliciaOrganoSourceAdapterIntegrationTest implements TestProper
 
   private void registerMapping(String mappingJson) throws Exception {
     adminClient.send(
-        HttpRequest.newBuilder(URI.create(wireMock.getBaseUrl() + "/__admin/mappings"))
+        HttpRequest.newBuilder(URI.create("%s/__admin/mappings".formatted(wireMock.getBaseUrl())))
             .POST(HttpRequest.BodyPublishers.ofString(mappingJson))
             .header("Content-Type", "application/json")
             .build(),
@@ -157,17 +159,17 @@ class ContratosDeGaliciaOrganoSourceAdapterIntegrationTest implements TestProper
   }
 
   private static String portadaHtml(String optionsHtml) {
-    return "<html><body><select id=\"organoA\">" + optionsHtml + "</select></body></html>";
+    return "<html><body><select id=\"organoA\">%s</select></body></html>".formatted(optionsHtml);
   }
 
   private static String option(String value, String text) {
-    return "<option value='" + value + "'>" + text + "</option>";
+    return "<option value='%s'>%s</option>".formatted(value, text);
   }
 
   private static String paddingOptions(int count) {
     StringBuilder builder = new StringBuilder();
     for (int i = 0; i < count; i++) {
-      builder.append(option("pad-" + i, "Padding Body " + i));
+      builder.append(option("pad-%d".formatted(i), "Padding Body %d".formatted(i)));
     }
     return builder.toString();
   }
