@@ -16,6 +16,9 @@ reformat. Write new code matching the style directly; run `checkstyleMain`/
 Prefer `.formatted()` over `+` concatenation for strings mixing literal text and
 variables, e.g. `"%s/%s".formatted(base, path)`.
 
+Prefer a text block (`"""..."""`) over a regular string literal whenever it avoids
+escape characters — e.g. a literal containing `"` (JSON, HTML, quoted attributes).
+
 Long fluent call chains — notably REST-assured's `given()/when()/then()` in
 `server/application/src/integrationTest` — are formatted as a staircase: each stage
 keyword sits at the base indent, calls chained onto that stage indent one level
