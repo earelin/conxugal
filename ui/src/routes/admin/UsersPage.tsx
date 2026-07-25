@@ -25,6 +25,7 @@ import {
   IconPlus,
 } from '@tabler/icons-react';
 import { type FormEvent, useState } from 'react';
+import type { Role } from '../../api/currentUser';
 import { HttpError } from '../../api/httpClient';
 import {
   type CreatedUser,
@@ -108,7 +109,7 @@ interface CreateUserFormProps {
 
 function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'USER' | 'ADMIN'>('USER');
+  const [role, setRole] = useState<Role>('USER');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const createUser = useCreateUser();
