@@ -95,6 +95,26 @@ class ImportOrganosTest {
   }
 
   @Test
+  void collapses_duplicate_source_keys_in_one_payload_into_single_insert() {
+    FakeOrganoRepository repository = new FakeOrganoRepository();
+    ImportOrganos importOrganos =
+        new ImportOrganos(
+            () ->
+                List.of(
+                    new OrganoSourceEntry("consorcio-x", "First Name"),
+                    new OrganoSourceEntry("consorcio-x", "Last Name")),
+            repository);
+
+    ImportOutcome outcome = importOrganos.run();
+
+    assertThat(outcome.status()).isEqualTo(ImportOutcome.Status.SUCCESS);
+    assertThat(outcome.added()).isEqualTo(1);
+    assertThat(repository.findAll())
+        .singleElement()
+        .satisfies(organo -> assertThat(organo.name()).isEqualTo("Last Name"));
+  }
+
+  @Test
   void marks_stored_entry_absent_from_the_source_inactive_and_keeps_it() {
     FakeOrganoRepository repository = new FakeOrganoRepository();
     OrganoDeContratacion stored = repository.seed("consorcio-x", "Consorcio X", true);

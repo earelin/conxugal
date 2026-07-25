@@ -7,10 +7,12 @@
   <Match>
     <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
   </Match>
-  <!-- False positive: OrganoRepository is a stateless port, constructor-stored like every
-       other use case's collaborators, not a leaked mutable data holder. -->
+  <!-- False positive: SpotBugs' MutableClasses heuristic treats OrganoRepository as mutable
+       purely because it declares an insert(...) method, not because this field actually leaks
+       mutable state — it is a stateless port, constructor-stored like any other collaborator. -->
   <Match>
     <Class name="gal.conxugal.domain.organo.ImportOrganos"/>
+    <Field name="organoRepository"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
 </FindBugsFilter>
