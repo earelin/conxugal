@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0004
-adrs: [0001, 0002, 0005, 0006, 0008, 0010, 0011]
+adrs: [0001, 0002, 0005, 0006, 0008, 0010, 0011, 0014]
 status: draft
 ---
 
@@ -169,6 +169,13 @@ flowchart LR
    (`ADMIN`-only, returns the outcome). *(SPEC-0004 #1, #10, #12)*
 6. **Scheduled import trigger** — a `@Scheduled` job running the import on a recurring,
    configurable interval through the same use case and guard. *(SPEC-0004 #11, #12)*
+7. **Resilient, self-throttling outbound HTTP client** — the shared client every source
+   adapter calls through: retry on transient failures, rate limiting, circuit breaking,
+   an identifying `User-Agent`, and `Retry-After` support, per ADR-0014. Adds the
+   capability without touching any adapter. *(SPEC-0004 #13)*
+8. **Adopt the resilient client in the source adapter** — move the Órganos adapter onto
+   that client, count an unusable response against the breaker, and add the ArchUnit rule
+   that makes bypassing the policy a build failure. *(SPEC-0004 #3, #13)*
 
 ## Edge cases
 - **Source unreachable or unusable** — the whole run fails before any write; the stored
