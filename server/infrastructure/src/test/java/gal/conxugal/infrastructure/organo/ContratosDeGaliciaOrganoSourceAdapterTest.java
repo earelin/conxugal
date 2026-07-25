@@ -118,6 +118,19 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
   }
 
   @Test
+  void throws_when_the_source_responds_with_an_empty_body() {
+    when(httpClient.toBlocking()).thenReturn(blockingHttpClient);
+    when(blockingHttpClient.exchange(portadaRequest(), eq(byte[].class))).thenReturn(response);
+    when(response.body()).thenReturn(null);
+    ContratosDeGaliciaOrganoSourceAdapter adapter =
+        new ContratosDeGaliciaOrganoSourceAdapter(httpClient);
+
+    assertThatThrownBy(adapter::fetchAll)
+        .isInstanceOf(OrganoSourceUnavailableException.class)
+        .hasNoCause();
+  }
+
+  @Test
   void throws_when_the_organoa_select_is_not_on_the_page() {
     ContratosDeGaliciaOrganoSourceAdapter adapter =
         adapterReturning("<html><body><p>unexpected page</p></body></html>");
@@ -151,17 +164,17 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
   }
 
   private static String portadaHtml(String optionsHtml) {
-    return "<html><body><select id=\"organoA\">" + optionsHtml + "</select></body></html>";
+    return "<html><body><select id=\"organoA\">%s</select></body></html>".formatted(optionsHtml);
   }
 
   private static String option(String value, String text) {
-    return "<option value='" + value + "'>" + text + "</option>";
+    return "<option value='%s'>%s</option>".formatted(value, text);
   }
 
   private static String paddingOptions(int count) {
     StringBuilder builder = new StringBuilder();
     for (int i = 0; i < count; i++) {
-      builder.append(option("pad-" + i, "Padding Body " + i));
+      builder.append(option("pad-%d".formatted(i), "Padding Body %d".formatted(i)));
     }
     return builder.toString();
   }

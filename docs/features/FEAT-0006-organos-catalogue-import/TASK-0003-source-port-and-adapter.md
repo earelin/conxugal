@@ -25,6 +25,10 @@ executor per [ADR-0011](../../architecture/0011-blocking-io-virtual-threads.md).
 - Signal a clear, typed failure when the source is unreachable or returns an unusable
   response (including an empty or implausibly small list — see the feature's edge cases),
   rather than returning a partial/empty success.
+- A follow-up migration on the `organo_contratacion` table (created by TASK-0002) drops
+  the `acronym` column — the source's trailing `(XXXX)` convention has no deterministic
+  rule for telling an acronym apart from an ordinary parenthetical qualifier — and flips
+  `active`'s default to `false`, so a newly discovered Órgano starts inactive.
 
 ## Acceptance criteria
 - The adapter returns each published Órgano as (`sourceKey`, `name`), decoding

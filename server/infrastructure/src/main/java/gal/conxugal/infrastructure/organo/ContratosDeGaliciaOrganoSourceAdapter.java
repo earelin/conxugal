@@ -14,7 +14,6 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,16 +56,14 @@ public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
     Element select = document.selectFirst(SELECT_SELECTOR);
     if (select == null) {
       throw new OrganoSourceUnavailableException(
-          "Órganos list not found on the source page: no " + SELECT_SELECTOR + " element");
+          "Órganos list not found on the source page: no %s element".formatted(SELECT_SELECTOR));
     }
 
     List<OrganoSourceEntry> entries = parseEntries(select);
     if (entries.size() < MIN_EXPECTED_ORGANOS) {
       throw new OrganoSourceUnavailableException(
-          "Órganos list is implausibly small: got "
-              + entries.size()
-              + " entries, expected at least "
-              + MIN_EXPECTED_ORGANOS);
+          "Órganos list is implausibly small: got %d entries, expected at least %d"
+              .formatted(entries.size(), MIN_EXPECTED_ORGANOS));
     }
     return entries;
   }
@@ -75,7 +72,7 @@ public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
     try (ByteArrayInputStream in = new ByteArrayInputStream(body)) {
       return Jsoup.parse(in, StandardCharsets.ISO_8859_1.name(), PORTADA_PATH);
     } catch (IOException e) {
-      throw new UncheckedIOException(e);
+      throw new OrganoSourceUnavailableException("Source response could not be parsed", e);
     }
   }
 
@@ -90,24 +87,23 @@ public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
       return body;
     } catch (HttpClientResponseException e) {
       throw new OrganoSourceUnavailableException(
-          "Source responded with status " + e.getStatus(), e);
+          "Source responded with status %s".formatted(e.getStatus()), e);
     } catch (HttpClientException e) {
-      throw new OrganoSourceUnavailableException("Source is unreachable: " + e.getMessage(), e);
+      throw new OrganoSourceUnavailableException(
+          "Source is unreachable: %s".formatted(e.getMessage()), e);
     }
   }
 
   /**
-   * The first option of the {@code <select>} is the source's own "Seleccione o organismo..."
-   * placeholder prompt (a blank {@code value}), not a real entry, and is skipped; every other
-   * option's {@code value} is the source's own stable id for that Órgano.
+   * A blank {@code value} — the source's own "Seleccione o organismo..." placeholder prompt is
+   * the only option that has one — is not a real Órgano and is skipped, wherever it appears in
+   * the list.
    */
   private static List<OrganoSourceEntry> parseEntries(Element select) {
-    List<Element> options = select.select("option");
     List<OrganoSourceEntry> entries = new ArrayList<>();
-    for (int i = 0; i < options.size(); i++) {
-      Element option = options.get(i);
+    for (Element option : select.select("option")) {
       String sourceKey = option.attr("value").trim();
-      if (i == 0 && sourceKey.isEmpty()) {
+      if (sourceKey.isEmpty()) {
         continue;
       }
       entries.add(new OrganoSourceEntry(sourceKey, option.text().trim()));

@@ -12,5 +12,11 @@ public record OrganoSourceEntry(String sourceKey, String name) {
   public OrganoSourceEntry {
     Objects.requireNonNull(sourceKey, "sourceKey must not be null");
     Objects.requireNonNull(name, "name must not be null");
+    if (sourceKey.isBlank()) {
+      throw new IllegalArgumentException("sourceKey must not be blank");
+    }
+    if (name.isBlank()) {
+      throw new IllegalArgumentException("name must not be blank");
+    }
   }
 }
