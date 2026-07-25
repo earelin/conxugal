@@ -4,4 +4,7 @@
   <Match>
     <Annotation name="io.micronaut.core.annotation.Generated"/>
   </Match>
+  <Match>
+    <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
+  </Match>
 </FindBugsFilter>

@@ -22,8 +22,8 @@ contract-first. Governed by [ADR-0006](../../architecture/0006-reserved-api-url-
   the `ImportOutcome` (success + added/refreshed/deactivated counts, or "already
   running").
 - `GET /api/organos` — `@Secured(IS_AUTHENTICATED)`: lists the stored catalogue (each
-  body's name, acronym when present, and active state) for any authenticated user.
-  Deliberately **not** under `/api/admin/`.
+  body's name and active state) for any authenticated user. Deliberately **not** under
+  `/api/admin/`.
 
 ## Acceptance criteria
 - As an `ADMIN`, `POST /api/admin/organos/import` runs an import and returns success with
@@ -32,7 +32,7 @@ contract-first. Governed by [ADR-0006](../../architecture/0006-reserved-api-url-
 - A `USER` or unauthenticated caller to `POST /api/admin/organos/import` is denied
   (403 / 401). (SPEC-0004 #1)
 - As an authenticated `USER` or `ADMIN`, `GET /api/organos` returns the catalogue list
-  with each body's name, acronym, and active state. (SPEC-0004 #2, #3, #8)
+  with each body's name and active state. (SPEC-0004 #2, #3, #8)
 - An unauthenticated caller to `GET /api/organos` is denied (401). (SPEC-0004 #2)
 - The implementation conforms to `docs/api/openapi.yaml` (enforced by the CI contract
   test), and the endpoints are integration-tested over HTTP.

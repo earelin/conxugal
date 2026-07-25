@@ -16,18 +16,18 @@ Domain only — no JDBC, SQL, connections, or transport.
 
 ## Scope
 - `OrganoDeContratacion` domain aggregate: a system-assigned `id` (UUID) identity, a
-  `sourceKey` (the stable key reconciliation matches on), a `name`, an optional `acronym`,
-  and an `active` boolean. It carries the Micronaut Data mapping annotations
-  (`@MappedEntity`, `@Id`, etc.) for its single table.
+  `sourceKey` (the stable key reconciliation matches on), a `name`, and an `active`
+  boolean. It carries the Micronaut Data mapping annotations (`@MappedEntity`, `@Id`,
+  etc.) for its single table.
 - `OrganoRepository` port (in `domain`): `findAll()`, `findBySourceKey(...)` (or a bulk
   `findAllBySourceKeyIn(...)` for reconciliation), `insert(...)`, an **update-in-place**
-  for an existing row's name/acronym/active, and `setActive(...)`.
+  for an existing row's name/active, and `setActive(...)`.
 - The port shape must let reconciliation add, refresh, deactivate, and reactivate by
   matching on `sourceKey` **without** any delete-and-reinsert.
 
 ## Acceptance criteria
-- The aggregate carries a UUID identity, an opaque stable `sourceKey`, a `name`, an
-  optional `acronym`, and an `active` state. ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #4)
+- The aggregate carries a UUID identity, an opaque stable `sourceKey`, a `name`, and an
+  `active` state. ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #4)
 - The repository port exposes read-all, lookup-by-source-key, insert, in-place update, and
   set-active — sufficient to add new, refresh existing in place, deactivate absent, and
   reactivate returning bodies without deleting rows. (SPEC-0004 #4, #5, #6)

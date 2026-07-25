@@ -9,8 +9,8 @@ status: draft
 The system builds and maintains its own catalogue of the **Órganos de Contratación**
 (contracting bodies) of the Xunta de Galicia by importing the list published by the
 official source, [contratosdegalicia.gal](https://www.contratosdegalicia.gal/portada.jsp),
-and storing it. The source list is flat — each entry is a name, sometimes with an
-acronym — so the system also lets administrators impose structure on it: they organise
+and storing it. The source list is flat — each entry is a name — so the system also
+lets administrators impose structure on it: they organise
 the Órganos into a **multilevel taxonomy** of categories they define (for example, by
 administration level and sector) and view the result as a navigable tree.
 
@@ -47,16 +47,16 @@ features.
 - **R3** — The system imports the list of Órganos de Contratación published by the
   official source and stores each entry as a record in its own catalogue, so the
   catalogue is available independently of the source thereafter.
-- **R4** — Each stored Órgano carries the attributes the source provides — its name and,
-  when present, its acronym — together with a stable identity by which the same Órgano is
-  recognised across successive imports, and an active/inactive state (per R6).
+- **R4** — Each stored Órgano carries the attributes the source provides — its name —
+  together with a stable identity by which the same Órgano is recognised across
+  successive imports, and an active/inactive state (per R6).
 
 ### Identity and reconciliation
 
 - **R5** — A re-import reconciles against the stored catalogue rather than replacing it:
-  an Órgano new to the source is added; an Órgano already stored is matched by its stable
-  identity and its source-derived attributes are refreshed. Matching an existing Órgano
-  never changes or discards its taxonomy placement.
+  an Órgano new to the source is added and starts **inactive**; an Órgano already stored
+  is matched by its stable identity and its source-derived attributes are refreshed.
+  Matching an existing Órgano never changes or discards its taxonomy placement.
 - **R6** — An Órgano that was imported previously but is absent from the latest source
   list is retained and marked **inactive**; it keeps its taxonomy placement and is never
   deleted. If it reappears in a later import it is returned to **active**.
@@ -67,8 +67,8 @@ features.
 ### Reading and selecting Órganos
 
 - **R8** — Any authenticated user can view the stored catalogue: a list of all Órganos
-  showing, for each, its name, its acronym (when present), its active/inactive state, and
-  its current taxonomy placement (or that it is unclassified).
+  showing, for each, its name, its active/inactive state, and its current taxonomy
+  placement (or that it is unclassified).
 - **R9** — Any authenticated user can browse the taxonomy as a navigable tree of category
   nodes with the Órganos placed within each node, and select an Órgano from it — for
   example, to query contracts by that Órgano. For a `USER` this tree is read-only: it
@@ -116,8 +116,9 @@ features.
    assigning/clearing an Órgano's node — is denied; an authenticated `ADMIN` is allowed.
 2. **(R2)** An authenticated `USER` can read the catalogue and browse the taxonomy tree;
    an unauthenticated visitor that requests either is denied.
-3. **(R3, R8)** After an import from the source completes, a user viewing the catalogue
-   sees every Órgano from the source list stored with its name and acronym.
+3. **(R3, R5, R8)** After an import from the source completes, a user viewing the
+   catalogue sees every Órgano from the source list stored with its name; an Órgano new
+   to that import is stored **inactive**.
 4. **(R4, R5)** Re-importing after an Órgano's source attributes change updates that
    Órgano in place — its stable identity and its taxonomy placement are unchanged while
    the refreshed attributes are shown.
@@ -128,9 +129,8 @@ features.
    later import that includes it again shows it active.
 7. **(R7)** Running two imports of the same source list in succession yields the same
    catalogue with no duplicate Órganos and no change to states or placements.
-8. **(R8)** The catalogue view shows, for every Órgano, its name, its acronym (when
-   present), its active/inactive state, and its taxonomy placement (or that it is
-   unclassified).
+8. **(R8)** The catalogue view shows, for every Órgano, its name, its active/inactive
+   state, and its taxonomy placement (or that it is unclassified).
 9. **(R9)** A user can browse the taxonomy tree and select an Órgano from it; the tree
    presented to a `USER` offers no control to create, rename, move, delete, or reassign
    anything.
