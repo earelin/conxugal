@@ -13,6 +13,9 @@ dependencies {
     annotationProcessor(libs.micronaut.data.processor)
     runtimeOnly(libs.postgresql)
 
+    implementation(libs.micronaut.http.client)
+    implementation(libs.jsoup)
+
     implementation(libs.bouncycastle.provider)
 
     runtimeOnly(libs.micronaut.flyway)
@@ -20,6 +23,7 @@ dependencies {
     runtimeOnly(libs.flyway.database.postgresql)
 
     testImplementation(libs.assertj.core)
+    testImplementation(libs.mockito.junit.jupiter)
 }
 
 micronaut {
@@ -44,6 +48,9 @@ testing {
                 implementation(libs.testcontainers.postgresql)
                 implementation(libs.assertj.core)
                 implementation(libs.assertj.db)
+                implementation(libs.micronaut.http.client)
+                implementation(libs.micronaut.serde.jackson)
+                implementation(libs.wiremock.testcontainers)
             }
 
             targets {

@@ -67,9 +67,9 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
-  void finds_all_stored_organos_with_name_acronym_and_active_state() throws Exception {
-    insertOrgano("consorcio-x", "Consorcio X", "CX", true);
-    insertOrgano("axencia-y", "Axencia Y", null, false);
+  void finds_all_stored_organos_with_name_and_active_state() throws Exception {
+    insertOrgano("consorcio-x", "Consorcio X", true);
+    insertOrgano("axencia-y", "Axencia Y", false);
 
     List<OrganoDeContratacion> organos = organoRepository.findAll();
 
@@ -77,18 +77,16 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
         .extracting(
             OrganoDeContratacion::sourceKey,
             OrganoDeContratacion::name,
-            OrganoDeContratacion::acronym,
             OrganoDeContratacion::active)
         .containsExactlyInAnyOrder(
-            tuple("consorcio-x", "Consorcio X", "CX", true),
-            tuple("axencia-y", "Axencia Y", null, false));
+            tuple("consorcio-x", "Consorcio X", true), tuple("axencia-y", "Axencia Y", false));
   }
 
   @Test
   void finds_organos_matching_given_source_keys() throws Exception {
-    insertOrgano("consorcio-x", "Consorcio X", "CX", true);
-    insertOrgano("axencia-y", "Axencia Y", null, true);
-    insertOrgano("concello-z", "Concello Z", "CZ", true);
+    insertOrgano("consorcio-x", "Consorcio X", true);
+    insertOrgano("axencia-y", "Axencia Y", true);
+    insertOrgano("concello-z", "Concello Z", true);
 
     List<OrganoDeContratacion> organos =
         organoRepository.findAllBySourceKeyIn(List.of("consorcio-x", "concello-z"));
@@ -100,21 +98,20 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void inserts_an_organo_with_database_generated_id() {
-    OrganoDeContratacion newOrgano =
-        new OrganoDeContratacion("consorcio-x", "Consorcio X", "CX");
+    OrganoDeContratacion newOrgano = new OrganoDeContratacion("consorcio-x", "Consorcio X");
 
     OrganoDeContratacion created = organoRepository.insert(newOrgano);
 
     assertThat(created.id()).isNotNull();
     assertThat(organoRepository.findAll())
         .extracting(OrganoDeContratacion::sourceKey, OrganoDeContratacion::active)
-        .containsExactly(tuple("consorcio-x", true));
+        .containsExactly(tuple("consorcio-x", false));
   }
 
   @Test
   void rejects_inserting_duplicate_source_key_without_altering_the_existing_row()
       throws Exception {
-    insertOrgano("consorcio-x", "Consorcio X", "CX", true);
+    insertOrgano("consorcio-x", "Consorcio X", true);
     // The injected DataSource is Micronaut Data's connection-context-aware proxy, so
     // dataSource.getConnection() here shares the same underlying connection as the
     // repository call below, not a fresh one from the pool. Committing now is what lets
@@ -123,8 +120,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     try (Connection connection = dataSource.getConnection()) {
       connection.commit();
     }
-    OrganoDeContratacion duplicate =
-        new OrganoDeContratacion("consorcio-x", "Other Name", "OTH");
+    OrganoDeContratacion duplicate = new OrganoDeContratacion("consorcio-x", "Other Name");
 
     assertThatThrownBy(() -> organoRepository.insert(duplicate))
         .isInstanceOf(RuntimeException.class);
@@ -138,53 +134,38 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     AssertDbConnection assertDbConnection = AssertDbConnectionFactory.of(dataSource).create();
     Table organos = assertDbConnection.table("organo_contratacion").build();
     assertThat(organos).hasNumberOfRows(1);
-    assertThat(organos).row(0)
-        .value("name").isEqualTo("Consorcio X")
-        .value("acronym").isEqualTo("CX");
+    assertThat(organos).row(0).value("name").isEqualTo("Consorcio X");
   }
 
   @Test
-  void updates_name_acronym_and_active_on_the_existing_row_matched_by_id() throws Exception {
-    UUID id = insertOrgano("consorcio-x", "Consorcio X", "CX", true);
+  void updates_name_and_active_on_the_existing_row_matched_by_id() throws Exception {
+    UUID id = insertOrgano("consorcio-x", "Consorcio X", true);
 
-    organoRepository.update(id, "Consorcio X Renamed", "CXR", false);
+    organoRepository.update(id, "Consorcio X Renamed", false);
 
     OrganoDeContratacion updated =
         organoRepository.findAllBySourceKeyIn(List.of("consorcio-x")).get(0);
     assertThat(updated.id()).isEqualTo(id);
     assertThat(updated.sourceKey()).isEqualTo("consorcio-x");
     assertThat(updated.name()).isEqualTo("Consorcio X Renamed");
-    assertThat(updated.acronym()).isEqualTo("CXR");
     assertThat(updated.active()).isFalse();
   }
 
   @Test
   void update_preserves_other_stored_rows() throws Exception {
-    insertOrgano("consorcio-x", "Consorcio X", "CX", true);
-    UUID otherId = insertOrgano("axencia-y", "Axencia Y", null, true);
+    insertOrgano("consorcio-x", "Consorcio X", true);
+    UUID otherId = insertOrgano("axencia-y", "Axencia Y", true);
 
-    organoRepository.update(otherId, "Axencia Y Renamed", "AY", true);
+    organoRepository.update(otherId, "Axencia Y Renamed", true);
 
     OrganoDeContratacion untouched =
         organoRepository.findAllBySourceKeyIn(List.of("consorcio-x")).get(0);
     assertThat(untouched.name()).isEqualTo("Consorcio X");
-    assertThat(untouched.acronym()).isEqualTo("CX");
   }
 
   @Test
-  void update_clears_previously_set_acronym() throws Exception {
-    UUID id = insertOrgano("consorcio-x", "Consorcio X", "CX", true);
-
-    organoRepository.update(id, "Consorcio X", null, true);
-
-    OrganoDeContratacion updated =
-        organoRepository.findAllBySourceKeyIn(List.of("consorcio-x")).get(0);
-    assertThat(updated.acronym()).isNull();
-  }
-
-  @Test
-  void toggles_the_active_state_without_touching_name_or_acronym() throws Exception {
-    UUID id = insertOrgano("consorcio-x", "Consorcio X", "CX", true);
+  void toggles_the_active_state_without_touching_name() throws Exception {
+    UUID id = insertOrgano("consorcio-x", "Consorcio X", true);
 
     organoRepository.updateActive(id, false);
 
@@ -192,7 +173,6 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
         organoRepository.findAllBySourceKeyIn(List.of("consorcio-x")).get(0);
     assertThat(deactivated.active()).isFalse();
     assertThat(deactivated.name()).isEqualTo("Consorcio X");
-    assertThat(deactivated.acronym()).isEqualTo("CX");
 
     organoRepository.updateActive(id, true);
 
@@ -203,8 +183,8 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void set_active_only_changes_the_matched_row() throws Exception {
-    UUID id = insertOrgano("consorcio-x", "Consorcio X", "CX", true);
-    insertOrgano("axencia-y", "Axencia Y", null, true);
+    UUID id = insertOrgano("consorcio-x", "Consorcio X", true);
+    insertOrgano("axencia-y", "Axencia Y", true);
 
     organoRepository.updateActive(id, false);
 
@@ -213,17 +193,15 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(untouched.active()).isTrue();
   }
 
-  private UUID insertOrgano(String sourceKey, String name, String acronym, boolean active)
-      throws Exception {
+  private UUID insertOrgano(String sourceKey, String name, boolean active) throws Exception {
     String sql =
-        "INSERT INTO organo_contratacion (id, source_key, name, acronym, active) "
-            + "VALUES (uuidv7(), ?, ?, ?, ?) RETURNING id";
+        "INSERT INTO organo_contratacion (id, source_key, name, active) "
+            + "VALUES (uuidv7(), ?, ?, ?) RETURNING id";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, sourceKey);
       statement.setString(2, name);
-      statement.setString(3, acronym);
-      statement.setBoolean(4, active);
+      statement.setBoolean(3, active);
       try (ResultSet resultSet = statement.executeQuery()) {
         if (!resultSet.next()) {
           throw new IllegalStateException("Insert did not return a generated id");
