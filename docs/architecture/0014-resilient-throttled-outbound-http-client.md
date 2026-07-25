@@ -1,7 +1,7 @@
 ---
 status: proposed
 date: 2026-07-25
-spec: SPEC-0004
+spec: null
 supersedes: null
 superseded_by: null
 ---
@@ -12,42 +12,48 @@ superseded_by: null
 Proposed
 
 ## Context
-conxugal's data comes from a single external site it does not control,
-contratosdegalicia.gal. The outbound client that reaches it — built by a `@Factory` in
-`infrastructure` and driven by the Órganos source adapter
-([TASK-0003](../features/FEAT-0006-organos-catalogue-import/TASK-0003-source-port-and-adapter.md))
-— sets a read timeout and nothing else. It sends one request, and any failure of that
-request becomes a failed import.
+Substantially all of conxugal's data comes from one external site it does not control,
+contratosdegalicia.gal, and it will ask that site for several different things: a page
+scraped for a catalogue, searches issued per query, result sets walked page by page, detail
+documents fetched one per record. What differs between those is the request shape and the
+parsing behind it. What does not differ is the relationship — we are an automated client of
+somebody else's server, repeatedly, unattended, on a schedule, and that server owes us
+nothing.
 
-Three gaps follow from that, and all three get worse rather than better as the product grows.
+The outbound client every one of those requests runs through — built by a `@Factory` in
+`infrastructure` and today driven by a single source adapter — sets a read timeout and
+nothing else. Three gaps follow, and all three get worse rather than better as the number of
+request kinds grows.
 
 **Transient faults are indistinguishable from permanent ones.** A dropped connection, a
 momentary 503 during the source's own maintenance window, or a read timeout under load all
-surface as the same typed failure as a genuinely missing page. Once the import runs
-unattended overnight
-([TASK-0006](../features/FEAT-0006-organos-catalogue-import/TASK-0006-scheduled-import-trigger.md)),
-a single packet loss at 04:00 means a day with no refreshed catalogue and nobody watching.
-The cheapest correct answer — try again in a moment — is not available anywhere in the stack.
+surface as the same typed failure as a genuinely missing page. Once these runs happen
+unattended and overnight, a single packet loss at 04:00 costs a whole run with nobody
+watching — and the more requests a run makes, the likelier it is that at least one of them
+meets a blip. The cheapest correct answer — try again in a moment — is not available
+anywhere in the stack.
 
-**Nothing paces us.** Today the Órganos import is one `GET` per run, so the site cannot
-tell us apart from a browser. That is temporary. The contract ingestion this platform
-exists for fans out to a request per Órgano or per result page — hundreds to thousands of
-requests, issued as fast as the JVM can make them, at whatever hour the scheduler fires.
-A public administration site with no published rate limits does not respond to that with a
-`429`; it responds with an IP block, and we would find out days later when the catalogue
-silently stopped refreshing. That ingestion has no spec or feature yet, which is precisely
-why this is the moment to decide: the policy is cheap to establish while one adapter exists
-and expensive to retrofit across several.
+**Nothing paces us.** Today there is one request per run, so the site cannot tell us apart
+from a browser. That is temporary and not a design we chose: as soon as a run issues a
+request per record or per result page, it becomes hundreds to thousands of requests fired as
+fast as the JVM can make them, at whatever hour the scheduler starts. A public administration
+site with no published rate limits does not answer that with a `429`; it answers with an IP
+block, and we find out days later when data silently stopped arriving. Crucially, that block
+is not scoped to the request kind that caused it — one impolite adapter costs us every other
+adapter too, which is why pacing has to be a property of the client rather than of whoever
+happens to be using it.
 
 **We are anonymous.** The client sends no identifying `User-Agent`. An operator looking at
 their access log sees unattributed automated traffic with no way to contact whoever is
 generating it. Their only available response is to block it.
 
-None of this is specific to the Órganos adapter. Every driven adapter that speaks HTTP to
-an external source — the ones that exist and the ones FEAT-0007 and contract ingestion will
-add — needs the same answer, and it should not be a decision each one re-makes. That makes
-it a cross-cutting pattern on the driven side of
-[ADR-0002](0002-hexagonal-architecture.md)'s hexagon, and a decision to record once.
+None of this is specific to any one adapter or any one kind of request, and none of it is
+worth deciding more than once. Every driven adapter that speaks HTTP to an external source
+faces the same three gaps and should inherit the same answer, which makes this a
+cross-cutting pattern on the driven side of
+[ADR-0002](0002-hexagonal-architecture.md)'s hexagon. It is also cheapest to settle now,
+while one adapter exists: the policy costs little to establish once and a great deal to
+retrofit across several.
 
 Two existing decisions shape the available options.
 [ADR-0011](0011-blocking-io-virtual-threads.md) already runs all I/O blocking on virtual
@@ -141,9 +147,10 @@ Resilience4j's defaults, and is recorded so that enabling it later is understood
 reopening this decision rather than tuning a knob.
 
 **The decorator sits below parsing, above transport.** Source adapters keep the contract
-they have today: they parse and validate the response, and the domain-level failure
-(`OrganoSourceUnavailableException` and its future siblings) remains the only exception
-type that escapes them.
+they have today: each parses and validates the response it knows how to read, and the domain
+failure declared by its own port remains the only exception type that escapes it. Adapters
+differ in what they request and how they interpret it; they do not differ in how they treat
+the source, and that is the part this decorator owns.
 
 **"Retryable" and "counts as a breaker failure" are separate properties, and a response can
 be the second without being the first.** A source that answers successfully with the wrong
@@ -156,8 +163,9 @@ the breaker blind to the single signal it most needs, and under fan-out we would
 hammering a site that has already refused us.
 
 So a call **carries the adapter's acceptability check, and the decorator applies it**. A
-response the adapter judges unusable — an implausibly small Órganos list, a page missing the
-structure it must have — is recorded against the breaker as a failure and is **not** retried.
+response the adapter judges unusable — a list implausibly shorter than the source could hold,
+a result page missing the structure it must have, a detail document that parses to nothing —
+is recorded against the breaker as a failure and is **not** retried.
 The check travels into the decorator rather than the breaker travelling out to the adapter:
 the adapter supplies a judgement about its own payload, which is knowledge it alone has,
 while Resilience4j stays wholly inside the decorator and no adapter names a circuit breaker.
@@ -213,9 +221,9 @@ header are decided here rather than left to discovery. It is parsed in **both** 
 `HttpHeaders.findDate` — because a date-form header met by integer parsing throws from
 inside the retry machinery, where nothing is positioned to handle it. And the value is
 **clamped to a configured maximum**: a source answering `Retry-After: 3600` during a
-maintenance window is being honest, but honouring it literally parks the overnight import
-for an hour per attempt, producing a run that looks alive for three hours and returns
-nothing. Beyond the clamp the call **aborts rather than waits**, so the run fails while
+maintenance window is being honest, but honouring it literally parks an overnight run for an
+hour per attempt — and a run that makes many requests can meet that header repeatedly,
+turning one maintenance window into a job that looks alive for hours and returns nothing. Beyond the clamp the call **aborts rather than waits**, so the run fails while
 someone can still read the log and understand why. Absent the header, the wait is
 exponential backoff **with jitter** — jitter is mandatory, not a refinement, because an
 unjittered curve re-synchronises a fanned-out batch into a second simultaneous burst.
@@ -287,8 +295,8 @@ here.
 
 ### Pros
 - Transient faults stop costing whole overnight runs. The most common real failure — a
-  momentary network or 5xx blip — is absorbed silently instead of producing a stale
-  catalogue and a morning investigation.
+  momentary network or 5xx blip — is absorbed silently instead of producing stale data and a
+  morning investigation, and the benefit grows with every additional request a run makes.
 - The pacing cannot be outrun by retries. Because the limiter is innermost, the ordering
   makes that a structural property of the composition rather than something each adapter
   has to be careful about.
@@ -318,10 +326,10 @@ here.
   because that documentation targets a framework version we are past. The programmatic API
   is the library's stable core so the risk is low, but we forgo the annotation ergonomics
   and inherit no upstream guidance for this combination.
-- **The circuit breaker is close to inert today.** One request per daily run will never
-  reach a meaningful `minimumNumberOfCalls`, and its open-state duration is meaningless
-  across runs that are a day apart. It is configured now so the policy does not have to be
-  reopened when fan-out arrives — but until then it is machinery that earns nothing.
+- **The circuit breaker is close to inert until more request kinds exist.** A run making a
+  single request will never reach a meaningful `minimumNumberOfCalls`, and the open-state
+  duration is meaningless across runs a day apart. It is configured now so the policy need
+  not be reopened once runs fan out — but until then it is machinery that earns nothing.
 - Retry being outermost means one logical failure records **several** failures in the
   breaker's window. That is the right accounting for an outbound client, where each attempt
   really was a failed call, but the thresholds only make sense when read with that in mind.
@@ -329,15 +337,17 @@ here.
   [ADR-0011](0011-blocking-io-virtual-threads.md), but not free, and a maximum wait set too
   generously converts a fast, visible failure into a slow, silent one.
 - Another layer between adapter and transport is **another thing to reason about** when
-  diagnosing a failed import, and it invalidates the existing unit tests that stub
+  diagnosing a failed run, and it invalidates the existing unit tests that stub
   `HttpClient.toBlocking()` directly.
 - The initial rate, backoff and breaker settings are **educated guesses**. The source
   documents no limits, so the only way to learn the right values is to run against it and
   watch — which means the first configuration is provisional by construction.
 - **A sequential default buys politeness with wall-clock time.** One request in flight at a
-  deliberately slow rate makes a fanned-out ingestion a long-running job by construction —
-  hours, not minutes, once contract ingestion arrives. That interacts with the scheduler and
-  with any job-level timeout, and it is the direct price of the guarantee above.
+  deliberately slow rate makes any fanned-out run a long-running job by construction — hours,
+  not minutes, at thousands of requests. It also means the rate is shared across every kind of
+  request: a run walking result pages and a run fetching detail documents compete for the same
+  budget rather than each getting one. That interacts with the scheduler and with any
+  job-level timeout, and it is the direct price of the guarantee above.
 - **Rate, concurrency and maximum wait are coupled**, and the coupling is not obvious from
   reading any one of them. A configuration violating the inequality does not fail at startup;
   it fails as refused permits under load, at whatever hour the scheduler runs. Until
