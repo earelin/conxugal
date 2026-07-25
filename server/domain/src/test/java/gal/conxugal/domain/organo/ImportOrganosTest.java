@@ -54,21 +54,43 @@ class ImportOrganosTest {
   }
 
   @Test
-  void reactivates_previously_inactive_entry_that_reappears() {
+  void refreshing_an_inactive_matched_entrys_name_does_not_reactivate_it() {
+    FakeOrganoRepository repository = new FakeOrganoRepository();
+    OrganoDeContratacion stored = repository.seed("consorcio-x", "Old Name", false);
+    ImportOrganos importOrganos =
+        new ImportOrganos(
+            () -> List.of(new OrganoSourceEntry("consorcio-x", "New Name")), repository);
+
+    ImportOutcome outcome = importOrganos.run();
+
+    assertThat(outcome.refreshed()).isEqualTo(1);
+    assertThat(repository.findAll())
+        .singleElement()
+        .satisfies(
+            organo -> {
+              assertThat(organo.id()).isEqualTo(stored.id());
+              assertThat(organo.name()).isEqualTo("New Name");
+              assertThat(organo.active()).isFalse();
+            });
+  }
+
+  @Test
+  void matching_an_entry_with_an_unchanged_name_writes_nothing_and_leaves_its_state_untouched() {
     FakeOrganoRepository repository = new FakeOrganoRepository();
     OrganoDeContratacion stored = repository.seed("consorcio-x", "Consorcio X", false);
     ImportOrganos importOrganos =
         new ImportOrganos(
             () -> List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X")), repository);
 
-    importOrganos.run();
+    ImportOutcome outcome = importOrganos.run();
 
+    assertThat(outcome.refreshed()).isZero();
     assertThat(repository.findAll())
         .singleElement()
         .satisfies(
             organo -> {
               assertThat(organo.id()).isEqualTo(stored.id());
-              assertThat(organo.active()).isTrue();
+              assertThat(organo.active()).isFalse();
             });
   }
 
@@ -91,7 +113,7 @@ class ImportOrganosTest {
   }
 
   @Test
-  void reimporting_the_same_list_adds_nothing_and_creates_no_duplicate() {
+  void reimporting_the_same_list_adds_nothing_and_changes_no_state() {
     FakeOrganoRepository repository = new FakeOrganoRepository();
     ImportOrganos importOrganos =
         new ImportOrganos(
@@ -101,8 +123,11 @@ class ImportOrganosTest {
     ImportOutcome outcome = importOrganos.run();
 
     assertThat(outcome.added()).isZero();
+    assertThat(outcome.refreshed()).isZero();
     assertThat(outcome.deactivated()).isZero();
-    assertThat(repository.findAll()).hasSize(1);
+    assertThat(repository.findAll())
+        .singleElement()
+        .satisfies(organo -> assertThat(organo.active()).isFalse());
   }
 
   @Test

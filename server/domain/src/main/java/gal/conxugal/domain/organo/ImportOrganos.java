@@ -11,9 +11,10 @@ import java.util.stream.Collectors;
 
 /**
  * Import & reconciliation use case: pulls the entire catalogue from {@link OrganoSource} and
- * reconciles it against {@link OrganoRepository} — insert new entries inactive, refresh matched
- * entries in place (which also reactivates them), and deactivate stored entries absent from the
- * source — within a single transaction, guarded so at most one run proceeds at a time.
+ * reconciles it against {@link OrganoRepository} — insert new entries inactive, refresh a matched
+ * entry's name in place when it changed (never touching its active state), and deactivate stored
+ * entries absent from the source — within a single transaction, guarded so at most one run
+ * proceeds at a time.
  */
 @Singleton
 public class ImportOrganos {
@@ -59,8 +60,8 @@ public class ImportOrganos {
       if (stored == null) {
         organoRepository.insert(newOrgano(entry));
         added++;
-      } else {
-        organoRepository.update(stored.id(), entry.name(), true);
+      } else if (!stored.name().equals(entry.name())) {
+        organoRepository.update(stored.id(), entry.name(), stored.active());
         refreshed++;
       }
     }
