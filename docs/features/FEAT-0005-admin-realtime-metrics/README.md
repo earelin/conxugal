@@ -95,6 +95,9 @@ flowchart LR
   opens an `EventSource` to `/api/admin/metrics`, updates the displayed values on each
   event, and shows a small rolling history (recent samples) for spotting trends while
   debugging.
+- The screens are mocked in [`design/`](design/README.md): the live panel on the dashboard,
+  the connecting/live/reconnecting states with the sparkline anatomy, and the narrow-viewport
+  stacking.
 - That history is held **only in component state in the browser** and is bounded to a fixed
   number of recent samples; navigating away or reloading discards it (SPEC-0003 R20). The
   panel closes the `EventSource` on unmount, and relies on `EventSource`'s built-in
