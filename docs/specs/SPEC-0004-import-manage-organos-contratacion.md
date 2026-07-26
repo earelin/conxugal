@@ -134,6 +134,16 @@ features.
 9. **(R9)** A user can browse the taxonomy tree and select an Órgano from it; the tree
    presented to a `USER` offers no control to create, rename, move, delete, or reassign
    anything.
+   > **Deferred, and knowingly outside this spec's features.** The *data* this tree is
+   > built from ships with
+   > [FEAT-0007](../features/FEAT-0007-organos-taxonomy-classification/README.md) as two
+   > authenticated reads, but no `USER`-facing tree is rendered by any feature of this
+   > spec: the only place a user picks an Órgano is the **Órgano filter of the contratos
+   > list**, which belongs to the future contract-querying spec and will be built against
+   > those two contracts. This criterion is therefore satisfied *outside* SPEC-0004, and
+   > the spec should not be read as unfulfilled while it waits. Recorded here so the gap
+   > is visible from the spec that owns the requirement, not only from the feature that
+   > declined it.
 10. **(R10)** After an administrator triggers an import manually, the system reports
     whether it succeeded and a summary of how many Órganos were added, refreshed, and
     marked inactive.

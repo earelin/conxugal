@@ -63,7 +63,7 @@ contract-first in the [OpenAPI document](../../api/openapi.yaml)
   the outcome display (SPEC-0004 R1 write ops, R14–R18) — belong to a separate feature,
   *FEAT-0007. Órganos taxonomy & classification*. This feature stops at the stored
   catalogue those screens consume. In particular, **both** authenticated reads —
-  `GET /api/organos` and `GET /api/organos/taxonomy` — are FEAT-0007's: a catalogue view
+  `GET /api/organos` and `GET /api/taxonomy-nodes` — are FEAT-0007's: a catalogue view
   without the placement would not satisfy R8 anyway, so the read ships with the placement
   rather than here. The `USER`-facing tree of R9 is built later still, as the Órgano filter
   of the contratos list.

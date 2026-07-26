@@ -3,7 +3,7 @@ feat: FEAT-0007
 domain: backend
 adrs: [0002]
 status: todo
-depends_on: [TASK-0001]
+depends_on: [TASK-0001, TASK-0003]
 ---
 
 # Órgano classification use cases + catalogue reads
@@ -15,8 +15,20 @@ authenticated endpoints serve. Governed by
 
 ## Scope
 - `AssignOrganoToNode` — sets an Órgano's placement to a node, **replacing** any current
-  one; rejects an unknown Órgano or an unknown node.
-- `ClearOrganoNode` — removes an Órgano's placement, returning it to unclassified.
+  one; rejects an unknown Órgano or an unknown node. The unknown-node exception is
+  [TASK-0003](TASK-0003-taxonomy-management-use-cases.md)'s — reuse it rather than declaring
+  a second type, or TASK-0006 has two exceptions to map onto one problem type. The
+  unknown-Órgano check is what the `OrganoRepository` by-id read from TASK-0001 exists for;
+  scanning `findAll()` to answer it would be the whole-table server work this feature avoids.
+- `ClearOrganoNode` — removes an Órgano's placement, returning it to unclassified. Rejects
+  an unknown Órgano with the same exception `AssignOrganoToNode` uses. Clearing an Órgano
+  that is **already** unclassified is **not** an error: it is idempotent and writes nothing,
+  because the caller's intent is already satisfied and an admin double-clicking a row should
+  not see a failure.
+- Assign and clear take **no taxonomy lock** — they write one Órgano row and cannot reshape
+  the tree. An assign racing a `DeleteNode` is settled by the lock TASK-0003 holds and the
+  foreign key: the assign either commits first and is cleared by the delete, or fails
+  against the vanished node.
 - `ListOrganos` — every stored Órgano, each with its name, active state and its
   `taxonomyNodeId` or null. A straight `findAll()`: no filtering, no paging, no grouping.
 - `ListTaxonomyNodes` — every taxonomy node, each with its name and its `parentId` or null.
@@ -28,7 +40,7 @@ authenticated endpoints serve. Governed by
   the substantive "every Órgano, exactly once, with its placement" guarantee (SPEC-0004 #8)
   is proven where it is observable — against the database in
   [TASK-0002](TASK-0002-taxonomy-store-infrastructure.md) and over HTTP in
-  [TASK-0005](TASK-0005-taxonomy-and-classification-rest-endpoints.md).
+  [TASK-0005](TASK-0005-taxonomy-read-endpoints.md).
 - **No unclassified concept in the backend.** There is no `GetUnclassifiedOrganos` and no
   unclassified field in any result: an Órgano with a null `taxonomyNodeId` is unclassified,
   and callers filter for it. This is what the two-endpoint split buys — R8 and R18 are
@@ -41,14 +53,17 @@ authenticated endpoints serve. Governed by
   ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #17)
 - Clearing an assignment leaves the Órgano in no node — `ListOrganos` then reports a null
   `taxonomyNodeId` for it. (SPEC-0004 #17, #18)
-- An Órgano that has never been classified — including a newly imported one — has a null
-  `taxonomyNodeId` until it is assigned. (SPEC-0004 #18)
 - Assigning to an unknown node, or assigning an unknown Órgano, is rejected and writes
-  nothing.
+  nothing; clearing an unknown Órgano is rejected likewise, while clearing an
+  already-unclassified one succeeds and writes nothing.
+- Both rejections reuse TASK-0003's exception types; no new unknown-node type is declared.
 - `ListOrganos` returns `OrganoRepository.findAll()` unchanged — the same elements in the
   same order, nothing filtered, grouped, sorted or re-shaped on the way through.
 - `ListTaxonomyNodes` does the same for `TaxonomyNodeRepository.findAll()`, returning an
   empty list when the repository holds no node.
 - Unit-tested against test doubles of the ports, covering the reassignment case, the
   cleared-placement case, the rejections, and the empty-repository case for
-  `ListTaxonomyNodes`.
+  `ListTaxonomyNodes`. The placement assertions run against the **recording
+  `FakeOrganoRepository`**, not a stub: a mock that returns whatever the test told it to
+  cannot show that a reassignment left *one* placement rather than two, which is the whole
+  claim of SPEC-0004 #17.

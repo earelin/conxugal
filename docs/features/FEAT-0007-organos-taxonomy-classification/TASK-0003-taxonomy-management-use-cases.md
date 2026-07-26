@@ -17,19 +17,37 @@ in `domain`, not in a controller.
 - `CreateNode` — a node with a name, either at the root or under an existing parent;
   rejects an unknown parent.
 - `RenameNode` — changes the name of an existing node; rejects an unknown node.
-- `MoveNode` — re-parents a node, or moves it to the root. Enforces the **cycle guard**:
-  the target parent may be neither the node itself nor any of its descendants. A rejected
-  move writes nothing.
+- `MoveNode` — re-parents a node, or moves it to the root. Rejects an unknown node **and an
+  unknown target parent** — without the second check the cycle guard walks up from a parent
+  that does not exist, and what the feature promises as a 404 surfaces as a 500. Enforces
+  the **cycle guard**: the target parent may be neither the node itself nor any of its
+  descendants. A rejected move writes nothing.
 - `DeleteNode` — applies the R16 rules: **rejected while the node has child nodes**;
   otherwise deletes the node and returns the Órganos placed directly in it to the
   unclassified set. Deletes no Órgano.
-- Distinct domain exceptions for the rejections (unknown node, cycle, node still has
-  children), so the endpoints of
-  [TASK-0005](TASK-0005-taxonomy-and-classification-rest-endpoints.md) can map each to its
-  own status without inspecting messages.
-- `DeleteNode` runs its delete and the placement clearing it triggers in **one
-  transaction**, so a concurrent reader never sees an Órgano pointing at a node that is
-  already gone.
+- The **sibling-name rule** from the feature's *Taxonomy as a tree*: a name is required,
+  non-blank once trimmed, stored trimmed, and unique case-insensitively among its siblings
+  (roots being siblings of each other). It binds `CreateNode`, `RenameNode` and the
+  `MoveNode` that lands a node beside a new set of siblings. Length and blankness are
+  rejected at the edge by the request record; the sibling comparison lives here, where the
+  repository read it needs is available, and TASK-0001's unique index is what makes it
+  race-proof — this check exists to produce a civil refusal, not to be the only guard.
+- **This task owns the feature's rejection exceptions** — unknown node, cycle, node still
+  has children, duplicate sibling name — as distinct domain types, so
+  [TASK-0006](TASK-0006-taxonomy-admin-endpoints.md) can map each to its own status and
+  problem type without inspecting messages.
+  [TASK-0004](TASK-0004-organo-classification-use-cases.md) reuses the unknown-node type
+  rather than declaring a second one; it is listed here so two tasks picked up in parallel
+  do not each invent one.
+- **Tree-shape mutations serialise.** `MoveNode` and `DeleteNode` call `lockTaxonomy` before
+  reading and hold it through the write, all in one transaction. For `MoveNode` this is what
+  makes the cycle guard sound at all — a check-then-write over a tree another admin is
+  reshaping is not a guard (see the feature's *Edge cases*). For `DeleteNode` the same
+  transaction also covers the placement clearing, so a concurrent reader never sees an
+  Órgano pointing at a node that is already gone. `CreateNode` and `RenameNode` do not
+  reshape the tree and take no lock: the only thing they can race on is the sibling-name
+  rule, and the unique index settles that in the database rather than by making every
+  create wait.
 
 ## Acceptance criteria
 - A node can be created at the root and under a parent, renamed, and moved to a different
@@ -43,6 +61,17 @@ in `domain`, not in a controller.
   (SPEC-0004 #16)
 - Deleting a node that has Órganos placed directly in it succeeds, those Órganos become
   unclassified, and every one of them still exists. (SPEC-0004 #16)
-- Each rejection surfaces as its own exception type.
+- Creating a node under an unknown parent, renaming an unknown node, and moving a node
+  **onto an unknown parent** are each rejected and write nothing — the last is the path that
+  would otherwise walk a non-existent ancestry and fail as a 500.
+- A create, a rename, or a move that would put two same-named siblings under one parent is
+  rejected — including two roots and including a case-only difference — while the same name
+  under a different parent is accepted. (SPEC-0004 #14)
+- Each rejection surfaces as its own exception type, and unknown-node is a single type
+  shared with [TASK-0004](TASK-0004-organo-classification-use-cases.md), not a second one.
+- `MoveNode` and `DeleteNode` take the taxonomy lock before their first read; `CreateNode`
+  and `RenameNode` do not. Provable against the test double by recording the call order —
+  a guard that reads before locking is the bug this exists to prevent, and it looks
+  identical to a correct one in a single-threaded test otherwise.
 - Unit-tested against a test double of `TaxonomyNodeRepository` / `OrganoRepository`; the
   cycle guard is tested at depth, not only one level down.

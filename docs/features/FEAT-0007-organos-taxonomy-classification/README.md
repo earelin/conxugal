@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0004
-adrs: [0002, 0003, 0004, 0005, 0006, 0008, 0010]
+adrs: [0002, 0003, 0004, 0005, 0006, 0008, 0010, 0012, 0015, 0016]
 status: draft
 ---
 
@@ -12,7 +12,7 @@ expose that catalogue and taxonomy to any authenticated user as read endpoints, 
 **[SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md)** (R1 write
 operations, the R8 catalogue read, the data R9's tree is built from, and R14–R18). It
 adds the taxonomy of category nodes, the single-node classification of Órganos, the two
-read endpoints — `GET /api/organos` and `GET /api/organos/taxonomy` — and one user
+read endpoints — `GET /api/organos` and `GET /api/taxonomy-nodes` — and one user
 interface: an **admin management** section to build the taxonomy, classify Órganos, and
 run imports.
 
@@ -51,7 +51,8 @@ Galician.
   rename, re-parent, delete).
 - **Domain (placement):** extend the `OrganoDeContratacion` aggregate and
   `OrganoRepository` (from FEAT-0006) with an **optional** taxonomy-node placement, plus
-  the writes that set and clear it.
+  the writes that set and clear it, and the **by-id read** the classification use cases
+  need to reject an unknown Órgano (the port has none today — it matches on `sourceKey`).
 - **Domain (use cases):** taxonomy management (`CreateNode`, `RenameNode`, `MoveNode` with
   the cycle guard, `DeleteNode` with the child/reassignment rules), classification
   (`AssignOrganoToNode`, `ClearOrganoNode`), and two thin reads — `ListOrganos` and
@@ -61,7 +62,7 @@ Galician.
   `TaxonomyNodeRepository` and the `OrganoRepository` placement operations.
 - **Application (driving):**
   - **Read (any authenticated user):** `GET /api/organos` — every Órgano with its name,
-    active state and its `taxonomyNodeId` or null; and `GET /api/organos/taxonomy` — every
+    active state and its `taxonomyNodeId` or null; and `GET /api/taxonomy-nodes` — every
     node with its name and its `parentId` or null. Together they cover the R8 view and carry
     everything an R9 tree needs, though no `USER` tree is rendered here (SPEC-0004 R2, R8).
   - **Manage (`ADMIN` only):** node create/rename/move/delete and Órgano assign/clear
@@ -78,17 +79,24 @@ Galician.
   feature, against the endpoints delivered here. No reusable Órgano-selector component is
   built in advance — it has no consumer yet, and its shape is the filter's to decide.
   What is in scope is the **data** that tree is built from: the two authenticated reads.
+  Because that feature will trace to a **different spec**, SPEC-0004 cannot reach
+  `implemented` on the filesystem trace while #9 belongs to nobody — so the deferral is
+  recorded in SPEC-0004 itself, next to the criterion, rather than only here where the
+  owning spec cannot see it.
   Stated plainly, **SPEC-0004 acceptance criterion #9 is not satisfied by this feature** —
   "a user can browse the taxonomy tree and select an Órgano from it" needs a rendered tree
   offering no management controls, and this feature builds no `USER` surface at all. The
   split makes the gap wider than it was: the server now emits neither the tree nor the
   node→Órgano association, so nothing here can be tested against #9. It is met by the
   contract-querying feature that renders the filter, against these contracts.
-- **Server-side tree assembly, filtering, paging or search** over either read. Both return
-  the whole table, unfiltered and unpaged: the catalogue is a few hundred rows and the
-  taxonomy fewer, so a client holds both comfortably and re-slices them without a round
-  trip. If a future consumer needs filtering, it is designed then, against a real
-  requirement.
+- **Server-side tree assembly, filtering, paging or search** over **these two reads**. Both
+  return the whole table, unfiltered and unpaged: the catalogue is a few hundred rows and
+  the taxonomy fewer, so a client holds both comfortably and re-slices them without a round
+  trip. This is a decision about *these two endpoints at this data size*, not a standing
+  rule for the API — it deliberately does not bind the contract-querying feature, whose
+  volumes are a different order of magnitude and which will decide its own read shape. Were
+  it meant to bind every future endpoint, it would need an ADR, which is the bar
+  [ADR-0016](../../architecture/0016-rest-resource-naming.md) had to clear.
 - The **contract-query screens** themselves — a future contract-browsing spec/feature.
 - **Importing and reconciling** the catalogue and the import endpoint/scheduler — owned by
   [FEAT-0006](../FEAT-0006-organos-catalogue-import/README.md). This feature only *drives*
@@ -103,8 +111,8 @@ Galician.
 flowchart LR
     subgraph application["application (driving)"]
         organosApi["GET /api/organos (authenticated)"]
-        taxonomyApi["GET /api/organos/taxonomy (authenticated)"]
-        manageApi["/api/admin/taxonomy/** + classify (ADMIN)"]
+        taxonomyApi["GET /api/taxonomy-nodes (authenticated)"]
+        manageApi["/api/admin/taxonomy-node(s) + /api/admin/organo/&#123;id&#125;/taxonomy-node (ADMIN)"]
     end
     subgraph domain["domain"]
         node["TaxonomyNode"]
@@ -135,6 +143,18 @@ flowchart LR
   any Órganos assigned directly to it to the unclassified set**. Deleting a node never
   deletes an Órgano.
 
+**Node names.** A name is required and must be non-blank once trimmed; it is stored
+trimmed, capped at 255 characters to match the column, and **siblings may not share a
+name** (case-insensitively) — the tree is navigated by name and two identical children of
+one parent are indistinguishable to the admin reading it. Roots count as siblings of each
+other. The same rule applies to a create, a rename, and the re-parent that moves a node
+next to a new set of siblings. Names are *not* globally unique: the same node name under
+two different parents is legitimate and common. Validation is rejected at the edge with
+`@NotBlank`/`@Size` on the request record (the `CreateUserRequest` precedent) and the
+sibling rule in the use case, where the repository read it needs lives — backed by a unique
+index on `(parent_id, lower(name))` so a concurrent create cannot slip past a check-then-write.
+The index needs `NULLS NOT DISTINCT` to cover the roots, whose `parent_id` is null.
+
 ### Placement and classification
 - Placement is an **optional** `taxonomy_node_id` on the catalogue row — exactly one node
   or none (SPEC-0004 R17). Because it lives on the Órgano row that FEAT-0006 reconciles
@@ -152,15 +172,37 @@ flowchart LR
 - When the target node is deleted, the reassignment rule above returns its Órganos to
   unclassified rather than orphaning them against a missing node.
 
-### API surface ([ADR-0006](../../architecture/0006-reserved-api-url-prefix.md), [ADR-0010](../../architecture/0010-design-first-openapi-contract.md))
+**How the placement is cleared on delete — decided here, not in a task.** The foreign key
+on `organo_contratacion.taxonomy_node_id` is declared with **no `ON DELETE` action** (so
+PostgreSQL's default `NO ACTION`), and `DeleteNode` clears the placements itself in the
+same transaction as the delete. The clearing is a domain rule with a use case that owns it
+and a port operation that expresses it, so putting it in the schema would state the same
+rule twice and let a future caller delete a node without going through `DeleteNode`.
+Declining `ON DELETE SET NULL` costs nothing and buys a loud failure: with `NO ACTION`, a
+delete that skipped the clearing raises a constraint violation instead of silently
+unclassifying rows nobody meant to touch. `ON DELETE CASCADE` is forbidden outright — it
+would delete Órganos, which R16 prohibits. The migration in
+[TASK-0001](TASK-0001-taxonomy-node-domain-model-and-placement.md) writes the foreign key
+this way; no later task revisits it.
+
+### API surface ([ADR-0006](../../architecture/0006-reserved-api-url-prefix.md), [ADR-0010](../../architecture/0010-design-first-openapi-contract.md), [ADR-0016](../../architecture/0016-rest-resource-naming.md))
 Two reads, each `@Secured(IS_AUTHENTICATED)`, each a **flat list of one entity type**:
 
 - `GET /api/organos` — every stored Órgano: `id`, `name`, `active`, and `taxonomyNodeId`
   (null when unclassified). This is the R8 catalogue view: name, state, and placement or
   the absence of one, for every Órgano (SPEC-0004 R2, R8).
-- `GET /api/organos/taxonomy` — every taxonomy node: `id`, `name`, and `parentId` (null for
+- `GET /api/taxonomy-nodes` — every taxonomy node: `id`, `name`, and `parentId` (null for
   a root). No Órganos, no nesting — this is the data an R9 tree is built from, not the tree
   (SPEC-0004 R2).
+
+**Why `/api/taxonomy-nodes` and not `/api/organos/taxonomy`.** This feature is the reason
+[ADR-0016](../../architecture/0016-rest-resource-naming.md) exists: the taxonomy read was
+first drafted as `GET /api/organos/taxonomy`, which parks a *different* resource exactly
+where `/api/organos`' member path `/api/organos/{id}` has to go — forcing every client to
+special-case one literal segment and reserving `"taxonomy"` against ever being an Órgano
+id. The nodes are their own collection and get their own plural path. Under ADR-0010 the
+contract is authoritative and CI-enforced, so this is free to fix now and a breaking change
+once published.
 
 **Why two flat reads rather than one tree.** Each response is exactly one table's rows,
 so the server does no assembly at all: no descendant walk, no grouping, no unclassified
@@ -188,21 +230,78 @@ each mirror a column exactly; no response repeats an edge from the other side (a
 never lists its children or its Órganos), so no two fields can disagree and the serialiser
 has nothing to keep in step.
 
-- `/api/admin/taxonomy/**` and the Órgano-classification operations — `@Secured("ADMIN")`:
-  create/rename/move/delete nodes and assign/clear an Órgano's node (SPEC-0004 R1,
-  R14–R18). A `USER` gets 403. There is no admin-specific listing: an admin manages the
-  same two lists every authenticated caller receives, and files from the ones whose
-  `taxonomyNodeId` is null (SPEC-0004 R18).
+Six `@Secured("ADMIN")` operations, named here rather than left as a `/api/admin/**`
+wildcard — the paths *are* the decision, and leaving them as prose in a task is exactly how
+the collision above happened the first time (SPEC-0004 R1, R14–R18):
+
+| Operation | Path |
+| --- | --- |
+| Create a node (root or under a parent) | `POST /api/admin/taxonomy-nodes` |
+| Rename a node | `PATCH /api/admin/taxonomy-node/{id}` |
+| Move a node (re-parent, or to the root) | `PUT /api/admin/taxonomy-node/{id}/parent` |
+| Delete a node | `DELETE /api/admin/taxonomy-node/{id}` |
+| Place an Órgano in a node | `PUT /api/admin/organo/{id}/taxonomy-node` |
+| Clear an Órgano's placement | `DELETE /api/admin/organo/{id}/taxonomy-node` |
+
+Note that the two classification operations sit under `/api/organo/…`, **not** under a
+taxonomy path — they change the Órgano, not the node. A `USER` gets 403 on all six. There
+is no admin-specific listing: an admin manages the same two lists every authenticated
+caller receives, and files from the ones whose `taxonomyNodeId` is null (SPEC-0004 R18).
+
+**Failure contract.** Refusals are RFC 9457 `application/problem+json`, matching the
+`urn:conxugal:problem-type:duplicate-email` precedent already in the contract. Status alone
+cannot carry the distinction the admin UI must render — a cycle and a
+blocked-by-children delete are both 409 — so each rejection gets its own `type`:
+
+| Problem type | Status | Raised by |
+| --- | --- | --- |
+| `urn:conxugal:problem-type:taxonomy-node-not-found` | 404 | any operation naming an unknown node |
+| `urn:conxugal:problem-type:organo-not-found` | 404 | assign/clear naming an unknown Órgano |
+| `urn:conxugal:problem-type:taxonomy-cycle` | 409 | a move onto the node itself or a descendant |
+| `urn:conxugal:problem-type:taxonomy-node-has-children` | 409 | a delete of a node with child nodes |
+| `urn:conxugal:problem-type:duplicate-sibling-name` | 409 | a create/rename/move colliding with a sibling name |
+
+- **Every operation carries the rate-limit contract** of
+  [ADR-0012](../../architecture/0012-rate-limit-http-contract.md): the three `RateLimit-*`
+  response headers on success and the shared `TooManyRequests` 429 response. This is not
+  optional decoration — `.vacuum.yaml`'s ruleset fails `openapi-lint` without it, so all
+  eight operations would be red on first push.
 - All contracts are authored in [`docs/api/openapi.yaml`](../../api/openapi.yaml) before the
   controllers, and CI enforces conformance (ADR-0010).
 
-### UI ([ADR-0003](../../architecture/0003-react-router-ui-served-by-backend.md), [ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md))
+### UI ([ADR-0003](../../architecture/0003-react-router-ui-served-by-backend.md), [ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md), [ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md))
 - **Taxonomy admin** — the only UI here, an `ADMIN`-only section: the tree with create/rename/move/delete
   controls, an assign-to-node action and the unclassified worklist for classifying Órganos,
   and an **import** button that calls FEAT-0006's `POST /api/admin/organos/import` and shows
   the returned outcome (added/refreshed/deactivated, or "already running"). Chrome and
   messages in Galician (SPEC-0001 R6). Admin-only nav gating is cosmetic; `/api/admin/**`
-  stays server-gated.
+  stays server-gated. The visual target is the mockup set in
+  [`design/`](design/README.md).
+
+**Where the code lands ([ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md)).**
+That ADR is accepted and left its migration to "whichever feature or maintenance task picks
+this up"; this is the first UI work since, so the feature answers it explicitly rather than
+letting whoever types first decide. **New code follows the ADR layout; the existing tree is
+not migrated here.** The section is a slice at `ui/src/features/organos/`, exposing one
+`index.ts` barrel, owning its own components, API calls and local state, and importing
+nothing from `routes/admin/`. `ui/src/api/`, `ui/src/commons/` and `ui/src/routes/admin/`
+stay exactly where they are.
+
+The trade-off is taken with open eyes: `ui/src` is left a **hybrid** of two layouts, and
+because the old tree is untouched, `eslint-plugin-boundaries` is *not* wired up either —
+there is nothing coherent for it to enforce yet, so the new slice's boundary rests on review
+until the migration lands. The full migration and the lint wiring remain unowned, and this
+feature does not claim them: they are still follow-up work for a maintenance task or the
+next frontend feature, which will find one slice already in the target shape rather than
+none.
+
+One exception to "new code only": **`ErrorAlert` moves to `shared/ui/`**. It lives in
+`routes/admin/` today, and the Órganos slice needs it for the failed-fetch case below — a
+feature importing another feature's internals is the one thing the ADR's dependency rule
+forbids outright, and the ADR's own trigger for promoting a file is a second consumer
+appearing. Moving one shared component down is not the migration; leaving it put would mean
+either duplicating it or breaking the rule on the first file written. It also gains the
+retry affordance it does not have today.
 - **Tree assembly lives in the client** — the section fetches both lists and builds the tree
   in one pass: group nodes by `parentId` (null → root), group Órganos by `taxonomyNodeId`,
   and the null bucket is the unclassified worklist. It is a **pure function** of the two
@@ -224,27 +323,54 @@ has nothing to keep in step.
    queries — model and schema move together or the task lands red.
    *(SPEC-0004 #14, #15, #17, #18)*
 2. **[TASK-0002](TASK-0002-taxonomy-store-infrastructure.md) — Taxonomy store
-   infrastructure** *(backend)*: the JDBC `TaxonomyNodeRepository` and the
-   `OrganoRepository` placement operations (set/clear an Órgano's node, clear every
-   placement pointing at a node), against the schema TASK-0001 created.
-   *(SPEC-0004 #5, #14, #16, #17)*
+   infrastructure** *(backend)*: the JDBC `TaxonomyNodeRepository` (including
+   `lockTaxonomy`), against the schema TASK-0001 created. The `OrganoRepository` placement
+   operations need **no adapter code** — the repository is a bare derived interface and
+   Micronaut Data generates them from the port — so this task's Órgano half is proving them
+   against a real database, plus the one genuine decision: whether clearing every placement
+   pointing at a node derives from its method name or needs a `@Query`.
+   *(SPEC-0004 #14, #16, #17)*
 3. **[TASK-0003](TASK-0003-taxonomy-management-use-cases.md) — Taxonomy management use
    cases** *(backend)*: `CreateNode`, `RenameNode`, `MoveNode` (cycle guard), `DeleteNode`
-   (reject with children; return directly-assigned Órganos to unclassified).
+   (reject with children; return directly-assigned Órganos to unclassified), the serialising
+   lock, the sibling-name rule, and **the rejection exceptions the whole feature shares**.
    *(SPEC-0004 #14, #15, #16)*
 4. **[TASK-0004](TASK-0004-organo-classification-use-cases.md) — Órgano classification &
    catalogue reads** *(backend)*: `AssignOrganoToNode` (single placement, replaces any
    current), `ClearOrganoNode`, and the two thin reads `ListOrganos` / `ListTaxonomyNodes`.
-   *(SPEC-0004 #17, #18)*
-5. **[TASK-0005](TASK-0005-taxonomy-and-classification-rest-endpoints.md) — Taxonomy &
-   classification REST endpoints** *(backend)*: OpenAPI-first — the two authenticated reads
-   (`GET /api/organos` with each Órgano's `taxonomyNodeId`, `GET /api/organos/taxonomy` with
-   each node's `parentId`) and the `ADMIN` management + classify endpoints under
-   `/api/admin`. *(SPEC-0004 #1, #2, #8, #14–#18)*
-6. **[TASK-0006](TASK-0006-taxonomy-admin-ui.md) — Taxonomy admin UI** *(frontend)*: the
-   `ADMIN` section — build the tree from the two reads, manage it, classify Órganos, work
-   the unclassified set, and trigger an import with its outcome.
-   *(SPEC-0004 #1, #8, #10, #14–#18; SPEC-0001 #6)*
+   Depends on TASK-0003 for the shared exceptions. *(SPEC-0004 #17, #18)*
+5. **[TASK-0005](TASK-0005-taxonomy-read-endpoints.md) — Taxonomy & catalogue read
+   endpoints** *(backend)*: OpenAPI-first — the two authenticated reads, `GET /api/organos`
+   with each Órgano's `taxonomyNodeId` and `GET /api/taxonomy-nodes` with each node's
+   `parentId`. *(SPEC-0004 #2, #8)*
+6. **[TASK-0006](TASK-0006-taxonomy-admin-endpoints.md) — Taxonomy management &
+   classification endpoints** *(backend)*: the six `ADMIN` operations, the problem-type
+   contract for each refusal, and the `ADMIN` gate. Split from the reads because it is a
+   different security posture, a different half of the contract, and six operations against
+   two. *(SPEC-0004 #1, #14–#18)*
+7. **[TASK-0007](TASK-0007-organos-section-and-tree-view.md) — Órganos section + tree view**
+   *(frontend)*: the route, nav entry and `features/organos/` slice; the pure tree builder
+   over the two reads; the loading, empty, failed-fetch and dangling-id states; name
+   ordering. Read-only — no mutation controls. *(SPEC-0004 #8, #14, #18; SPEC-0001 #6)*
+8. **[TASK-0008](TASK-0008-taxonomy-management-ui.md) — Taxonomy management UI**
+   *(frontend)*: create, rename, move and delete from the tree, with the cycle and
+   blocked-by-children refusals shown as distinct explanatory messages.
+   *(SPEC-0004 #14, #15, #16)*
+9. **[TASK-0009](TASK-0009-classification-ui.md) — Classification UI** *(frontend)*: the
+   assign-to-node picker, the clear action, and the unclassified worklist as the filing
+   queue. *(SPEC-0004 #17, #18)*
+10. **[TASK-0010](TASK-0010-import-trigger-ui.md) — Import trigger UI** *(frontend)*: the
+    import button driving FEAT-0006's endpoint, its outcome counts, and the "already
+    running" case. *(SPEC-0004 #10)*
+
+**Why the UI is four tasks.** The mockups in [`design/`](design/README.md) cover six
+screens; built as one task it would be the largest change in the repo by some margin — more
+than the whole of today's `ui/src` — and its acceptance criteria would span tree assembly,
+four mutation flows, two refusal states, a picker, a worklist and an import. FEAT-0004
+already set the precedent of splitting a UI feature (shell and nav apart from the page
+inside it), and the seams here are the mockups' own. TASK-0007 carries the slice and the
+builder every later task renders through, so it goes first; TASK-0008 to TASK-0010 are then
+independent of each other.
 
 ## Edge cases
 - **Cycle on move** — re-parenting a node under itself or a descendant is rejected and the
@@ -254,7 +380,9 @@ has nothing to keep in step.
   deletes no Órgano (SPEC-0004 #16).
 - **Import preserves placement** — because placement is a column on the in-place-updated
   catalogue row (FEAT-0006), an Órgano keeps its node across re-imports, and an Órgano gone
-  inactive keeps its placement (SPEC-0004 #5, #6).
+  inactive keeps its placement (SPEC-0004 #5, #6). Both halves are proven in
+  [TASK-0001](TASK-0001-taxonomy-node-domain-model-and-placement.md), against the
+  reconciliation write paths it must leave alone.
 - **Reassignment is a move, not a copy** — assigning an already-classified Órgano to a new
   node leaves it in only the new node; it is never in two at once (SPEC-0004 #17).
 - **Newly imported Órgano is unclassified** — it arrives in `GET /api/organos` with a null
@@ -265,7 +393,7 @@ has nothing to keep in step.
   they can only issue the two `GET`s. With no `USER` UI here, the server gate is the whole
   story; #9's "offers no controls" clause has no surface to bind until the filter is built
   (SPEC-0004 #1).
-- **Empty taxonomy** — until an admin creates the first node, `GET /api/organos/taxonomy`
+- **Empty taxonomy** — until an admin creates the first node, `GET /api/taxonomy-nodes`
   returns an **empty array** while `GET /api/organos` returns the entire catalogue with
   every `taxonomyNodeId` null. That is the normal state right after the first import, not a
   degenerate one, and the split makes it trivially correct: the catalogue read does not
@@ -286,6 +414,25 @@ has nothing to keep in step.
   refresh re-fetches both. No Órgano can disappear from view, because the catalogue read is
   the one that lists them and it never depends on the taxonomy read.
 - **Concurrent edits to the tree** — two admins moving/deleting overlapping nodes must not
-  corrupt the tree or leave a placement pointing at a deleted node **in the database**; node
-  moves/deletes and the reassignment they trigger are applied atomically. A dangling id in a
-  *client's* pair of responses is the transient case above, not a stored one.
+  corrupt the tree or leave a placement pointing at a deleted node **in the database**. A
+  dangling id in a *client's* pair of responses is the transient case above, not a stored
+  one. Two guarantees, with different mechanisms:
+  - **No cycle, ever.** A transaction alone does not deliver this: at PostgreSQL's default
+    `READ COMMITTED`, two concurrent moves can each walk a tree that is still acyclic, each
+    pass the guard, and jointly create a cycle — and no foreign key can catch it, unlike
+    the delete cases the FKs do backstop. So **tree-shape mutations serialise**: `MoveNode`
+    and `DeleteNode` call a `lockTaxonomy()` port operation before reading and hold it
+    through the write, inside one transaction. The port keeps the domain free of the
+    mechanism ([ADR-0002](../../architecture/0002-hexagonal-architecture.md)); the JDBC
+    adapter implements it as a transaction-scoped PostgreSQL advisory lock. These are rare,
+    admin-initiated
+    operations over a table of a few dozen rows, so serialising them outright costs nothing
+    measurable and is far easier to reason about than retrying serialisation failures.
+  - **No stored dangling placement.** `DeleteNode`'s delete and the placement clearing it
+    triggers run in **one transaction**, and the non-cascading foreign key above is the
+    backstop if that clearing is ever skipped. `AssignOrganoToNode` racing a `DeleteNode`
+    is settled by the same lock plus the foreign key: the assign either commits before the
+    delete (and is cleared by it) or fails against the vanished node.
+  - Concurrent *classification* of two different Órganos does not serialise — they are
+    independent row updates that cannot interact, and taking the tree lock for them would
+    make the admin worklist needlessly sequential.

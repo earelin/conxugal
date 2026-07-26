@@ -22,29 +22,46 @@ JDBC/SQL stays entirely in `infrastructure`.
   This task adds adapters only; if a column turns out to be missing, the fix belongs in
   TASK-0001's migration, not a second one.
 - Micronaut Data JDBC implementation of `TaxonomyNodeRepository`: find all, find by id,
-  insert, rename, re-parent, delete, and the child-existence check. No recursive CTE and no
-  subtree query — the endpoint serves the whole table and the client builds the tree.
-- Placement operations on `JdbcOrganoRepository`: set an Órgano's node, clear it, and clear
-  every placement pointing at a given node. No `findByNode` and no `findUnclassified` —
-  `findAll()` already carries `taxonomy_node_id` on every row.
+  insert, rename, re-parent, delete, the child-existence check, and the children-of-parent
+  read (a null parent must return the roots, which is not the same query as a parent match).
+  No recursive CTE and no subtree query — the endpoint serves the whole table and the client
+  builds the tree.
+- `lockTaxonomy` is the one operation with no derivable form: implement it as
+  `SELECT pg_advisory_xact_lock(<fixed key>)` via `@Query`. Transaction-scoped, so it
+  releases on commit or rollback with no explicit unlock and no leak on a failed move.
+  Record the chosen key where the next person will find it.
+- Placement operations on `JdbcOrganoRepository`: set an Órgano's node, clear it, clear every
+  placement pointing at a given node, and read by id. **Expect to write no code for most of
+  these** — the repository is a bare derived interface and Micronaut Data generates them
+  from the port's method names, so this task's Órgano half is mostly proving them against a
+  real database. The one genuine decision is *clear every placement pointing at a node*: an
+  update matched on a non-id column, which either derives from its method name or needs a
+  `@Query`. No `findByNode` and no `findUnclassified` — `findAll()` already carries
+  `taxonomy_node_id` on every row.
 
 ## Acceptance criteria
 - Nodes persist and reload with their edges intact: `findAll` returns a root with a null
   `parentId` and a child carrying its parent's id, so several levels of nesting round-trip
   as a flat list a caller can rebuild the tree from.
   ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #14)
+- Every node operation round-trips against the database, not just `findAll`: a rename shows
+  the new name and nothing else changed; a re-parent moves the node between parents and to
+  the root (null); find-by-id returns the stored node and nothing for an unknown id; delete
+  removes exactly one node. (SPEC-0004 #14)
+- The child check answers true for a node with children and false for a leaf, and the
+  children-of-parent read returns a parent's direct children — and, given a null parent, the
+  roots. These are what `DeleteNode`'s refusal and the sibling-name rule stand on, so a
+  wrong answer here silently disables both.
 - Setting an Órgano's node, then setting a different one, leaves exactly one placement on
   the row; clearing it leaves none. (SPEC-0004 #17)
-- `findAll` returns each Órgano's `taxonomyNodeId` — the node's id for a placed one, null
-  for an unplaced one, including a freshly inserted Órgano. This is a port-contract
-  guarantee; the user-visible catalogue view it feeds (SPEC-0004 #8, #18) is proven over
-  HTTP in [TASK-0005](TASK-0005-taxonomy-and-classification-rest-endpoints.md) and on the
-  screen in [TASK-0006](TASK-0006-taxonomy-admin-ui.md).
-- Deleting a node never deletes an Órgano row — after clearing the placements pointing at a
-  node and deleting it through the adapters, the Órganos that pointed at it are still stored
-  and unclassified. This exercises TASK-0001's non-cascading foreign key from the adapter
-  side. (SPEC-0004 #16)
-- The `update` / `updateActive` reconciliation paths from FEAT-0006 leave
-  `taxonomy_node_id` untouched, verified against a placed Órgano. (SPEC-0004 #5)
+- `lockTaxonomy` actually serialises: two concurrent transactions that both call it are
+  ordered, the second proceeding only once the first commits or rolls back, and the lock is
+  released without an explicit unlock. Proven with two real connections — a single-threaded
+  test cannot tell a working lock from a no-op.
+- Deleting a node whose placements were **not** cleared first is refused by the database —
+  the foreign key raises rather than cascading or nulling. This is the criterion that
+  distinguishes TASK-0001's bare foreign key from an `ON DELETE CASCADE` or `SET NULL` one;
+  the clear-then-delete happy path is `DeleteNode`'s, in
+  [TASK-0003](TASK-0003-taxonomy-management-use-cases.md). (SPEC-0004 #16)
 - The adapters satisfy the domain port contracts, integration-tested against PostgreSQL
   (Testcontainers).

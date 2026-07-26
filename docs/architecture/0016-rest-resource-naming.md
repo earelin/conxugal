@@ -6,7 +6,7 @@ supersedes: null
 superseded_by: null
 ---
 
-# 0015. Plural resource paths for collections, singular for a single element
+# 0016. Plural resource paths for collections, singular for a single element
 
 ## Status
 Proposed

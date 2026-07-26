@@ -1,17 +1,34 @@
 # Visual design — Órganos taxonomy admin UI
 
-Static visual mockups for [TASK-0006](../TASK-0006-taxonomy-admin-ui.md)'s `ADMIN`-only
-**Órganos** section of [FEAT-0007](../README.md). They render the taxonomy tree, the
-Órgano catalogue and unclassified worklist, the node create/rename/move/delete flows —
-including the two refusal states — the assign-to-node flow, and the import trigger with
-its outcome, using the project's Mantine stack
+Static visual mockups for the `ADMIN`-only **Órganos** section of
+[FEAT-0007](../README.md). They render the taxonomy tree, the Órgano catalogue and
+unclassified worklist, the node create/rename/move/delete flows — including the two refusal
+states — the assign-to-node flow, and the import trigger with its outcome, using the
+project's Mantine stack
 ([ADR-0004](../../../architecture/0004-ui-stack-vite-mantine.md)) so implementation has a
 concrete, faithful target.
 
 These are **design artifacts, not code**: hand-authored SVG that mirrors the real
 Mantine `AppShell`, `Card`, `Table`, `Badge`, `Button`, `Select` and `Modal` components
-with the project theme. They are impl-agnostic reference; the buildable UI is delivered
-by TASK-0006.
+with the project theme. They are impl-agnostic reference; the buildable UI is delivered by
+four tasks — [TASK-0007](../TASK-0007-organos-section-and-tree-view.md) (section, tree,
+states), [TASK-0008](../TASK-0008-taxonomy-management-ui.md) (node management),
+[TASK-0009](../TASK-0009-classification-ui.md) (assign/clear and the worklist) and
+[TASK-0010](../TASK-0010-import-trigger-ui.md) (import) — each naming the screens above as
+its visual target.
+
+## Elements shown here that are deliberately not built
+
+Two rendered details have no contract behind them, and the implementing tasks say so rather
+than leaving someone to build against a picture:
+
+- The persistent **"última importación … 42 engadidos · 15 actualizados · 3 desactivados"**
+  caption needs a stored last-import read that FEAT-0006 does not expose and SPEC-0004 does
+  not require. TASK-0010 ships the post-trigger banner, which is what R10 asks for, and
+  omits the caption.
+- The **NOVO** badge in `unclassified-worklist.svg` needs a `createdAt` (or
+  first-seen) field the Órgano contract does not carry. The worklist itself is the queue;
+  the badge is illustration.
 
 ## Screens
 
@@ -51,8 +68,10 @@ links; that gating is cosmetic, `/api/admin/**` is the real gate (feature *edge 
 - **Two-pane admin layout**: a `Taxonomía` tree card (left) and a content card (right)
   that shows whatever is selected in the tree — a real node's Órganos, or the pinned
   **Sen clasificar** entry's worklist. Selecting either is the same interaction; the
-  unclassified collection is not a separate screen or admin-only call, it travels
-  alongside the tree in the same `GET /api/organos/taxonomy` response (feature *Design*).
+  unclassified collection is not a separate screen or admin-only call. It is the
+  null-`taxonomyNodeId` slice of the `GET /api/organos` response the section already holds —
+  the server has no unclassified endpoint, query or field, and the taxonomy read carries no
+  Órganos at all (feature *Design*).
 - **Tree rows** show an expand/collapse chevron (root/parent nodes) and a count badge;
   the selected node swaps its badge for inline **rename / move / delete** icon actions.
   `Novo nodo` at the tree header creates at the root, or under the selected node.
@@ -60,10 +79,11 @@ links; that gating is cosmetic, `/api/admin/**` is the real gate (feature *edge 
   (`Renomear`/`Mover`/`Eliminar`/`Asignar órgano`), and a table of its Órganos with a
   `Quitar do nodo` action per row — inactive Órganos are dimmed, never removed, per the
   existing table convention.
-- **Import**: a toolbar button beside a persistent "última importación" caption
-  (counts, timestamp); triggering it surfaces a success banner with the same counts.
-  `unclassified-worklist.svg` also annotates the disabled/"already running" button state
-  in a dashed inset — not a separate screen, since it is the same button mid-action.
+- **Import**: a toolbar button; triggering it surfaces a success banner with the
+  added/refreshed/deactivated counts. `unclassified-worklist.svg` also annotates the
+  disabled/"already running" button state in a dashed inset — not a separate screen, since
+  it is the same button mid-action. The "última importación" caption beside the button is
+  **not built** (see above).
 
 ## How the design meets the spec
 
@@ -82,9 +102,9 @@ links; that gating is cosmetic, `/api/admin/**` is the real gate (feature *edge 
   first assignment and reassignment (the dialog always replaces, never adds, a placement).
   `unclassified-worklist.svg` shows the worklist itself, including a freshly imported,
   still-unclassified Órgano.
-- **Import trigger and outcome (#10)** — the toolbar button, the persistent last-outcome
-  caption, the success banner, and the annotated "already running" button state together
-  cover every outcome TASK-0006 must surface.
+- **Import trigger and outcome (#10)** — the toolbar button, the success banner and the
+  annotated "already running" button state together cover every outcome
+  [TASK-0010](../TASK-0010-import-trigger-ui.md) must surface.
 - **Galician chrome (SPEC-0001 #6)** — all labels, empty-state and refusal copy are in
   Galician, consistent with `ui/src/strings.ts`.
 

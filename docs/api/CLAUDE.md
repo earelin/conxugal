@@ -12,7 +12,7 @@ Every path is mounted under `/api/`
 ([ADR-0006](../architecture/0006-reserved-api-url-prefix.md)). After that prefix — and
 after the `/admin/` segment where present — the resource noun is **plural when the path
 addresses the collection, singular when it addresses one element**
-([ADR-0015](../architecture/0015-rest-resource-naming.md), the governing record).
+([ADR-0016](../architecture/0016-rest-resource-naming.md), the governing record).
 
 | Path addresses | Noun | Example |
 | --- | --- | --- |
