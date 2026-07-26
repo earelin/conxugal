@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="840" viewBox="0 0 1280 840" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <filter id="modalShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="11"/>
+    </filter>
+  </defs>
+
+  <!-- ===== backdrop: taxonomy admin screen (context behind the dialog) ===== -->
+  <rect width="1280" height="840" fill="#f8f9fa"/>
+  <rect x="0" y="0" width="1280" height="60" fill="#ffffff"/>
+  <rect x="0" y="60" width="260" height="780" fill="#ffffff"/>
+  <line x1="0" y1="60" x2="1280" y2="60" stroke="#dee2e6" stroke-width="1"/>
+  <line x1="260" y1="60" x2="260" y2="840" stroke="#dee2e6" stroke-width="1"/>
+  <g transform="translate(24,12) scale(0.18)">
+    <rect x="0" y="0" width="200" height="200" rx="46" fill="#4c6ef5"/>
+    <path d="M 132 55 A 56 56 0 1 0 132 145" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+    <path d="M 112 100 L 176 100" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round"/>
+    <path d="M 156 80 L 178 100 L 156 120" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="72" y="31" font-size="20" font-weight="700" fill="#212529">conxugal</text>
+  <text x="72" y="47" font-size="11" fill="#868e96">Contratos públicos da Xunta de Galicia</text>
+  <circle cx="1236" cy="30" r="18" fill="#4c6ef5"/>
+  <text x="1236" y="30" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">AP</text>
+  <text x="24" y="192" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ADMINISTRACIÓN</text>
+  <text x="52" y="232" font-size="14" fill="#495057">Panel</text>
+  <text x="52" y="264" font-size="14" fill="#495057">Usuarios</text>
+  <rect x="12" y="286" width="236" height="42" rx="8" fill="#edf2ff"/>
+  <text x="52" y="312" font-size="14" font-weight="600" fill="#3b5bdb">Órganos</text>
+  <text x="284" y="112" font-size="26" font-weight="700" fill="#212529">Órganos</text>
+  <text x="284" y="138" font-size="14" fill="#868e96">Organiza o catálogo nunha taxonomía e clasifica os órganos de contratación.</text>
+  <rect x="284" y="222" width="400" height="594" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="308" y="254" font-size="15" font-weight="600" fill="#212529">Taxonomía</text>
+  <rect x="296" y="378" width="372" height="34" rx="8" fill="#edf2ff"/>
+  <text x="352" y="399" font-size="14" font-weight="600" fill="#3b5bdb">Consellería de Educación, Ciencia,</text>
+  <rect x="708" y="222" width="548" height="594" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+
+  <!-- ===== dim overlay ===== -->
+  <rect width="1280" height="840" fill="#101113" opacity="0.55"/>
+
+  <!-- ===== modal ===== -->
+  <rect x="520" y="264" width="420" height="312" rx="10" fill="#000000" opacity="0.45" filter="url(#modalShadow)"/>
+  <rect x="520" y="258" width="420" height="312" rx="10" fill="#ffffff"/>
+
+  <!-- header -->
+  <text x="544" y="292" font-size="18" font-weight="600" fill="#212529">Eliminar nodo</text>
+  <g stroke="#868e96" stroke-width="1.6" stroke-linecap="round">
+    <line x1="907" y1="281" x2="917" y2="291"/><line x1="917" y1="281" x2="907" y2="291"/>
+  </g>
+  <line x1="520" y1="310" x2="940" y2="310" stroke="#f1f3f5"/>
+
+  <text x="544" y="338" font-size="14" fill="#495057">Eliminar «Consellería de Educación, Ciencia,</text>
+  <text x="544" y="356" font-size="14" fill="#495057">Universidades e FP»?</text>
+
+  <!-- blocked alert -->
+  <rect x="544" y="376" width="372" height="120" rx="8" fill="#fff5f5" stroke="#ffc9c9"/>
+  <g stroke="#e03131" stroke-width="1.6" fill="none">
+    <circle cx="566" cy="398" r="9"/>
+    <line x1="566" y1="393" x2="566" y2="399" stroke-linecap="round"/>
+    <circle cx="566" cy="403.5" r="0.6" fill="#e03131" stroke="none"/>
+  </g>
+  <text x="586" y="394" font-size="13" font-weight="600" fill="#c92a2a">Este nodo non se pode eliminar</text>
+  <text x="566" y="418" font-size="12" fill="#c92a2a">Ten 1 nodo fillo («Axencia Galega de Innovación»).</text>
+  <text x="566" y="434" font-size="12" fill="#c92a2a">Move ou elimina antes os seus nodos fillos; despois</text>
+  <text x="566" y="450" font-size="12" fill="#c92a2a">poderás eliminar este nodo.</text>
+
+  <!-- footer -->
+  <line x1="520" y1="510" x2="940" y2="510" stroke="#f1f3f5"/>
+  <rect x="656" y="526" width="96" height="40" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="704" y="547" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#495057">Cancelar</text>
+  <rect x="760" y="526" width="100" height="40" rx="8" fill="#f1f3f5"/>
+  <text x="810" y="547" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="600" fill="#adb5bd">Eliminar</text>
+
+  <!-- annotated alternate case: allowed deletion of an empty node -->
+  <rect x="520" y="610" width="420" height="106" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="4 3"/>
+  <text x="538" y="632" font-size="10" font-weight="600" letter-spacing="0.5" fill="#868e96">OUTRO CASO DE ELIMINACIÓN (PERMITIDO)</text>
+  <g stroke="#2f9e44" stroke-width="1.6" fill="none">
+    <circle cx="548" cy="654" r="9"/>
+    <path d="M543 654 l4 4 l7 -8"/>
+  </g>
+  <text x="566" y="651" font-size="12" fill="#495057">Un nodo baleiro (sen fillos) elimínase sen bloqueo. Se tiña</text>
+  <text x="566" y="667" font-size="12" fill="#495057">órganos asignados directamente, pasan a Sen clasificar;</text>
+  <text x="566" y="683" font-size="12" fill="#495057">nunca se elimina un órgano.</text>
+  <rect x="538" y="695" width="100" height="14" rx="7" fill="#f1f3f5"/>
+  <text x="588" y="702" text-anchor="middle" dominant-baseline="central" font-size="8" font-weight="700" letter-spacing="0.3" fill="#495057">ELIMINAR (activo)</text>
+</svg>
