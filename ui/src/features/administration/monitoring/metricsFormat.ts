@@ -62,6 +62,18 @@ export function errorRate(requestCount?: number, errorCount?: number): number | 
   return safeDivide(errorCount, requestCount);
 }
 
+export type ErrorRateSeverity = 'normal' | 'elevated' | 'high';
+
+export function errorRateSeverity(rate: number): ErrorRateSeverity {
+  if (rate < 0.01) {
+    return 'normal';
+  }
+  if (rate < 0.05) {
+    return 'elevated';
+  }
+  return 'high';
+}
+
 export function peakOf(
   history: RuntimeMetrics[],
   select: (sample: RuntimeMetrics) => number | null,

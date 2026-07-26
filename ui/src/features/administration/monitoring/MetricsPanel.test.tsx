@@ -106,6 +106,35 @@ describe('MetricsPanel', () => {
     expect(screen.getByText(`+38 ${t.sinceLastSamplePrefix}`)).toBeInTheDocument();
   });
 
+  it('caps the rolling history at 30 samples and evicts the oldest, not just the newest peak', () => {
+    renderMetricsPanel();
+
+    const heapMax = baseSample.jvm!.heapMaxBytes!;
+    const spikeSample: RuntimeMetrics = {
+      ...baseSample,
+      timestamp: '2026-07-18T09:30:00Z',
+      jvm: { ...baseSample.jvm, heapUsedBytes: Math.round(heapMax * 0.95) },
+    };
+    act(() => currentSource().emitMessage(spikeSample));
+
+    // 34 more steady-state (50% heap) samples: 35 emitted total into a
+    // 30-sample buffer, so the 95% spike from the very first sample must be
+    // evicted by the time the buffer fills.
+    for (let i = 1; i < 35; i += 1) {
+      act(() =>
+        currentSource().emitMessage({
+          ...baseSample,
+          timestamp: `2026-07-18T09:30:${String(i).padStart(2, '0')}Z`,
+        }),
+      );
+    }
+
+    expect(screen.getByText(new RegExp(`${t.peaksOfHeapPrefix} 50 %`))).toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(`${t.peaksOfHeapPrefix} 95 %`))).not.toBeInTheDocument();
+    expect(screen.queryByText(/31\/30/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/35\/30/)).not.toBeInTheDocument();
+  });
+
   it('stays connecting when the stream errors before any sample has arrived', () => {
     renderMetricsPanel();
 

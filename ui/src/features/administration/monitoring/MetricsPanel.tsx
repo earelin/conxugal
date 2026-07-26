@@ -18,6 +18,7 @@ import { MetricSparkline } from './MetricSparkline';
 import {
   deltaOf,
   errorRate,
+  errorRateSeverity,
   formatCount,
   formatDecimal,
   formatMb,
@@ -402,7 +403,7 @@ function computePoolSummary(pool: RuntimeMetrics['datastorePool']): PoolSummary 
 function PoolBar({ summary }: { summary: PoolSummary | null }) {
   if (!summary) {
     return (
-      <Box style={{ height: 10, borderRadius: 5, background: 'var(--mantine-color-gray-1)' }} />
+      <Box style={{ height: 10, borderRadius: 5, background: 'var(--mantine-color-gray-2)' }} />
     );
   }
   const pct = (n: number) => `${(n / summary.max) * 100}%`;
@@ -429,14 +430,22 @@ function PoolBar({ summary }: { summary: PoolSummary | null }) {
           width: pct(summary.free),
           height: '100%',
           borderRadius: 5,
-          background: 'var(--mantine-color-gray-1)',
+          background: 'var(--mantine-color-gray-2)',
         }}
       />
     </Group>
   );
 }
 
-function LegendDot({ color, label }: { color: string; label: string }) {
+function LegendDot({
+  color,
+  label,
+  bordered,
+}: {
+  color: string;
+  label: string;
+  bordered?: boolean;
+}) {
   return (
     <Group gap={6} wrap="nowrap">
       <Box
@@ -445,6 +454,7 @@ function LegendDot({ color, label }: { color: string; label: string }) {
           height: 10,
           borderRadius: 3,
           background: `var(--mantine-color-${color})`,
+          border: bordered ? '1px solid var(--mantine-color-gray-3)' : undefined,
         }}
       />
       <Text size="xs" c="dimmed">
@@ -485,7 +495,8 @@ function DatastorePoolCard({ latest }: { latest: RuntimeMetrics | null }) {
             label={`${t.poolLegendIdle} ${summary ? summary.idle : t.noValue}`}
           />
           <LegendDot
-            color="gray-3"
+            color="gray-2"
+            bordered
             label={`${t.poolLegendFree} ${summary ? summary.free : t.noValue}`}
           />
         </Group>
@@ -510,10 +521,17 @@ function DatastorePoolCard({ latest }: { latest: RuntimeMetrics | null }) {
   );
 }
 
+const ERROR_RATE_BADGE = {
+  normal: { color: 'green', labelKey: 'errorRateNormalBadge' },
+  elevated: { color: 'yellow', labelKey: 'errorRateElevatedBadge' },
+  high: { color: 'red', labelKey: 'errorRateHighBadge' },
+} as const;
+
 function HttpActivityCard({ latest }: { latest: RuntimeMetrics | null }) {
   const t = strings.admin.dashboard.metrics;
   const http = latest?.http;
   const rate = errorRate(http?.requestCount, http?.errorCount);
+  const badge = rate != null ? ERROR_RATE_BADGE[errorRateSeverity(rate)] : null;
 
   return (
     <Card withBorder radius="md" padding="lg">
@@ -535,9 +553,9 @@ function HttpActivityCard({ latest }: { latest: RuntimeMetrics | null }) {
           label={t.errorRateLabel}
           value={rate != null ? `${formatDecimal(rate * 100)} %` : t.noValue}
         />
-        {rate != null && (
-          <Badge color="green" variant="light">
-            {t.errorRateNormalBadge}
+        {badge && (
+          <Badge color={badge.color} variant="light">
+            {t[badge.labelKey]}
           </Badge>
         )}
       </Group>

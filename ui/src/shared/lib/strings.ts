@@ -124,6 +124,8 @@ export const strings = {
         errorResponsesLabel: 'Respostas con erro',
         errorRateLabel: 'Taxa de erro',
         errorRateNormalBadge: 'NORMAL',
+        errorRateElevatedBadge: 'ELEVADA',
+        errorRateHighBadge: 'ALTA',
         httpAccumulatedNote: 'Acumulados desde o arranque do proceso.',
 
         privacyNote:
