@@ -1,8 +1,8 @@
 import { screen } from '@testing-library/react';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mockCurrentUser, renderApp } from './test/renderApp';
 import { strings } from './shared/lib/strings';
+import { mockCurrentUser, renderApp } from './test/renderApp';
 
 describe('application shell', () => {
   beforeEach(() => {

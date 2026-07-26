@@ -21,7 +21,7 @@ export const routes: RouteObject[] = [
       { path: 'acerca', Component: AboutPage },
       {
         path: 'administracion',
-        Component: AdminRoute,
+        element: <AdminRoute fallback={<NotFoundPage />} />,
         children: [
           { index: true, Component: DashboardPage },
           { path: 'usuarios', Component: UsersPage },

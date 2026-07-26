@@ -35,7 +35,11 @@ export default tseslint.config(
         { type: 'shared-ui', pattern: 'src/shared/ui' },
         { type: 'shared-lib', pattern: 'src/shared/lib' },
       ],
-      'boundaries/files': [{ pattern: 'src/main.tsx', category: 'app-entry' }],
+      'boundaries/files': [
+        { pattern: 'src/main.tsx', category: 'app-entry' },
+        { pattern: '**/*.test.{ts,tsx}', category: 'test' },
+      ],
+      'boundaries/ignore': ['src/vite-env.d.ts', 'src/App.test.tsx', 'vite.config.ts'],
       'import/resolver': {
         typescript: { alwaysTryTypes: true, project: ['tsconfig.app.json', 'tsconfig.node.json'] },
       },
@@ -44,6 +48,8 @@ export default tseslint.config(
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'boundaries/no-unknown-files': 'error',
+      'boundaries/no-unknown-dependencies': 'error',
       'boundaries/dependencies': [
         'error',
         {
@@ -54,7 +60,7 @@ export default tseslint.config(
               allow: {
                 to: [
                   { element: { type: 'app' } },
-                  { element: { type: 'features', fileInternalPath: 'index.ts' } },
+                  { element: { type: 'features', fileInternalPath: 'index.{ts,tsx}' } },
                   { element: { type: ['shared-entities', 'shared-ui', 'shared-lib'] } },
                 ],
               },
@@ -64,7 +70,7 @@ export default tseslint.config(
               allow: {
                 to: [
                   { element: { type: 'app' } },
-                  { element: { type: 'features', fileInternalPath: 'index.ts' } },
+                  { element: { type: 'features', fileInternalPath: 'index.{ts,tsx}' } },
                   { element: { type: ['shared-entities', 'shared-ui', 'shared-lib'] } },
                 ],
               },
@@ -95,14 +101,18 @@ export default tseslint.config(
               from: { element: { type: 'shared-lib' } },
               allow: { to: { element: { type: 'shared-lib' } } },
             },
+            {
+              // Test files may additionally reach into the app layer (e.g. the
+              // shared test harness in src/test/, or app/theme.ts for a
+              // MantineProvider wrapper) without loosening what production
+              // code — or a test importing another feature's internals — may do.
+              from: { file: { categories: 'test' } },
+              allow: { to: { element: { type: 'app' } } },
+            },
           ],
         },
       ],
     },
-  },
-  {
-    files: ['**/*.test.{ts,tsx}'],
-    rules: { 'boundaries/dependencies': 'off' },
   },
   {
     files: ['**/*.cjs'],

@@ -16,9 +16,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ROLES } from '../../shared/entities/currentUser';
-import { type CreatedUser, useCreateUser } from './users';
 import { isHttpStatus } from '../../shared/lib/httpError';
 import { strings } from '../../shared/lib/strings';
+import { type CreatedUser, useCreateUser } from './users';
 
 function PasswordReveal({ created, onDone }: { created: CreatedUser; onDone: () => void }) {
   const passwordInputRef = useRef<HTMLInputElement>(null);
