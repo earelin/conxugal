@@ -50,13 +50,17 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
   }
 
   @Test
-  void source_failure_is_reported_as_failure_outcome(RequestSpecification spec) {
-    Response response = triggerImportAsAdmin(spec, ImportOutcome.failure());
+  void source_failure_is_reported_as_server_error(RequestSpecification spec) {
+    when(importOrganos.run()).thenReturn(ImportOutcome.failure());
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
-    assertThat(response.jsonPath().getString("status")).isEqualTo("FAILURE");
-    assertThat(response.jsonPath().getInt("added")).isZero();
-    assertThat(response.jsonPath().getInt("refreshed")).isZero();
-    assertThat(response.jsonPath().getInt("deactivated")).isZero();
+    given(spec)
+        .header(HttpHeaders.COOKIE, sessionCookie)
+    .when()
+        .post("/api/admin/organos/import")
+    .then()
+        .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.getCode())
+        .contentType("application/problem+json");
   }
 
   @Test

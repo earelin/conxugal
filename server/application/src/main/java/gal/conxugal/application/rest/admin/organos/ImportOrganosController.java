@@ -1,6 +1,7 @@
 package gal.conxugal.application.rest.admin.organos;
 
 import gal.conxugal.domain.organo.ImportOrganos;
+import gal.conxugal.domain.organo.ImportOutcome;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.security.annotation.Secured;
@@ -17,6 +18,10 @@ class ImportOrganosController {
 
   @Post("/import")
   ImportOutcomeResponse importOrganos() {
-    return ImportOutcomeResponse.of(importOrganos.run());
+    ImportOutcome outcome = importOrganos.run();
+    if (outcome.status() == ImportOutcome.Status.FAILURE) {
+      throw new ImportFailedException();
+    }
+    return ImportOutcomeResponse.of(outcome);
   }
 }

@@ -263,14 +263,14 @@ paths:
         If an import is already running (triggered manually or by the schedule), this
         returns the "already running" outcome rather than starting a second concurrent
         run on that instance (SPEC-0004 R12; the guard is per-instance today — running
-        more than one instance of the service is not yet supported).
+        more than one instance of the service is not yet supported). If the source is
+        unreachable or returns an unusable response, nothing is written and this is
+        reported as a 500 (SPEC-0004 R13).
       responses:
         "200":
           description: >-
-            The import was attempted; its outcome is returned either way — it completed
-            (`SUCCESS`), it could not read the source and wrote nothing (`FAILURE`,
-            SPEC-0004 R13), or another run was already in progress (`ALREADY_RUNNING`,
-            SPEC-0004 R12). A source failure is a reported outcome, not a 5xx.
+            The import completed (`SUCCESS`), or another run was already in progress
+            (`ALREADY_RUNNING`, SPEC-0004 R12).
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
@@ -291,7 +291,20 @@ paths:
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
-          $ref: "#/components/responses/InternalServerError"
+          description: >-
+            The import could not read the source and wrote nothing: the source was
+            unreachable or returned an unusable response (SPEC-0004 R13).
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /api/me:
     get:
@@ -722,8 +735,9 @@ components:
     ImportOutcome:
       type: object
       description: >-
-        The result of one Órganos de Contratación import run (SPEC-0004 R10, R12).
-        `added`, `refreshed` and `deactivated` are always 0 unless `status` is `SUCCESS`.
+        The result of an import run that did not fail (SPEC-0004 R10, R12) — a source
+        failure is reported as a 500 instead (SPEC-0004 R13), never as this body. `added`,
+        `refreshed` and `deactivated` are always 0 unless `status` is `SUCCESS`.
       required: [status, added, refreshed, deactivated]
       example:
         status: "SUCCESS"
@@ -733,12 +747,11 @@ components:
       properties:
         status:
           type: string
-          enum: [SUCCESS, FAILURE, ALREADY_RUNNING]
+          enum: [SUCCESS, ALREADY_RUNNING]
           example: "SUCCESS"
           description: >-
-            SUCCESS if the import completed; FAILURE if the source was unreachable or
-            returned an unusable response (SPEC-0004 R13); ALREADY_RUNNING if another
-            import was already in progress (SPEC-0004 R12).
+            SUCCESS if the import completed; ALREADY_RUNNING if another import was
+            already in progress (SPEC-0004 R12).
         added:
           type: integer
           format: int32
