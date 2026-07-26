@@ -23,13 +23,17 @@ and declares the port) and
   **nullable** `UUID parentId` — a null parent is a root, which is what makes the taxonomy
   many-rooted and arbitrarily deep. The parent is held as the parent's **id**, not a nested
   node, keeping the 1:1 single-table mapping of ADR-0008.
-- `TaxonomyNodeRepository` port: find all (the whole tree is small enough to read whole and
-  assemble in memory), find by id, insert, rename, re-parent, delete, and a
-  `existsByParentId`-style child check the delete rule needs.
+- `TaxonomyNodeRepository` port: **find all** — the read endpoint serves this list verbatim,
+  so there is no by-parent or subtree query — plus find by id, insert, rename, re-parent,
+  delete, and an `existsByParentId`-style child check the delete rule needs.
 - Placement on the Órgano: a **nullable** `UUID taxonomyNodeId` on `OrganoDeContratacion`,
-  and the `OrganoRepository` operations that read and write it — set the node, clear it,
-  list by node, list the unclassified ones. Placement is exactly one node or none; there is
-  no collection.
+  and the `OrganoRepository` operations that write it — set the node, clear it, and clear
+  every placement pointing at a given node (what `DeleteNode` needs). Placement is exactly
+  one node or none; there is no collection.
+- **No filtered reads.** There is deliberately no `findByNode` and no `findUnclassified`:
+  `GET /api/organos` returns `findAll()` with each row's `taxonomyNodeId`, and every
+  by-node or unclassified view is a client-side filter over that list. Adding either query
+  here would ship port surface with no caller.
 - Keep the placement out of the reconciliation write paths: `update` and `updateActive`
   must go on writing name/active only, so an import cannot disturb a placement.
 
@@ -43,8 +47,9 @@ and declares the port) and
   second placement. (SPEC-0004 #17)
 - An Órgano built without a placement is unclassified, and that is the state a newly
   imported one starts in. (SPEC-0004 #18)
-- The port exposes every operation the later use cases need — read the tree, insert,
-  rename, re-parent, delete, check for children, set/clear an Órgano's node, list by node,
-  list unclassified — and no infrastructure type leaks into its signatures.
+- The port exposes every operation the later use cases need — find all, find by id, insert,
+  rename, re-parent, delete, check for children, set/clear an Órgano's node, clear the
+  placements pointing at a node — and nothing they do not; no infrastructure type leaks into
+  its signatures.
 - Unit-tested at the record level (construction, null-parent root, null-placement
   unclassified); no database involved.
