@@ -38,12 +38,13 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * Proves {@link ImportOrganos}' single-transaction guarantee against a real Postgres: a write
  * that fails partway through a reconcile run rolls back every write that run made, including
  * ones that had already succeeded earlier in the same run. Injects the DI-managed
- * {@code ImportOrganos} bean rather than constructing it, so the assertion actually exercises
- * the {@code @Transactional} advice woven into it, and runs it on its own thread so its
- * transaction borrows a connection independent of the one this test's own JDBC work uses —
- * Micronaut Data JDBC otherwise binds one shared connection to the whole calling thread, which
- * would let the final assertion see that connection's ambient, not-yet-committed state instead
- * of what {@code ImportOrganos}' own transaction actually committed.
+ * {@code ImportOrganos} bean rather than constructing it, so its call into the reconciler
+ * resolves to the DI-managed {@code OrganoReconciler} bean carrying the {@code @Transactional}
+ * advice, not a plain instance, and runs it on its own thread so its transaction borrows a
+ * connection independent of the one this test's own JDBC work uses — Micronaut Data JDBC
+ * otherwise binds one shared connection to the whole calling thread, which would let the final
+ * assertion see that connection's ambient, not-yet-committed state instead of what the
+ * reconciler's own transaction actually committed.
  */
 @MicronautTest(startApplication = false)
 @Testcontainers(disabledWithoutDocker = true)
