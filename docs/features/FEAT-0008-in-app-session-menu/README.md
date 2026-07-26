@@ -52,6 +52,10 @@ single origin established by
 
 ## Design
 
+The screens are mocked in [`design/`](design/README.md): the open menu over the admin
+dashboard, the same header at 360 px with the initials-only trigger, and the trigger and
+item states — rest, hover/focus, in flight and failed — with the keyboard path.
+
 ### Trigger and placement ([ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md))
 The user menu is **app-shell chrome, not a feature slice.** It lives at
 `app/layout/UserMenu.tsx` next to `AppLayout.tsx`, and reads the session through
