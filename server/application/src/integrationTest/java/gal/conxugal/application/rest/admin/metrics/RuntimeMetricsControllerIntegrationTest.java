@@ -10,7 +10,6 @@ import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
 import gal.conxugal.domain.metrics.RuntimeMetrics;
 import gal.conxugal.domain.metrics.RuntimeMetricsSource;
-import gal.conxugal.domain.user.User;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.core.io.buffer.ByteBuffer;
 import io.micronaut.http.HttpHeaders;
@@ -20,7 +19,6 @@ import io.micronaut.http.client.StreamingHttpClient;
 import io.micronaut.runtime.server.EmbeddedServer;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
-import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import jakarta.inject.Inject;
 import java.nio.charset.StandardCharsets;
@@ -70,7 +68,7 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
 
   @Test
   void user_role_is_forbidden(RequestSpecification spec) {
-    String sessionCookie = loginAs(spec, TestUserFactory.normalUser());
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.normalUser());
 
     given(spec)
         .header(HttpHeaders.COOKIE, sessionCookie)
@@ -93,7 +91,7 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
   void admin_receives_first_sample_without_waiting_for_the_interval(RequestSpecification spec)
       throws InterruptedException {
     when(runtimeMetricsSource.currentSample()).thenReturn(sample(1));
-    String sessionCookie = loginAs(spec, TestUserFactory.adminUser());
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
     StreamCollector collector = openStream(sessionCookie);
     try {
@@ -109,7 +107,7 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
       throws InterruptedException {
     when(runtimeMetricsSource.currentSample())
         .thenReturn(sample(1), sample(2), sample(3));
-    String sessionCookie = loginAs(spec, TestUserFactory.adminUser());
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
     StreamCollector collector = openStream(sessionCookie);
     try {
@@ -125,7 +123,7 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
   void heartbeats_are_interleaved_between_samples(RequestSpecification spec)
       throws InterruptedException {
     when(runtimeMetricsSource.currentSample()).thenReturn(sample(1));
-    String sessionCookie = loginAs(spec, TestUserFactory.adminUser());
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
     StreamCollector collector = openStream(sessionCookie);
     try {
@@ -149,7 +147,7 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
   void disconnecting_the_client_releases_the_subscription_and_its_timer(RequestSpecification spec)
       throws InterruptedException {
     when(runtimeMetricsSource.currentSample()).thenReturn(sample(1));
-    String sessionCookie = loginAs(spec, TestUserFactory.adminUser());
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
     StreamCollector collector = openStream(sessionCookie);
     collector.awaitText(text -> countDataFrames(text) >= 2, Duration.ofSeconds(2));
@@ -184,19 +182,6 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
     HttpRequest<?> request =
         HttpRequest.GET("/api/admin/metrics").header(HttpHeaders.COOKIE, sessionCookie);
     return new StreamCollector(Flux.from(streamingClient.dataStream(request)));
-  }
-
-  private String loginAs(RequestSpecification spec, User user) {
-    seedUser(user);
-    Response response =
-        given(spec)
-            .body(
-                """
-                {"username":"%s","password":"%s"}\
-                """.formatted(user.email(), user.passwordHash()))
-        .when()
-            .post("/login");
-    return sessionCookieOf(response);
   }
 
   private static int countDataFrames(String text) {
