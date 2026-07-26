@@ -13,7 +13,8 @@ info:
     This document is the design-first, authoritative contract for the API (ADR-0010):
     endpoints are specified here before they are implemented, and controllers conform to
     it. It currently covers the planned endpoints of FEAT-0004 (user administration,
-    system status, and the current-user lookup) and FEAT-0005 (real-time metrics).
+    system status, and the current-user lookup), FEAT-0005 (real-time metrics), and
+    FEAT-0006 (the Órganos de Contratación catalogue import trigger).
 
 servers:
   - url: /
@@ -26,6 +27,8 @@ tags:
     description: System dashboard status and detailed runtime metrics (SPEC-0003 R2-R5, R17-R21).
   - name: account
     description: The authenticated caller's own account (SPEC-0002 R14).
+  - name: organos
+    description: Órganos de Contratación catalogue import (SPEC-0004 R1, R10, R12).
 
 security:
   - cookieSession: []
@@ -237,6 +240,45 @@ paths:
                 $ref: "#/components/schemas/RuntimeMetrics"
               # OpenAPI cannot model an SSE frame sequence; this schema documents the JSON
               # `data` payload carried by each sample event, not a single response body.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/admin/organos/import:
+    post:
+      tags: [organos]
+      operationId: importOrganos
+      summary: Trigger an Órganos de Contratación catalogue import
+      description: >-
+        Runs an import against the source catalogue and reconciles it into the stored
+        catalogue: new Órganos are added, existing ones are refreshed in place, and
+        Órganos absent from the source are marked inactive (SPEC-0004 R1, R5, R6, R10).
+        If an import is already running (triggered manually or by the schedule), this
+        returns the "already running" outcome rather than starting a second concurrent
+        run (SPEC-0004 R12).
+      responses:
+        "200":
+          description: >-
+            The import ran to completion, or was already running; its outcome is
+            returned either way.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportOutcome"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -673,6 +715,48 @@ components:
               maxLength: 64
               pattern: "^[\x20-\x7E]{1,64}$"
               example: "amd64"
+
+    ImportOutcome:
+      type: object
+      description: >-
+        The result of one Órganos de Contratación import run (SPEC-0004 R10, R12).
+        `added`, `refreshed` and `deactivated` are always 0 unless `status` is `SUCCESS`.
+      required: [status, added, refreshed, deactivated]
+      example:
+        status: "SUCCESS"
+        added: 3
+        refreshed: 12
+        deactivated: 1
+      properties:
+        status:
+          type: string
+          enum: [SUCCESS, FAILURE, ALREADY_RUNNING]
+          example: "SUCCESS"
+          description: >-
+            SUCCESS if the import completed; FAILURE if the source was unreachable or
+            returned an unusable response (SPEC-0004 R13); ALREADY_RUNNING if another
+            import was already in progress (SPEC-0004 R12).
+        added:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100000
+          example: 3
+          description: Órganos new to the source, stored as active (SPEC-0004 R5).
+        refreshed:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100000
+          example: 12
+          description: Órganos already stored, matched by identity and updated in place (SPEC-0004 R5).
+        deactivated:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100000
+          example: 1
+          description: Previously-stored Órganos absent from this import, marked inactive (SPEC-0004 R6).
 
     RuntimeMetrics:
       type: object

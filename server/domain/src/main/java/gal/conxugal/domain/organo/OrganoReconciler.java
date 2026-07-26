@@ -15,11 +15,11 @@ import java.util.stream.Collectors;
  * source.
  */
 @Singleton
-class OrganoReconciler {
+public class OrganoReconciler {
 
   private final OrganoRepository organoRepository;
 
-  OrganoReconciler(OrganoRepository organoRepository) {
+  public OrganoReconciler(OrganoRepository organoRepository) {
     this.organoRepository = organoRepository;
   }
 

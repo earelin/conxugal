@@ -1,0 +1,101 @@
+package gal.conxugal.application.rest.admin.organos;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
+import gal.conxugal.application.http.auth.support.TestUserFactory;
+import gal.conxugal.domain.organo.ImportOrganos;
+import gal.conxugal.domain.organo.ImportOutcome;
+import gal.conxugal.domain.user.User;
+import io.micronaut.http.HttpHeaders;
+import io.micronaut.http.HttpStatus;
+import io.micronaut.test.annotation.MockBean;
+import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import io.restassured.response.Response;
+import io.restassured.specification.RequestSpecification;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.Test;
+
+@MicronautTest
+class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
+
+  @Inject
+  ImportOrganos importOrganos;
+
+  @MockBean(ImportOrganos.class)
+  ImportOrganos importOrganosMock() {
+    return mock(ImportOrganos.class);
+  }
+
+  @Test
+  void admin_triggers_import_and_gets_outcome(RequestSpecification spec) {
+    User admin = TestUserFactory.adminUser();
+    seedUser(admin);
+    when(importOrganos.run()).thenReturn(ImportOutcome.success(3, 12, 1));
+    String sessionCookie = loginAs(spec, admin);
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+        .when()
+            .post("/api/admin/organos/import");
+
+    response.then().statusCode(HttpStatus.OK.getCode());
+    assertThat(response.jsonPath().getString("status")).isEqualTo("SUCCESS");
+    assertThat(response.jsonPath().getInt("added")).isEqualTo(3);
+    assertThat(response.jsonPath().getInt("refreshed")).isEqualTo(12);
+    assertThat(response.jsonPath().getInt("deactivated")).isEqualTo(1);
+  }
+
+  @Test
+  void admin_gets_already_running_outcome(RequestSpecification spec) {
+    User admin = TestUserFactory.adminUser();
+    seedUser(admin);
+    when(importOrganos.run()).thenReturn(ImportOutcome.alreadyRunning());
+    String sessionCookie = loginAs(spec, admin);
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+        .when()
+            .post("/api/admin/organos/import");
+
+    response.then().statusCode(HttpStatus.OK.getCode());
+    assertThat(response.jsonPath().getString("status")).isEqualTo("ALREADY_RUNNING");
+  }
+
+  @Test
+  void user_role_is_forbidden(RequestSpecification spec) {
+    seedUser(TestUserFactory.normalUser());
+    String sessionCookie = loginAs(spec, TestUserFactory.normalUser());
+
+    given(spec)
+        .header(HttpHeaders.COOKIE, sessionCookie)
+    .when()
+        .post("/api/admin/organos/import")
+    .then()
+        .statusCode(HttpStatus.FORBIDDEN.getCode());
+  }
+
+  @Test
+  void unauthenticated_caller_is_unauthorized(RequestSpecification spec) {
+    given(spec)
+    .when()
+        .post("/api/admin/organos/import")
+    .then()
+        .statusCode(HttpStatus.UNAUTHORIZED.getCode());
+  }
+
+  private String loginAs(RequestSpecification spec, User user) {
+    Response response =
+        given(spec)
+            .body(
+                "{\"username\":\"" + user.email() + "\",\"password\":\"" + user.passwordHash()
+                    + "\"}")
+        .when()
+            .post("/login");
+    return sessionCookieOf(response);
+  }
+}
