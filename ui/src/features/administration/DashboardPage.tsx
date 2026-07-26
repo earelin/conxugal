@@ -18,9 +18,9 @@ import {
   IconRefresh,
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
-import { HttpError } from '../../api/httpClient';
-import { useSystemStatus, type SystemStatus } from '../../api/systemStatus';
-import { strings } from '../../strings';
+import { HttpError } from '../../shared/lib/httpClient';
+import { useSystemStatus, type SystemStatus } from './systemStatus';
+import { strings } from '../../shared/lib/strings';
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('gl-ES', { dateStyle: 'short', timeStyle: 'short' });

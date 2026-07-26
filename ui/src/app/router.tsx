@@ -1,11 +1,9 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
+import { AdminRoute, DashboardPage, UsersPage } from '../features/administration';
 import { AppLayout } from './layout/AppLayout';
-import { AboutPage } from './routes/AboutPage';
-import { AdminRoute } from './routes/admin/AdminRoute';
-import { DashboardPage } from './routes/admin/DashboardPage';
-import { UsersPage } from './routes/admin/UsersPage';
-import { HomePage } from './routes/HomePage';
-import { NotFoundPage } from './routes/NotFoundPage';
+import { AboutPage } from './pages/AboutPage';
+import { HomePage } from './pages/HomePage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 /**
  * Route tree. Exported separately from the router so tests can mount it with a

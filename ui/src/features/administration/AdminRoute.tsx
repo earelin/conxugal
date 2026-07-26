@@ -1,7 +1,7 @@
 import { Center, Loader } from '@mantine/core';
 import { Outlet } from 'react-router';
-import { useCurrentUser } from '../../api/currentUser';
-import { NotFoundPage } from '../NotFoundPage';
+import { useCurrentUser } from '../../shared/entities/currentUser';
+import { NotFoundView } from '../../shared/ui/NotFoundView';
 
 /**
  * Gates the admin route subtree on the session role. This is a client-side
@@ -20,7 +20,7 @@ export function AdminRoute() {
   }
 
   if (currentUser?.role !== 'ADMIN') {
-    return <NotFoundPage />;
+    return <NotFoundView />;
   }
 
   return <Outlet />;

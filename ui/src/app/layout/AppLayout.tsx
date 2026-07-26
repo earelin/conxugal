@@ -10,10 +10,10 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { NavLink, Outlet } from 'react-router';
-import { useCurrentUser } from '../api/currentUser';
-import { initialsOf } from '../commons/avatar';
+import { useCurrentUser } from '../../shared/entities/currentUser';
+import { initialsOf } from '../../shared/ui/avatar';
 import { visibleNavSections } from '../nav';
-import { strings } from '../strings';
+import { strings } from '../../shared/lib/strings';
 
 /**
  * Persistent application shell: a header with the product name and a navbar

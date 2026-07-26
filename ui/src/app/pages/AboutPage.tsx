@@ -1,5 +1,5 @@
 import { Stack, Text, Title } from '@mantine/core';
-import { strings } from '../strings';
+import { strings } from '../../shared/lib/strings';
 
 export function AboutPage() {
   return (

@@ -1,11 +1,11 @@
 import { Button, Group, Loader, Stack, Text, Title } from '@mantine/core';
 import { IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
-import { useUsers } from '../../api/users';
-import { isHttpStatus } from '../../commons/httpError';
-import { strings } from '../../strings';
+import { useUsers } from './users';
+import { isHttpStatus } from '../../shared/lib/httpError';
+import { strings } from '../../shared/lib/strings';
 import { CreateUserModal } from './CreateUserModal';
-import { ErrorAlert } from './ErrorAlert';
+import { ErrorAlert } from '../../shared/ui/ErrorAlert';
 import { UsersTable } from './UsersTable';
 
 function UsersError({ error }: { error: unknown }) {

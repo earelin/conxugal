@@ -3,9 +3,9 @@ import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createQueryClient } from '../../api/queryClient';
-import { strings } from '../../strings';
-import { theme } from '../../theme';
+import { createQueryClient } from '../../shared/lib/queryClient';
+import { strings } from '../../shared/lib/strings';
+import { theme } from '../../app/theme';
 import { DashboardPage } from './DashboardPage';
 
 const BASE_URL = 'http://localhost:3000';

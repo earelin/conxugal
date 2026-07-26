@@ -4,10 +4,10 @@ import { render } from '@testing-library/react';
 import nock from 'nock';
 import { createMemoryRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
-import type { Role } from '../api/currentUser';
-import { createQueryClient } from '../api/queryClient';
-import { routes } from '../router';
-import { theme } from '../theme';
+import type { Role } from '../shared/entities/currentUser';
+import { createQueryClient } from '../shared/lib/queryClient';
+import { routes } from '../app/router';
+import { theme } from '../app/theme';
 
 export const BASE_URL = 'http://localhost:3000';
 

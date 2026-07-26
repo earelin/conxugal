@@ -1,11 +1,11 @@
 import { Avatar, Badge, Button, Card, Group, Stack, Table, Text, Tooltip } from '@mantine/core';
 import { useState } from 'react';
-import { type UserAccount, useSetUserEnabled } from '../../api/users';
-import { initialsOf } from '../../commons/avatar';
-import { formatDate } from '../../commons/date';
-import { isHttpStatus } from '../../commons/httpError';
-import { strings } from '../../strings';
-import { ErrorAlert } from './ErrorAlert';
+import { type UserAccount, useSetUserEnabled } from './users';
+import { initialsOf } from '../../shared/ui/avatar';
+import { formatDate } from '../../shared/lib/date';
+import { isHttpStatus } from '../../shared/lib/httpError';
+import { strings } from '../../shared/lib/strings';
+import { ErrorAlert } from '../../shared/ui/ErrorAlert';
 
 interface UserRowProps {
   user: UserAccount;

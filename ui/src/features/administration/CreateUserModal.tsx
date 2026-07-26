@@ -15,10 +15,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { ROLES } from '../../api/currentUser';
-import { type CreatedUser, useCreateUser } from '../../api/users';
-import { isHttpStatus } from '../../commons/httpError';
-import { strings } from '../../strings';
+import { ROLES } from '../../shared/entities/currentUser';
+import { type CreatedUser, useCreateUser } from './users';
+import { isHttpStatus } from '../../shared/lib/httpError';
+import { strings } from '../../shared/lib/strings';
 
 function PasswordReveal({ created, onDone }: { created: CreatedUser; onDone: () => void }) {
   const passwordInputRef = useRef<HTMLInputElement>(null);

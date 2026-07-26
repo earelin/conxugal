@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from './httpClient';
+import { apiFetch } from '../../shared/lib/httpClient';
 
 export type ServiceStatus = 'UP' | 'DEGRADED';
 
