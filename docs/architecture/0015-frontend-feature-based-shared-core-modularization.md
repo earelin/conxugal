@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-07-26
 spec: null
 supersedes: null
@@ -9,7 +9,7 @@ superseded_by: null
 # 0015. Frontend modularization: feature-based slices with a shared core
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 [ADR-0004](0004-ui-stack-vite-mantine.md) settled the UI's build tool, router and
