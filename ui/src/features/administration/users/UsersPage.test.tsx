@@ -4,10 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createQueryClient } from '../../shared/lib/queryClient';
+import { createQueryClient } from '../../../shared/lib/queryClient';
 import type { UserAccount } from './users';
-import { strings } from '../../shared/lib/strings';
-import { theme } from '../../app/theme';
+import { strings } from '../../../shared/lib/strings';
+import { theme } from '../../../app/theme';
 import { UsersPage } from './UsersPage';
 
 const BASE_URL = 'http://localhost:3000';

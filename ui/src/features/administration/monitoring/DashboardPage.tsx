@@ -18,8 +18,8 @@ import {
   IconRefresh,
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
-import { HttpError } from '../../shared/lib/httpClient';
-import { strings } from '../../shared/lib/strings';
+import { HttpError } from '../../../shared/lib/httpClient';
+import { strings } from '../../../shared/lib/strings';
 import { useSystemStatus, type SystemStatus } from './systemStatus';
 
 function formatDateTime(iso: string): string {

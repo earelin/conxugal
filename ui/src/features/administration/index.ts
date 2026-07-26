@@ -1,3 +1,3 @@
 export { AdminRoute } from './AdminRoute';
-export { DashboardPage } from './DashboardPage';
-export { UsersPage } from './UsersPage';
+export { DashboardPage } from './monitoring/DashboardPage';
+export { UsersPage } from './users/UsersPage';
