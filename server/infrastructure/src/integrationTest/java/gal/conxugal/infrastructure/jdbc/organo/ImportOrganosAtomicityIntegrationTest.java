@@ -1,25 +1,32 @@
 package gal.conxugal.infrastructure.jdbc.organo;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import gal.conxugal.domain.organo.ImportOrganos;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoRepository;
+import gal.conxugal.domain.organo.OrganoSource;
 import gal.conxugal.domain.organo.OrganoSourceEntry;
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
 import jakarta.inject.Inject;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import javax.sql.DataSource;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -28,9 +35,15 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Proves {@link ImportOrganos}' "single transaction" guarantee (SPEC-0004 R13) against a real
- * Postgres: a write that fails partway through a reconcile run rolls back every write that run
- * made, including ones that had already succeeded earlier in the same run.
+ * Proves {@link ImportOrganos}' single-transaction guarantee against a real Postgres: a write
+ * that fails partway through a reconcile run rolls back every write that run made, including
+ * ones that had already succeeded earlier in the same run. Injects the DI-managed
+ * {@code ImportOrganos} bean rather than constructing it, so the assertion actually exercises
+ * the {@code @Transactional} advice woven into it, and runs it on its own thread so its
+ * transaction borrows a connection independent of the one this test's own JDBC work uses —
+ * Micronaut Data JDBC otherwise binds one shared connection to the whole calling thread, which
+ * would let the final assertion see that connection's ambient, not-yet-committed state instead
+ * of what {@code ImportOrganos}' own transaction actually committed.
  */
 @MicronautTest(startApplication = false)
 @Testcontainers(disabledWithoutDocker = true)
@@ -56,14 +69,22 @@ class ImportOrganosAtomicityIntegrationTest implements TestPropertyProvider {
   }
 
   @Inject
-  OrganoRepository organoRepository;
+  ImportOrganos importOrganos;
 
   @Inject
-  DataSource dataSource;
+  OrganoSource organoSource;
+
+  @Inject
+  OrganoRepository organoRepository;
+
+  @MockBean(OrganoSource.class)
+  OrganoSource organoSourceMock() {
+    return mock(OrganoSource.class);
+  }
 
   @AfterEach
   void cleanUp() throws Exception {
-    try (Connection connection = dataSource.getConnection();
+    try (Connection connection = rawConnection();
         Statement statement = connection.createStatement()) {
       statement.execute("TRUNCATE TABLE organo_contratacion");
     }
@@ -74,27 +95,16 @@ class ImportOrganosAtomicityIntegrationTest implements TestPropertyProvider {
       throws Exception {
     insertOrgano("will-be-renamed", "Old Name", true);
     insertOrgano("disappears", "Disappears", true);
-    // The injected DataSource shares the same underlying connection as the repository calls
-    // below (Micronaut Data's connection-context-aware proxy), so this needs to be committed
-    // for the seeded rows to survive the rollback the failing insert forces on that connection.
-    try (Connection connection = dataSource.getConnection()) {
-      connection.commit();
-    }
     String nameTooLongForColumn = "A".repeat(256);
-    ImportOrganos importOrganos =
-        new ImportOrganos(
-            () ->
-                List.of(
-                    new OrganoSourceEntry("will-be-renamed", "Renamed"),
-                    new OrganoSourceEntry("new-and-poisoned", nameTooLongForColumn)),
-            organoRepository);
+    when(organoSource.fetchAll())
+        .thenReturn(
+            List.of(
+                new OrganoSourceEntry("will-be-renamed", "Renamed"),
+                new OrganoSourceEntry("new-and-poisoned", nameTooLongForColumn)));
 
-    assertThatThrownBy(importOrganos::run).isInstanceOf(RuntimeException.class);
+    Exception failure = runOnItsOwnThread(importOrganos::run);
 
-    // Postgres refuses further commands on the aborted connection until it is rolled back.
-    try (Connection rollbackConnection = dataSource.getConnection()) {
-      rollbackConnection.rollback();
-    }
+    assertThat(failure).isInstanceOf(RuntimeException.class);
     List<OrganoDeContratacion> organos = organoRepository.findAll();
     assertThat(organos)
         .extracting(
@@ -104,11 +114,30 @@ class ImportOrganosAtomicityIntegrationTest implements TestPropertyProvider {
             tuple("will-be-renamed", "Old Name", true), tuple("disappears", "Disappears", true));
   }
 
+  // Runs the given call on its own thread and returns the exception it threw, so a failure
+  // that reaches the test thread as data does not silently mask the connection isolation this
+  // test relies on (see the class javadoc).
+  @SuppressWarnings("PMD.AvoidCatchingGenericException")
+  private static Exception runOnItsOwnThread(Runnable call) throws Exception {
+    Callable<Exception> captureFailure =
+        () -> {
+          try {
+            call.run();
+            return null;
+          } catch (RuntimeException e) {
+            return e;
+          }
+        };
+    try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
+      return executor.submit(captureFailure).get(10, TimeUnit.SECONDS);
+    }
+  }
+
   private UUID insertOrgano(String sourceKey, String name, boolean active) throws Exception {
     String sql =
         "INSERT INTO organo_contratacion (id, source_key, name, active) "
             + "VALUES (uuidv7(), ?, ?, ?) RETURNING id";
-    try (Connection connection = dataSource.getConnection();
+    try (Connection connection = rawConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, sourceKey);
       statement.setString(2, name);
@@ -120,5 +149,10 @@ class ImportOrganosAtomicityIntegrationTest implements TestPropertyProvider {
         return resultSet.getObject("id", UUID.class);
       }
     }
+  }
+
+  private static Connection rawConnection() throws Exception {
+    return DriverManager.getConnection(
+        postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
   }
 }

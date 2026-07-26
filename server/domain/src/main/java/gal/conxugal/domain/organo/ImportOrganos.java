@@ -45,6 +45,13 @@ public class ImportOrganos {
         LOG.warn("Órganos import failed: source is unavailable or returned an unusable list", e);
         return ImportOutcome.failure();
       }
+      // OrganoSource's contract forbids an empty success, but this is defence-in-depth
+      // against a source implementation that doesn't honour it: an empty list would
+      // otherwise deactivate the entire catalogue.
+      if (sourceEntries.isEmpty()) {
+        LOG.warn("Órganos import failed: source returned an empty list");
+        return ImportOutcome.failure();
+      }
       return reconcile(sourceEntries);
     } finally {
       running.set(false);

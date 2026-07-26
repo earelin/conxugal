@@ -133,18 +133,56 @@ class ImportOrganosTest {
   void marks_stored_entry_absent_from_the_source_inactive_and_keeps_it() {
     FakeOrganoRepository repository = new FakeOrganoRepository();
     OrganoDeContratacion stored = repository.seed("consorcio-x", "Consorcio X", true);
-    ImportOrganos importOrganos = new ImportOrganos(List::of, repository);
+    ImportOrganos importOrganos =
+        new ImportOrganos(sourceReturning("other-key", "Other Org"), repository);
 
     ImportOutcome outcome = importOrganos.run();
 
     assertThat(outcome.deactivated()).isEqualTo(1);
     assertThat(repository.findAll())
+        .filteredOn(organo -> "consorcio-x".equals(organo.sourceKey()))
         .singleElement()
         .satisfies(
             organo -> {
               assertThat(organo.id()).isEqualTo(stored.id());
               assertThat(organo.active()).isFalse();
             });
+  }
+
+  @Test
+  void redeactivating_an_already_inactive_absentee_reports_zero_deactivated() {
+    FakeOrganoRepository repository = new FakeOrganoRepository();
+    OrganoDeContratacion stored = repository.seed("consorcio-x", "Consorcio X", true);
+    ImportOrganos importOrganos =
+        new ImportOrganos(sourceReturning("other-key", "Other Org"), repository);
+    ImportOutcome firstOutcome = importOrganos.run();
+
+    ImportOutcome secondOutcome = importOrganos.run();
+
+    assertThat(firstOutcome.deactivated()).isEqualTo(1);
+    assertThat(secondOutcome.deactivated()).isZero();
+    assertThat(repository.findAll())
+        .filteredOn(organo -> "consorcio-x".equals(organo.sourceKey()))
+        .singleElement()
+        .satisfies(
+            organo -> {
+              assertThat(organo.id()).isEqualTo(stored.id());
+              assertThat(organo.active()).isFalse();
+            });
+  }
+
+  @Test
+  void writes_nothing_and_reports_failure_when_the_source_returns_an_empty_list() {
+    FakeOrganoRepository repository = new FakeOrganoRepository();
+    repository.seed("consorcio-x", "Consorcio X", true);
+    ImportOrganos importOrganos = new ImportOrganos(List::of, repository);
+
+    ImportOutcome outcome = importOrganos.run();
+
+    assertThat(outcome.status()).isEqualTo(ImportOutcome.Status.FAILURE);
+    assertThat(repository.findAll())
+        .singleElement()
+        .satisfies(organo -> assertThat(organo.active()).isTrue());
   }
 
   @Test
