@@ -13,6 +13,8 @@ and [ADR-0009](../../architecture/0009-sse-admin-realtime-metrics.md). Adds a li
 to the existing admin dashboard, consuming
 [TASK-0004](TASK-0004-metrics-sse-endpoint.md)'s stream.
 
+The visual target is [`design/`](design/README.md).
+
 ## Scope
 - A **Métricas** panel on the admin dashboard opening an `EventSource` to
   `/api/admin/metrics` (session cookie sent by the browser; no new credential handling).
