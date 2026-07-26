@@ -39,7 +39,10 @@ JDBC/SQL stays entirely in `infrastructure`.
 - Setting an Órgano's node, then setting a different one, leaves exactly one placement on
   the row; clearing it leaves none. (SPEC-0004 #17)
 - `findAll` returns each Órgano's `taxonomyNodeId` — the node's id for a placed one, null
-  for an unplaced one, including a freshly inserted Órgano. (SPEC-0004 #8, #18)
+  for an unplaced one, including a freshly inserted Órgano. This is a port-contract
+  guarantee; the user-visible catalogue view it feeds (SPEC-0004 #8, #18) is proven over
+  HTTP in [TASK-0005](TASK-0005-taxonomy-and-classification-rest-endpoints.md) and on the
+  screen in [TASK-0006](TASK-0006-taxonomy-admin-ui.md).
 - Deleting a node never deletes an Órgano row — after the delete, the Órganos that pointed
   at it are still stored and unclassified. (SPEC-0004 #16)
 - The `update` / `updateActive` reconciliation paths from FEAT-0006 leave

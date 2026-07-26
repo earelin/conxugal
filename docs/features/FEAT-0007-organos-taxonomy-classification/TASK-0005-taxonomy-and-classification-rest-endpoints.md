@@ -28,6 +28,10 @@ Governed by [ADR-0006](../../architecture/0006-reserved-api-url-prefix.md) (rese
   to build the tree, and filters `taxonomyNodeId == null` for the unclassified set.
 - Both are unfiltered and unpaged, and take no query parameters — the whole table, every
   time. Adding a filter later is additive; guessing at one now is not.
+- **Neither response guarantees an order**, and the OpenAPI description of each array says
+  so — no `ORDER BY` is added to satisfy an unstated expectation. Presentation order belongs
+  to the client ([TASK-0006](TASK-0006-taxonomy-admin-ui.md) sorts by name with locale-aware
+  collation).
 - `ADMIN`-only, under `/api/admin/`: create a node, rename it, move it, delete it; assign
   an Órgano to a node and clear its node.
 - Map the TASK-0003 domain rejections onto distinct statuses — unknown node/Órgano to 404,
@@ -41,7 +45,7 @@ Governed by [ADR-0006](../../architecture/0006-reserved-api-url-prefix.md) (rese
   ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #2, #8)
 - As an authenticated `USER` or `ADMIN`, `GET /api/organos/taxonomy` returns every node with
   its `parentId` or null; with no node created it returns an empty array, while
-  `GET /api/organos` still returns the whole catalogue. (SPEC-0004 #2, #8, #9)
+  `GET /api/organos` still returns the whole catalogue. (SPEC-0004 #2, #8)
 - An unauthenticated caller to either read is denied (401). (SPEC-0004 #2)
 - As an `ADMIN`, a node can be created at the root and under a parent, renamed, moved and
   deleted over HTTP; each change is visible in the next `GET /api/organos/taxonomy`.

@@ -27,6 +27,15 @@ arrives later as the Órgano filter of the contratos list.
 - Tolerate a `taxonomyNodeId` that matches no node in the taxonomy response — the two reads
   are separate requests and another admin's delete can land between them. Render such an
   Órgano as unclassified; never drop it and never throw.
+- **Distinguish a failed fetch from an empty one.** If either read fails, show the shared
+  `ErrorAlert` with a retry instead of rendering the successful half alone — a failed
+  taxonomy fetch must never reach the builder as an empty node list, because the tolerance
+  rule above would then present the whole catalogue as unclassified and an admin would read
+  a transport failure as their taxonomy having been wiped.
+- **Sort for display**: nodes among their siblings, and Órganos within a node and in the
+  unclassified worklist, by name using `localeCompare` with a Galician locale — the
+  endpoints promise no order, and without this the tree reshuffles on the refetch after
+  every mutation. Accented names must collate correctly (`Á` beside `A`, not after `Z`).
 - The taxonomy tree with its management controls: create a node at the root or under a
   parent, rename, move, delete.
 - The catalogue with each Órgano's name, active state and placement, an assign-to-node
@@ -46,9 +55,15 @@ arrives later as the Órgano filter of the contratos list.
 - Given the two flat responses, the builder produces the correct rooted tree at several
   levels of nesting, places each Órgano under the node its `taxonomyNodeId` names, and
   returns every null-placement Órgano as unclassified — with an empty taxonomy response,
-  the whole catalogue comes back unclassified. (SPEC-0004 #8, #9, #14)
+  the whole catalogue comes back unclassified. (SPEC-0004 #8, #14)
 - An Órgano whose `taxonomyNodeId` matches no node in the taxonomy response is shown as
   unclassified rather than lost or fatal.
+- When the taxonomy read fails and the catalogue read succeeds, the section shows an error
+  with a retry — **not** an empty tree with the whole catalogue as unclassified; the two
+  states are visibly different. The reverse failure is handled the same way.
+- Sibling nodes, and Órganos within a node and in the unclassified worklist, are displayed
+  in name order; re-fetching after a mutation reproduces the same order, and accented
+  Galician names sort in their expected places.
 - An `ADMIN` can create a node at the root and under a parent, rename it, move it and
   delete it from the UI, and the tree reflects each change.
   ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #14)
@@ -65,6 +80,6 @@ arrives later as the Órgano filter of the contratos list.
   remains the real gate. (SPEC-0004 #1)
 - All added chrome and messages are in Galician. ([SPEC-0001](../../specs/SPEC-0001-web-ui.md) #6)
 - The tree builder is unit-tested on its own arrays — nesting, unclassified, empty
-  taxonomy, dangling node id — with no component rendered; the page is component-tested
-  with a stubbed API for the tree operations, the assign/clear flow, the unclassified
-  worklist and the import outcome, including the refusal cases.
+  taxonomy, dangling node id, sibling ordering — with no component rendered; the page is
+  component-tested with a stubbed API for the tree operations, the assign/clear flow, the
+  unclassified worklist, the import outcome and a failing read, including the refusal cases.

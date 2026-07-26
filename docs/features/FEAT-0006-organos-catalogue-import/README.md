@@ -57,8 +57,8 @@ contract-first in the [OpenAPI document](../../api/openapi.yaml)
     case and guard (SPEC-0004 R11).
 
 **Out of scope (owned by future features):**
-- The **taxonomy of categories, classifying Órganos into it, the unclassified set, the
-  authenticated read endpoint, and the admin UI** — the read contract of SPEC-0004 R2, R8
+- The **taxonomy of categories, classifying Órganos into it, both authenticated read
+  endpoints, and the admin UI** — the read contract of SPEC-0004 R2, R8
   and R9, the admin management tree, the catalogue table, the import-trigger button, and
   the outcome display (SPEC-0004 R1 write ops, R14–R18) — belong to a separate feature,
   *FEAT-0007. Órganos taxonomy & classification*. This feature stops at the stored

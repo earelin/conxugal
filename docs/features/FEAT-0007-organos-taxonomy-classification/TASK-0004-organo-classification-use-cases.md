@@ -24,7 +24,11 @@ authenticated endpoints serve. Governed by
   node carries its children or its Órganos.
 - Both reads mirror the `ListUsers` precedent in `gal.conxugal.domain.user` — a thin,
   single-purpose use case over the port, so the controller depends on the domain rather than
-  on a repository.
+  on a repository. Being pass-throughs, their unit tests can only prove they pass through;
+  the substantive "every Órgano, exactly once, with its placement" guarantee (SPEC-0004 #8)
+  is proven where it is observable — against the database in
+  [TASK-0002](TASK-0002-taxonomy-store-infrastructure.md) and over HTTP in
+  [TASK-0005](TASK-0005-taxonomy-and-classification-rest-endpoints.md).
 - **No unclassified concept in the backend.** There is no `GetUnclassifiedOrganos` and no
   unclassified field in any result: an Órgano with a null `taxonomyNodeId` is unclassified,
   and callers filter for it. This is what the two-endpoint split buys — R8 and R18 are
@@ -41,10 +45,10 @@ authenticated endpoints serve. Governed by
   `taxonomyNodeId` until it is assigned. (SPEC-0004 #18)
 - Assigning to an unknown node, or assigning an unknown Órgano, is rejected and writes
   nothing.
-- `ListOrganos` returns **every** stored Órgano exactly once with its name, active state and
-  placement or null — nothing in the catalogue is unreachable through it, whether or not any
-  node exists. (SPEC-0004 #8)
-- `ListTaxonomyNodes` returns **every** node exactly once with its parent's id, or null for
-  a root; with no node created it returns an empty list. (SPEC-0004 #9)
+- `ListOrganos` returns `OrganoRepository.findAll()` unchanged — the same elements in the
+  same order, nothing filtered, grouped, sorted or re-shaped on the way through.
+- `ListTaxonomyNodes` does the same for `TaxonomyNodeRepository.findAll()`, returning an
+  empty list when the repository holds no node.
 - Unit-tested against test doubles of the ports, covering the reassignment case, the
-  cleared-placement case, and both reads with an empty taxonomy.
+  cleared-placement case, the rejections, and the empty-repository case for
+  `ListTaxonomyNodes`.
