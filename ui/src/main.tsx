@@ -1,5 +1,6 @@
 // All Mantine packages except `@mantine/hooks` require their styles to be imported.
 import '@mantine/core/styles.css';
+import '@mantine/charts/styles.css';
 
 import { ColorSchemeScript, MantineProvider } from '@mantine/core';
 import { QueryClientProvider } from '@tanstack/react-query';

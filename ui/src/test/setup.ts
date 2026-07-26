@@ -27,5 +27,33 @@ class ResizeObserverMock {
   disconnect() {}
 }
 
+// jsdom has no EventSource either. This inert stub never fires a callback, so
+// a component that opens one (e.g. the admin metrics panel) just sits in its
+// permanent "connecting" state during tests that don't stub EventSource
+// themselves with a more capable double.
+class NoopEventSource {
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSED = 2;
+
+  readyState = NoopEventSource.CONNECTING;
+  onopen: (() => void) | null = null;
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onerror: (() => void) | null = null;
+
+  constructor(public url: string) {}
+
+  close() {
+    this.readyState = NoopEventSource.CLOSED;
+  }
+
+  addEventListener() {}
+  removeEventListener() {}
+  dispatchEvent(): boolean {
+    return false;
+  }
+}
+
 vi.stubGlobal('matchMedia', matchMediaMock);
 vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+vi.stubGlobal('EventSource', NoopEventSource);

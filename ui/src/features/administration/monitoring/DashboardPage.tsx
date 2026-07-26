@@ -20,6 +20,7 @@ import {
 import type { ReactNode } from 'react';
 import { HttpError } from '../../../shared/lib/httpClient';
 import { strings } from '../../../shared/lib/strings';
+import { MetricsPanel } from './MetricsPanel';
 import { useSystemStatus, type SystemStatus } from './systemStatus';
 
 function formatDateTime(iso: string): string {
@@ -222,6 +223,7 @@ export function DashboardPage() {
           onRefresh={() => void refetch()}
         />
       )}
+      <MetricsPanel />
     </Stack>
   );
 }
