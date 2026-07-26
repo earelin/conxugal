@@ -41,7 +41,11 @@ export default tseslint.config(
       ],
       'boundaries/ignore': ['src/vite-env.d.ts', 'src/App.test.tsx', 'vite.config.ts'],
       'import/resolver': {
-        typescript: { alwaysTryTypes: true, project: ['tsconfig.app.json', 'tsconfig.node.json'] },
+        typescript: {
+          alwaysTryTypes: true,
+          project: ['tsconfig.app.json', 'tsconfig.node.json'],
+          noWarnOnMultipleProjects: true,
+        },
       },
     },
     rules: {
@@ -102,11 +106,13 @@ export default tseslint.config(
               allow: { to: { element: { type: 'shared-lib' } } },
             },
             {
-              // Test files may additionally reach into the app layer (e.g. the
+              // Feature tests may additionally reach into the app layer (e.g. the
               // shared test harness in src/test/, or app/theme.ts for a
               // MantineProvider wrapper) without loosening what production
               // code — or a test importing another feature's internals — may do.
-              from: { file: { categories: 'test' } },
+              // Scoped to `features` only: `app` can already reach `app`, and
+              // `shared-*` tests have no legitimate reason to depend upward on `app`.
+              from: { element: { type: 'features' }, file: { categories: 'test' } },
               allow: { to: { element: { type: 'app' } } },
             },
           ],
