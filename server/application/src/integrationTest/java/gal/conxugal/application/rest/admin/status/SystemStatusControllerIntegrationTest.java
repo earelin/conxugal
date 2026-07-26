@@ -101,15 +101,4 @@ class SystemStatusControllerIntegrationTest extends AuthenticationTestSupport {
     assertThat(response.jsonPath().getString("status")).isEqualTo("DEGRADED");
     assertThat(response.jsonPath().getBoolean("datastore.reachable")).isFalse();
   }
-
-  private String loginAs(RequestSpecification spec, User user) {
-    Response response =
-        given(spec)
-            .body(
-                "{\"username\":\"" + user.email() + "\",\"password\":\"" + user.passwordHash()
-                    + "\"}")
-        .when()
-            .post("/login");
-    return sessionCookieOf(response);
-  }
 }

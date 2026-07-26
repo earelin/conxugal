@@ -10,16 +10,10 @@
   <!-- False positive: SpotBugs' MutableClasses heuristic conservatively treats OrganoReconciler
        (and previously OrganoRepository, before it was extracted out of this class) as mutable
        purely for lacking an immutability marker — it is a stateless, constructor-stored
-       collaborator like any other, not a leaked mutable data holder. The same heuristic flags
-       OrganoRepository (a port interface) one level down, inside OrganoReconciler itself. -->
+       collaborator like any other, not a leaked mutable data holder. -->
   <Match>
     <Class name="gal.conxugal.domain.organo.ImportOrganos"/>
     <Field name="organoReconciler"/>
-    <Bug pattern="EI_EXPOSE_REP2"/>
-  </Match>
-  <Match>
-    <Class name="gal.conxugal.domain.organo.OrganoReconciler"/>
-    <Field name="organoRepository"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
 </FindBugsFilter>

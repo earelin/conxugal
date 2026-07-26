@@ -13,13 +13,18 @@ import java.util.stream.Collectors;
  * transaction: insert new entries active, refresh a matched entry's name in place and
  * reactivate it if it had been deactivated, and deactivate stored entries absent from the
  * source.
+ *
+ * <p>The class itself is public — not to be constructed outside this package, but because a
+ * Micronaut Test {@code @MockBean}-generated proxy for {@link ImportOrganos} in another module
+ * needs this type in its constructor signature. The constructor stays package-private so {@link
+ * ImportOrganos} remains the only way to reach {@link #reconcile}.
  */
 @Singleton
 public class OrganoReconciler {
 
   private final OrganoRepository organoRepository;
 
-  public OrganoReconciler(OrganoRepository organoRepository) {
+  OrganoReconciler(OrganoRepository organoRepository) {
     this.organoRepository = organoRepository;
   }
 

@@ -262,12 +262,15 @@ paths:
         Órganos absent from the source are marked inactive (SPEC-0004 R1, R5, R6, R10).
         If an import is already running (triggered manually or by the schedule), this
         returns the "already running" outcome rather than starting a second concurrent
-        run (SPEC-0004 R12).
+        run on that instance (SPEC-0004 R12; the guard is per-instance today — running
+        more than one instance of the service is not yet supported).
       responses:
         "200":
           description: >-
-            The import ran to completion, or was already running; its outcome is
-            returned either way.
+            The import was attempted; its outcome is returned either way — it completed
+            (`SUCCESS`), it could not read the source and wrote nothing (`FAILURE`,
+            SPEC-0004 R13), or another run was already in progress (`ALREADY_RUNNING`,
+            SPEC-0004 R12). A source failure is a reported outcome, not a 5xx.
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"

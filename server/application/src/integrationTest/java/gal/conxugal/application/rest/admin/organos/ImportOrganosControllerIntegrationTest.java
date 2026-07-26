@@ -2,6 +2,7 @@ package gal.conxugal.application.rest.admin.organos;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
@@ -64,6 +65,29 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
     response.then().statusCode(HttpStatus.OK.getCode());
     assertThat(response.jsonPath().getString("status")).isEqualTo("ALREADY_RUNNING");
+    assertThat(response.jsonPath().getInt("added")).isZero();
+    assertThat(response.jsonPath().getInt("refreshed")).isZero();
+    assertThat(response.jsonPath().getInt("deactivated")).isZero();
+  }
+
+  @Test
+  void source_failure_is_reported_as_failure_outcome(RequestSpecification spec) {
+    User admin = TestUserFactory.adminUser();
+    seedUser(admin);
+    when(importOrganos.run()).thenReturn(ImportOutcome.failure());
+    String sessionCookie = loginAs(spec, admin);
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+        .when()
+            .post("/api/admin/organos/import");
+
+    response.then().statusCode(HttpStatus.OK.getCode());
+    assertThat(response.jsonPath().getString("status")).isEqualTo("FAILURE");
+    assertThat(response.jsonPath().getInt("added")).isZero();
+    assertThat(response.jsonPath().getInt("refreshed")).isZero();
+    assertThat(response.jsonPath().getInt("deactivated")).isZero();
   }
 
   @Test
@@ -77,6 +101,7 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
         .post("/api/admin/organos/import")
     .then()
         .statusCode(HttpStatus.FORBIDDEN.getCode());
+    verifyNoInteractions(importOrganos);
   }
 
   @Test
@@ -86,16 +111,6 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
         .post("/api/admin/organos/import")
     .then()
         .statusCode(HttpStatus.UNAUTHORIZED.getCode());
-  }
-
-  private String loginAs(RequestSpecification spec, User user) {
-    Response response =
-        given(spec)
-            .body(
-                "{\"username\":\"" + user.email() + "\",\"password\":\"" + user.passwordHash()
-                    + "\"}")
-        .when()
-            .post("/login");
-    return sessionCookieOf(response);
+    verifyNoInteractions(importOrganos);
   }
 }
