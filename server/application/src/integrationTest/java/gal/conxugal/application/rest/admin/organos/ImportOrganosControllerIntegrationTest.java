@@ -9,7 +9,6 @@ import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
 import gal.conxugal.domain.organo.ImportOrganos;
 import gal.conxugal.domain.organo.ImportOutcome;
-import gal.conxugal.domain.user.User;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.annotation.MockBean;
@@ -32,10 +31,8 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   @Test
   void admin_triggers_import_and_gets_outcome(RequestSpecification spec) {
-    User admin = TestUserFactory.adminUser();
-    seedUser(admin);
     when(importOrganos.run()).thenReturn(ImportOutcome.success(3, 12, 1));
-    String sessionCookie = loginAs(spec, admin);
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
     Response response =
         given(spec)
@@ -52,10 +49,8 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   @Test
   void admin_gets_already_running_outcome(RequestSpecification spec) {
-    User admin = TestUserFactory.adminUser();
-    seedUser(admin);
     when(importOrganos.run()).thenReturn(ImportOutcome.alreadyRunning());
-    String sessionCookie = loginAs(spec, admin);
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
     Response response =
         given(spec)
@@ -72,10 +67,8 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   @Test
   void source_failure_is_reported_as_failure_outcome(RequestSpecification spec) {
-    User admin = TestUserFactory.adminUser();
-    seedUser(admin);
     when(importOrganos.run()).thenReturn(ImportOutcome.failure());
-    String sessionCookie = loginAs(spec, admin);
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
     Response response =
         given(spec)
@@ -92,8 +85,7 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   @Test
   void user_role_is_forbidden(RequestSpecification spec) {
-    seedUser(TestUserFactory.normalUser());
-    String sessionCookie = loginAs(spec, TestUserFactory.normalUser());
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.normalUser());
 
     given(spec)
         .header(HttpHeaders.COOKIE, sessionCookie)

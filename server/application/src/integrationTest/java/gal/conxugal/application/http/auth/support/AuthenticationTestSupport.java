@@ -63,6 +63,11 @@ public abstract class AuthenticationTestSupport {
     return sessionCookieOf(response);
   }
 
+  protected String seedUserAndLoginAs(RequestSpecification spec, User user) {
+    seedUser(user);
+    return loginAs(spec, user);
+  }
+
   protected static String sessionCookieOf(HttpResponse<?> response) {
     return sessionCookiePairOf(response.getHeaders().getAll(HttpHeaders.SET_COOKIE));
   }
