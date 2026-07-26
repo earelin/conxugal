@@ -54,7 +54,7 @@ features.
 ### Identity and reconciliation
 
 - **R5** — A re-import reconciles against the stored catalogue rather than replacing it:
-  an Órgano new to the source is added and starts **inactive**; an Órgano already stored
+  an Órgano new to the source is added and starts **active**; an Órgano already stored
   is matched by its stable identity and its source-derived attributes are refreshed.
   Matching an existing Órgano never changes or discards its taxonomy placement.
 - **R6** — An Órgano that was imported previously but is absent from the latest source
@@ -118,7 +118,7 @@ features.
    an unauthenticated visitor that requests either is denied.
 3. **(R3, R5, R8)** After an import from the source completes, a user viewing the
    catalogue sees every Órgano from the source list stored with its name; an Órgano new
-   to that import is stored **inactive**.
+   to that import is stored **active**.
 4. **(R4, R5)** Re-importing after an Órgano's source attributes change updates that
    Órgano in place — its stable identity and its taxonomy placement are unchanged while
    the refreshed attributes are shown.
