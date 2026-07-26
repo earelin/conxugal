@@ -108,9 +108,9 @@ flowchart LR
   matched by source key and its name/active fields are updated on the same row. This is
   what preserves everything else attached to that row — critically the **taxonomy
   placement** a later feature will add as a column here — across every re-import (SPEC-0004
-  R5, R6). A new source key inserts a new row **starting inactive**; a stored key missing
-  from the source flips `active` to false; a previously-inactive key that reappears flips
-  it back to true.
+  R5, R6). A new source key inserts a new row **starting active**; a stored key missing
+  from the source flips `active` to false; a key deactivated that way and later reappearing
+  flips it back to true.
 - The catalogue table gives `source_key` a **unique** constraint, so idempotency and
   "no duplicates" (SPEC-0004 R7) hold at the store level, not only in use-case logic.
 
@@ -154,7 +154,7 @@ flowchart LR
    set active). *(SPEC-0004 #3, #8)*
 2. **Catalogue store infrastructure** — a migration creating the
    `organo_contratacion` table (UUID id, unique `source_key`, name, `active` default
-   false — a newly discovered Órgano starts inactive) and the Micronaut Data JDBC
+   true — a newly discovered Órgano starts active) and the Micronaut Data JDBC
    implementation of `OrganoRepository`. *(SPEC-0004 #3, #4, #6, #7)*
 3. **Source port + contratosdegalicia adapter** — the `OrganoSource` port and its driven
    adapter that retrieves and parses the published list (ISO-8859-1, embedded in the
