@@ -10,6 +10,10 @@ status: draft
 Give an authenticated user a discoverable way to end their session from inside the
 SPA, satisfying **[SPEC-0002](../../specs/SPEC-0002-user-authentication.md)** R15 and
 criterion #12. The header's user block becomes a dropdown whose single item logs out.
+Being shell chrome, it also inherits the standing UI requirements of
+**[SPEC-0001](../../specs/SPEC-0001-web-ui.md)** — R4 (keyboard-operable, accessibly
+named), R5 (usable at a narrow width) and R6 (Galician chrome) — which the tasks below
+cite; SPEC-0002 remains the spec this feature slices.
 
 The **session mechanism is already decided and built**
 (**[ADR-0005](../../architecture/0005-session-based-authentication.md)**): a
@@ -43,10 +47,14 @@ single origin established by
   which stays `done`. No backend or configuration change belongs to this feature.
 - Any account or profile screen. The dropdown holds exactly one item; adding "my
   account" would need a screen no spec asks for yet.
-- A general CSRF-token seam for the SPA. Worth naming as a known follow-up: the whole
-  SPA, including this logout, relies on the CSRF filter gating form-shaped requests
-  only. If that is ever tightened to cover JSON, every SPA mutation breaks together
-  and wants one shared fix, not a logout-specific one.
+- A general CSRF-token seam for the SPA. The whole SPA, including this logout, relies on
+  the CSRF filter gating form- and multipart-shaped requests only, exactly as the
+  existing admin mutations do. That is an architectural position no ADR records —
+  [ADR-0005](../../architecture/0005-session-based-authentication.md) covers only the
+  form-login flow — and it wants **its own ADR (or an amendment to ADR-0005)**, since
+  tightening the filter to cover JSON would break every SPA mutation together and wants
+  one shared fix, not a logout-specific one. Raised here, owned there; it does not block
+  this feature.
 - Server-side session listing or "log out everywhere". Sessions are single-cookie
   today; a multi-session view would need its own spec requirement.
 
@@ -66,8 +74,18 @@ and `eslint-plugin-boundaries` enforces the direction either way.
 Today's header renders the email, role label and initials avatar as a plain group that
 is hidden below the `sm` breakpoint. That block becomes the menu trigger, with one
 change: **only the email/role text keeps the breakpoint, not the whole group.** Below
-`sm` the trigger survives as an initials-only button. Without this, logout would be
-unreachable on a narrow viewport, which SPEC-0002 #12 forbids.
+`sm` the trigger survives as the avatar alone — initials only, no chevron, since the
+chevron reads as a hint attached to text and an avatar-alone menu button is already a
+familiar affordance. Without this, logout would be unreachable on a narrow viewport,
+which SPEC-0002 #12 forbids.
+
+The trigger keeps today's `currentUser &&` guard: when the session read fails for a
+reason other than 401 the header renders no user block, and therefore no logout control.
+That stranded state is **left as-is and out of scope here.** A non-401 failure of
+`GET /api/me` is a broken shell, not a live session the user needs to end, and R15's
+other half — naming the account — cannot be satisfied without one. If it is ever worth
+fixing, the fix belongs to the shell's error handling for the session read, not to this
+menu.
 
 The dropdown repeats the email and role label as an identity header. That is redundant
 beside a desktop trigger which already shows both, and deliberately so: on a narrow
@@ -93,6 +111,20 @@ So the call posts a JSON content type with `redirect: 'manual'`, and treats **an
 status below 400 as success**. That covers all three shapes the same response can take:
 the opaque redirect a browser reports for an unfollowed `303`, the `303` itself, and the
 `200` a followed redirect or a test double produces.
+
+Two contracts follow from that rule and are part of the design, not implementation
+detail:
+
+- **The request sends no `Accept` override** — `fetch`'s default `*/*`. Micronaut picks
+  the shape of its *rejections* from `Accept` too: an HTML-shaped request to a dead
+  session gets a `303` to `/login`, a JSON-shaped one gets a `401`. Advertising
+  `text/html` would therefore return a below-400 status for a session that was already
+  gone, which the rule above reads as success, and the 401 path below would never run.
+- **A response of 400 or above rejects with `HttpError`** from
+  `shared/lib/httpClient.ts`, carrying the status. That type is the seam the shared
+  session-loss handler keys on (`error instanceof HttpError && error.status === 401`);
+  rejecting with a plain `Error` satisfies every other constraint here and silently
+  loses the redirect.
 
 On success the browser leaves the SPA with a full-page load of `/login`, mirroring the
 existing session-loss navigation. The React Query cache is **not** cleared first: the
@@ -127,23 +159,30 @@ sequenceDiagram
 
 ## Sequencing (tasks, one small change each)
 1. **[TASK-0001](TASK-0001-session-logout-action.md)** —
-   The session logout action and its navigation, beside the existing session read.
-   *(frontend)* *(SPEC-0002 #7)*
+   The session logout action and its navigation, beside the existing session read —
+   the "using that control" half of criterion #12. The endpoint behind it, and #7
+   itself, are already delivered by FEAT-0002. *(frontend)* *(SPEC-0002 #12)*
 2. **[TASK-0002](TASK-0002-header-user-menu.md)** —
    The header user menu: dropdown trigger, identity header, logout item and Galician
-   copy. *(frontend)* *(SPEC-0002 #12)*
+   copy, against the mockups in [`design/`](design/README.md), which own the exact copy
+   and the trigger/item states. *(frontend)* *(SPEC-0002 #12)*
 
 ## Edge cases
 - **Narrow viewport** — the trigger must not inherit the breakpoint that hides the
   email/role text, or logout becomes unreachable below `sm` (SPEC-0002 #12).
 - **Already-expired session** — clicking logout when the session is already gone
-  yields a 401; the shared session-loss handler redirects, and it must fire once, not
-  once per handler.
+  yields a 401 and the shared session-loss handler redirects. Firing exactly once is
+  already guaranteed: `shared/lib/queryClient.ts` shares one `redirectingToLogin` flag
+  across the query and mutation caches, and `queryClient.test.ts` covers the concurrent
+  case. Nothing to re-implement or re-test — only to not break.
 - **Failed logout** — a 5xx or network failure must not navigate. The login page
   redirects an authenticated visitor back to the app, so an optimistic redirect would
   loop the user rather than inform them.
 - **Repeat clicks** — the item is disabled while the request is in flight, so an
   impatient double-click cannot fire two logouts or two navigations.
+- **Failed session read** — a non-401 failure of `GET /api/me` leaves the header with
+  no user block and so no logout control. Deliberately unchanged from today's shell and
+  out of scope here; see *Trigger and placement*.
 - **Duplicated identity text** — the email and role appear in both the trigger and the
   open dropdown; component tests must scope their queries rather than assume a single
   match, and the existing header assertions must keep passing.

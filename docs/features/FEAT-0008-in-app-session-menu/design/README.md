@@ -77,7 +77,7 @@ queries rather than assume a single match.
 | Open | `gray.1` background, chevron up | — | — |
 | In flight | unchanged | dimmed (`gray.5`) and disabled, trailing `Loader` | — |
 | Failed (non-401) | unchanged, menu stays open | back to plain | red alert under the item |
-| Below `sm` | initials + chevron only | unchanged | unchanged |
+| Below `sm` | initials only, no chevron | unchanged | unchanged |
 
 Three of these encode decisions from the feature's *Design* and *edge cases*:
 
@@ -128,10 +128,10 @@ spinner-marked, and the failure alert is a sentence, not a red tint.
 - **Ends the session (SPEC-0002 #7):** activating the item posts to `/logout` and the
   browser lands on the server-rendered login page; nothing in the design implies a
   client-side "logged out" screen, because there is none.
-- **Reachable at 360 px ([SPEC-0001](../../../specs/SPEC-0001-web-ui.md) #6):**
+- **Reachable at 360 px ([SPEC-0001](../../../specs/SPEC-0001-web-ui.md) R5/AC6):**
   `user-menu-narrow.svg` is drawn at exactly 360 px, with the dropdown fitting inside
   the viewport and nothing overflowing horizontally.
-- **Keyboard operable (SPEC-0001 #5):** section 4 of `user-menu-states.svg` records the
+- **Keyboard operable (SPEC-0001 R4/AC5):** section 4 of `user-menu-states.svg` records the
   full path — `Tab` to the trigger, `Intro`/`Espazo` to open, arrows to move, `Intro` to
   activate, `Esc` to close and return focus.
 
