@@ -214,16 +214,19 @@ has nothing to keep in step.
 
 ## Sequencing (tasks, one small change each)
 1. **[TASK-0001](TASK-0001-taxonomy-node-domain-model-and-placement.md) — Taxonomy node
-   domain model + Órgano placement** *(backend)*: the `TaxonomyNode` aggregate (UUID, name,
-   optional parent) and the `TaxonomyNodeRepository` port (find all, find by id, insert,
-   rename, re-parent, delete, child check), plus the placement field on
-   `OrganoDeContratacion` and the matching `OrganoRepository` operations.
+   domain model + Órgano placement + schema migration** *(backend)*: the `TaxonomyNode`
+   aggregate (UUID, name, optional parent) and the `TaxonomyNodeRepository` port (find all,
+   find by id, insert, rename, re-parent, delete, child check), the placement field on
+   `OrganoDeContratacion` and the matching `OrganoRepository` operations, **and the
+   migration** adding the `taxonomy_node` table (self-referencing parent) and the nullable
+   `taxonomy_node_id` on the catalogue table. Under ADR-0008 the entity carries its own
+   mapping, so widening the record without its column would break FEAT-0006's existing
+   queries — model and schema move together or the task lands red.
    *(SPEC-0004 #14, #15, #17, #18)*
 2. **[TASK-0002](TASK-0002-taxonomy-store-infrastructure.md) — Taxonomy store
-   infrastructure** *(backend)*: a migration adding the `taxonomy_node` table
-   (self-referencing parent) and a nullable `taxonomy_node_id` on the catalogue table; the
-   JDBC `TaxonomyNodeRepository` and the `OrganoRepository` placement operations (set/clear
-   an Órgano's node, clear every placement pointing at a node).
+   infrastructure** *(backend)*: the JDBC `TaxonomyNodeRepository` and the
+   `OrganoRepository` placement operations (set/clear an Órgano's node, clear every
+   placement pointing at a node), against the schema TASK-0001 created.
    *(SPEC-0004 #5, #14, #16, #17)*
 3. **[TASK-0003](TASK-0003-taxonomy-management-use-cases.md) — Taxonomy management use
    cases** *(backend)*: `CreateNode`, `RenameNode`, `MoveNode` (cycle guard), `DeleteNode`
