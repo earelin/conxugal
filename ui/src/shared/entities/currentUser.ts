@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from './httpClient';
+import { apiFetch } from '../lib/httpClient';
 
 export const ROLES = ['USER', 'ADMIN'] as const;
 

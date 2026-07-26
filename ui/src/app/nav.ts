@@ -1,6 +1,6 @@
 import { IconLayoutDashboard, IconUsers, type Icon } from '@tabler/icons-react';
-import type { Role } from './api/currentUser';
-import { strings } from './strings';
+import type { Role } from '../shared/entities/currentUser';
+import { strings } from '../shared/lib/strings';
 
 export interface NavItem {
   /** Visible label (Galician). */

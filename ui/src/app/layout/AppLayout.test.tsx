@@ -1,8 +1,8 @@
 import { screen, waitFor } from '@testing-library/react';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mockCurrentUser, renderApp } from '../test/renderApp';
-import { strings } from '../strings';
+import { mockCurrentUser, renderApp } from '../../test/renderApp';
+import { strings } from '../../shared/lib/strings';
 
 function renderShell() {
   return renderApp('/');

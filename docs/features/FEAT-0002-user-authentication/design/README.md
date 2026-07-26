@@ -50,7 +50,7 @@ for SPA routes stays inside the app: `NotFoundPage`, SPEC-0001 R3.)
 
 ## Design language
 
-The pages reuse the theme tokens from `ui/src/theme.ts` so they read as the same
+The pages reuse the theme tokens from `ui/src/app/theme.ts` so they read as the same
 product as the SPA, without borrowing its chrome.
 
 ### Tokens (from the Mantine theme)
@@ -102,7 +102,7 @@ validation-style error the user must act on.
 
 ## Copy
 
-All copy is **Galician**, consistent with `ui/src/strings.ts` (SPEC-0001 R6). When these
+All copy is **Galician**, consistent with `ui/src/shared/lib/strings.ts` (SPEC-0001 R6). When these
 pages are implemented, their strings should be authored alongside the existing chrome
 copy so a later i18n pass lifts them together.
 

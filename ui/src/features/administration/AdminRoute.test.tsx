@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BASE_URL, mockCurrentUser, renderApp } from '../../test/renderApp';
-import { strings } from '../../strings';
+import { strings } from '../../shared/lib/strings';
 
 function mockSystemStatus() {
   return nock(BASE_URL)
