@@ -31,16 +31,8 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   @Test
   void admin_triggers_import_and_gets_outcome(RequestSpecification spec) {
-    when(importOrganos.run()).thenReturn(ImportOutcome.success(3, 12, 1));
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+    Response response = triggerImportAsAdmin(spec, ImportOutcome.success(3, 12, 1));
 
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-        .when()
-            .post("/api/admin/organos/import");
-
-    response.then().statusCode(HttpStatus.OK.getCode());
     assertThat(response.jsonPath().getString("status")).isEqualTo("SUCCESS");
     assertThat(response.jsonPath().getInt("added")).isEqualTo(3);
     assertThat(response.jsonPath().getInt("refreshed")).isEqualTo(12);
@@ -49,16 +41,8 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   @Test
   void admin_gets_already_running_outcome(RequestSpecification spec) {
-    when(importOrganos.run()).thenReturn(ImportOutcome.alreadyRunning());
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+    Response response = triggerImportAsAdmin(spec, ImportOutcome.alreadyRunning());
 
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-        .when()
-            .post("/api/admin/organos/import");
-
-    response.then().statusCode(HttpStatus.OK.getCode());
     assertThat(response.jsonPath().getString("status")).isEqualTo("ALREADY_RUNNING");
     assertThat(response.jsonPath().getInt("added")).isZero();
     assertThat(response.jsonPath().getInt("refreshed")).isZero();
@@ -67,16 +51,8 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   @Test
   void source_failure_is_reported_as_failure_outcome(RequestSpecification spec) {
-    when(importOrganos.run()).thenReturn(ImportOutcome.failure());
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+    Response response = triggerImportAsAdmin(spec, ImportOutcome.failure());
 
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-        .when()
-            .post("/api/admin/organos/import");
-
-    response.then().statusCode(HttpStatus.OK.getCode());
     assertThat(response.jsonPath().getString("status")).isEqualTo("FAILURE");
     assertThat(response.jsonPath().getInt("added")).isZero();
     assertThat(response.jsonPath().getInt("refreshed")).isZero();
@@ -104,5 +80,19 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
     .then()
         .statusCode(HttpStatus.UNAUTHORIZED.getCode());
     verifyNoInteractions(importOrganos);
+  }
+
+  private Response triggerImportAsAdmin(RequestSpecification spec, ImportOutcome outcome) {
+    when(importOrganos.run()).thenReturn(outcome);
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+        .when()
+            .post("/api/admin/organos/import");
+
+    response.then().statusCode(HttpStatus.OK.getCode());
+    return response;
   }
 }
