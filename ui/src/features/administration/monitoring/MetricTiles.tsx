@@ -26,6 +26,37 @@ export interface TileProps {
   variant: 'live' | 'stale';
 }
 
+function buildPeakCaption({
+  state,
+  history,
+  reconnectingCaption,
+  prefix,
+  peakPrefix,
+  select,
+  formatPeak,
+}: {
+  state: MetricsStreamState;
+  history: RuntimeMetrics[];
+  reconnectingCaption: string;
+  prefix: string;
+  peakPrefix: string;
+  select: (sample: RuntimeMetrics) => number | null;
+  formatPeak: (peak: number) => string;
+}): string {
+  const t = strings.admin.dashboard.metrics;
+  if (state === 'connecting') {
+    return t.noHistoryYet;
+  }
+  if (state === 'reconnecting') {
+    return reconnectingCaption;
+  }
+  if (history.length < METRICS_HISTORY_LIMIT) {
+    return `${prefix} · ${history.length}/${METRICS_HISTORY_LIMIT} ${t.samplesUnit}`;
+  }
+  const peak = peakOf(history, select);
+  return peak != null ? `${prefix} · ${peakPrefix} ${formatPeak(peak)}` : prefix;
+}
+
 function MetricTile({
   label,
   value,
@@ -105,21 +136,15 @@ export function HeapTile({ state, latest, history, variant }: TileProps) {
 export function SystemLoadTile({ state, latest, history, variant }: TileProps) {
   const t = strings.admin.dashboard.metrics;
   const percent = latest ? systemLoadPercent(latest) : null;
-
-  let caption: string;
-  if (state === 'connecting') {
-    caption = t.noHistoryYet;
-  } else if (state === 'reconnecting') {
-    caption = t.lastKnownLoad;
-  } else if (history.length < METRICS_HISTORY_LIMIT) {
-    caption = `${t.recentLoadPrefix} · ${history.length}/${METRICS_HISTORY_LIMIT} ${t.samplesUnit}`;
-  } else {
-    const peak = peakOf(history, systemLoadPercent);
-    caption =
-      peak != null
-        ? `${t.recentLoadPrefix} · ${t.maxOfLoadPrefix} ${Math.round(peak * 100)} %`
-        : t.recentLoadPrefix;
-  }
+  const caption = buildPeakCaption({
+    state,
+    history,
+    reconnectingCaption: t.lastKnownLoad,
+    prefix: t.recentLoadPrefix,
+    peakPrefix: t.maxOfLoadPrefix,
+    select: systemLoadPercent,
+    formatPeak: (peak) => `${Math.round(peak * 100)} %`,
+  });
 
   return (
     <MetricTile
@@ -142,21 +167,15 @@ export function SystemLoadTile({ state, latest, history, variant }: TileProps) {
 export function ThreadsTile({ state, latest, history, variant }: TileProps) {
   const t = strings.admin.dashboard.metrics;
   const count = latest?.jvm?.threadCount ?? null;
-
-  let caption: string;
-  if (state === 'connecting') {
-    caption = t.noHistoryYet;
-  } else if (state === 'reconnecting') {
-    caption = t.lastKnownThreads;
-  } else if (history.length < METRICS_HISTORY_LIMIT) {
-    caption = `${t.aliveNowPrefix} · ${history.length}/${METRICS_HISTORY_LIMIT} ${t.samplesUnit}`;
-  } else {
-    const peak = peakOf(history, (sample) => sample.jvm?.threadCount ?? null);
-    caption =
-      peak != null
-        ? `${t.aliveNowPrefix} · ${t.peakOfThreadsPrefix} ${Math.round(peak)}`
-        : t.aliveNowPrefix;
-  }
+  const caption = buildPeakCaption({
+    state,
+    history,
+    reconnectingCaption: t.lastKnownThreads,
+    prefix: t.aliveNowPrefix,
+    peakPrefix: t.peakOfThreadsPrefix,
+    select: (sample) => sample.jvm?.threadCount ?? null,
+    formatPeak: (peak) => `${Math.round(peak)}`,
+  });
 
   return (
     <MetricTile
