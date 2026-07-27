@@ -41,13 +41,6 @@ namespaces, so a sibling resource can never collide with a member path. `/api/or
 reserving `"taxonomy"` against ever being an id. Under this rule the taxonomy read is
 `GET /api/taxonomy-nodes` and the collision cannot arise.
 
-### Known exception
-
-`POST /api/admin/users/{id}/enabled` predates the rule and should be
-`/api/admin/user/{id}/enabled`. It is shipped, and correcting it is unowned follow-up work
-— a breaking change that needs its own task. Treat it as the one documented deviation,
-never as precedent.
-
 ### Before adding a path
 
 Ask what the path addresses, not what the operation does: if the caller must supply an
