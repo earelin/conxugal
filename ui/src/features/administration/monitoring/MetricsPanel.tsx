@@ -21,12 +21,12 @@ import {
   errorRateSeverity,
   formatCount,
   formatDecimal,
-  formatMb,
   formatPercent,
   formatSingleMb,
   formatTime,
   formatUptime,
   fractionToPercent,
+  heapUsageMb,
   heapUsedPercent,
   peakOf,
   systemLoadPercent,
@@ -176,10 +176,7 @@ function MetricsSectionHeader({
 function HeapTile({ state, latest, history, variant }: TileProps) {
   const t = strings.admin.dashboard.metrics;
   const percent = latest ? heapUsedPercent(latest) : null;
-  const mbPart =
-    latest?.jvm?.heapUsedBytes != null && latest.jvm.heapMaxBytes != null
-      ? formatMb(latest.jvm.heapUsedBytes, latest.jvm.heapMaxBytes)
-      : null;
+  const mbPart = heapUsageMb(latest);
 
   let caption: string;
   if (state === 'connecting') {
@@ -326,10 +323,7 @@ function MemoryGcCard({ latest }: { latest: RuntimeMetrics | null }) {
   const t = strings.admin.dashboard.metrics;
   const jvm = latest?.jvm;
   const heapPercent = latest ? heapUsedPercent(latest) : null;
-  const heapMbPart =
-    jvm?.heapUsedBytes != null && jvm.heapMaxBytes != null
-      ? formatMb(jvm.heapUsedBytes, jvm.heapMaxBytes)
-      : null;
+  const heapMbPart = heapUsageMb(latest);
   const heapValueText =
     heapMbPart != null && heapPercent != null
       ? `${heapMbPart} · ${formatPercent(heapPercent)}`

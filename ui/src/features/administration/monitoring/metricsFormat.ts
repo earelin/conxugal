@@ -57,6 +57,13 @@ export function heapUsedPercent(sample: RuntimeMetrics): number | null {
   return safeDivide(sample.jvm?.heapUsedBytes, sample.jvm?.heapMaxBytes);
 }
 
+export function heapUsageMb(sample: RuntimeMetrics | null): string | null {
+  if (sample?.jvm?.heapUsedBytes == null || sample.jvm.heapMaxBytes == null) {
+    return null;
+  }
+  return formatMb(sample.jvm.heapUsedBytes, sample.jvm.heapMaxBytes);
+}
+
 export function systemLoadPercent(sample: RuntimeMetrics): number | null {
   return sample.system?.cpuLoad ?? null;
 }
