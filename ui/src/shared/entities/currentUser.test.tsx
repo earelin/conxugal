@@ -1,15 +1,16 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import nock from 'nock';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpError } from '../lib/httpClient';
+import { createQueryClient } from '../lib/queryClient';
 import { useLogout } from './currentUser';
 
 const BASE_URL = 'http://localhost:3000';
 
 function createWrapper() {
-  const queryClient = new QueryClient();
+  const queryClient = createQueryClient();
   return function Wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
@@ -85,7 +86,7 @@ describe('useLogout', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it('rejects with HttpError carrying the status and does not navigate itself on a 401', async () => {
+  it('rejects with HttpError carrying the status on a 401, leaving navigation to the shared session-loss handler', async () => {
     nock(BASE_URL).post('/logout').reply(401);
 
     const { result } = renderHook(() => useLogout(), { wrapper: createWrapper() });
@@ -93,7 +94,9 @@ describe('useLogout', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
+    expect(result.current.error).toBeInstanceOf(HttpError);
     expect((result.current.error as HttpError).status).toBe(401);
-    expect(replace).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalledOnce();
+    expect(replace).toHaveBeenCalledWith('/login');
   });
 });
