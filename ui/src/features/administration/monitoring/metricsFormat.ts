@@ -77,11 +77,18 @@ export function errorRateSeverity(rate: number): ErrorRateSeverity {
   return 'high';
 }
 
+function selectNumericValues(
+  history: RuntimeMetrics[],
+  select: (sample: RuntimeMetrics) => number | null,
+): number[] {
+  return history.map(select).filter((value): value is number => value != null);
+}
+
 export function peakOf(
   history: RuntimeMetrics[],
   select: (sample: RuntimeMetrics) => number | null,
 ): number | null {
-  const values = history.map(select).filter((value): value is number => value != null);
+  const values = selectNumericValues(history, select);
   return values.length > 0 ? Math.max(...values) : null;
 }
 
@@ -89,7 +96,7 @@ export function deltaOf(
   history: RuntimeMetrics[],
   select: (sample: RuntimeMetrics) => number | null,
 ): number | null {
-  const values = history.map(select).filter((value): value is number => value != null);
+  const values = selectNumericValues(history, select);
   if (values.length < 2) {
     return null;
   }
