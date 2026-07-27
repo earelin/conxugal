@@ -11,21 +11,40 @@ function retryOnTransientError(failureCount: number, error: unknown) {
   return failureCount < MAX_RETRIES;
 }
 
+const redirectOnceByClient = new WeakMap<QueryClient, () => void>();
+
 export function createQueryClient(): QueryClient {
   let redirectingToLogin = false;
 
+  function redirectOnce() {
+    if (redirectingToLogin) {
+      return;
+    }
+    redirectingToLogin = true;
+    window.location.replace('/login');
+  }
+
   function redirectToLoginOnSessionLoss(error: unknown) {
-    if (error instanceof HttpError && error.status === 401 && !redirectingToLogin) {
-      redirectingToLogin = true;
-      window.location.replace('/login');
+    if (error instanceof HttpError && error.status === 401) {
+      redirectOnce();
     }
   }
 
-  return new QueryClient({
+  const client = new QueryClient({
     defaultOptions: { queries: { retry: retryOnTransientError } },
     queryCache: new QueryCache({ onError: redirectToLoginOnSessionLoss }),
     mutationCache: new MutationCache({ onError: redirectToLoginOnSessionLoss }),
   });
+
+  redirectOnceByClient.set(client, redirectOnce);
+  return client;
+}
+
+// Shared with callers outside the query/mutation cache (e.g. useLogout's own
+// success path) so a redirect they trigger counts against the same
+// once-only guard as the cache's session-loss handler above.
+export function redirectToLogin(client: QueryClient): void {
+  redirectOnceByClient.get(client)?.();
 }
 
 export const queryClient = createQueryClient();
