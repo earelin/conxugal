@@ -1,5 +1,6 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, HttpError } from '../lib/httpClient';
+import { redirectToLogin } from '../lib/queryClient';
 
 export const ROLES = ['USER', 'ADMIN'] as const;
 
@@ -37,10 +38,11 @@ async function logout(): Promise<void> {
 }
 
 export function useLogout() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: logout,
     onSuccess: () => {
-      window.location.replace('/login');
+      redirectToLogin(queryClient);
     },
   });
 }
