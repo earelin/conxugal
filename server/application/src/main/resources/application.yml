@@ -15,7 +15,13 @@ micronaut:
     name: conxugal
   executors:
     blocking:
+      virtual: true
+    # Dedicated executor for the organos import job, kept separate from `blocking`
+    # (which every HTTP request shares via thread-selection: BLOCKING below) so the
+    # scheduled import's own pool sizing never constrains request-serving capacity.
+    organos-import:
       type: scheduled
+      core-pool-size: 1
       virtual: true
   router:
     static-resources:

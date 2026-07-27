@@ -2,7 +2,6 @@ package gal.conxugal.application.scheduling.organos;
 
 import gal.conxugal.domain.organo.ImportOrganos;
 import gal.conxugal.domain.organo.ImportOutcome;
-import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -20,19 +19,24 @@ class ImportOrganosScheduler {
   }
 
   @Scheduled(
-      cron = "${conxugal.organos.import.schedule:0 0 3 * * *}",
+      cron = "${conxugal.organos.import.schedule}",
       zoneId = "Europe/Madrid",
-      scheduler = TaskExecutors.BLOCKING)
+      scheduler = "organos-import")
+  @SuppressWarnings("PMD.ExhaustiveSwitchHasDefault")
   void run() {
     ImportOutcome outcome = importOrganos.run();
-    if (outcome.status() == ImportOutcome.Status.ALREADY_RUNNING) {
-      LOG.info("Órganos import skipped: another run is already in progress");
-    } else if (outcome.status() == ImportOutcome.Status.SUCCESS) {
-      LOG.info(
-          "Órganos import completed: {} added, {} refreshed, {} deactivated",
-          outcome.added(),
-          outcome.refreshed(),
-          outcome.deactivated());
+    switch (outcome.status()) {
+      case SUCCESS ->
+          LOG.info(
+              "Órganos import completed: {} added, {} refreshed, {} deactivated",
+              outcome.added(),
+              outcome.refreshed(),
+              outcome.deactivated());
+      case ALREADY_RUNNING ->
+          LOG.info("Órganos import skipped: another run is already in progress");
+      case FAILURE -> {} // already logged by ImportOrganos itself
+      default ->
+          throw new IllegalStateException("Unexpected import outcome status: " + outcome.status());
     }
   }
 }

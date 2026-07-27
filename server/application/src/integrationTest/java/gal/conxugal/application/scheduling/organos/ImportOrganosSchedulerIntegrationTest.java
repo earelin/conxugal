@@ -13,6 +13,13 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Only asserts {@code zoneId}, not the resolved {@code cron} value: Micronaut resolves a bean
+ * method's {@code @Scheduled} placeholder once per JVM and caches it on the compiled annotation
+ * metadata, so a cron assertion here could read back whatever value another test's context
+ * resolved first. {@link ImportOrganosSchedulerFiringIntegrationTest} proves the cron is
+ * genuinely configuration-driven by observing an overridden schedule actually fire.
+ */
 @MicronautTest
 class ImportOrganosSchedulerIntegrationTest {
 
@@ -24,12 +31,11 @@ class ImportOrganosSchedulerIntegrationTest {
   }
 
   @Test
-  void run_is_scheduled_from_the_import_schedule_property_in_europe_madrid() {
+  void run_is_scheduled_in_europe_madrid() {
     BeanDefinition<ImportOrganosScheduler> definition =
         applicationContext.getBeanDefinition(ImportOrganosScheduler.class);
     ExecutableMethod<ImportOrganosScheduler, ?> run = definition.getRequiredMethod("run");
 
-    assertThat(run.stringValue(Scheduled.class, "cron")).hasValue("0 0 3 * * *");
     assertThat(run.stringValue(Scheduled.class, "zoneId")).hasValue("Europe/Madrid");
   }
 }
