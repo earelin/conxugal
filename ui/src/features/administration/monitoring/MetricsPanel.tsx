@@ -45,6 +45,10 @@ interface TileProps {
   variant: 'live' | 'stale';
 }
 
+function orNoValue<T>(value: T | null | undefined, format: (value: T) => string): string {
+  return value != null ? format(value) : strings.admin.dashboard.metrics.noValue;
+}
+
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <Stack gap={0}>
@@ -194,7 +198,7 @@ function HeapTile({ state, latest, history, variant }: TileProps) {
   return (
     <MetricTile
       label={t.heapTileLabel}
-      value={percent != null ? formatPercent(percent) : t.noValue}
+      value={orNoValue(percent, formatPercent)}
       caption={caption}
       loading={state === 'connecting'}
       dimmed={state === 'reconnecting'}
@@ -231,7 +235,7 @@ function SystemLoadTile({ state, latest, history, variant }: TileProps) {
   return (
     <MetricTile
       label={t.systemLoadTileLabel}
-      value={percent != null ? formatPercent(percent) : t.noValue}
+      value={orNoValue(percent, formatPercent)}
       caption={caption}
       loading={state === 'connecting'}
       dimmed={state === 'reconnecting'}
@@ -268,7 +272,7 @@ function ThreadsTile({ state, latest, history, variant }: TileProps) {
   return (
     <MetricTile
       label={t.threadsTileLabel}
-      value={count != null ? formatCount(count) : t.noValue}
+      value={orNoValue(count, formatCount)}
       caption={caption}
       loading={state === 'connecting'}
       dimmed={state === 'reconnecting'}
@@ -303,7 +307,7 @@ function HttpTile({ state, latest, history, variant }: TileProps) {
   return (
     <MetricTile
       label={t.httpTileLabel}
-      value={count != null ? formatCount(count) : t.noValue}
+      value={orNoValue(count, formatCount)}
       caption={caption}
       loading={state === 'connecting'}
       dimmed={state === 'reconnecting'}
@@ -352,24 +356,17 @@ function MemoryGcCard({ latest }: { latest: RuntimeMetrics | null }) {
         <SimpleGrid cols={2} spacing="lg" mt="xs">
           <Field
             label={t.nonHeapMemoryLabel}
-            value={jvm?.nonHeapUsedBytes != null ? formatSingleMb(jvm.nonHeapUsedBytes) : t.noValue}
+            value={orNoValue(jvm?.nonHeapUsedBytes, formatSingleMb)}
           />
           <Field
             label={t.gcCollectionsLabel}
-            value={jvm?.gcCollectionCount != null ? formatCount(jvm.gcCollectionCount) : t.noValue}
+            value={orNoValue(jvm?.gcCollectionCount, formatCount)}
           />
           <Field
             label={t.gcTimeLabel}
-            value={
-              jvm?.gcCollectionTimeMillis != null
-                ? `${formatDecimal(jvm.gcCollectionTimeMillis / 1000)} s`
-                : t.noValue
-            }
+            value={orNoValue(jvm?.gcCollectionTimeMillis, (ms) => `${formatDecimal(ms / 1000)} s`)}
           />
-          <Field
-            label={t.sinceStartupLabel}
-            value={jvm?.uptimeMillis != null ? formatUptime(jvm.uptimeMillis) : t.noValue}
-          />
+          <Field label={t.sinceStartupLabel} value={orNoValue(jvm?.uptimeMillis, formatUptime)} />
         </SimpleGrid>
       </Stack>
     </Card>
@@ -474,9 +471,7 @@ function DatastorePoolCard({ latest }: { latest: RuntimeMetrics | null }) {
             {t.poolUsageLabel}
           </Text>
           <Text size="sm">
-            {summary
-              ? `${summary.active + summary.idle} / ${summary.max} ${t.poolOpenUnit}`
-              : t.noValue}
+            {orNoValue(summary, (s) => `${s.active + s.idle} / ${s.max} ${t.poolOpenUnit}`)}
           </Text>
         </Group>
         <PoolBar summary={summary} />
@@ -498,11 +493,11 @@ function DatastorePoolCard({ latest }: { latest: RuntimeMetrics | null }) {
         <SimpleGrid cols={2} spacing="lg" mt="xs">
           <Field
             label={t.poolMaxLabel}
-            value={summary ? `${summary.max} ${t.poolConnectionsUnit}` : t.noValue}
+            value={orNoValue(summary, (s) => `${s.max} ${t.poolConnectionsUnit}`)}
           />
           <Field
             label={t.poolInUseNowLabel}
-            value={summary ? formatPercent(summary.active / summary.max) : t.noValue}
+            value={orNoValue(summary, (s) => formatPercent(s.active / s.max))}
           />
         </SimpleGrid>
         <Group gap="xs" mt="xs">
@@ -534,19 +529,13 @@ function HttpActivityCard({ latest }: { latest: RuntimeMetrics | null }) {
         {t.httpActivityCardTitle}
       </Text>
       <SimpleGrid cols={2} spacing="lg">
-        <Field
-          label={t.totalRequestsLabel}
-          value={http?.requestCount != null ? formatCount(http.requestCount) : t.noValue}
-        />
-        <Field
-          label={t.errorResponsesLabel}
-          value={http?.errorCount != null ? formatCount(http.errorCount) : t.noValue}
-        />
+        <Field label={t.totalRequestsLabel} value={orNoValue(http?.requestCount, formatCount)} />
+        <Field label={t.errorResponsesLabel} value={orNoValue(http?.errorCount, formatCount)} />
       </SimpleGrid>
       <Group justify="space-between" mt="sm" align="flex-end">
         <Field
           label={t.errorRateLabel}
-          value={rate != null ? `${formatDecimal(rate * 100)} %` : t.noValue}
+          value={orNoValue(rate, (r) => `${formatDecimal(r * 100)} %`)}
         />
         {badge && (
           <Badge color={badge.color} variant="light">
