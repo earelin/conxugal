@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-07-26
 spec: null
 supersedes: null
@@ -9,7 +9,7 @@ superseded_by: null
 # 0016. Plural resource paths for collections, singular for a single element
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 [ADR-0006](0006-reserved-api-url-prefix.md) reserves `/api/` for every REST endpoint but
