@@ -26,13 +26,16 @@ export function formatTime(date: Date): string {
   });
 }
 
+function bytesToMb(bytes: number): number {
+  return Math.round(bytes / (1024 * 1024));
+}
+
 export function formatMb(usedBytes: number, maxBytes: number): string {
-  const toMb = (bytes: number) => Math.round(bytes / (1024 * 1024));
-  return `${toMb(usedBytes)} / ${toMb(maxBytes)} MB`;
+  return `${bytesToMb(usedBytes)} / ${bytesToMb(maxBytes)} MB`;
 }
 
 export function formatSingleMb(bytes: number): string {
-  return `${Math.round(bytes / (1024 * 1024))} MB`;
+  return `${bytesToMb(bytes)} MB`;
 }
 
 export function formatUptime(uptimeMillis: number): string {
