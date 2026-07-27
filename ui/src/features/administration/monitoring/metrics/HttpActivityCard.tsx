@@ -1,6 +1,6 @@
 import { Badge, Card, Group, SimpleGrid, Text } from '@mantine/core';
 import { IconClock } from '@tabler/icons-react';
-import { strings } from '../../../shared/lib/strings';
+import { strings } from '../../../../shared/lib/strings';
 import { Field } from './Field';
 import { errorRate, errorRateSeverity, formatCount, formatDecimal } from './metricsFormat';
 import type { RuntimeMetrics } from './metricsStream';

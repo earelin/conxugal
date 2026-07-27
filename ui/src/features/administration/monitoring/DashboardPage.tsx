@@ -25,7 +25,7 @@ import { useSystemStatus, type SystemStatus } from './systemStatus';
 // Code-split: @mantine/charts (and its recharts peer) are only needed once an
 // ADMIN opens this page, not for every visitor of the app's eager entry chunk.
 const MetricsPanel = lazy(() =>
-  import('./MetricsPanel').then((module) => ({ default: module.MetricsPanel })),
+  import('./metrics').then((module) => ({ default: module.MetricsPanel })),
 );
 
 function formatDateTime(iso: string): string {

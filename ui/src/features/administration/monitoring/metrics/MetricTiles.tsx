@@ -1,6 +1,6 @@
 import { Box, Card, Skeleton, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
-import { strings } from '../../../shared/lib/strings';
+import { strings } from '../../../../shared/lib/strings';
 import { MetricSparkline } from './MetricSparkline';
 import {
   deltaOf,

@@ -1,6 +1,6 @@
 import { Group, Stack, Text } from '@mantine/core';
 import { IconHistory, IconLock } from '@tabler/icons-react';
-import { strings } from '../../../shared/lib/strings';
+import { strings } from '../../../../shared/lib/strings';
 
 export function MetricsFooterNotes() {
   const t = strings.admin.dashboard.metrics;
