@@ -61,6 +61,10 @@ export function systemLoadPercent(sample: RuntimeMetrics): number | null {
   return sample.system?.cpuLoad ?? null;
 }
 
+export function fractionToPercent(fraction: number | null): number | null {
+  return fraction != null ? fraction * 100 : null;
+}
+
 export function errorRate(requestCount?: number, errorCount?: number): number | null {
   return safeDivide(errorCount, requestCount);
 }

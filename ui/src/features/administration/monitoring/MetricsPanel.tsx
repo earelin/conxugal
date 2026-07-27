@@ -26,6 +26,7 @@ import {
   formatSingleMb,
   formatTime,
   formatUptime,
+  fractionToPercent,
   heapUsedPercent,
   peakOf,
   systemLoadPercent,
@@ -201,10 +202,7 @@ function HeapTile({ state, latest, history, variant }: TileProps) {
         <MetricSparkline
           history={history}
           variant={variant}
-          select={(sample) => {
-            const p = heapUsedPercent(sample);
-            return p != null ? p * 100 : null;
-          }}
+          select={(sample) => fractionToPercent(heapUsedPercent(sample))}
         />
       }
     />
@@ -241,10 +239,7 @@ function SystemLoadTile({ state, latest, history, variant }: TileProps) {
         <MetricSparkline
           history={history}
           variant={variant}
-          select={(sample) => {
-            const p = systemLoadPercent(sample);
-            return p != null ? p * 100 : null;
-          }}
+          select={(sample) => fractionToPercent(systemLoadPercent(sample))}
         />
       }
     />
