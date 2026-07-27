@@ -135,6 +135,35 @@ describe('MetricsPanel', () => {
     expect(screen.queryByText(/35\/30/)).not.toBeInTheDocument();
   });
 
+  it('shows system-load and thread-count peaks reflecting only the retained window, not an evicted spike', () => {
+    renderMetricsPanel();
+
+    const spikeSample: RuntimeMetrics = {
+      ...baseSample,
+      timestamp: '2026-07-18T09:30:00Z',
+      system: { cpuLoad: 0.95 },
+      jvm: { ...baseSample.jvm, threadCount: 999 },
+    };
+    act(() => currentSource().emitMessage(spikeSample));
+
+    // 34 more steady-state samples (35 emitted total into a 30-sample
+    // buffer): the spike from the very first sample must be evicted by the
+    // time the buffer fills.
+    for (let i = 1; i < 35; i += 1) {
+      act(() =>
+        currentSource().emitMessage({
+          ...baseSample,
+          timestamp: `2026-07-18T09:30:${String(i).padStart(2, '0')}Z`,
+        }),
+      );
+    }
+
+    expect(screen.getByText(new RegExp(`${t.maxOfLoadPrefix} 35 %`))).toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(`${t.maxOfLoadPrefix} 95 %`))).not.toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${t.peakOfThreadsPrefix} 42`))).toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(`${t.peakOfThreadsPrefix} 999`))).not.toBeInTheDocument();
+  });
+
   it('stays connecting when the stream errors before any sample has arrived', () => {
     renderMetricsPanel();
 
@@ -154,6 +183,16 @@ describe('MetricsPanel', () => {
     expect(screen.getByText('50 %')).toBeInTheDocument();
     expect(screen.getByText(new RegExp(t.notUpdating))).toBeInTheDocument();
     expect(screen.queryByText(/1\/30/)).not.toBeInTheDocument();
+  });
+
+  it('shows the system-load and thread-count specific reconnecting captions, distinct from heap', () => {
+    renderMetricsPanel();
+
+    act(() => currentSource().emitMessage(baseSample));
+    act(() => currentSource().emitError());
+
+    expect(screen.getByText(t.lastKnownLoad)).toBeInTheDocument();
+    expect(screen.getByText(t.lastKnownThreads)).toBeInTheDocument();
   });
 
   it('closes the EventSource on unmount', () => {
