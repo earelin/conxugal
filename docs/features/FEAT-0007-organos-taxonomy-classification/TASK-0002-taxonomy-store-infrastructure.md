@@ -26,17 +26,27 @@ JDBC/SQL stays entirely in `infrastructure`.
   read (a null parent must return the roots, which is not the same query as a parent match).
   No recursive CTE and no subtree query — the endpoint serves the whole table and the client
   builds the tree.
-- `lockTaxonomy` is the one operation with no derivable form: implement it as
-  `SELECT pg_advisory_xact_lock(<fixed key>)` via `@Query`. Transaction-scoped, so it
-  releases on commit or rollback with no explicit unlock and no leak on a failed move.
-  Record the chosen key where the next person will find it.
+- `lockTaxonomy` has no derivable form: implement it as
+  `SELECT pg_advisory_xact_lock(<fixed key>)` via `@Query`, pinning how the result is
+  mapped — a `void`/`Void` return over a `SELECT` is the wrinkle to settle here rather than
+  at the call site. Record the chosen key where the next person will find it.
+  **It only serialises inside a transaction**, which
+  [TASK-0003](TASK-0003-taxonomy-management-use-cases.md)'s use cases open: called without
+  one, it is acquired and released within its own statement and quietly does nothing.
+- **Translate the two constraint violations into domain exceptions**, so a raced refusal
+  reaches the same problem type as a checked one instead of a 500: the unique-index
+  violation on `(parent_id, lower(name))` becomes the duplicate-sibling-name exception, and
+  the foreign-key violation on `taxonomy_node_id` becomes node-not-found. Match on
+  SQLSTATE/constraint name, not on message text. This is the layer that keeps SQLSTATE
+  knowledge out of `domain` and out of the controllers.
 - Placement operations on `JdbcOrganoRepository`: set an Órgano's node, clear it, clear every
   placement pointing at a given node, and read by id. **Expect to write no code for most of
-  these** — the repository is a bare derived interface and Micronaut Data generates them
-  from the port's method names, so this task's Órgano half is mostly proving them against a
-  real database. The one genuine decision is *clear every placement pointing at a node*: an
-  update matched on a non-id column, which either derives from its method name or needs a
-  `@Query`. No `findByNode` and no `findUnclassified` — `findAll()` already carries
+  these** — both repositories are bare derived interfaces, so Micronaut Data generates the
+  bodies from the port's method names, and it does so during *TASK-0001's* build, not this
+  one. What is left here is the `@Query` operations that cannot derive (`lockTaxonomy`, and
+  *clear every placement pointing at a node* if an update matched on a non-id column does
+  not derive), the translation layer above, and proving the rest against a real database.
+  No `findByNode` and no `findUnclassified` — `findAll()` already carries
   `taxonomy_node_id` on every row.
 
 ## Acceptance criteria
@@ -58,6 +68,10 @@ JDBC/SQL stays entirely in `infrastructure`.
   ordered, the second proceeding only once the first commits or rolls back, and the lock is
   released without an explicit unlock. Proven with two real connections — a single-threaded
   test cannot tell a working lock from a no-op.
+- Inserting a duplicate sibling name raises the **duplicate-sibling-name domain exception**,
+  not a raw `DataAccessException`; deleting a node that still has placements raises
+  **node-not-found**. Without this the raced paths return 500 where the contract promises
+  409 and 404 — and the happy paths would still pass every other criterion here.
 - Deleting a node whose placements were **not** cleared first is refused by the database —
   the foreign key raises rather than cascading or nulling. This is the criterion that
   distinguishes TASK-0001's bare foreign key from an `ON DELETE CASCADE` or `SET NULL` one;

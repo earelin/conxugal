@@ -92,7 +92,12 @@ links; that gating is cosmetic, `/api/admin/**` is the real gate (feature *edge 
   (`taxonomy-admin.svg`, `create-node.svg`).
 - **Cycle guard (#15)** — `move-node.svg` shows the exact refusal: attempting to move a
   node under its own child renders a red `Alert` naming both nodes and explaining why,
-  with the primary action disabled rather than a silent no-op.
+  with the primary action disabled rather than a silent no-op. **This is the specified
+  behaviour**, and [TASK-0008](../TASK-0008-taxonomy-management-ui.md) follows it: an
+  invalid target stays selectable so the refusal can explain itself. Filtering such targets
+  out of the picker would be the obvious alternative and is deliberately not taken — it
+  makes the rule unreachable through the UI and leaves the admin guessing why a destination
+  is missing.
 - **Delete rules (#16)** — `delete-node.svg` shows the blocked case (node has children,
   explanatory alert, disabled primary) and annotates the allowed case (empty node,
   directly-assigned Órganos return to unclassified, delete stays enabled) so both branches
@@ -102,10 +107,13 @@ links; that gating is cosmetic, `/api/admin/**` is the real gate (feature *edge 
   first assignment and reassignment (the dialog always replaces, never adds, a placement).
   `unclassified-worklist.svg` shows the worklist itself, including a freshly imported,
   still-unclassified Órgano.
-- **Import trigger and outcome (#10)** — the toolbar button, the success banner and the
-  annotated "already running" button state together cover every outcome
-  [TASK-0010](../TASK-0010-import-trigger-ui.md) must surface.
-- **Galician chrome (SPEC-0001 #6)** — all labels, empty-state and refusal copy are in
+- **Import trigger and outcome (#10, #12, #13)** — the toolbar button, the success banner
+  and the annotated "already running" button state. Note the mockups show **two** of the
+  three outcomes the endpoint returns: there is no `FAILURE` state drawn, and
+  [TASK-0010](../TASK-0010-import-trigger-ui.md) must build one anyway — an import that
+  fails would otherwise render as a success with zero counts. The mockups are behind the
+  contract here, not ahead of it.
+- **Galician chrome (SPEC-0001 AC7)** — all labels, empty-state and refusal copy are in
   Galician, consistent with `ui/src/strings.ts`.
 
 ## Regenerating previews

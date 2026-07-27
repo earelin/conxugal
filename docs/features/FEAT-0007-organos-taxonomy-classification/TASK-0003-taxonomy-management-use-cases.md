@@ -32,15 +32,22 @@ in `domain`, not in a controller.
   rejected at the edge by the request record; the sibling comparison lives here, where the
   repository read it needs is available, and TASK-0001's unique index is what makes it
   race-proof — this check exists to produce a civil refusal, not to be the only guard.
-- **This task owns the feature's rejection exceptions** — unknown node, cycle, node still
-  has children, duplicate sibling name — as distinct domain types, so
-  [TASK-0006](TASK-0006-taxonomy-admin-endpoints.md) can map each to its own status and
-  problem type without inspecting messages.
-  [TASK-0004](TASK-0004-organo-classification-use-cases.md) reuses the unknown-node type
+- **This task owns the feature's four node-scoped rejection exceptions** — unknown node,
+  cycle, node still has children, duplicate sibling name — as distinct domain types in
+  `domain.taxonomy`, so [TASK-0006](TASK-0006-taxonomy-admin-endpoints.md) can map each to
+  its own status and problem type without inspecting messages.
+  [TASK-0004](TASK-0004-organo-classification-use-cases.md) reuses the unknown-**node** type
   rather than declaring a second one; it is listed here so two tasks picked up in parallel
-  do not each invent one.
-- **Tree-shape mutations serialise.** `MoveNode` and `DeleteNode` call `lockTaxonomy` before
-  reading and hold it through the write, all in one transaction. For `MoveNode` this is what
+  do not each invent one. The fifth type in the feature's failure contract,
+  **unknown Órgano, is TASK-0004's** and lives in `domain.organo` — it is about an Órgano,
+  not the taxonomy.
+- **Tree-shape mutations serialise.** `MoveNode` and `DeleteNode` carry `@Transactional`
+  (`io.micronaut.transaction.annotation`) on the use-case method — the same boundary
+  `SetUserEnabled` and `CreateUser` already use — and call `lockTaxonomy` before their first
+  read, holding it through the write. **The annotation is not optional decoration**: the
+  lock is transaction-scoped, so without an ambient transaction it is released inside its
+  own statement and serialises nothing, while every single-threaded test still passes. For
+  `MoveNode` this is what
   makes the cycle guard sound at all — a check-then-write over a tree another admin is
   reshaping is not a guard (see the feature's *Edge cases*). For `DeleteNode` the same
   transaction also covers the placement clearing, so a concurrent reader never sees an
@@ -73,5 +80,11 @@ in `domain`, not in a controller.
   and `RenameNode` do not. Provable against the test double by recording the call order —
   a guard that reads before locking is the bug this exists to prevent, and it looks
   identical to a correct one in a single-threaded test otherwise.
+- **The serialisation is proven for real**, not only by call order: an integration test
+  drives the injected `MoveNode` from concurrent threads against a real database and shows
+  that two moves which would jointly create a cycle cannot both commit, following
+  `SetUserEnabledConcurrencyIntegrationTest`. This is the only criterion in the feature that
+  can fail when `@Transactional` is missing — every other test passes with the lock doing
+  nothing at all.
 - Unit-tested against a test double of `TaxonomyNodeRepository` / `OrganoRepository`; the
   cycle guard is tested at depth, not only one level down.

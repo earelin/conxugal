@@ -3,7 +3,7 @@ feat: FEAT-0007
 domain: backend
 adrs: [0002, 0005, 0006, 0010, 0012, 0016]
 status: todo
-depends_on: [TASK-0005]
+depends_on: [TASK-0002, TASK-0003, TASK-0004, TASK-0005]
 ---
 
 # Taxonomy management & classification endpoints
@@ -29,12 +29,18 @@ here: this is the whole `ADMIN` surface of the feature.
   | Place an Órgano in a node | `PUT /api/admin/organo/{id}/taxonomy-node` |
   | Clear an Órgano's placement | `DELETE /api/admin/organo/{id}/taxonomy-node` |
 
-- All six are `@Secured("ADMIN")`. Note the last two hang off `/api/organo/{id}` — they
-  change the Órgano, not the node — so an `/api/admin/taxonomy-node/**`-shaped security
+- All six are `@Secured("ADMIN")`. Note the last two hang off `/api/admin/organo/{id}` —
+  they change the Órgano, not the node — so an `/api/admin/taxonomy-node/**`-shaped security
   rule would miss them.
+- Success responses, fixed by the feature's *API surface*: **201** with the created node for
+  the create (the id is required — TASK-0008 selects and expands the new node without a
+  refetch), **200** with the updated node for the rename, **204** for the other four. The
+  two request bodies are `{parentId}` on the move and `{taxonomyNodeId}` on the placement.
 - Request records validated at the edge: `@NotBlank @Size(max = 255)` on a node name, per
   the `CreateUserRequest` precedent. A null `parentId` is **valid** on create and move — it
-  means "at the root" — and must not be conflated with a missing field.
+  means "at the root" — and must not be conflated with a missing field. Whatever
+  representation is chosen, it must round-trip a null distinctly enough that "move this node
+  to the root" stays expressible.
 - Map each domain rejection to its own status **and** its own RFC 9457 problem `type`, as
   fixed by the feature's failure contract. Status alone is not enough: a cycle and a
   blocked-by-children delete are both 409, and
@@ -49,12 +55,24 @@ here: this is the whole `ADMIN` surface of the feature.
   | `urn:conxugal:problem-type:taxonomy-node-has-children` | 409 |
   | `urn:conxugal:problem-type:duplicate-sibling-name` | 409 |
 
+- Each documented 404 and 409 **enumerates which problem `type`s it can carry**. The shared
+  `Error` schema has no `type` enum, so a 409 described only as "conflict" leaves a
+  generated client unable to tell a cycle from a duplicate name — defeating the distinction
+  the five types exist to make.
 - Every operation carries the ADR-0012 rate-limit contract — the three `RateLimit-*`
-  headers and the shared `TooManyRequests` 429.
+  headers and the shared `TooManyRequests` 429 — plus the 400, 401 and 500 responses
+  `vacuum:owasp` requires.
+- The two refusals that can arrive as **constraint violations** rather than as a use case's
+  own check — a raced duplicate name and an assign racing a delete — reach these same
+  statuses, because TASK-0002 translates them into the domain exceptions first. Nothing
+  extra is needed here; it is noted so the 500 does not get re-introduced by handling them
+  separately.
 
 ## Acceptance criteria
 - As an `ADMIN`, a node can be created at the root and under a parent, renamed, moved and
-  deleted over HTTP; each change is visible in the next `GET /api/taxonomy-nodes`.
+  deleted over HTTP; each change is visible in the next `GET /api/taxonomy-nodes`. The
+  create returns 201 **carrying the new node's id**, which the UI needs to select it without
+  a refetch; a move to the root succeeds with an explicit null parent.
   ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #14)
 - A move that would create a cycle is refused with 409 and the taxonomy is unchanged; a
   delete of a node with children is refused likewise — and the two carry **different**

@@ -64,9 +64,11 @@ green twice, so this is a cohesion argument rather than the only workable order.
   must go on writing name/active only, so an import cannot disturb a placement.
 - **Migration** `V9__create_taxonomy_node_and_organo_placement.sql` under
   `infrastructure/src/main/resources/db/migration/`, creating the `taxonomy_node` table —
-  UUID primary key defaulting to `uuidv7()` as `organo_contratacion` does, `name`
-  `NOT NULL`, and a nullable self-referencing `parent_id` with a foreign key back to
-  `taxonomy_node` — and adding the nullable `taxonomy_node_id` to `organo_contratacion`
+  UUID primary key defaulting to `uuidv7()` as `organo_contratacion` does,
+  `name VARCHAR(255) NOT NULL` (matching the `@Size` the request records enforce, and the
+  `organo_contratacion.name` precedent), and a nullable self-referencing `parent_id` with a
+  foreign key back to `taxonomy_node` — and adding the nullable `taxonomy_node_id` to
+  `organo_contratacion`
   with a foreign key to `taxonomy_node`. Both tables in one migration: the placement's
   foreign key needs the node table to exist already. **V9, not V8** — V8 is taken, and V4
   is reserved by `db/migration-local/V4__seed_demo_user.sql`, so a free-looking number in
@@ -76,6 +78,10 @@ green twice, so this is a cohesion argument rather than the only workable order.
   concurrent create cannot slip past. `NULLS NOT DISTINCT` is what extends it to the roots:
   under the default, every null `parent_id` is distinct and two identically-named roots
   would be accepted. `lower(name)` makes it case-insensitive, matching the rule as stated.
+- The self-referencing `taxonomy_node.parent_id` foreign key likewise carries **no
+  `ON DELETE` action**. `CASCADE` here would let one delete remove a whole subtree, quietly
+  defeating the R16 rule that a delete is *rejected* while the node has children — the
+  refusal would never get the chance to fire.
 - The foreign key on `organo_contratacion.taxonomy_node_id` carries **no `ON DELETE`
   action** — not `SET NULL`, and never `CASCADE`. `DeleteNode` clears the placements itself
   in the same transaction, and the bare foreign key is the backstop that turns a skipped
@@ -110,6 +116,12 @@ green twice, so this is a cohesion argument rather than the only workable order.
 - The migration applies cleanly on top of the existing schema and creates both the
   `taxonomy_node` table (with its self-referencing parent foreign key) and
   `organo_contratacion.taxonomy_node_id` (nullable, foreign-keyed, no `ON DELETE` action).
+- The sibling-name index does what it claims, asserted directly against the database:
+  two same-named children of one parent are refused, **two same-named roots are refused**
+  (the `NULLS NOT DISTINCT` case, which a default index would silently allow), a
+  case-only difference is refused, and the same name under two different parents is
+  accepted. This is the feature's only race-proof guard on the rule, and it is one keyword
+  away from not working.
 - **The task lands green.** FEAT-0006's existing `JdbcOrganoRepository` integration tests
   still pass unchanged against the migrated schema — the widened record round-trips with
   `taxonomyNodeId` null — which is the whole reason the migration is in this task.

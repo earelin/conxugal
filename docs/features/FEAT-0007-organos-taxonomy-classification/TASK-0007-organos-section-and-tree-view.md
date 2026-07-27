@@ -28,10 +28,29 @@ layout, tree rows and Órgano table, minus every action button.
   its API calls and its local state, exposes one `index.ts` barrel, and imports nothing from
   `routes/admin/`. The existing tree is *not* migrated and `eslint-plugin-boundaries` is
   *not* wired here — see the feature's *UI* section for why, and for what stays unowned.
-- Move `ErrorAlert` from `routes/admin/` to `ui/src/shared/ui/`, updating the existing
-  importers. This slice needs it, and a feature reaching into another feature's internals is
-  the one thing ADR-0015's dependency rule forbids. Give it the **retry** affordance it does
-  not have today, which the failed-fetch rule below depends on.
+- **Promote three files, and no others** (the feature's *UI* section argues each):
+  - `ErrorAlert` → `shared/ui/`, gaining the **retry** affordance the failed-fetch rule
+    below depends on;
+  - `httpClient.ts` (`apiFetch`, `HttpError`) and `httpError.ts` → `shared/lib/`, with
+    `api/queryClient.ts` repointed at the new path. This one is load-bearing: the single
+    `QueryClient` keys its retry policy *and* its 401→`/login` redirect on
+    `error instanceof HttpError`, so a slice with its own error type would retry blindly and
+    lose the session-expiry redirect. Exactly one `HttpError` class may exist.
+
+  Update every existing importer. Nothing else moves — the rest of `ui/src` stays as it is.
+- Add **`ProblemError`** to `shared/lib/`: `type`, `status` and `detail` parsed from an
+  `application/problem+json` body, falling back to today's `HttpError` behaviour when the
+  body is not one. `apiFetch` currently discards the body entirely, so without this the
+  refusal messages [TASK-0008](TASK-0008-taxonomy-management-ui.md) and
+  [TASK-0009](TASK-0009-classification-ui.md) specify — keyed on `type`, never on status —
+  cannot be written at all.
+- The slice's **HTTP module and refetch hook**: the typed calls for both reads, and the
+  single hook that refetches and re-runs the builder. The three later tasks all call it;
+  leaving it to whichever landed first would mean it was designed as a side effect of a
+  mutation flow.
+- **Strings are split, and this task decides the split**: the nav label goes in
+  `ui/src/strings.ts`, because `nav.ts` reads `strings.nav.*`; all section copy lives in the
+  slice.
 - Fetch both reads — `GET /api/organos` and `GET /api/taxonomy-nodes` — and **build the tree
   in the browser**: a pure function taking the two arrays and returning the rooted tree plus
   the unclassified list, by grouping nodes on `parentId` (null → root) and Órganos on
@@ -51,8 +70,15 @@ layout, tree rows and Órgano table, minus every action button.
   endpoints promise no order, and without this the tree reshuffles on the refetch after
   every mutation. Accented names must collate correctly (`Á` beside `A`, not after `Z`).
 - The two-pane layout: the `Taxonomía` tree card, and the content card showing the selected
-  node's Órganos or the pinned **Sen clasificar** worklist. Each Órgano row shows name,
-  active state and nothing else yet.
+  node's Órganos or the pinned **Sen clasificar** worklist. Each Órgano row shows name and
+  active state (inactive rows dimmed, never hidden) and nothing else yet.
+- **The section chrome is this task's, including the places the later tasks fill**: the tree
+  header, the node-content header with its breadcrumb, the per-row slots, and the toolbar —
+  all rendered, all with empty action areas. TASK-0008 to TASK-0010 add controls into
+  structure that already exists rather than each inventing a container.
+- Usable at a **360 px viewport** ([SPEC-0001](../../specs/SPEC-0001-web-ui.md) AC6): this is
+  the repo's first two-pane layout, and two side-by-side cards are exactly what that
+  criterion constrains. The panes stack rather than overflow.
 - Galician chrome and copy, consistent with the existing admin pages.
 
 ## Acceptance criteria
@@ -73,8 +99,17 @@ layout, tree rows and Órgano table, minus every action button.
   no second request. (SPEC-0004 #8, #18)
 - The section is not reachable by a `USER`; this gating is cosmetic — `/api/admin/**`
   remains the real gate. (SPEC-0004 #1)
-- No file under `features/organos/` imports from `routes/admin/`, `api/` or `commons/`.
-- All added chrome and messages are in Galician. ([SPEC-0001](../../specs/SPEC-0001-web-ui.md) #6)
+- No file under `features/organos/` imports from `routes/admin/` — the rule ADR-0015 makes
+  absolute. It **does** import the promoted files from `shared/`, which is the point of
+  promoting them, and exactly one `HttpError` class exists in the app afterwards, still the
+  one `api/queryClient.ts` compares against.
+- `ProblemError` surfaces `type` from a `problem+json` refusal and degrades to plain
+  `HttpError` behaviour on a body that is not one — proven against both shapes, since
+  TASK-0008 and TASK-0009 are unimplementable without the first and would crash on the
+  second.
+- The section is usable at 360 px: both panes reachable, nothing clipped or horizontally
+  scrolled. (SPEC-0001 AC6)
+- All added chrome and messages are in Galician. (SPEC-0001 AC7)
 - The tree builder is unit-tested on its own arrays — nesting, unclassified, empty taxonomy,
   dangling node id, sibling ordering — with no component rendered; the page is
   component-tested for selection, the empty-taxonomy state and each failing read, with HTTP

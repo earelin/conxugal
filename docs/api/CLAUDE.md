@@ -44,8 +44,9 @@ reserving `"taxonomy"` against ever being an id. Under this rule the taxonomy re
 ### Known exception
 
 `POST /api/admin/users/{id}/enabled` predates the rule and should be
-`/api/admin/user/{id}/enabled`. It is shipped, and its correction is carried as a task
-under FEAT-0004. Treat it as the one documented deviation, never as precedent.
+`/api/admin/user/{id}/enabled`. It is shipped, and correcting it is unowned follow-up work
+— a breaking change that needs its own task. Treat it as the one documented deviation,
+never as precedent.
 
 ### Before adding a path
 

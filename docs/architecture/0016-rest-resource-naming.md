@@ -60,15 +60,16 @@ element**.
 
 One shipped endpoint predates this rule and violates it:
 **`POST /api/admin/users/{id}/enabled`** should be `/api/admin/user/{id}/enabled`. It is
-recorded as a known exception here and carried as a task under
-[FEAT-0004](../features/FEAT-0004-administration-area/README.md); until that lands, it is
-the single documented deviation, not a precedent. Every other existing path already
-conforms.
+recorded here as the single documented deviation, not a precedent. Correcting it is
+**unowned follow-up work** — no task under
+[FEAT-0004](../features/FEAT-0004-administration-area/README.md) currently carries it, and
+it is a breaking change to a shipped endpoint, so it needs a task of its own before it
+lands. Every other existing path already conforms.
 
 Like ADR-0006 this is an enforceable convention upheld by review: a path that addresses
-one element through a plural noun is a defect. It is restated in `server/CLAUDE.md`
-alongside the `/api/` prefix rule for day-to-day visibility, but this ADR is the governing
-record.
+one element through a plural noun is a defect. It is restated in
+[`docs/api/CLAUDE.md`](../api/CLAUDE.md) — next to `openapi.yaml`, where paths are actually
+chosen — for day-to-day visibility, but this ADR is the governing record.
 
 ## Consequences
 

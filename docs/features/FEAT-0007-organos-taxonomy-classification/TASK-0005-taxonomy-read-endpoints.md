@@ -3,7 +3,7 @@ feat: FEAT-0007
 domain: backend
 adrs: [0002, 0005, 0006, 0010, 0012, 0016]
 status: todo
-depends_on: [TASK-0004]
+depends_on: [TASK-0002, TASK-0004]
 ---
 
 # Taxonomy & catalogue read endpoints
@@ -30,9 +30,13 @@ different half of the contract, and six operations against these two.
   taxonomy node — `id`, `name`, `parentId` (nullable, null for a root). No Órganos, no
   nested children. **Not** `/api/organos/taxonomy`: that path parks a second resource on
   `/api/organos`' member slot, which is the collision ADR-0016 was written to stop.
-- Both carry the ADR-0012 rate-limit contract — the three `RateLimit-*` response headers
-  and the shared `TooManyRequests` 429 — like every other operation in the contract.
-  Omitting them fails `openapi-lint` before any code runs.
+- Both return **200** with a JSON array of the fields above; the schemas name every field's
+  type and which are nullable. Both carry the ADR-0012 rate-limit contract — the three
+  `RateLimit-*` response headers and the shared `TooManyRequests` 429 — plus the 400, 401
+  and 500 responses `vacuum:owasp` requires, as `listUsers` already declares. Omitting any
+  of these fails `openapi-lint` before a line of code runs.
+- `TASK-0002`'s adapter is a real prerequisite, not just an ordering preference: the HTTP
+  integration tests below need something to read from.
 - Neither response nests, groups, or partitions anything: each is one use-case list mapped
   row-for-row onto a response record. The client joins them on `taxonomyNodeId` = node `id`
   to build the tree, and filters `taxonomyNodeId == null` for the unclassified set.
@@ -50,7 +54,8 @@ different half of the contract, and six operations against these two.
   ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #2, #8)
 - As an authenticated `USER` or `ADMIN`, `GET /api/taxonomy-nodes` returns every node with
   its `parentId` or null, several levels of nesting arriving as a flat list the caller can
-  rebuild the tree from. (SPEC-0004 #2, #14)
+  rebuild the tree from. (SPEC-0004 #2 access-control half — the *browse the tree* half is
+  deferred with #9 and no task here renders it)
 - With no node created, `GET /api/taxonomy-nodes` returns an empty array while
   `GET /api/organos` still returns the whole catalogue with every `taxonomyNodeId` null —
   the normal state after a first import, not a degenerate one. (SPEC-0004 #8)
@@ -59,5 +64,9 @@ different half of the contract, and six operations against these two.
   may call, and gating them by mistake would take R8 with them. (SPEC-0004 #2, #8)
 - Both responses carry the `RateLimit-*` headers, and the contract declares
   `TooManyRequests` for each.
+- **No `ORDER BY` is added to either query.** The no-promised-order rule is stated twice in
+  prose and is otherwise unfalsifiable — a helpful `ORDER BY name` would satisfy every other
+  criterion here while quietly turning an unpromised order into one clients depend on.
+  Assert it against the code, not the response.
 - The implementation conforms to `docs/api/openapi.yaml`, and both endpoints are
   integration-tested over HTTP against a running server.

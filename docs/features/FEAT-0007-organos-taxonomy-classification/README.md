@@ -243,10 +243,38 @@ the collision above happened the first time (SPEC-0004 R1, R14–R18):
 | Place an Órgano in a node | `PUT /api/admin/organo/{id}/taxonomy-node` |
 | Clear an Órgano's placement | `DELETE /api/admin/organo/{id}/taxonomy-node` |
 
-Note that the two classification operations sit under `/api/organo/…`, **not** under a
-taxonomy path — they change the Órgano, not the node. A `USER` gets 403 on all six. There
-is no admin-specific listing: an admin manages the same two lists every authenticated
-caller receives, and files from the ones whose `taxonomyNodeId` is null (SPEC-0004 R18).
+Note that the two classification operations sit under `/api/admin/organo/{id}/…`, **not**
+under a taxonomy path — they change the Órgano, not the node, so a security rule shaped
+around `/api/admin/taxonomy-node/**` would miss them entirely. A `USER` gets 403 on all
+six. There is no admin-specific listing: an admin manages the same two lists every
+authenticated caller receives, and files from the ones whose `taxonomyNodeId` is null
+(SPEC-0004 R18).
+
+**Success responses, fixed here for the same reason the paths are.** A path with no
+declared success shape is half a decision, and under ADR-0010 the contract is what CI
+enforces:
+
+| Operation | Success | Body |
+| --- | --- | --- |
+| `GET /api/organos` | 200 | array of `{id, name, active, taxonomyNodeId}` |
+| `GET /api/taxonomy-nodes` | 200 | array of `{id, name, parentId}` |
+| `POST /api/admin/taxonomy-nodes` | 201 | the created node — **the id is required**: the UI selects and expands the new node without a refetch |
+| `PATCH /api/admin/taxonomy-node/{id}` | 200 | the updated node |
+| `PUT /api/admin/taxonomy-node/{id}/parent` | 204 | none |
+| `DELETE /api/admin/taxonomy-node/{id}` | 204 | none |
+| `PUT /api/admin/organo/{id}/taxonomy-node` | 204 | none |
+| `DELETE /api/admin/organo/{id}/taxonomy-node` | 204 | none |
+
+Two request bodies carry a single field each: `{parentId}` on the move (null meaning
+*at the root*) and `{taxonomyNodeId}` on the placement. A **null `parentId` is a value, not
+an omission** — the contract must distinguish "move to the root" from "field absent", or
+moving a node out to the root becomes unexpressible.
+
+**Why a null-`parentId` `PUT` for the move but a `DELETE` for the placement**, side by side
+in one table: re-parenting and moving-to-the-root are one use case (`MoveNode`) with one
+argument that happens to be nullable, so splitting them across two methods would make every
+client branch on null to call the same operation. Assign and clear are two use cases with
+different rules — clear is idempotent, assign is not — so they get two methods.
 
 **Failure contract.** Refusals are RFC 9457 `application/problem+json`, matching the
 `urn:conxugal:problem-type:duplicate-email` precedent already in the contract. Status alone
@@ -261,11 +289,37 @@ blocked-by-children delete are both 409 — so each rejection gets its own `type
 | `urn:conxugal:problem-type:taxonomy-node-has-children` | 409 | a delete of a node with child nodes |
 | `urn:conxugal:problem-type:duplicate-sibling-name` | 409 | a create/rename/move colliding with a sibling name |
 
+**Who declares each exception.** The four node-scoped types are
+[TASK-0003](TASK-0003-taxonomy-management-use-cases.md)'s, in `domain.taxonomy`.
+`organo-not-found` is **[TASK-0004](TASK-0004-organo-classification-use-cases.md)'s**, in
+`domain.organo` — it is about an Órgano, and putting it in the taxonomy package to satisfy
+"one owner" would misfile it. What TASK-0004 must not do is declare a *second*
+unknown-**node** type; that one it reuses. Five types, five distinct statuses-plus-`type`
+pairs, no duplicates.
+
+**The database backstops must reach the same contract.** Two refusals can arrive as
+constraint violations rather than as a use case's own check — the unique index when two
+creates race, and the placement foreign key when an assign races a delete. Left alone,
+Micronaut Data raises a `DataAccessException` and the caller gets a **500**, which is
+exactly what the admin surface promises never to do. So the **JDBC adapter
+([TASK-0002](TASK-0002-taxonomy-store-infrastructure.md)) translates them**: a unique-index
+violation on `(parent_id, lower(name))` becomes the duplicate-sibling-name exception, and a
+foreign-key violation on `taxonomy_node_id` becomes the node-not-found one. Translating in
+the adapter is what keeps the mapping honest under ADR-0002 — the exception types are the
+domain's, the SQLSTATE knowledge stays in `infrastructure`, and the controllers need no
+special case for "the same refusal, but raced".
+
 - **Every operation carries the rate-limit contract** of
   [ADR-0012](../../architecture/0012-rate-limit-http-contract.md): the three `RateLimit-*`
   response headers on success and the shared `TooManyRequests` 429 response. This is not
   optional decoration — `.vacuum.yaml`'s ruleset fails `openapi-lint` without it, so all
-  eight operations would be red on first push.
+  eight operations would be red on first push. The same ruleset (`vacuum:owasp`) also
+  requires 400, 401 and 500 to be declared; `listUsers` is the worked example already in
+  the contract.
+- **Each refusal status must say which `type`s it can carry.** The shared `Error` schema
+  has no `type` enum, so a 409 documented as just "conflict" leaves a generated client
+  unable to tell a cycle from a duplicate name — which is precisely the distinction the
+  five types exist to make. Enumerate them per operation.
 - All contracts are authored in [`docs/api/openapi.yaml`](../../api/openapi.yaml) before the
   controllers, and CI enforces conformance (ADR-0010).
 
@@ -273,10 +327,27 @@ blocked-by-children delete are both 409 — so each rejection gets its own `type
 - **Taxonomy admin** — the only UI here, an `ADMIN`-only section: the tree with create/rename/move/delete
   controls, an assign-to-node action and the unclassified worklist for classifying Órganos,
   and an **import** button that calls FEAT-0006's `POST /api/admin/organos/import` and shows
-  the returned outcome (added/refreshed/deactivated, or "already running"). Chrome and
-  messages in Galician (SPEC-0001 R6). Admin-only nav gating is cosmetic; `/api/admin/**`
-  stays server-gated. The visual target is the mockup set in
-  [`design/`](design/README.md).
+  the returned outcome. Chrome and messages in Galician (SPEC-0001 AC7). Admin-only nav
+  gating is cosmetic; `/api/admin/**` stays server-gated. The visual target is the mockup
+  set in [`design/`](design/README.md).
+- **Tree assembly lives in the client** — the section fetches both lists and builds the tree
+  in one pass: group nodes by `parentId` (null → root), group Órganos by `taxonomyNodeId`,
+  and the null bucket is the unclassified worklist. It is a **pure function** of the two
+  arrays, kept out of the components and unit-tested on its own, so a mutation re-renders by
+  re-running it over refreshed data rather than by asking the server for a new shape.
+- **No `USER` section** — a `USER` gains no new route or nav entry from this feature. They
+  reach the catalogue and taxonomy only through the two reads, and will see them rendered
+  when the contratos-list filter arrives.
+
+**The import outcome is three-way, not two.** FEAT-0006's `ImportOutcome.Status` is
+`SUCCESS`, `FAILURE` and `ALREADY_RUNNING`, and `ImportOrganos` **returns** a failure rather
+than throwing — so a failed import can arrive with the same HTTP status as a successful one
+and all-zero counts. Rendered as a success, a source outage would read *0 engadidos · 0
+actualizados · 0 desactivados*: the most misleading possible report, and a silent failure of
+SPEC-0004 R13's "the import reports failure". The section therefore distinguishes all three,
+and treats a transport error as a fourth, local case. This depends on FEAT-0006's import
+endpoint declaring the discriminator in its contract —
+[TASK-0010](TASK-0010-import-trigger-ui.md) is blocked until it does.
 
 **Where the code lands ([ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md)).**
 That ADR is accepted and left its migration to "whichever feature or maintenance task picks
@@ -295,40 +366,54 @@ feature does not claim them: they are still follow-up work for a maintenance tas
 next frontend feature, which will find one slice already in the target shape rather than
 none.
 
-One exception to "new code only": **`ErrorAlert` moves to `shared/ui/`**. It lives in
-`routes/admin/` today, and the Órganos slice needs it for the failed-fetch case below — a
-feature importing another feature's internals is the one thing the ADR's dependency rule
-forbids outright, and the ADR's own trigger for promoting a file is a second consumer
-appearing. Moving one shared component down is not the migration; leaving it put would mean
-either duplicating it or breaking the rule on the first file written. It also gains the
-retry affordance it does not have today.
-- **Tree assembly lives in the client** — the section fetches both lists and builds the tree
-  in one pass: group nodes by `parentId` (null → root), group Órganos by `taxonomyNodeId`,
-  and the null bucket is the unclassified worklist. It is a **pure function** of the two
-  arrays, kept out of the components and unit-tested on its own, so a mutation re-renders by
-  re-running it over refreshed data rather than by asking the server for a new shape.
-- **No `USER` section** — a `USER` gains no new route or nav entry from this feature. They
-  reach the catalogue and taxonomy only through the two reads, and will see them rendered
-  when the contratos-list filter arrives.
+**Three files move down, and they are the ones that carry behaviour.** The ADR's own trigger
+for promoting a file is a second consumer appearing, and that is exactly what this slice is:
+
+- **`ErrorAlert` → `shared/ui/`**, for the failed-fetch case below. It also gains the retry
+  affordance it does not have today.
+- **`httpClient.ts` (`apiFetch`, `HttpError`) and `httpError.ts` → `shared/lib/`**, with
+  `api/queryClient.ts` repointed at the new location. This is not tidiness. The single
+  `QueryClient` wired in `main.tsx` keys **both** of its cross-cutting policies on
+  `error instanceof HttpError`: the retry policy, and the redirect to `/login` on a 401. A
+  slice that honoured "import nothing from `api/`" by rolling its own error type would get
+  three blind retries on every failed read whatever the status — slow enough to mask the
+  failed-fetch state this feature designs so carefully — and would **silently lose the
+  session-expiry redirect**. Exactly one `HttpError` class may exist in the app.
+
+Three files is still not the migration, and ADR-0015 already lists all three under
+`shared/ui/` and `shared/lib/`. Nothing else moves.
+
+**The slice reads `problem+json`.** The five problem types exist so the UI can tell a cycle
+from a blocked delete, and both are 409 — but `apiFetch` today throws away the response body
+and the only existing refusal precedent keys on the status. So `shared/lib/` also gains a
+`ProblemError` carrying `type`, `status` and `detail`, parsed from an
+`application/problem+json` body and falling back to the plain `HttpError` behaviour when the
+body is not one. Without it, every refusal message in TASK-0008 and TASK-0009 is
+unimplementable as specified, and whoever picks up the first of those would invent the
+plumbing mid-task for the other to find or duplicate. It is delivered by
+[TASK-0007](TASK-0007-organos-section-and-tree-view.md) with the rest of the slice's HTTP
+module.
 
 ## Sequencing (tasks, one small change each)
 1. **[TASK-0001](TASK-0001-taxonomy-node-domain-model-and-placement.md) — Taxonomy node
    domain model + Órgano placement + schema migration** *(backend)*: the `TaxonomyNode`
    aggregate (UUID, name, optional parent) and the `TaxonomyNodeRepository` port (find all,
-   find by id, insert, rename, re-parent, delete, child check), the placement field on
-   `OrganoDeContratacion` and the matching `OrganoRepository` operations, **and the
-   migration** adding the `taxonomy_node` table (self-referencing parent) and the nullable
-   `taxonomy_node_id` on the catalogue table. Under ADR-0008 the entity carries its own
-   mapping, so widening the record without its column would break FEAT-0006's existing
+   find by id, insert, rename, re-parent, delete, child check, children-of-parent,
+   `lockTaxonomy`), the placement field on `OrganoDeContratacion` and the matching
+   `OrganoRepository` operations including the by-id read, **and the migration** adding the
+   `taxonomy_node` table (self-referencing parent), the nullable `taxonomy_node_id` on the
+   catalogue table and the sibling-name unique index. Under ADR-0008 the entity carries its
+   own mapping, so widening the record without its column would break FEAT-0006's existing
    queries — model and schema move together or the task lands red.
-   *(SPEC-0004 #14, #15, #17, #18)*
+   *(SPEC-0004 #5, #6, #8, #14, #15, #17, #18)*
 2. **[TASK-0002](TASK-0002-taxonomy-store-infrastructure.md) — Taxonomy store
    infrastructure** *(backend)*: the JDBC `TaxonomyNodeRepository` (including
-   `lockTaxonomy`), against the schema TASK-0001 created. The `OrganoRepository` placement
-   operations need **no adapter code** — the repository is a bare derived interface and
-   Micronaut Data generates them from the port — so this task's Órgano half is proving them
-   against a real database, plus the one genuine decision: whether clearing every placement
-   pointing at a node derives from its method name or needs a `@Query`.
+   `lockTaxonomy`) and the translation of the two constraint violations into domain
+   exceptions, against the schema TASK-0001 created. Both repositories are bare derived
+   interfaces, so Micronaut Data generates most method bodies from the port — this task's
+   work is the two `@Query` operations that cannot derive, the translation layer, and
+   proving the rest against a real database. Every endpoint task depends on it: without the
+   adapter there is nothing for an HTTP integration test to run against.
    *(SPEC-0004 #14, #16, #17)*
 3. **[TASK-0003](TASK-0003-taxonomy-management-use-cases.md) — Taxonomy management use
    cases** *(backend)*: `CreateNode`, `RenameNode`, `MoveNode` (cycle guard), `DeleteNode`
@@ -342,35 +427,56 @@ retry affordance it does not have today.
 5. **[TASK-0005](TASK-0005-taxonomy-read-endpoints.md) — Taxonomy & catalogue read
    endpoints** *(backend)*: OpenAPI-first — the two authenticated reads, `GET /api/organos`
    with each Órgano's `taxonomyNodeId` and `GET /api/taxonomy-nodes` with each node's
-   `parentId`. *(SPEC-0004 #2, #8)*
+   `parentId`. Also depends on TASK-0002 — an HTTP integration test needs a real adapter
+   underneath. *(SPEC-0004 #2 access-control half, #8)*
 6. **[TASK-0006](TASK-0006-taxonomy-admin-endpoints.md) — Taxonomy management &
    classification endpoints** *(backend)*: the six `ADMIN` operations, the problem-type
    contract for each refusal, and the `ADMIN` gate. Split from the reads because it is a
    different security posture, a different half of the contract, and six operations against
    two. *(SPEC-0004 #1, #14–#18)*
 7. **[TASK-0007](TASK-0007-organos-section-and-tree-view.md) — Órganos section + tree view**
-   *(frontend)*: the route, nav entry and `features/organos/` slice; the pure tree builder
-   over the two reads; the loading, empty, failed-fetch and dangling-id states; name
-   ordering. Read-only — no mutation controls. *(SPEC-0004 #8, #14, #18; SPEC-0001 #6)*
+   *(frontend)*: the route, nav entry and `features/organos/` slice; the three promoted
+   `shared/` files and the `ProblemError` reader; the slice's HTTP module and the refetch
+   hook the later tasks call; the section chrome — tree card and node-content card — as
+   containers with empty action rows; the pure tree builder over the two reads; the loading,
+   empty, failed-fetch and dangling-id states; name ordering; and the unclassified worklist
+   **rendered**. Read-only — no mutation controls.
+   *(SPEC-0004 #1 nav gating, #8, #14, #18; SPEC-0001 AC6, AC7)*
 8. **[TASK-0008](TASK-0008-taxonomy-management-ui.md) — Taxonomy management UI**
-   *(frontend)*: create, rename, move and delete from the tree, with the cycle and
-   blocked-by-children refusals shown as distinct explanatory messages.
-   *(SPEC-0004 #14, #15, #16)*
+   *(frontend)*: create, rename, move and delete from the tree — filling the action row
+   TASK-0007 left empty — with the cycle and blocked-by-children refusals shown as distinct
+   explanatory messages. *(SPEC-0004 #14, #15, #16; SPEC-0001 AC7)*
 9. **[TASK-0009](TASK-0009-classification-ui.md) — Classification UI** *(frontend)*: the
-   assign-to-node picker, the clear action, and the unclassified worklist as the filing
-   queue. *(SPEC-0004 #17, #18)*
+   assign-to-node picker, the clear action, and the **actions on** the unclassified worklist
+   TASK-0007 already renders — plus the invariant that it stays in step after every
+   assignment. *(SPEC-0004 #8 inactive display, #17, #18; SPEC-0001 AC7)*
 10. **[TASK-0010](TASK-0010-import-trigger-ui.md) — Import trigger UI** *(frontend)*: the
-    import button driving FEAT-0006's endpoint, its outcome counts, and the "already
-    running" case. *(SPEC-0004 #10)*
+    import button driving FEAT-0006's endpoint, and all three outcomes — success counts,
+    failure, and "already running". *(SPEC-0004 #10 surfacing, #12, #13 admin-facing half,
+    #18; SPEC-0001 AC7)*
 
 **Why the UI is four tasks.** The mockups in [`design/`](design/README.md) cover six
 screens; built as one task it would be the largest change in the repo by some margin — more
 than the whole of today's `ui/src` — and its acceptance criteria would span tree assembly,
 four mutation flows, two refusal states, a picker, a worklist and an import. FEAT-0004
 already set the precedent of splitting a UI feature (shell and nav apart from the page
-inside it), and the seams here are the mockups' own. TASK-0007 carries the slice and the
-builder every later task renders through, so it goes first; TASK-0008 to TASK-0010 are then
-independent of each other.
+inside it), and the seams here are the mockups' own.
+
+**TASK-0007 owns everything the other three share**, which is what makes them genuinely
+parallel rather than nominally so: the slice and its barrel, the HTTP module including the
+`problem+json` reader, the refetch hook, the section chrome with its empty action rows, and
+the builder. TASK-0008 to TASK-0010 then add controls into structure that already exists,
+and none of them needs anything from another. Left unassigned, those five surfaces would be
+built by whichever of the three was picked up first — unreviewed, and either duplicated or
+retrofitted by the next.
+
+Two more shared decisions land in TASK-0007 for the same reason: the slice's **strings**
+(the nav label has to go in `ui/src/strings.ts`, which `nav.ts` reads, while the section's
+own copy stays in the slice — so it is a split, not a choice), and the **two node pickers**.
+TASK-0008's move picker and TASK-0009's assign picker are *different controls* — one
+excludes the node and its descendants and offers "at the root", the other is searchable and
+always replaces — so they are two components by design, not an accident to be refactored
+away later.
 
 ## Edge cases
 - **Cycle on move** — re-parenting a node under itself or a descendant is rejected and the
@@ -422,9 +528,9 @@ independent of each other.
     pass the guard, and jointly create a cycle — and no foreign key can catch it, unlike
     the delete cases the FKs do backstop. So **tree-shape mutations serialise**: `MoveNode`
     and `DeleteNode` call a `lockTaxonomy()` port operation before reading and hold it
-    through the write, inside one transaction. The port keeps the domain free of the
-    mechanism ([ADR-0002](../../architecture/0002-hexagonal-architecture.md)); the JDBC
-    adapter implements it as a transaction-scoped PostgreSQL advisory lock. These are rare,
+    through the write. The port keeps the domain free of the mechanism
+    ([ADR-0002](../../architecture/0002-hexagonal-architecture.md)); the JDBC adapter
+    implements it as a transaction-scoped PostgreSQL advisory lock. These are rare,
     admin-initiated
     operations over a table of a few dozen rows, so serialising them outright costs nothing
     measurable and is far easier to reason about than retrying serialisation failures.
@@ -433,6 +539,19 @@ independent of each other.
     backstop if that clearing is ever skipped. `AssignOrganoToNode` racing a `DeleteNode`
     is settled by the same lock plus the foreign key: the assign either commits before the
     delete (and is cleared by it) or fails against the vanished node.
+  - **The transaction is part of the decision, not an implementation detail.** A
+    transaction-scoped advisory lock taken with no ambient transaction is acquired and
+    released inside its own statement: it serialises nothing, and it looks identical to a
+    working lock in every single-threaded test. So `MoveNode` and `DeleteNode` carry
+    `@Transactional` on the use-case method — the boundary the repo already uses for
+    `SetUserEnabled` and `CreateUser` — and the lock, the reads and the writes all sit
+    inside it. This is also what makes `DeleteNode`'s delete-plus-clearing atomic. It is
+    proven the way `SetUserEnabledConcurrencyIntegrationTest` proves its equivalent:
+    driving the injected use case from concurrent threads against a real database. A
+    unit test against a test double cannot tell a held lock from a released one.
+  - **A `MoveNode` racing a `DeleteNode` of its target parent** is settled by the same
+    lock: whichever commits first, the second re-reads under the lock and either moves
+    under a node that still exists or fails to find it.
   - Concurrent *classification* of two different Órganos does not serialise — they are
     independent row updates that cannot interact, and taking the tree lock for them would
     make the admin worklist needlessly sequential.

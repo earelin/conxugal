@@ -15,11 +15,18 @@ authenticated endpoints serve. Governed by
 
 ## Scope
 - `AssignOrganoToNode` — sets an Órgano's placement to a node, **replacing** any current
-  one; rejects an unknown Órgano or an unknown node. The unknown-node exception is
-  [TASK-0003](TASK-0003-taxonomy-management-use-cases.md)'s — reuse it rather than declaring
-  a second type, or TASK-0006 has two exceptions to map onto one problem type. The
-  unknown-Órgano check is what the `OrganoRepository` by-id read from TASK-0001 exists for;
-  scanning `findAll()` to answer it would be the whole-table server work this feature avoids.
+  one; rejects an unknown Órgano or an unknown node. Two **different** exceptions, because
+  the feature's failure contract gives them different problem types:
+  - the unknown-**node** exception is
+    [TASK-0003](TASK-0003-taxonomy-management-use-cases.md)'s — reuse it rather than
+    declaring a second type, or TASK-0006 has two exceptions mapping to one problem type;
+  - the unknown-**Órgano** exception is **declared by this task**, in `domain.organo`. It is
+    the fifth type in the feature's failure contract and no other task owns it; it is about
+    an Órgano, so filing it under `domain.taxonomy` for tidiness would misplace it.
+
+  The unknown-Órgano check is what the `OrganoRepository` by-id read from TASK-0001 exists
+  for; scanning `findAll()` to answer it would be the whole-table server work this feature
+  avoids.
 - `ClearOrganoNode` — removes an Órgano's placement, returning it to unclassified. Rejects
   an unknown Órgano with the same exception `AssignOrganoToNode` uses. Clearing an Órgano
   that is **already** unclassified is **not** an error: it is idempotent and writes nothing,
@@ -56,7 +63,9 @@ authenticated endpoints serve. Governed by
 - Assigning to an unknown node, or assigning an unknown Órgano, is rejected and writes
   nothing; clearing an unknown Órgano is rejected likewise, while clearing an
   already-unclassified one succeeds and writes nothing.
-- Both rejections reuse TASK-0003's exception types; no new unknown-node type is declared.
+- An unknown node and an unknown Órgano raise **distinct** exception types — TASK-0003's for
+  the node, this task's for the Órgano — so TASK-0006 can return two different 404 problem
+  types. No second unknown-**node** type is declared.
 - `ListOrganos` returns `OrganoRepository.findAll()` unchanged — the same elements in the
   same order, nothing filtered, grouped, sorted or re-shaped on the way through.
 - `ListTaxonomyNodes` does the same for `TaxonomyNodeRepository.findAll()`, returning an

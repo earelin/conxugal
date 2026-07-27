@@ -116,6 +116,12 @@ features.
    assigning/clearing an Órgano's node — is denied; an authenticated `ADMIN` is allowed.
 2. **(R2)** An authenticated `USER` can read the catalogue and browse the taxonomy tree;
    an unauthenticated visitor that requests either is denied.
+   > **Partly deferred, with criterion 9 below.** The access-control half — a `USER` may read both,
+   > an anonymous caller is denied — is satisfied by
+   > [FEAT-0007](../features/FEAT-0007-organos-taxonomy-classification/README.md)'s two
+   > authenticated reads. The *"browse the taxonomy tree"* half is the same unrendered
+   > `USER` surface #9 defers, and travels with it to the contract-querying spec. A task
+   > claiming this criterion should say which half it proves.
 3. **(R3, R5, R8)** After an import from the source completes, a user viewing the
    catalogue sees every Órgano from the source list stored with its name; an Órgano new
    to that import is stored **active**.
