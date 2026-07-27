@@ -43,7 +43,7 @@
   <rect x="480" y="104" width="480" height="560" rx="10" fill="#ffffff"/>
 
   <!-- header -->
-  <text x="504" y="138" font-size="18" font-weight="600" fill="#212529">Asignar a un nodo</text>
+  <text x="504" y="138" font-size="18" font-weight="600" fill="#212529">Asignar a un termo</text>
   <g stroke="#868e96" stroke-width="1.6" stroke-linecap="round">
     <line x1="927" y1="127" x2="937" y2="137"/><line x1="937" y1="127" x2="927" y2="137"/>
   </g>
@@ -54,13 +54,13 @@
   <text x="504" y="220" font-size="12" fill="#adb5bd">Actualmente: Sen clasificar</text>
 
   <!-- search field -->
-  <text x="504" y="252" font-size="13" font-weight="600" fill="#212529">Nodo<tspan fill="#fa5252"> *</tspan></text>
+  <text x="504" y="252" font-size="13" font-weight="600" fill="#212529">Termo<tspan fill="#fa5252"> *</tspan></text>
   <rect x="504" y="262" width="432" height="40" rx="8" fill="#ffffff" stroke="#4c6ef5" stroke-width="1.5"/>
   <g stroke="#adb5bd" stroke-width="1.6" fill="none">
     <circle cx="524" cy="282" r="6"/>
     <line x1="528.5" y1="286.5" x2="532" y2="290" stroke-linecap="round"/>
   </g>
-  <text x="542" y="287" font-size="14" fill="#adb5bd">Buscar nodo…</text>
+  <text x="542" y="287" font-size="14" fill="#adb5bd">Buscar termo…</text>
 
   <!-- open tree listbox -->
   <rect x="504" y="306" width="432" height="288" rx="8" fill="#ffffff" stroke="#dee2e6"/>
@@ -80,7 +80,7 @@
   <text x="522" y="474" font-size="13" font-weight="500" fill="#495057">Concellos</text>
   <text x="522" y="500" font-size="13" font-weight="500" fill="#495057">Deputacións provinciais</text>
 
-  <text x="522" y="530" font-size="12" fill="#adb5bd">… 84 nodos máis</text>
+  <text x="522" y="530" font-size="12" fill="#adb5bd">… 84 termos máis</text>
 
   <!-- footer -->
   <line x1="480" y1="608" x2="960" y2="608" stroke="#f1f3f5"/>

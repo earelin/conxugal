@@ -11,7 +11,7 @@ depends_on: [TASK-0007]
 The one control in this feature that drives a **FEAT-0006** endpoint: an import button in
 the Órganos section toolbar, and the outcome it reports. Built on
 [TASK-0007](TASK-0007-organos-section-and-tree-view.md)'s section; independent of
-[TASK-0008](TASK-0008-taxonomy-management-ui.md) and
+[TASK-0008](TASK-0008-taxonomia-management-ui.md) and
 [TASK-0009](TASK-0009-classification-ui.md). Governed by
 [ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md),
 [ADR-0003](../../architecture/0003-react-router-ui-served-by-backend.md) and

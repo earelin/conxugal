@@ -17,29 +17,32 @@ addresses the collection, singular when it addresses one element**
 | Path addresses | Noun | Example |
 | --- | --- | --- |
 | the collection — list | plural | `GET /api/organos` |
-| the collection — create an element | plural | `POST /api/admin/taxonomy-nodes` |
+| the collection — create an element | plural | `POST /api/admin/organos/taxonomia/termos` |
 | the collection — an operation on the whole set | plural | `POST /api/admin/organos/import` |
+| the collection — a sub-resource of the whole set | plural | `GET /api/organos/taxonomia` |
 | one element, by id | singular | `GET /api/organo/{id}` |
-| one element's sub-resource | singular | `PUT /api/admin/organo/{id}/taxonomy-node` |
+| one element's sub-resource | singular | `PUT /api/admin/organo/{id}/termo` |
 | a singleton — no collection exists | singular | `GET /api/me` |
 
 Applying it:
 
 - **A create takes the plural.** It has no id yet, so it acts on the collection.
-- **A sub-resource follows the same rule for its own noun** — `.../{id}/taxonomy-node`
-  places the element in one node; a sub-collection would be plural in turn.
-- **Multi-word nouns are kebab-case**: `system-status`, `taxonomy-node`.
+- **A sub-resource follows the same rule for its own noun** — `.../{id}/termo`
+  places the element in one term; a sub-collection is plural in turn, which is why the
+  taxonomy's terms are `/api/organos/taxonomia/termos`.
+- **Multi-word nouns are kebab-case**: `system-status`.
 - **Use the noun the domain already uses.** `organo`/`organos` because the aggregate is
-  `OrganoDeContratacion`; `taxonomy-node`/`taxonomy-nodes` because it is `TaxonomyNode`.
+  `OrganoDeContratacion`; `termo`/`termos` because it is `Termo`.
   The contract does not translate a term the code has chosen, so the model's language mix
   reaches the URLs deliberately.
 
 Why it is worth the two spellings: a collection and its members occupy **disjoint**
-namespaces, so a sibling resource can never collide with a member path. `/api/organos` and
-`/api/organos/taxonomy` would collide — the second is not an Órgano id, yet it sits where
-`/api/organos/{id}` must go, forcing every client to special-case the literal and
-reserving `"taxonomy"` against ever being an id. Under this rule the taxonomy read is
-`GET /api/taxonomy-nodes` and the collision cannot arise.
+namespaces, so a sibling resource can never collide with a member path. Without the rule,
+`/api/organos/taxonomia` would be ambiguous — `taxonomia` is not an Órgano id, yet it sits
+where `/api/organos/{id}` would go, forcing every client to special-case the literal and
+reserving `"taxonomia"` against ever being an id. With members at `/api/organo/{id}`, the
+plural namespace holds no ids at all, so `GET /api/organos/taxonomia` is unambiguous and
+reads as what it is: a sub-resource of the whole collection.
 
 ### Before adding a path
 

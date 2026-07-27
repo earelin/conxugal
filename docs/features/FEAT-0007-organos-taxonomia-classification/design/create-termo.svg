@@ -45,7 +45,7 @@
   <rect x="550" y="228" width="440" height="352" rx="10" fill="#ffffff"/>
 
   <!-- header -->
-  <text x="574" y="262" font-size="18" font-weight="600" fill="#212529">Novo nodo</text>
+  <text x="574" y="262" font-size="18" font-weight="600" fill="#212529">Novo termo</text>
   <g stroke="#868e96" stroke-width="1.6" stroke-linecap="round">
     <line x1="957" y1="251" x2="967" y2="261"/><line x1="967" y1="251" x2="957" y2="261"/>
   </g>
@@ -56,17 +56,17 @@
   <rect x="574" y="324" width="392" height="42" rx="8" fill="#ffffff" stroke="#4c6ef5" stroke-width="1.5"/>
   <text x="590" y="349" font-size="14" fill="#adb5bd">p. ex. Hospitais e centros de saúde</text>
 
-  <!-- field: nodo pai -->
-  <text x="574" y="396" font-size="13" font-weight="600" fill="#212529">Nodo pai</text>
+  <!-- field: termo pai -->
+  <text x="574" y="396" font-size="13" font-weight="600" fill="#212529">Termo pai</text>
   <rect x="574" y="406" width="392" height="42" rx="8" fill="#ffffff" stroke="#ced4da"/>
   <text x="590" y="431" font-size="14" fill="#212529">Consellerías › Consellería de Sanidade</text>
   <path d="M944 423 l6 6 l6 -6" stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="574" y="466" font-size="12" fill="#868e96">Déixao baleiro para crear un nodo raíz.</text>
+  <text x="574" y="466" font-size="12" fill="#868e96">Déixao baleiro para crear un termo raíz.</text>
 
   <!-- footer -->
   <line x1="550" y1="500" x2="990" y2="500" stroke="#f1f3f5"/>
   <rect x="726" y="516" width="96" height="40" rx="8" fill="#ffffff" stroke="#ced4da"/>
   <text x="774" y="537" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#495057">Cancelar</text>
   <rect x="830" y="516" width="126" height="40" rx="8" fill="#4c6ef5"/>
-  <text x="893" y="537" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="600" fill="#ffffff">Crear nodo</text>
+  <text x="893" y="537" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="600" fill="#ffffff">Crear termo</text>
 </svg>

@@ -34,7 +34,7 @@ features.
 ### Access
 
 - **R1** — **Managing** the catalogue and taxonomy — triggering imports (R10), creating,
-  renaming, moving and deleting taxonomy nodes (R14–R16), and classifying Órganos (R17) —
+  renaming, moving and deleting terms (R14–R16), and classifying Órganos (R17) —
   is reachable only by users with the `ADMIN` role; a `USER` or an unauthenticated visitor
   who attempts any of these is denied (consistent with SPEC-0003 R1).
 - **R2** — **Reading** the catalogue of Órganos (R8) and browsing the taxonomy tree (R9)
@@ -70,7 +70,7 @@ features.
   showing, for each, its name, its active/inactive state, and its current taxonomy
   placement (or that it is unclassified).
 - **R9** — Any authenticated user can browse the taxonomy as a navigable tree of category
-  nodes with the Órganos placed within each node, and select an Órgano from it — for
+  terms with the Órganos placed within each term, and select an Órgano from it — for
   example, to query contracts by that Órgano. For a `USER` this tree is read-only: it
   offers no controls that create, rename, move, delete, or reassign anything.
 
@@ -91,34 +91,34 @@ features.
 
 ### Managing the taxonomy
 
-- **R14** — An administrator can build a **multilevel taxonomy** of category nodes they
-  define: create a node with a name, place it at the root or nest it under a parent node,
+- **R14** — An administrator can build a **multilevel taxonomy** of category terms they
+  define: create a term with a name, place it at the root or nest it under a parent term,
   rename it, move it to a different parent, and delete it. The taxonomy may be nested to
   any depth.
-- **R15** — The taxonomy is a tree: every node has at most one parent and there are no
-  cycles — a node cannot be moved to sit under itself or under any of its own descendants.
-- **R16** — Deleting a node with child nodes is not allowed until those children are
-  removed or moved; deleting a node returns any Órganos assigned directly to it to the
-  unclassified set. Deleting a taxonomy node never deletes an Órgano.
+- **R15** — The taxonomy is a tree: every term has at most one parent and there are no
+  cycles — a term cannot be moved to sit under itself or under any of its own descendants.
+- **R16** — Deleting a term with child terms is not allowed until those children are
+  removed or moved; deleting a term returns any Órganos assigned directly to it to the
+  unclassified set. Deleting a term never deletes an Órgano.
 
 ### Classifying Órganos
 
-- **R17** — An administrator can assign an Órgano to a single taxonomy node, change that
-  assignment to another node, or clear it. An Órgano is placed in **at most one** node at
-  any time; it is never in two nodes simultaneously.
+- **R17** — An administrator can assign an Órgano to a single term, change that
+  assignment to another term, or clear it. An Órgano is placed in **at most one** term at
+  any time; it is never in two terms simultaneously.
 - **R18** — Órganos that have not been classified — including every newly imported one —
   are discoverable as an **unclassified** set, so an administrator can find and file them.
 
 ## Acceptance criteria
 
 1. **(R1)** A `USER` or an unauthenticated visitor that attempts any management function
-   — triggering an import, creating/renaming/moving/deleting a taxonomy node, or
-   assigning/clearing an Órgano's node — is denied; an authenticated `ADMIN` is allowed.
+   — triggering an import, creating/renaming/moving/deleting a term, or
+   assigning/clearing an Órgano's term — is denied; an authenticated `ADMIN` is allowed.
 2. **(R2)** An authenticated `USER` can read the catalogue and browse the taxonomy tree;
    an unauthenticated visitor that requests either is denied.
    > **Partly deferred, with criterion 9 below.** The access-control half — a `USER` may read both,
    > an anonymous caller is denied — is satisfied by
-   > [FEAT-0007](../features/FEAT-0007-organos-taxonomy-classification/README.md)'s two
+   > [FEAT-0007](../features/FEAT-0007-organos-taxonomia-classification/README.md)'s two
    > authenticated reads. The *"browse the taxonomy tree"* half is the same unrendered
    > `USER` surface #9 defers, and travels with it to the contract-querying spec. A task
    > claiming this criterion should say which half it proves.
@@ -128,7 +128,7 @@ features.
 4. **(R4, R5)** Re-importing after an Órgano's source attributes change updates that
    Órgano in place — its stable identity and its taxonomy placement are unchanged while
    the refreshed attributes are shown.
-5. **(R5)** An Órgano that an administrator has placed in a taxonomy node retains that
+5. **(R5)** An Órgano that an administrator has placed in a term retains that
    placement after a subsequent import.
 6. **(R6)** When an Órgano present in an earlier import is absent from a later source
    list, it remains in the catalogue marked inactive and keeps its placement; a still
@@ -142,7 +142,7 @@ features.
    anything.
    > **Deferred, and knowingly outside this spec's features.** The *data* this tree is
    > built from ships with
-   > [FEAT-0007](../features/FEAT-0007-organos-taxonomy-classification/README.md) as two
+   > [FEAT-0007](../features/FEAT-0007-organos-taxonomia-classification/README.md) as two
    > authenticated reads, but no `USER`-facing tree is rendered by any feature of this
    > spec: the only place a user picks an Órgano is the **Órgano filter of the contratos
    > list**, which belongs to the future contract-querying spec and will be built against
@@ -160,15 +160,15 @@ features.
 13. **(R13)** When the source is unreachable or returns an unusable response, the import
     reports failure and the previously stored catalogue, states, and taxonomy are
     unchanged (no partial wipe).
-14. **(R14)** An administrator can create a node, nest a node under a parent, rename a
-    node, move a node to a different parent, and delete an empty node; a taxonomy nested
+14. **(R14)** An administrator can create a term, nest a term under a parent, rename a
+    term, move a term to a different parent, and delete an empty term; a taxonomy nested
     several levels deep is supported.
-15. **(R15)** An attempt to move a node under itself or under one of its own descendants
+15. **(R15)** An attempt to move a term under itself or under one of its own descendants
     is rejected and the taxonomy is left unchanged.
-16. **(R16)** Deleting a node that has child nodes is rejected; deleting a node with
+16. **(R16)** Deleting a term that has child terms is rejected; deleting a term with
     directly assigned Órganos returns those Órganos to the unclassified set and deletes no
     Órgano.
-17. **(R17)** Assigning an Órgano to a node, then to a different node, leaves it in only
-    the second node; clearing its assignment leaves it in none.
+17. **(R17)** Assigning an Órgano to a term, then to a different term, leaves it in only
+    the second term; clearing its assignment leaves it in none.
 18. **(R18)** A newly imported Órgano that has not been classified appears in the
-    unclassified set until an administrator assigns it to a node.
+    unclassified set until an administrator assigns it to a term.

@@ -90,7 +90,7 @@
   <g stroke="#ffffff" stroke-width="1.7" stroke-linecap="round">
     <line x1="563" y1="254" x2="575" y2="254"/><line x1="569" y1="248" x2="569" y2="260"/>
   </g>
-  <text x="582" y="258" font-size="12" font-weight="600" fill="#ffffff">Novo nodo</text>
+  <text x="582" y="258" font-size="12" font-weight="600" fill="#ffffff">Novo termo</text>
   <line x1="284" y1="282" x2="684" y2="282" stroke="#f1f3f5"/>
 
   <!-- row: Consellerías (root, expanded) -->
@@ -183,7 +183,7 @@
   <rect x="980" y="435" width="72" height="22" rx="11" fill="#ebfbee"/>
   <text x="1016" y="447" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVO</text>
   <rect x="1112" y="434" width="120" height="26" rx="8" fill="#ffffff" stroke="#ced4da"/>
-  <text x="1172" y="447" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Quitar do nodo</text>
+  <text x="1172" y="447" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Quitar do termo</text>
   <line x1="732" y1="464" x2="1232" y2="464" stroke="#f1f3f5"/>
 
   <!-- row 2: 061, active -->
@@ -192,7 +192,7 @@
   <rect x="980" y="495" width="72" height="22" rx="11" fill="#ebfbee"/>
   <text x="1016" y="507" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVO</text>
   <rect x="1112" y="494" width="120" height="26" rx="8" fill="#ffffff" stroke="#ced4da"/>
-  <text x="1172" y="507" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Quitar do nodo</text>
+  <text x="1172" y="507" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Quitar do termo</text>
   <line x1="732" y1="538" x2="1232" y2="538" stroke="#f1f3f5"/>
 
   <!-- row 3: Hospital Álvaro Cunqueiro, inactive (dimmed, never removed) -->
@@ -200,8 +200,8 @@
   <rect x="980" y="563" width="80" height="22" rx="11" fill="#f1f3f5"/>
   <text x="1020" y="575" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">INACTIVO</text>
   <rect x="1112" y="562" width="120" height="26" rx="8" fill="#ffffff" stroke="#ced4da"/>
-  <text x="1172" y="575" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Quitar do nodo</text>
+  <text x="1172" y="575" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Quitar do termo</text>
   <line x1="732" y1="598" x2="1232" y2="598" stroke="#f1f3f5"/>
 
-  <text x="732" y="620" font-size="12" fill="#868e96">3 órganos neste nodo</text>
+  <text x="732" y="620" font-size="12" fill="#868e96">3 órganos neste termo</text>
 </svg>

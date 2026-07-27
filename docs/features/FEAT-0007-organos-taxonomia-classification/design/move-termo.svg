@@ -42,18 +42,18 @@
   <rect x="500" y="178" width="440" height="452" rx="10" fill="#ffffff"/>
 
   <!-- header -->
-  <text x="524" y="212" font-size="18" font-weight="600" fill="#212529">Mover nodo</text>
+  <text x="524" y="212" font-size="18" font-weight="600" fill="#212529">Mover termo</text>
   <g stroke="#868e96" stroke-width="1.6" stroke-linecap="round">
     <line x1="907" y1="201" x2="917" y2="211"/><line x1="917" y1="201" x2="907" y2="211"/>
   </g>
   <line x1="500" y1="230" x2="940" y2="230" stroke="#f1f3f5"/>
 
-  <text x="524" y="256" font-size="13" fill="#868e96">Nodo:</text>
+  <text x="524" y="256" font-size="13" fill="#868e96">Termo:</text>
   <text x="524" y="276" font-size="14" font-weight="600" fill="#212529">Consellería de Educación, Ciencia,</text>
   <text x="524" y="294" font-size="14" font-weight="600" fill="#212529">Universidades e FP</text>
 
-  <!-- field: novo nodo pai (invalid selection) -->
-  <text x="524" y="330" font-size="13" font-weight="600" fill="#212529">Novo nodo pai<tspan fill="#fa5252"> *</tspan></text>
+  <!-- field: novo termo pai (invalid selection) -->
+  <text x="524" y="330" font-size="13" font-weight="600" fill="#212529">Novo termo pai<tspan fill="#fa5252"> *</tspan></text>
   <rect x="524" y="340" width="392" height="42" rx="8" fill="#fff5f5" stroke="#fa5252" stroke-width="1.5"/>
   <text x="540" y="365" font-size="14" fill="#e03131">… › Axencia Galega de Innovación</text>
   <path d="M894 357 l6 6 l6 -6" stroke="#e03131" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
@@ -66,7 +66,7 @@
     <circle cx="546" cy="421.5" r="0.6" fill="#e03131" stroke="none"/>
   </g>
   <text x="566" y="412" font-size="13" font-weight="600" fill="#c92a2a">Non se pode mover aquí</text>
-  <text x="546" y="436" font-size="12" fill="#c92a2a">«Axencia Galega de Innovación» é un nodo fillo de</text>
+  <text x="546" y="436" font-size="12" fill="#c92a2a">«Axencia Galega de Innovación» é un termo fillo de</text>
   <text x="546" y="452" font-size="12" fill="#c92a2a">«Consellería de Educación, Ciencia, Universidades e</text>
   <text x="546" y="468" font-size="12" fill="#c92a2a">FP»: movelo aquí crearía un ciclo na taxonomía. Elixe</text>
   <text x="546" y="484" font-size="12" fill="#c92a2a">un destino que non sexa el mesmo nin un dos seus fillos.</text>

@@ -100,7 +100,7 @@
   <g stroke="#ffffff" stroke-width="1.7" stroke-linecap="round">
     <line x1="563" y1="330" x2="575" y2="330"/><line x1="569" y1="324" x2="569" y2="336"/>
   </g>
-  <text x="582" y="334" font-size="12" font-weight="600" fill="#ffffff">Novo nodo</text>
+  <text x="582" y="334" font-size="12" font-weight="600" fill="#ffffff">Novo termo</text>
   <line x1="284" y1="358" x2="684" y2="358" stroke="#f1f3f5"/>
 
   <!-- row: Consellerías (root, expanded) -->
@@ -159,7 +159,7 @@
   <text x="732" y="330" font-size="12" fill="#868e96" xml:space="preserve">Taxonomía<tspan fill="#adb5bd"> › </tspan><tspan fill="#495057" font-weight="600">Sen clasificar</tspan></text>
 
   <text x="732" y="364" font-size="22" font-weight="700" fill="#212529">Sen clasificar</text>
-  <text x="732" y="384" font-size="13" fill="#868e96">Órganos importados que aínda non teñen nodo asignado.</text>
+  <text x="732" y="384" font-size="13" fill="#868e96">Órganos importados que aínda non teñen termo asignado.</text>
   <line x1="732" y1="400" x2="1232" y2="400" stroke="#f1f3f5"/>
 
   <!-- table header -->
@@ -174,7 +174,7 @@
   <rect x="980" y="479" width="72" height="22" rx="11" fill="#ebfbee"/>
   <text x="1016" y="491" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVO</text>
   <rect x="1092" y="478" width="140" height="26" rx="8" fill="#edf2ff"/>
-  <text x="1162" y="491" text-anchor="middle" font-size="12" font-weight="600" fill="#3b5bdb">Asignar a nodo</text>
+  <text x="1162" y="491" text-anchor="middle" font-size="12" font-weight="600" fill="#3b5bdb">Asignar a termo</text>
   <line x1="732" y1="508" x2="1232" y2="508" stroke="#f1f3f5"/>
 
   <!-- row 2 (two-line) -->
@@ -183,7 +183,7 @@
   <rect x="980" y="525" width="72" height="22" rx="11" fill="#ebfbee"/>
   <text x="1016" y="537" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVO</text>
   <rect x="1092" y="524" width="140" height="26" rx="8" fill="#edf2ff"/>
-  <text x="1162" y="537" text-anchor="middle" font-size="12" font-weight="600" fill="#3b5bdb">Asignar a nodo</text>
+  <text x="1162" y="537" text-anchor="middle" font-size="12" font-weight="600" fill="#3b5bdb">Asignar a termo</text>
   <line x1="732" y1="576" x2="1232" y2="576" stroke="#f1f3f5"/>
 
   <!-- row 3: newly imported -->
@@ -193,7 +193,7 @@
   <rect x="1010" y="591" width="72" height="22" rx="11" fill="#ebfbee"/>
   <text x="1046" y="603" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVO</text>
   <rect x="1092" y="590" width="140" height="26" rx="8" fill="#edf2ff"/>
-  <text x="1162" y="603" text-anchor="middle" font-size="12" font-weight="600" fill="#3b5bdb">Asignar a nodo</text>
+  <text x="1162" y="603" text-anchor="middle" font-size="12" font-weight="600" fill="#3b5bdb">Asignar a termo</text>
   <line x1="732" y1="628" x2="1232" y2="628" stroke="#f1f3f5"/>
 
   <text x="732" y="650" font-size="12" fill="#868e96">12 órganos sen clasificar</text>
