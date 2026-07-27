@@ -386,39 +386,30 @@ function computePoolSummary(pool: RuntimeMetrics['datastorePool']): PoolSummary 
   };
 }
 
+function PoolBarSegment({ fraction, color }: { fraction: number; color: string }) {
+  return (
+    <Box
+      style={{
+        width: `${fraction * 100}%`,
+        height: '100%',
+        borderRadius: 5,
+        background: `var(--mantine-color-${color})`,
+      }}
+    />
+  );
+}
+
 function PoolBar({ summary }: { summary: PoolSummary | null }) {
   if (!summary) {
     return (
       <Box style={{ height: 10, borderRadius: 5, background: 'var(--mantine-color-gray-2)' }} />
     );
   }
-  const pct = (n: number) => `${(n / summary.max) * 100}%`;
   return (
     <Group gap={2} wrap="nowrap" style={{ height: 10 }}>
-      <Box
-        style={{
-          width: pct(summary.active),
-          height: '100%',
-          borderRadius: 5,
-          background: 'var(--mantine-color-indigo-6)',
-        }}
-      />
-      <Box
-        style={{
-          width: pct(summary.idle),
-          height: '100%',
-          borderRadius: 5,
-          background: 'var(--mantine-color-indigo-2)',
-        }}
-      />
-      <Box
-        style={{
-          width: pct(summary.free),
-          height: '100%',
-          borderRadius: 5,
-          background: 'var(--mantine-color-gray-2)',
-        }}
-      />
+      <PoolBarSegment fraction={summary.active / summary.max} color="indigo-6" />
+      <PoolBarSegment fraction={summary.idle / summary.max} color="indigo-2" />
+      <PoolBarSegment fraction={summary.free / summary.max} color="gray-2" />
     </Group>
   );
 }
