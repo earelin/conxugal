@@ -15,6 +15,7 @@ micronaut:
     name: conxugal
   executors:
     blocking:
+      type: scheduled
       virtual: true
   router:
     static-resources:

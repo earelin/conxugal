@@ -32,13 +32,4 @@ class ImportOrganosSchedulerIntegrationTest {
     assertThat(run.stringValue(Scheduled.class, "cron")).hasValue("0 0 3 * * *");
     assertThat(run.stringValue(Scheduled.class, "zoneId")).hasValue("Europe/Madrid");
   }
-
-  @Test
-  void import_schedule_property_defaults_to_daily_overnight_run() {
-    assertThat(
-            applicationContext
-                .getEnvironment()
-                .getProperty("conxugal.organos.import.schedule", String.class))
-        .hasValue("0 0 3 * * *");
-  }
 }

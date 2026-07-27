@@ -16,7 +16,7 @@ class ImportOrganosSchedulerTest {
 
   @Test
   void delegates_to_the_import_use_case_on_each_trigger() {
-    when(importOrganos.run()).thenReturn(ImportOutcome.success(3, 12, 1));
+    when(importOrganos.run()).thenReturn(ImportOutcome.success(0, 0, 0));
     ImportOrganosScheduler scheduler = new ImportOrganosScheduler(importOrganos);
 
     scheduler.run();
