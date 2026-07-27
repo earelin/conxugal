@@ -6,6 +6,9 @@ conxugal:
     stream:
       sample-interval: 5s
       heartbeat-interval: 15s
+  organos:
+    import:
+      schedule: "0 0 3 * * *"
 
 micronaut:
   application:
