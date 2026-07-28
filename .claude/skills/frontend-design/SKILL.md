@@ -21,15 +21,16 @@ what "coherent" looks like here; mirror their structure.
 
 Never hardcode what these modules already own:
 
-- **`ui/src/theme.ts`** — the Mantine theme: `primaryColor: 'indigo'`,
+- **`ui/src/app/theme.ts`** — the Mantine theme: `primaryColor: 'indigo'`,
   `defaultRadius: 'md'`, the system font stack, headings at weight 600. Use theme
   tokens (`c="dimmed"`, `radius="md"`, colour names like `green`, `red`), not literal
   hex. If a token is missing, add it to the theme rather than inlining a value.
-- **`ui/src/strings.ts`** — all user-facing copy, in **Galician**. Add new copy here
-  under a per-screen key; never write literal user-facing text in a component.
-- **`ui/src/nav.ts` + `ui/src/layout/AppLayout.tsx`** — the persistent `AppShell`
-  chrome (header + collapsible navbar). New sections extend this data/layout; they do
-  not fork it.
+- **`ui/src/shared/lib/strings.ts`** — all user-facing copy, in **Galician**. Add new
+  copy here under a per-screen key; never write literal user-facing text in a
+  component.
+- **`ui/src/app/nav.ts` + `ui/src/app/layout/AppLayout.tsx`** — the persistent
+  `AppShell` chrome (header + collapsible navbar). New sections extend this
+  data/layout; they do not fork it.
 - **`@tabler/icons-react`** — the icon set. Use it for every icon; never hand-roll SVG
   paths in components (the mockups draw raw SVG only because they are static artifacts).
 

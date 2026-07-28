@@ -27,7 +27,10 @@ hashing and security wiring are driven adapters; the login/logout endpoints and
 
 **Out of scope (separate features):** user self-registration, password reset, admin
 user management/CRUD, and the actual contents of the admin area (this feature only
-gates access to it).
+gates access to it). The SPA's in-app logout affordance — a header user menu offering
+the control that reaches the `/logout` endpoint below — is owned by
+[FEAT-0008](../FEAT-0008-in-app-session-menu/README.md); this feature delivers the
+endpoint and the 401 handling, not the chrome that triggers them.
 
 ## Design
 

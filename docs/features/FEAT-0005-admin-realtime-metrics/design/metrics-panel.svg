@@ -1,0 +1,291 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1230" viewBox="0 0 1280 1230" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title>Panel do sistema — métricas en tempo real (estado en directo)</title>
+
+  <!-- ===== app background & AppShell frame ===== -->
+  <rect width="1280" height="1230" fill="#f8f9fa"/>
+  <rect x="0" y="0" width="1280" height="60" fill="#ffffff"/>
+  <rect x="0" y="60" width="260" height="1170" fill="#ffffff"/>
+  <line x1="0" y1="60" x2="1280" y2="60" stroke="#dee2e6" stroke-width="1"/>
+  <line x1="260" y1="60" x2="260" y2="1230" stroke="#dee2e6" stroke-width="1"/>
+
+  <!-- ===== header ===== -->
+  <g transform="translate(24,12) scale(0.18)">
+    <rect x="0" y="0" width="200" height="200" rx="46" fill="#4c6ef5"/>
+    <path d="M 132 55 A 56 56 0 1 0 132 145" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+    <path d="M 112 100 L 176 100" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round"/>
+    <path d="M 156 80 L 178 100 L 156 120" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="72" y="31" font-size="20" font-weight="700" fill="#212529">conxugal</text>
+  <text x="72" y="47" font-size="11" fill="#868e96">Contratos públicos da Xunta de Galicia</text>
+  <g stroke="#868e96" stroke-width="1.5" fill="none">
+    <circle cx="1116" cy="30" r="4.5"/>
+    <g stroke-linecap="round">
+      <line x1="1116" y1="21.5" x2="1116" y2="23.5"/><line x1="1116" y1="36.5" x2="1116" y2="38.5"/>
+      <line x1="1107.5" y1="30" x2="1109.5" y2="30"/><line x1="1122.5" y1="30" x2="1124.5" y2="30"/>
+      <line x1="1110" y1="24" x2="1111.4" y2="25.4"/><line x1="1120.6" y1="34.6" x2="1122" y2="36"/>
+      <line x1="1122" y1="24" x2="1120.6" y2="25.4"/><line x1="1111.4" y1="34.6" x2="1110" y2="36"/>
+    </g>
+  </g>
+  <line x1="1148" y1="16" x2="1148" y2="44" stroke="#e9ecef" stroke-width="1"/>
+  <text x="1210" y="26" text-anchor="end" font-size="13" font-weight="500" fill="#495057">ana.pereira@conxugal.gal</text>
+  <text x="1210" y="42" text-anchor="end" font-size="11" fill="#868e96">Administradora</text>
+  <circle cx="1236" cy="30" r="18" fill="#4c6ef5"/>
+  <text x="1236" y="30" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">AP</text>
+
+  <!-- ===== navbar ===== -->
+  <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M27 111 L37 102 L47 111 M29.5 108.5 V119 H44.5 V108.5" transform="translate(-3,-1)"/>
+  </g>
+  <text x="52" y="106" font-size="14" fill="#495057">Inicio</text>
+  <g stroke="#868e96" stroke-width="1.6" fill="none">
+    <circle cx="34" cy="149" r="8"/>
+    <line x1="34" y1="147" x2="34" y2="153" stroke-linecap="round"/>
+    <circle cx="34" cy="143.5" r="0.6" fill="#868e96" stroke="none"/>
+  </g>
+  <text x="52" y="154" font-size="14" fill="#495057">Acerca de</text>
+
+  <text x="24" y="192" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ADMINISTRACIÓN</text>
+
+  <rect x="12" y="206" width="236" height="42" rx="8" fill="#edf2ff"/>
+  <g stroke="#4263eb" stroke-width="1.6" fill="none">
+    <rect x="24" y="217" width="8" height="9" rx="1.5"/>
+    <rect x="36" y="217" width="8" height="5" rx="1.5"/>
+    <rect x="24" y="230" width="8" height="5" rx="1.5"/>
+    <rect x="36" y="226" width="8" height="9" rx="1.5"/>
+  </g>
+  <text x="52" y="232" font-size="14" font-weight="600" fill="#3b5bdb">Panel</text>
+  <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="31" cy="271" r="3"/>
+    <path d="M25 283 c0 -3.5 3 -5 6 -5 s6 1.5 6 5"/>
+    <circle cx="41.5" cy="273" r="2.4"/>
+    <path d="M41 279 c2.5 0 4.5 1.3 4.5 4" />
+  </g>
+  <text x="52" y="280" font-size="14" fill="#495057">Usuarios</text>
+
+  <!-- ===== main: page scaffold (FEAT-0004 dashboard, unchanged) ===== -->
+  <text x="284" y="112" font-size="26" font-weight="700" fill="#212529">Panel do sistema</text>
+  <text x="284" y="138" font-size="14" fill="#868e96">Estado operativo do sistema no momento da consulta.</text>
+
+  <rect x="284" y="164" width="972" height="92" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="284" y="162" width="972" height="92" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <circle cx="322" cy="208" r="22" fill="#ebfbee"/>
+  <path d="M313 208 l6 6 l12 -13" stroke="#2f9e44" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="362" y="202" font-size="18" font-weight="600" fill="#212529">Servizo operativo</text>
+  <text x="362" y="224" font-size="13" fill="#868e96">Todos os compoñentes responden con normalidade.</text>
+  <text x="1188" y="204" text-anchor="end" font-size="12" fill="#868e96">Comprobado o 09/07/2026 ás 12:45</text>
+  <circle cx="1216" cy="208" r="17" fill="#ffffff" stroke="#dee2e6"/>
+  <g stroke="#4263eb" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1210 205 a6 6 0 1 0 1.5 -4"/>
+    <path d="M1209.5 199 v3 h3"/>
+  </g>
+
+  <rect x="284" y="276" width="476" height="140" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="284" y="274" width="476" height="140" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="308" y="306" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">SERVIZO</text>
+  <circle cx="316" cy="342" r="5" fill="#40c057"/>
+  <text x="330" y="350" font-size="24" font-weight="600" fill="#212529">Operativo</text>
+  <rect x="648" y="296" width="88" height="24" rx="12" fill="#ebfbee"/>
+  <text x="692" y="308" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">EN LIÑA</text>
+  <line x1="308" y1="374" x2="736" y2="374" stroke="#f1f3f5"/>
+  <text x="308" y="396" font-size="12" fill="#868e96">Sen incidencias rexistradas nas últimas 24 h.</text>
+
+  <rect x="780" y="276" width="476" height="140" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="780" y="274" width="476" height="140" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="804" y="306" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">BASE DE DATOS</text>
+  <circle cx="812" cy="342" r="5" fill="#40c057"/>
+  <text x="826" y="350" font-size="24" font-weight="600" fill="#212529">Accesible</text>
+  <rect x="1128" y="296" width="104" height="24" rx="12" fill="#ebfbee"/>
+  <text x="1180" y="308" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">CONECTADA</text>
+  <line x1="804" y1="374" x2="1232" y2="374" stroke="#f1f3f5"/>
+  <text x="804" y="396" font-size="12" fill="#868e96">Conexión verificada na última sonda (hai 2 s).</text>
+
+  <rect x="284" y="436" width="972" height="224" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="284" y="434" width="972" height="224" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="308" y="470" font-size="16" font-weight="600" fill="#212529">Información do sistema</text>
+  <line x1="308" y1="486" x2="1232" y2="486" stroke="#f1f3f5"/>
+  <text x="308" y="522" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">VERSIÓN DA APLICACIÓN</text>
+  <text x="308" y="546" font-size="15" fill="#212529">0.1.0</text>
+  <text x="620" y="522" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">CONTORNO</text>
+  <text x="620" y="546" font-size="15" fill="#212529">produción</text>
+  <text x="932" y="522" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">RUNTIME</text>
+  <text x="932" y="546" font-size="15" fill="#212529">Java 21 (Temurin)</text>
+  <text x="308" y="586" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">TEMPO DE ACTIVIDADE</text>
+  <text x="308" y="610" font-size="15" fill="#212529">3 d 04 h 12 m</text>
+  <text x="620" y="586" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">USO DE MEMORIA</text>
+  <text x="620" y="610" font-size="15" fill="#212529">512 / 2048 MB</text>
+  <text x="932" y="586" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">SISTEMA OPERATIVO</text>
+  <text x="932" y="610" font-size="15" fill="#212529">Linux (amd64)</text>
+  <line x1="308" y1="628" x2="1232" y2="628" stroke="#f1f3f5"/>
+  <g stroke="#adb5bd" stroke-width="1.4" fill="none">
+    <rect x="308" y="641" width="11" height="8" rx="1.5"/>
+    <path d="M310 641 v-2 a3.5 3.5 0 0 1 7 0 v2"/>
+  </g>
+  <text x="328" y="648" font-size="12" fill="#868e96">A información de estado nunca inclúe credenciais nin cadeas de conexión.</text>
+
+  <!-- ===== METRICS SECTION (FEAT-0005) ===== -->
+  <!-- section header -->
+  <text x="284" y="708" font-size="18" font-weight="600" fill="#212529">Métricas en tempo real</text>
+  <text x="284" y="730" font-size="13" fill="#868e96">Mostras en directo do proceso en execución. Actualízanse soas; non se gardan no servidor.</text>
+
+  <!-- live indicator: green dot + badge, with the arrival time of the last sample -->
+  <text x="1136" y="712" text-anchor="end" font-size="12" fill="#868e96">Mostra recibida ás 12:45:07 · cada 5 s</text>
+  <rect x="1148" y="694" width="108" height="26" rx="13" fill="#ebfbee"/>
+  <circle cx="1166" cy="707" r="4.5" fill="#40c057"/>
+  <circle cx="1166" cy="707" r="8" fill="none" stroke="#40c057" stroke-width="1.2" opacity="0.35"/>
+  <text x="1180" y="707" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">EN DIRECTO</text>
+
+  <!-- row A: four live stat tiles with recent-sample sparklines -->
+  <!-- tile 1: heap -->
+  <g transform="translate(284,748)">
+    <rect x="0" y="2" width="234" height="168" rx="8" fill="#212529" opacity="0.05"/>
+    <rect x="0" y="0" width="234" height="168" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+    <text x="20" y="30" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">MEMORIA HEAP</text>
+    <text x="20" y="68" font-size="26" font-weight="600" fill="#212529">25 %</text>
+    <text x="20" y="90" font-size="12" fill="#868e96">512 / 2048 MB · picos do 42 %</text>
+    <g transform="translate(20,112)">
+      <path d="M0,40 L0,32.57 L6.69,28.13 L13.38,23.7 L20.07,19.26 L26.76,14.83 L33.45,10.39 L40.14,4.48 L46.83,35.52 L53.52,31.09 L60.21,26.65 L66.9,22.22 L73.59,16.3 L80.28,11.87 L86.97,7.43 L93.66,3 L100.34,34.04 L107.03,29.61 L113.72,25.17 L120.41,20.74 L127.1,17.78 L133.79,13.35 L140.48,8.91 L147.17,5.96 L153.86,37 L160.55,32.57 L167.24,28.13 L173.93,23.7 L180.62,19.26 L187.31,14.83 L194,28.13 L194,40 Z" fill="#edf2ff"/>
+      <polyline points="0,32.57 6.69,28.13 13.38,23.7 20.07,19.26 26.76,14.83 33.45,10.39 40.14,4.48 46.83,35.52 53.52,31.09 60.21,26.65 66.9,22.22 73.59,16.3 80.28,11.87 86.97,7.43 93.66,3 100.34,34.04 107.03,29.61 113.72,25.17 120.41,20.74 127.1,17.78 133.79,13.35 140.48,8.91 147.17,5.96 153.86,37 160.55,32.57 167.24,28.13 173.93,23.7 180.62,19.26 187.31,14.83 194,28.13" fill="none" stroke="#4c6ef5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <line x1="0" y1="40" x2="194" y2="40" stroke="#f1f3f5"/>
+      <circle cx="194" cy="28.13" r="3.5" fill="#4c6ef5" stroke="#ffffff" stroke-width="2"/>
+    </g>
+  </g>
+  <!-- tile 2: system load -->
+  <g transform="translate(530,748)">
+    <rect x="0" y="2" width="234" height="168" rx="8" fill="#212529" opacity="0.05"/>
+    <rect x="0" y="0" width="234" height="168" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+    <text x="20" y="30" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">CARGA DO SISTEMA</text>
+    <text x="20" y="68" font-size="26" font-weight="600" fill="#212529">35 %</text>
+    <text x="20" y="90" font-size="12" fill="#868e96">carga recente · máx. 45 %</text>
+    <g transform="translate(20,112)">
+      <path d="M0,40 L0,33.42 L6.69,28.05 L13.38,37 L20.07,22.68 L26.76,10.16 L33.45,15.53 L40.14,31.63 L46.83,24.47 L53.52,29.84 L60.21,19.11 L66.9,4.79 L73.59,13.74 L80.28,28.05 L86.97,35.21 L93.66,26.26 L100.34,17.32 L107.03,8.37 L113.72,20.89 L120.41,31.63 L127.1,24.47 L133.79,11.95 L140.48,3 L147.17,15.53 L153.86,28.05 L160.55,33.42 L167.24,22.68 L173.93,19.11 L180.62,26.26 L187.31,17.32 L194,20.89 L194,40 Z" fill="#edf2ff"/>
+      <polyline points="0,33.42 6.69,28.05 13.38,37 20.07,22.68 26.76,10.16 33.45,15.53 40.14,31.63 46.83,24.47 53.52,29.84 60.21,19.11 66.9,4.79 73.59,13.74 80.28,28.05 86.97,35.21 93.66,26.26 100.34,17.32 107.03,8.37 113.72,20.89 120.41,31.63 127.1,24.47 133.79,11.95 140.48,3 147.17,15.53 153.86,28.05 160.55,33.42 167.24,22.68 173.93,19.11 180.62,26.26 187.31,17.32 194,20.89" fill="none" stroke="#4c6ef5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <line x1="0" y1="40" x2="194" y2="40" stroke="#f1f3f5"/>
+      <circle cx="194" cy="20.89" r="3.5" fill="#4c6ef5" stroke="#ffffff" stroke-width="2"/>
+    </g>
+  </g>
+  <!-- tile 3: threads -->
+  <g transform="translate(776,748)">
+    <rect x="0" y="2" width="234" height="168" rx="8" fill="#212529" opacity="0.05"/>
+    <rect x="0" y="0" width="234" height="168" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+    <text x="20" y="30" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">FÍOS ACTIVOS</text>
+    <text x="20" y="68" font-size="26" font-weight="600" fill="#212529">42</text>
+    <text x="20" y="90" font-size="12" fill="#868e96">vivos agora · pico de 51</text>
+    <g transform="translate(20,112)">
+      <path d="M0,40 L0,37 L6.69,33.91 L13.38,33.91 L20.07,27.73 L26.76,24.64 L33.45,24.64 L40.14,18.45 L46.83,21.55 L53.52,24.64 L60.21,27.73 L66.9,21.55 L73.59,15.36 L80.28,12.27 L86.97,15.36 L93.66,18.45 L100.34,21.55 L107.03,24.64 L113.72,24.64 L120.41,21.55 L127.1,18.45 L133.79,12.27 L140.48,3 L147.17,9.18 L153.86,15.36 L160.55,21.55 L167.24,24.64 L173.93,27.73 L180.62,30.82 L187.31,27.73 L194,30.82 L194,40 Z" fill="#edf2ff"/>
+      <polyline points="0,37 6.69,33.91 13.38,33.91 20.07,27.73 26.76,24.64 33.45,24.64 40.14,18.45 46.83,21.55 53.52,24.64 60.21,27.73 66.9,21.55 73.59,15.36 80.28,12.27 86.97,15.36 93.66,18.45 100.34,21.55 107.03,24.64 113.72,24.64 120.41,21.55 127.1,18.45 133.79,12.27 140.48,3 147.17,9.18 153.86,15.36 160.55,21.55 167.24,24.64 173.93,27.73 180.62,30.82 187.31,27.73 194,30.82" fill="none" stroke="#4c6ef5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <line x1="0" y1="40" x2="194" y2="40" stroke="#f1f3f5"/>
+      <circle cx="194" cy="30.82" r="3.5" fill="#4c6ef5" stroke="#ffffff" stroke-width="2"/>
+    </g>
+  </g>
+  <!-- tile 4: HTTP requests -->
+  <g transform="translate(1022,748)">
+    <rect x="0" y="2" width="234" height="168" rx="8" fill="#212529" opacity="0.05"/>
+    <rect x="0" y="0" width="234" height="168" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+    <text x="20" y="30" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">PETICIÓNS HTTP</text>
+    <text x="20" y="68" font-size="26" font-weight="600" fill="#212529">15 230</text>
+    <text x="20" y="90" font-size="12" fill="#868e96">+38 desde a mostra anterior</text>
+    <g transform="translate(20,112)">
+      <path d="M0,40 L0,33.22 L6.69,37 L13.38,28.19 L20.07,19.37 L26.76,24.41 L33.45,35.74 L40.14,30.7 L46.83,15.59 L53.52,6.78 L60.21,13.07 L66.9,23.15 L73.59,29.44 L80.28,34.48 L86.97,26.93 L93.66,20.63 L100.34,16.85 L107.03,24.41 L113.72,31.96 L120.41,35.74 L127.1,28.19 L133.79,18.11 L140.48,10.56 L147.17,3 L153.86,11.81 L160.55,21.89 L167.24,26.93 L173.93,30.7 L180.62,34.48 L187.31,29.44 L194,24.41 L194,40 Z" fill="#edf2ff"/>
+      <polyline points="0,33.22 6.69,37 13.38,28.19 20.07,19.37 26.76,24.41 33.45,35.74 40.14,30.7 46.83,15.59 53.52,6.78 60.21,13.07 66.9,23.15 73.59,29.44 80.28,34.48 86.97,26.93 93.66,20.63 100.34,16.85 107.03,24.41 113.72,31.96 120.41,35.74 127.1,28.19 133.79,18.11 140.48,10.56 147.17,3 153.86,11.81 160.55,21.89 167.24,26.93 173.93,30.7 180.62,34.48 187.31,29.44 194,24.41" fill="none" stroke="#4c6ef5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <line x1="0" y1="40" x2="194" y2="40" stroke="#f1f3f5"/>
+      <circle cx="194" cy="24.41" r="3.5" fill="#4c6ef5" stroke="#ffffff" stroke-width="2"/>
+    </g>
+  </g>
+
+  <!-- row B: detail cards -->
+  <!-- B1: memory & GC -->
+  <g transform="translate(284,928)">
+    <rect x="0" y="2" width="316" height="224" rx="8" fill="#212529" opacity="0.05"/>
+    <rect x="0" y="0" width="316" height="224" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+    <text x="24" y="36" font-size="15" font-weight="600" fill="#212529">Memoria e recolección de lixo</text>
+    <line x1="24" y1="52" x2="292" y2="52" stroke="#f1f3f5"/>
+
+    <text x="24" y="78" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">HEAP EN USO</text>
+    <text x="292" y="78" text-anchor="end" font-size="12" fill="#495057">512 / 2048 MB · 25 %</text>
+    <rect x="24" y="88" width="268" height="10" rx="5" fill="#f1f3f5"/>
+    <rect x="24" y="88" width="67" height="10" rx="5" fill="#4c6ef5"/>
+    <line x1="24" y1="120" x2="292" y2="120" stroke="#f1f3f5"/>
+
+    <text x="24" y="146" font-size="10" font-weight="600" letter-spacing="0.5" fill="#868e96">MEMORIA NON HEAP</text>
+    <text x="24" y="168" font-size="15" fill="#212529">96 MB</text>
+    <text x="168" y="146" font-size="10" font-weight="600" letter-spacing="0.5" fill="#868e96">RECOLLIDAS DE LIXO</text>
+    <text x="168" y="168" font-size="15" fill="#212529">1 284</text>
+
+    <text x="24" y="194" font-size="10" font-weight="600" letter-spacing="0.5" fill="#868e96">TEMPO EN GC</text>
+    <text x="24" y="216" font-size="15" fill="#212529">4,26 s</text>
+    <text x="168" y="194" font-size="10" font-weight="600" letter-spacing="0.5" fill="#868e96">DESDE O ARRANQUE</text>
+    <text x="168" y="216" font-size="15" fill="#212529">3 d 04 h 12 m</text>
+  </g>
+
+  <!-- B2: datastore connection pool -->
+  <g transform="translate(612,928)">
+    <rect x="0" y="2" width="316" height="224" rx="8" fill="#212529" opacity="0.05"/>
+    <rect x="0" y="0" width="316" height="224" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+    <text x="24" y="36" font-size="15" font-weight="600" fill="#212529">Conexións co almacén de datos</text>
+    <line x1="24" y1="52" x2="292" y2="52" stroke="#f1f3f5"/>
+
+    <text x="24" y="78" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">OCUPACIÓN DO POOL</text>
+    <text x="292" y="78" text-anchor="end" font-size="12" fill="#495057">7 / 10 abertas</text>
+    <rect x="24" y="88" width="79.2" height="12" rx="4" fill="#4c6ef5"/>
+    <rect x="105.2" y="88" width="105.6" height="12" rx="4" fill="#bac8ff"/>
+    <rect x="212.8" y="88" width="79.2" height="12" rx="4" fill="#e9ecef"/>
+
+    <rect x="24" y="114" width="10" height="10" rx="3" fill="#4c6ef5"/>
+    <text x="40" y="123" font-size="12" fill="#495057">En uso 3</text>
+    <rect x="120" y="114" width="10" height="10" rx="3" fill="#bac8ff"/>
+    <text x="136" y="123" font-size="12" fill="#495057">Inactivas 4</text>
+    <rect x="222" y="114" width="10" height="10" rx="3" fill="#e9ecef" stroke="#dee2e6"/>
+    <text x="238" y="123" font-size="12" fill="#495057">Libres 3</text>
+    <line x1="24" y1="142" x2="292" y2="142" stroke="#f1f3f5"/>
+
+    <text x="24" y="168" font-size="10" font-weight="600" letter-spacing="0.5" fill="#868e96">MÁXIMO DO POOL</text>
+    <text x="24" y="190" font-size="15" fill="#212529">10 conexións</text>
+    <text x="168" y="168" font-size="10" font-weight="600" letter-spacing="0.5" fill="#868e96">EN USO AGORA</text>
+    <text x="168" y="190" font-size="15" fill="#212529">30 %</text>
+
+    <g stroke="#adb5bd" stroke-width="1.3" fill="none">
+      <rect x="24" y="207" width="10" height="7" rx="1.5"/>
+      <path d="M25.8 207 v-1.8 a3.2 3.2 0 0 1 6.4 0 v1.8"/>
+    </g>
+    <text x="42" y="214" font-size="11" fill="#868e96">Só reconto: sen URL, usuario nin contrasinal.</text>
+  </g>
+
+  <!-- B3: HTTP activity -->
+  <g transform="translate(940,928)">
+    <rect x="0" y="2" width="316" height="224" rx="8" fill="#212529" opacity="0.05"/>
+    <rect x="0" y="0" width="316" height="224" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+    <text x="24" y="36" font-size="15" font-weight="600" fill="#212529">Actividade HTTP</text>
+    <line x1="24" y1="52" x2="292" y2="52" stroke="#f1f3f5"/>
+
+    <text x="24" y="78" font-size="10" font-weight="600" letter-spacing="0.5" fill="#868e96">PETICIÓNS TOTAIS</text>
+    <text x="24" y="104" font-size="20" font-weight="600" fill="#212529">15 230</text>
+    <text x="168" y="78" font-size="10" font-weight="600" letter-spacing="0.5" fill="#868e96">RESPOSTAS CON ERRO</text>
+    <text x="168" y="104" font-size="20" font-weight="600" fill="#212529">12</text>
+    <line x1="24" y1="126" x2="292" y2="126" stroke="#f1f3f5"/>
+
+    <text x="24" y="152" font-size="10" font-weight="600" letter-spacing="0.5" fill="#868e96">TAXA DE ERRO</text>
+    <text x="24" y="178" font-size="20" font-weight="600" fill="#212529">0,08 %</text>
+    <rect x="220" y="158" width="72" height="24" rx="12" fill="#ebfbee"/>
+    <text x="256" y="170" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">NORMAL</text>
+
+    <g stroke="#adb5bd" stroke-width="1.3" fill="none">
+      <circle cx="29" cy="210.5" r="5.5"/>
+      <line x1="29" y1="209.5" x2="29" y2="213.5" stroke-linecap="round"/>
+      <circle cx="29" cy="206.8" r="0.5" fill="#adb5bd" stroke="none"/>
+    </g>
+    <text x="42" y="214" font-size="11" fill="#868e96">Acumulados desde o arranque do proceso.</text>
+  </g>
+
+  <!-- section footer notes -->
+  <g stroke="#adb5bd" stroke-width="1.4" fill="none">
+    <rect x="284" y="1173" width="11" height="8" rx="1.5"/>
+    <path d="M286 1173 v-2 a3.5 3.5 0 0 1 7 0 v2"/>
+  </g>
+  <text x="304" y="1180" font-size="12" fill="#868e96">As métricas nunca inclúen credenciais, cadeas de conexión nin ningún outro valor secreto.</text>
+  <g stroke="#adb5bd" stroke-width="1.4" fill="none" stroke-linecap="round">
+    <path d="M284.5 1202 a6 6 0 1 0 1.5 -4"/>
+    <path d="M284 1196 v3 h3"/>
+    <path d="M290.5 1199 v3 l2.2 1.6"/>
+  </g>
+  <text x="304" y="1206" font-size="12" fill="#868e96">O historial das últimas 30 mostras vive só no navegador: ao recargar a páxina, o panel comeza baleiro.</text>
+</svg>

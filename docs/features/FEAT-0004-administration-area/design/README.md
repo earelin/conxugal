@@ -29,8 +29,8 @@ flowchart LR
 ## Design language
 
 The mockups reuse the existing `AppShell` chrome (header + collapsible navbar) from
-`ui/src/layout/AppLayout.tsx` and the theme in `ui/src/theme.ts`, so the admin section
-reads as part of the same product rather than a bolt-on.
+`ui/src/app/layout/AppLayout.tsx` and the theme in `ui/src/app/theme.ts`, so the admin
+section reads as part of the same product rather than a bolt-on.
 
 ### Tokens (from the Mantine theme)
 
@@ -56,7 +56,7 @@ reads as part of the same product rather than a bolt-on.
   **ADMINISTRACIÓN** section (*Panel*, *Usuarios*). This section is shown only to an
   `ADMIN`; the navbar gate is cosmetic — the server rules are the real gate
   (SPEC-0003 R1, feature *edge cases*).
-- All chrome and copy is **Galician**, consistent with `ui/src/strings.ts` (SPEC-0001 R6).
+- All chrome and copy is **Galician**, consistent with `ui/src/shared/lib/strings.ts` (SPEC-0001 R6).
 
 ## How the design meets the spec
 

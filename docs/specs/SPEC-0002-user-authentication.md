@@ -49,6 +49,11 @@ granted to ADMIN.
 - **R10** — An authenticated session expires after a period of inactivity, after
   which access requires logging in again. The concrete inactivity window is a
   feature-level decision.
+- **R15** — While authenticated, the interface continuously shows which account the
+  session belongs to, and offers a discoverable control to end that session from any
+  screen, at both desktop and narrow viewport widths. R9 says a user *can* log out;
+  this says the interface must *offer* it, so that inactivity expiry (R10) or
+  discarding credentials is not the only way out.
 
 ### Credentials
 
@@ -105,3 +110,7 @@ granted to ADMIN.
 11. **(R14)** An authenticated user requesting their own account data receives
     their id, email, role, creation date, and last login (no enabled state, no
     password); an unauthenticated caller is denied (criterion 1 applies).
+12. **(R15)** From any authenticated screen, at a typical desktop browser width and
+    at a 360 px-wide viewport, the account the session belongs to is identifiable and
+    a control that ends the session is reachable within one interaction; using that
+    control satisfies criterion 7.

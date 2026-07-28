@@ -51,6 +51,23 @@ public abstract class AuthenticationTestSupport {
     when(userRepository.findByEmail(user.email())).thenReturn(Optional.of(user));
   }
 
+  protected String loginAs(RequestSpecification spec, User user) {
+    Response response =
+        given(spec)
+            .body(
+                """
+                {"username":"%s","password":"%s"}\
+                """.formatted(user.email(), user.passwordHash()))
+        .when()
+            .post("/login");
+    return sessionCookieOf(response);
+  }
+
+  protected String seedUserAndLoginAs(RequestSpecification spec, User user) {
+    seedUser(user);
+    return loginAs(spec, user);
+  }
+
   protected static String sessionCookieOf(HttpResponse<?> response) {
     return sessionCookiePairOf(response.getHeaders().getAll(HttpHeaders.SET_COOKIE));
   }

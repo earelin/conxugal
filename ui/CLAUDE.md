@@ -32,21 +32,35 @@ failures before committing changes to this module.
   (`createBrowserRouter`, client-side SPA — not framework mode/SSR), Mantine for
   components. Builds to static assets consumed by the Micronaut server as a single
   deployable artifact (ADR-0003, ADR-0004).
-- **Route tree** (`src/router.tsx`): a single layout route (`AppLayout`) renders the
-  persistent Mantine `AppShell`; page routes nest as its children via `<Outlet/>`.
-  `routes` (the `RouteObject[]`) is exported separately from `router` so tests can
-  mount the same tree with `createMemoryRouter` instead of a real browser router —
-  see `src/App.test.tsx`.
+- **Module layout** (ADR-0015): `src/` is organized as feature slices with a
+  shared core, dependencies pointing only downward —
+  `app → features → shared/entities → shared/ui + shared/lib`. `app/` is the
+  composition root (router, nav, theme, layout, standalone pages);
+  `features/<name>/` owns one buildable feature and exposes only an `index.ts`
+  barrel outward — it may group its internals into sub-folders (e.g.
+  `administration/{monitoring,users}/`) for readability, but these are
+  organisational only and not enforced boundaries: `eslint-plugin-boundaries`
+  treats everything under `features/<name>/` as one element; `shared/entities/`
+  holds cross-feature domain types/reads;
+  `shared/ui/` and `shared/lib/` hold presentational primitives and
+  framework-free utilities respectively. `eslint-plugin-boundaries`
+  (`eslint.config.js`) enforces the dependency direction and that a feature can
+  only be imported via its barrel.
+- **Route tree** (`src/app/router.tsx`): a single layout route (`AppLayout`)
+  renders the persistent Mantine `AppShell`; page routes nest as its children
+  via `<Outlet/>`. `routes` (the `RouteObject[]`) is exported separately from
+  `router` so tests can mount the same tree with `createMemoryRouter` instead of
+  a real browser router — see `src/App.test.tsx`.
 - **Entry** (`src/main.tsx`): wraps the tree in `MantineProvider` (theme from
-  `src/theme.ts`) and `RouterProvider`. History-API routing (not hash) — in
+  `src/app/theme.ts`) and `RouterProvider`. History-API routing (not hash) — in
   production the server must serve `index.html` as the SPA fallback for non-API
   paths (owned by the server module, ADR-0003); Vite's dev server does this
   automatically.
-- **i18n seam** (`src/strings.ts`): all user-facing text (Galician) lives in one
-  `strings` object rather than scattered through components, so a future i18n
-  feature can lift it into a translation catalogue without restructuring call
-  sites. Add new UI copy here, not inline.
-- **Navigation** (`src/nav.ts`): primary nav items are declared as data
+- **i18n seam** (`src/shared/lib/strings.ts`): all user-facing text (Galician)
+  lives in one `strings` object rather than scattered through components, so a
+  future i18n feature can lift it into a translation catalogue without
+  restructuring call sites. Add new UI copy here, not inline.
+- **Navigation** (`src/app/nav.ts`): primary nav items are declared as data
   (`navItems`) and mapped to Mantine `NavLink`s in `AppLayout`, rather than
   hardcoded per-link JSX.
 - **Testing**: Vitest + Testing Library + jsdom (configured in `vite.config.ts`,
