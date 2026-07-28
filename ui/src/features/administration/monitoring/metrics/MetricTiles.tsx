@@ -19,11 +19,10 @@ import {
 } from './metricsStream';
 import { orNoValue } from './orNoValue';
 
-export interface TileProps {
+interface TileProps {
   state: MetricsStreamState;
   latest: RuntimeMetrics | null;
   history: RuntimeMetrics[];
-  variant: 'live' | 'stale';
 }
 
 function buildPeakCaption({
@@ -44,9 +43,10 @@ function buildPeakCaption({
   formatPeak: (peak: number) => string;
 }): string {
   const t = strings.admin.dashboard.metrics;
-  if (state === 'connecting') {
-    return t.noHistoryYet;
-  }
+  // Never actually rendered for state === 'connecting': MetricTile skeletons
+  // the caption row in that state, and history is always empty until the
+  // first sample flips state to 'live', so there's no connecting-specific
+  // branch to compute here.
   if (state === 'reconnecting') {
     return reconnectingCaption;
   }
@@ -79,14 +79,19 @@ function MetricTile({
         {label}
       </Text>
       {loading ? (
-        <Skeleton height={28} width="60%" radius="sm" mt="xs" />
+        // Matches the rendered height of the Text it replaces (20px xl
+        // font x 1.65 line-height) so the tile doesn't grow when the first
+        // sample arrives and swaps the skeleton for real content.
+        <Skeleton height={33} width="60%" radius="sm" mt="xs" />
       ) : (
         <Text size="xl" fw={600} mt="xs" c={dimmed ? 'dimmed' : undefined}>
           {value}
         </Text>
       )}
       {loading ? (
-        <Skeleton height={12} width="80%" radius="sm" mt={8} />
+        // Matches the rendered height of the Text it replaces (12px xs
+        // font x 1.4 line-height).
+        <Skeleton height={17} width="80%" radius="sm" mt={4} />
       ) : (
         <Text size="xs" c="dimmed" mt={4}>
           {caption}
@@ -97,15 +102,14 @@ function MetricTile({
   );
 }
 
-export function HeapTile({ state, latest, history, variant }: TileProps) {
+export function HeapTile({ state, latest, history }: TileProps) {
   const t = strings.admin.dashboard.metrics;
   const percent = latest ? heapUsedPercent(latest) : null;
   const mbPart = heapUsageMb(latest);
 
+  // Never actually rendered for state === 'connecting' (see buildPeakCaption).
   let caption: string;
-  if (state === 'connecting') {
-    caption = t.noHistoryYet;
-  } else if (state === 'reconnecting') {
+  if (state === 'reconnecting') {
     caption = mbPart ? `${mbPart} · ${t.notUpdating}` : t.notUpdating;
   } else if (history.length < METRICS_HISTORY_LIMIT) {
     const samplesPart = `${history.length}/${METRICS_HISTORY_LIMIT} ${t.samplesUnit}`;
@@ -125,7 +129,7 @@ export function HeapTile({ state, latest, history, variant }: TileProps) {
       sparkline={
         <MetricSparkline
           history={history}
-          variant={variant}
+          state={state}
           select={(sample) => fractionToPercent(heapUsedPercent(sample))}
         />
       }
@@ -133,7 +137,7 @@ export function HeapTile({ state, latest, history, variant }: TileProps) {
   );
 }
 
-export function SystemLoadTile({ state, latest, history, variant }: TileProps) {
+export function SystemLoadTile({ state, latest, history }: TileProps) {
   const t = strings.admin.dashboard.metrics;
   const percent = latest ? systemLoadPercent(latest) : null;
   const caption = buildPeakCaption({
@@ -155,7 +159,7 @@ export function SystemLoadTile({ state, latest, history, variant }: TileProps) {
       sparkline={
         <MetricSparkline
           history={history}
-          variant={variant}
+          state={state}
           select={(sample) => fractionToPercent(systemLoadPercent(sample))}
         />
       }
@@ -163,7 +167,7 @@ export function SystemLoadTile({ state, latest, history, variant }: TileProps) {
   );
 }
 
-export function ThreadsTile({ state, latest, history, variant }: TileProps) {
+export function ThreadsTile({ state, latest, history }: TileProps) {
   const t = strings.admin.dashboard.metrics;
   const count = latest?.jvm?.threadCount ?? null;
   const caption = buildPeakCaption({
@@ -185,7 +189,7 @@ export function ThreadsTile({ state, latest, history, variant }: TileProps) {
       sparkline={
         <MetricSparkline
           history={history}
-          variant={variant}
+          state={state}
           select={(sample) => sample.jvm?.threadCount ?? null}
         />
       }
@@ -193,15 +197,14 @@ export function ThreadsTile({ state, latest, history, variant }: TileProps) {
   );
 }
 
-export function HttpTile({ state, latest, history, variant }: TileProps) {
+export function HttpTile({ state, latest, history }: TileProps) {
   const t = strings.admin.dashboard.metrics;
   const count = latest?.http?.requestCount ?? null;
   const delta = deltaOf(history, (sample) => sample.http?.requestCount ?? null);
 
+  // Never actually rendered for state === 'connecting' (see buildPeakCaption).
   let caption: string;
-  if (state === 'connecting') {
-    caption = t.noHistoryYet;
-  } else if (state === 'reconnecting') {
+  if (state === 'reconnecting') {
     caption = t.noNewSamples;
   } else if (delta != null) {
     const sign = delta >= 0 ? '+' : '';
@@ -219,7 +222,7 @@ export function HttpTile({ state, latest, history, variant }: TileProps) {
       sparkline={
         <MetricSparkline
           history={history}
-          variant={variant}
+          state={state}
           select={(sample) => sample.http?.requestCount ?? null}
         />
       }

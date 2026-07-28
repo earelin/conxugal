@@ -1,6 +1,7 @@
 // All Mantine packages except `@mantine/hooks` require their styles to be imported.
+// @mantine/charts is imported by the metrics feature itself (features/administration/monitoring/metrics/index.ts),
+// which is lazy-loaded, so its styles ship in that chunk instead of here.
 import '@mantine/core/styles.css';
-import '@mantine/charts/styles.css';
 
 import { ColorSchemeScript, MantineProvider } from '@mantine/core';
 import { QueryClientProvider } from '@tanstack/react-query';

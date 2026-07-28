@@ -78,6 +78,10 @@ describe('formatDecimal', () => {
   it('formats zero with the requested precision', () => {
     expect(formatDecimal(0)).toBe('0,00');
   });
+
+  it('groups thousands with a space, matching formatCount, not a dot', () => {
+    expect(formatDecimal(1234.5)).toBe('1 234,50');
+  });
 });
 
 describe('formatTime', () => {

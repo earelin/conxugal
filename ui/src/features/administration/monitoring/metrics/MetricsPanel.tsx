@@ -9,17 +9,16 @@ import { useMetricsStream } from './metricsStream';
 
 export function MetricsPanel() {
   const { state, latest, history, lastArrivedAt } = useMetricsStream();
-  const variant: 'live' | 'stale' = state === 'reconnecting' ? 'stale' : 'live';
 
   return (
     <Stack gap="md">
       <MetricsSectionHeader state={state} lastArrivedAt={lastArrivedAt} />
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-        <HeapTile state={state} latest={latest} history={history} variant={variant} />
-        <SystemLoadTile state={state} latest={latest} history={history} variant={variant} />
-        <ThreadsTile state={state} latest={latest} history={history} variant={variant} />
-        <HttpTile state={state} latest={latest} history={history} variant={variant} />
+        <HeapTile state={state} latest={latest} history={history} />
+        <SystemLoadTile state={state} latest={latest} history={history} />
+        <ThreadsTile state={state} latest={latest} history={history} />
+        <HttpTile state={state} latest={latest} history={history} />
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, md: 3 }}>

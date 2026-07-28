@@ -16,7 +16,11 @@ export function HttpActivityCard({ latest }: { latest: RuntimeMetrics | null }) 
   const t = strings.admin.dashboard.metrics;
   const http = latest?.http;
   const rate = errorRate(http?.requestCount, http?.errorCount);
-  const badge = rate != null ? ERROR_RATE_BADGE[errorRateSeverity(rate)] : null;
+  // Classify severity on the same value the user actually sees (rounded to
+  // the 2 decimal places `formatDecimal` displays for the percentage), so
+  // two rates that render identically never get different-coloured badges.
+  const displayedRate = rate != null ? Math.round(rate * 10000) / 10000 : null;
+  const badge = displayedRate != null ? ERROR_RATE_BADGE[errorRateSeverity(displayedRate)] : null;
 
   return (
     <Card withBorder radius="md" padding="lg">
@@ -30,7 +34,7 @@ export function HttpActivityCard({ latest }: { latest: RuntimeMetrics | null }) 
       <Group justify="space-between" mt="sm" align="flex-end">
         <Field
           label={t.errorRateLabel}
-          value={orNoValue(rate, (r) => `${formatDecimal(r * 100)} %`)}
+          value={orNoValue(displayedRate, (r) => `${formatDecimal(r * 100)} %`)}
         />
         {badge && (
           <Badge color={badge.color} variant="light">

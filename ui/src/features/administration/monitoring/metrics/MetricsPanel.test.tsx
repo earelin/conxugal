@@ -33,6 +33,14 @@ class FakeEventSource {
   }
 }
 
+// A `getByText`/`queryByText` matcher for "contains this substring", without
+// building a RegExp out of Galician copy — some copy (e.g. "máx.") contains
+// characters ('.') that are regex metacharacters, which would silently
+// loosen the match.
+function containingText(substring: string) {
+  return (content: string) => content.includes(substring);
+}
+
 function currentSource(): FakeEventSource {
   const source = FakeEventSource.instances.at(-1);
   if (!source) {
@@ -136,8 +144,10 @@ describe('MetricsPanel', () => {
     // evicted by the time the buffer fills.
     emitSteadyStateSamples(34);
 
-    expect(screen.getByText(new RegExp(`${t.peaksOfHeapPrefix} 50 %`))).toBeInTheDocument();
-    expect(screen.queryByText(new RegExp(`${t.peaksOfHeapPrefix} 95 %`))).not.toBeInTheDocument();
+    expect(screen.getByText(containingText(`${t.peaksOfHeapPrefix} 50 %`))).toBeInTheDocument();
+    expect(
+      screen.queryByText(containingText(`${t.peaksOfHeapPrefix} 95 %`)),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/31\/30/)).not.toBeInTheDocument();
     expect(screen.queryByText(/35\/30/)).not.toBeInTheDocument();
   });
@@ -158,10 +168,12 @@ describe('MetricsPanel', () => {
     // time the buffer fills.
     emitSteadyStateSamples(34);
 
-    expect(screen.getByText(new RegExp(`${t.maxOfLoadPrefix} 35 %`))).toBeInTheDocument();
-    expect(screen.queryByText(new RegExp(`${t.maxOfLoadPrefix} 95 %`))).not.toBeInTheDocument();
-    expect(screen.getByText(new RegExp(`${t.peakOfThreadsPrefix} 42`))).toBeInTheDocument();
-    expect(screen.queryByText(new RegExp(`${t.peakOfThreadsPrefix} 999`))).not.toBeInTheDocument();
+    expect(screen.getByText(containingText(`${t.maxOfLoadPrefix} 35 %`))).toBeInTheDocument();
+    expect(screen.queryByText(containingText(`${t.maxOfLoadPrefix} 95 %`))).not.toBeInTheDocument();
+    expect(screen.getByText(containingText(`${t.peakOfThreadsPrefix} 42`))).toBeInTheDocument();
+    expect(
+      screen.queryByText(containingText(`${t.peakOfThreadsPrefix} 999`)),
+    ).not.toBeInTheDocument();
   });
 
   it('stays connecting when the stream errors before any sample has arrived', () => {
@@ -181,7 +193,7 @@ describe('MetricsPanel', () => {
 
     expect(screen.getByText(t.stateReconnecting)).toBeInTheDocument();
     expect(screen.getByText('50 %')).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(t.notUpdating))).toBeInTheDocument();
+    expect(screen.getByText(containingText(t.notUpdating))).toBeInTheDocument();
     expect(screen.queryByText(/1\/30/)).not.toBeInTheDocument();
   });
 

@@ -22,7 +22,20 @@ const matchMediaMock = (query: string): MediaQueryList => ({
 });
 
 class ResizeObserverMock {
-  observe() {}
+  constructor(private callback: ResizeObserverCallback) {}
+
+  observe(target: Element) {
+    // Chart libraries (recharts' ResponsiveContainer, used by
+    // @mantine/charts' Sparkline) measure their container via
+    // ResizeObserver. jsdom never lays anything out, so without a
+    // synthetic non-zero size every sparkline warns "width(0) and
+    // height(0) of chart should be greater than 0" on every render.
+    this.callback(
+      [{ target, contentRect: { width: 300, height: 40 } } as ResizeObserverEntry],
+      this,
+    );
+  }
+
   unobserve() {}
   disconnect() {}
 }

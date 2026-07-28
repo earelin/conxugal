@@ -34,7 +34,7 @@ export interface MetricsStreamResult {
   lastArrivedAt: Date | null;
 }
 
-export const METRICS_STREAM_URL = '/api/admin/metrics';
+const METRICS_STREAM_URL = '/api/admin/metrics';
 export const METRICS_HISTORY_LIMIT = 30;
 
 /**
@@ -44,7 +44,7 @@ export const METRICS_HISTORY_LIMIT = 30;
  * if no sample has arrived yet in this mount, otherwise reconnecting) — never a
  * separate error state, since a dropped stream keeps retrying on its own.
  */
-export function useMetricsStream(url: string = METRICS_STREAM_URL): MetricsStreamResult {
+export function useMetricsStream(): MetricsStreamResult {
   const [state, setState] = useState<MetricsStreamState>('connecting');
   const [latest, setLatest] = useState<RuntimeMetrics | null>(null);
   const [history, setHistory] = useState<RuntimeMetrics[]>([]);
@@ -52,7 +52,7 @@ export function useMetricsStream(url: string = METRICS_STREAM_URL): MetricsStrea
 
   useEffect(() => {
     let hasReceivedSample = false;
-    const source = new EventSource(url);
+    const source = new EventSource(METRICS_STREAM_URL);
 
     source.onmessage = (event: MessageEvent<string>) => {
       let sample: RuntimeMetrics;
@@ -78,7 +78,7 @@ export function useMetricsStream(url: string = METRICS_STREAM_URL): MetricsStrea
     };
 
     return () => source.close();
-  }, [url]);
+  }, []);
 
   return { state, latest, history, lastArrivedAt };
 }

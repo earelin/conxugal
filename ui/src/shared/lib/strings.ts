@@ -130,8 +130,9 @@ export const strings = {
 
         privacyNote:
           'As métricas nunca inclúen credenciais, cadeas de conexión nin ningún outro valor secreto.',
-        historyNote:
-          'O historial das últimas 30 mostras vive só no navegador: ao recargar a páxina, o panel comeza baleiro.',
+        historyNotePrefix: 'O historial das últimas',
+        historyNoteSuffix:
+          'mostras vive só no navegador: ao recargar a páxina, o panel comeza baleiro.',
       },
     },
     users: {

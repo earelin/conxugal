@@ -11,10 +11,15 @@ export function formatPercent(fraction: number): string {
 }
 
 export function formatDecimal(n: number, fractionDigits = 2): string {
+  // gl-ES groups thousands with '.', but formatCount above groups with a
+  // space — keep both consistent (and unambiguous next to the ',' decimal
+  // separator) by using the same space grouping here.
   return new Intl.NumberFormat('gl-ES', {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
-  }).format(n);
+  })
+    .format(n)
+    .replace(/\./g, ' ');
 }
 
 export function formatTime(date: Date): string {

@@ -1,4 +1,4 @@
-import { Badge, Group, Indicator, Stack, Text, Title } from '@mantine/core';
+import { Badge, Flex, Group, Indicator, Stack, Text, Title } from '@mantine/core';
 import { useEffect, useState } from 'react';
 import { strings } from '../../../../shared/lib/strings';
 import { formatTime } from './metricsFormat';
@@ -55,14 +55,14 @@ export function MetricsSectionHeader({
   );
 
   return (
-    <Group justify="space-between" wrap="nowrap" align="flex-start">
+    <Flex direction={{ base: 'column', sm: 'row' }} justify="space-between" gap="xs">
       <Stack gap={0}>
         <Title order={3}>{t.title}</Title>
-        <Text c="dimmed" size="sm">
+        <Text c="dimmed" size="sm" visibleFrom="sm">
           {t.subtitle}
         </Text>
       </Stack>
-      <Group gap="xs" wrap="nowrap">
+      <Group gap="xs" role="status" aria-live="polite">
         <Text size="xs" c="dimmed">
           {caption}
         </Text>
@@ -74,6 +74,6 @@ export function MetricsSectionHeader({
           badge
         )}
       </Group>
-    </Group>
+    </Flex>
   );
 }

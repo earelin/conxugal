@@ -10,7 +10,7 @@ function renderSparkline(history: RuntimeMetrics[]) {
     <MantineProvider theme={theme}>
       <MetricSparkline
         history={history}
-        variant="live"
+        state="live"
         select={(sample) => sample.jvm?.threadCount ?? null}
       />
     </MantineProvider>,

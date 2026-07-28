@@ -36,6 +36,7 @@ export function MemoryGcCard({ latest }: { latest: RuntimeMetrics | null }) {
           <Text size="sm">{heapValueText}</Text>
         </Group>
         <Progress
+          aria-hidden
           value={heapPercent != null ? heapPercent * 100 : 0}
           color="indigo"
           size="sm"
