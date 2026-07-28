@@ -14,11 +14,12 @@ micronaut:
   application:
     name: conxugal
   executors:
-    blocking:
-      virtual: true
-    # Dedicated executor for the organos import job, kept separate from `blocking`
-    # (which every HTTP request shares via thread-selection: BLOCKING below) so the
-    # scheduled import's own pool sizing never constrains request-serving capacity.
+    # No explicit `blocking` entry: declaring one at all — even just `virtual: true`
+    # — disables Micronaut's default unbounded virtual thread-per-task executor and
+    # replaces it with a capped platform-backed pool, undermining ADR-0011. Every
+    # HTTP request shares this executor via thread-selection: BLOCKING below, so it
+    # stays on Micronaut's default. The scheduled import gets its own executor
+    # instead, so its pool sizing never constrains request-serving capacity.
     organos-import:
       type: scheduled
       core-pool-size: 1
