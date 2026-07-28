@@ -120,8 +120,9 @@ features.
    > an anonymous caller is denied — is satisfied by
    > [FEAT-0007](../features/FEAT-0007-organos-taxonomia-classification/README.md)'s two
    > authenticated reads. The *"browse the taxonomy tree"* half is the same unrendered
-   > `USER` surface #9 defers, and travels with it to the contract-querying spec. A task
-   > claiming this criterion should say which half it proves.
+   > `USER` surface #9 defers, and travels with it to
+   > [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R13. A task claiming this
+   > criterion should say which half it proves.
 3. **(R3, R5, R8)** After an import from the source completes, a user viewing the
    catalogue sees every Órgano from the source list stored with its name; an Órgano new
    to that import is stored **active**.
@@ -144,12 +145,13 @@ features.
    > built from ships with
    > [FEAT-0007](../features/FEAT-0007-organos-taxonomia-classification/README.md) as two
    > authenticated reads, but no `USER`-facing tree is rendered by any feature of this
-   > spec: the only place a user picks an Órgano is the **Órgano filter of the contratos
-   > list**, which belongs to the future contract-querying spec and will be built against
-   > those two contracts. This criterion is therefore satisfied *outside* SPEC-0004, and
-   > the spec should not be read as unfulfilled while it waits. Recorded here so the gap
-   > is visible from the spec that owns the requirement, not only from the feature that
-   > declined it.
+   > spec. It is rendered by
+   > [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) **R13**, where browsing the
+   > tree and selecting an Órgano is how a user reaches that Órgano's contracts — built
+   > against those two contracts, and claimed by SPEC-0005 #16. This criterion is therefore
+   > satisfied *outside* SPEC-0004, and the spec should not be read as unfulfilled while it
+   > waits. Recorded here so the gap is visible from the spec that owns the requirement,
+   > not only from the feature that declined it.
 10. **(R10)** After an administrator triggers an import manually, the system reports
     whether it succeeded and a summary of how many Órganos were added, refreshed, and
     marked inactive.
