@@ -77,3 +77,7 @@ failures before committing changes to this module.
   build` and CI type-checking go through `tsc7`; only the programmatic compiler
   API (e.g. ESLint's type-aware rules) should ever resolve the aliased TS 6
   package.
+- **Utilities**: use [`es-toolkit`](https://es-toolkit.dev) for common array/object/function
+  helpers (`debounce`, `groupBy`, `chunk`, etc.) instead of hand-rolling them. Import from
+  `es-toolkit` itself, never from `es-toolkit/compat` — that subpath only exists to match
+  lodash's exact (looser) behaviour for projects migrating off it, which doesn't apply here.
