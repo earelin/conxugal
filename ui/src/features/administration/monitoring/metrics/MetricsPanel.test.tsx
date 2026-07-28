@@ -4,9 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { theme } from '../../../../app/theme';
 import { strings } from '../../../../shared/lib/strings';
 import { MetricsPanel } from './MetricsPanel';
-import type { RuntimeMetrics } from './metricsStream';
+import { METRICS_HISTORY_LIMIT, type RuntimeMetrics } from './metricsStream';
 
 const t = strings.admin.dashboard.metrics;
+
+// Matches "N/<limit>" sample-count captions without hardcoding the limit, so
+// these tests stay correct if METRICS_HISTORY_LIMIT changes.
+function sampleCountText(count: number) {
+  return new RegExp(`${count}/${METRICS_HISTORY_LIMIT}`);
+}
 
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
@@ -75,7 +81,7 @@ const baseSample: RuntimeMetrics = {
 
 // Emits `count` steady-state (baseSample-shaped) samples, one per second
 // starting at :01, so a preceding spike sample gets evicted once the
-// 30-sample buffer fills.
+// history buffer fills.
 function emitSteadyStateSamples(count: number) {
   for (let i = 1; i <= count; i += 1) {
     act(() =>
@@ -111,8 +117,8 @@ describe('MetricsPanel', () => {
     renderMetricsPanel();
 
     act(() => currentSource().emitMessage(baseSample));
-    expect(screen.getAllByText(/1\/30/).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/2\/30/)).not.toBeInTheDocument();
+    expect(screen.getAllByText(sampleCountText(1)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(sampleCountText(2))).not.toBeInTheDocument();
 
     act(() =>
       currentSource().emitMessage({
@@ -123,12 +129,12 @@ describe('MetricsPanel', () => {
       }),
     );
 
-    expect(screen.getAllByText(/2\/30/).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/1\/30/)).not.toBeInTheDocument();
+    expect(screen.getAllByText(sampleCountText(2)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(sampleCountText(1))).not.toBeInTheDocument();
     expect(screen.getByText(`+38 ${t.sinceLastSamplePrefix}`)).toBeInTheDocument();
   });
 
-  it('caps the rolling history at 30 samples and evicts the oldest, not just the newest peak', () => {
+  it('caps the rolling history at the configured limit and evicts the oldest, not just the newest peak', () => {
     renderMetricsPanel();
 
     const heapMax = baseSample.jvm!.heapMaxBytes!;
@@ -139,17 +145,17 @@ describe('MetricsPanel', () => {
     };
     act(() => currentSource().emitMessage(spikeSample));
 
-    // 34 more steady-state (50% heap) samples: 35 emitted total into a
-    // 30-sample buffer, so the 95% spike from the very first sample must be
-    // evicted by the time the buffer fills.
-    emitSteadyStateSamples(34);
+    // METRICS_HISTORY_LIMIT + 4 more steady-state (50% heap) samples: total
+    // emitted exceeds the buffer by 5, so the 95% spike from the very first
+    // sample must be evicted by the time the buffer fills.
+    emitSteadyStateSamples(METRICS_HISTORY_LIMIT + 4);
 
     expect(screen.getByText(containingText(`${t.peaksOfHeapPrefix} 50 %`))).toBeInTheDocument();
     expect(
       screen.queryByText(containingText(`${t.peaksOfHeapPrefix} 95 %`)),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText(/31\/30/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/35\/30/)).not.toBeInTheDocument();
+    expect(screen.queryByText(sampleCountText(METRICS_HISTORY_LIMIT + 1))).not.toBeInTheDocument();
+    expect(screen.queryByText(sampleCountText(METRICS_HISTORY_LIMIT + 5))).not.toBeInTheDocument();
   });
 
   it('shows system-load and thread-count peaks reflecting only the retained window, not an evicted spike', () => {
@@ -163,10 +169,10 @@ describe('MetricsPanel', () => {
     };
     act(() => currentSource().emitMessage(spikeSample));
 
-    // 34 more steady-state samples (35 emitted total into a 30-sample
-    // buffer): the spike from the very first sample must be evicted by the
-    // time the buffer fills.
-    emitSteadyStateSamples(34);
+    // METRICS_HISTORY_LIMIT + 4 more steady-state samples: total emitted
+    // exceeds the buffer by 5, so the spike from the very first sample must
+    // be evicted by the time the buffer fills.
+    emitSteadyStateSamples(METRICS_HISTORY_LIMIT + 4);
 
     expect(screen.getByText(containingText(`${t.maxOfLoadPrefix} 35 %`))).toBeInTheDocument();
     expect(screen.queryByText(containingText(`${t.maxOfLoadPrefix} 95 %`))).not.toBeInTheDocument();
@@ -194,7 +200,7 @@ describe('MetricsPanel', () => {
     expect(screen.getByText(t.stateReconnecting)).toBeInTheDocument();
     expect(screen.getByText('50 %')).toBeInTheDocument();
     expect(screen.getByText(containingText(t.notUpdating))).toBeInTheDocument();
-    expect(screen.queryByText(/1\/30/)).not.toBeInTheDocument();
+    expect(screen.queryByText(sampleCountText(1))).not.toBeInTheDocument();
   });
 
   it('shows the system-load and thread-count specific reconnecting captions, distinct from heap', () => {

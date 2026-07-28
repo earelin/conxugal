@@ -35,7 +35,14 @@ export interface MetricsStreamResult {
 }
 
 const METRICS_STREAM_URL = '/api/admin/metrics';
-export const METRICS_HISTORY_LIMIT = 30;
+const DEFAULT_METRICS_HISTORY_LIMIT = 250;
+
+function readMetricsHistoryLimit(): number {
+  const raw = Number(import.meta.env.VITE_METRICS_HISTORY_LIMIT);
+  return Number.isInteger(raw) && raw > 0 ? raw : DEFAULT_METRICS_HISTORY_LIMIT;
+}
+
+export const METRICS_HISTORY_LIMIT = readMetricsHistoryLimit();
 
 /**
  * Drives the admin metrics panel from the `/api/admin/metrics` SSE stream. Relies

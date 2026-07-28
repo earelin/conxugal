@@ -56,7 +56,7 @@ Each sparkline is a single series, so it carries **no legend and no axes** — t
 label names the data. It is drawn as a 2 px `indigo.6` line over an `indigo.0` fill,
 anchored to a `gray.1` baseline hairline, with the newest sample marked by a dot ringed in
 the surface colour. Hovering a sparkline shows a crosshair and a tooltip with that
-sample's time and value (`metrics-states.svg`). The buffer holds the **last 30 samples**;
+sample's time and value (`metrics-states.svg`). The buffer holds the **last 250 samples**;
 with fewer samples the line only spans the elapsed part of the box, which is how "the
 history is still filling up" is communicated instead of stretching six points across the
 full width.
@@ -105,7 +105,7 @@ under — the number above it is always the accessible source of truth.
 - **Detailed runtime figures (R17, R18):** the tiles and detail cards render the whole
   `RuntimeMetrics` sample — heap and non-heap memory, threads, uptime, GC count and time,
   system load, HTTP request/error counters, and datastore-pool usage.
-- **Nothing persisted (R20):** the footer states that the 30-sample history lives in the
+- **Nothing persisted (R20):** the footer states that the 250-sample history lives in the
   browser and that a reload starts the panel empty; `metrics-states.svg` shows exactly
   that empty starting state. No screen offers a past sample, an export, or a time range.
 - **No secrets (R21):** a lock note under the section, and a second one inside the pool
