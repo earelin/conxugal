@@ -13,9 +13,8 @@ The `ADMIN`-only import trigger, authored contract-first. Governed by
 [ADR-0010](../../architecture/0010-design-first-openapi-contract.md) (OpenAPI-first), and
 [ADR-0005](../../architecture/0005-session-based-authentication.md) (session security).
 
-This feature exposes **no read endpoint**: the single authenticated read of the catalogue
-is FEAT-0007's `GET /api/organos/taxonomy`, which serves the Órganos in their taxonomy
-positions plus the unclassified ones.
+This feature exposes **no read endpoint**: the authenticated read of the catalogue is
+FEAT-0007's `GET /api/organos`, which serves each Órgano with its taxonomy placement.
 
 ## Scope
 - Author the request/response contract in
