@@ -65,10 +65,12 @@ layout, tree rows and Órgano table, minus every action button.
   never reach the builder as an empty term list, because the tolerance rule above would then
   present the whole catalogue as unclassified and an admin would read a transport failure as
   their taxonomy having been wiped.
-- **Sort for display**: terms among their siblings, and Órganos within a term and in the
-  unclassified worklist, by name using `localeCompare` with a Galician locale — the
-  endpoints promise no order, and without this the tree reshuffles on the refetch after
-  every mutation. Accented names must collate correctly (`Á` beside `A`, not after `Z`).
+- **Do not sort.** Both reads promise name order (feature *API surface*), so the builder
+  preserves the order it receives and renders it. Grouping by parent keeps siblings in name
+  order, because grouping preserves relative order — no per-level sort is needed. A second
+  sort in the browser would be a second source of truth, and it would diverge from the
+  server's collation on exactly the accented Galician names this catalogue is full of; the
+  symptom would look like the server sending wrong data.
 - The two-pane layout: the `Taxonomía` tree card, and the content card showing the selected
   term's Órganos or the pinned **Sen clasificar** worklist. Each Órgano row shows name and
   active state (inactive rows dimmed, never hidden) and nothing else yet.
@@ -92,8 +94,11 @@ layout, tree rows and Órgano table, minus every action button.
 - When the taxonomy read fails and the catalogue read succeeds, the section shows an error
   with a working retry — **not** an empty tree with the whole catalogue as unclassified; the
   two states are visibly different. The reverse failure is handled the same way.
-- Sibling terms, and Órganos within a term and in the unclassified worklist, are displayed
-  in name order, and accented Galician names sort in their expected places.
+- Given responses in name order, sibling terms and the Órganos in each term and in the
+  worklist are **displayed in that same order**, and re-fetching after a mutation reproduces
+  it. Proven by feeding the builder a deliberately unsorted array and asserting the output
+  preserves input order rather than repairing it — a builder that quietly sorts would pass
+  an "is it in name order?" assertion while hiding the duplicated responsibility.
 - Selecting a term shows its Órganos with name and active state; selecting **Sen
   clasificar** shows the null-placement Órganos — from the catalogue already fetched, with
   no second request. (SPEC-0004 #8, #18)

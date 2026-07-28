@@ -42,10 +42,13 @@ different half of the contract, and six operations against these two.
   to build the tree, and filters `termoId == null` for the unclassified set.
 - Both are unfiltered and unpaged, and take no query parameters — the whole table, every
   time. Adding a filter later is additive; guessing at one now is not.
-- **Neither response guarantees an order**, and the OpenAPI description of each array says
-  so — no `ORDER BY` is added to satisfy an unstated expectation. Presentation order belongs
-  to the client ([TASK-0007](TASK-0007-organos-section-and-tree-view.md) sorts by name with
-  locale-aware collation).
+- **Both responses are ordered by name**, and the OpenAPI description of each array states
+  it as a guarantee callers may rely on — not an incidental property. The ordering itself is
+  the repository's, delivered by
+  [TASK-0002](TASK-0002-taxonomia-store-infrastructure.md) under an explicit Galician
+  collation; this task carries it into the contract and proves it over HTTP.
+  [TASK-0007](TASK-0007-organos-section-and-tree-view.md) renders in the order it receives
+  and does not re-sort.
 
 ## Acceptance criteria
 - As an authenticated `USER` or `ADMIN`, `GET /api/organos` returns every stored Órgano with
@@ -64,9 +67,14 @@ different half of the contract, and six operations against these two.
   may call, and gating them by mistake would take R8 with them. (SPEC-0004 #2, #8)
 - Both responses carry the `RateLimit-*` headers, and the contract declares
   `TooManyRequests` for each.
-- **No `ORDER BY` is added to either query.** The no-promised-order rule is stated twice in
-  prose and is otherwise unfalsifiable — a helpful `ORDER BY name` would satisfy every other
-  criterion here while quietly turning an unpromised order into one clients depend on.
-  Assert it against the code, not the response.
+- **Both responses arrive in name order**, asserted over HTTP against a fixture whose
+  insertion order is deliberately not its name order — otherwise the assertion passes on an
+  unordered query by luck.
+- The order is correct for **accented Galician names**: a fixture containing `Á`, `Ñ` and
+  plain-ASCII names comes back interleaved as a Galician reader expects, not with the
+  accented ones trailing after `Z`. Under a C/POSIX collation this is the criterion that
+  fails, and it is the reason the ordering is not left to the server's default.
+- The OpenAPI description of each array **states the order as a guarantee**, so the contract
+  and the behaviour cannot drift apart silently.
 - The implementation conforms to `docs/api/openapi.yaml`, and both endpoints are
   integration-tested over HTTP against a running server.

@@ -26,6 +26,12 @@ JDBC/SQL stays entirely in `infrastructure`.
   read (a null parent must return the roots, which is not the same query as a parent match).
   No recursive CTE and no subtree query — the endpoint serves the whole table and the client
   builds the tree.
+- **Both whole-table reads order by name** under TASK-0001's Galician collation:
+  `TermoRepository.findAll()` and `OrganoRepository.findAll()` each carry
+  `ORDER BY name COLLATE <the declared collation>`. A derived `findAllOrderByName()` would
+  give the ordering but not the collation, so these are `@Query` — the collation is the
+  whole point, not a detail. The feature's *API surface* promises this order to callers, so
+  it is a contract, not a convenience.
 - `lockTaxonomia` has no derivable form: implement it as
   `SELECT pg_advisory_xact_lock(<fixed key>)` via `@Query`, pinning how the result is
   mapped — a `void`/`Void` return over a `SELECT` is the wrinkle to settle here rather than
@@ -54,6 +60,10 @@ JDBC/SQL stays entirely in `infrastructure`.
   `parentId` and a child carrying its parent's id, so several levels of nesting round-trip
   as a flat list a caller can rebuild the tree from.
   ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #14)
+- Both `findAll` methods return rows **in name order**, from a fixture inserted in a
+  deliberately different order, and accented Galician names land where a reader expects
+  (`Ávila` beside `Avión`, not after `Zamora`). The accent case is the one that fails on a
+  default-collation cluster, which is exactly the failure this ordering exists to prevent.
 - Every term operation round-trips against the database, not just `findAll`: a rename shows
   the new name and nothing else changed; a re-parent moves the term between parents and to
   the root (null); find-by-id returns the stored term and nothing for an unknown id; delete

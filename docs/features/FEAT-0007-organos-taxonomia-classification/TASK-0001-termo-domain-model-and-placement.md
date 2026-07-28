@@ -40,8 +40,12 @@ green twice, so this is a cohesion argument rather than the only workable order.
   **nullable** `UUID parentId` — a null parent is a root, which is what makes the taxonomy
   many-rooted and arbitrarily deep. The parent is held as the parent's **id**, not a nested
   term, keeping the 1:1 single-table mapping of ADR-0008.
-- `TermoRepository` port: **find all** — the read endpoint serves this list verbatim,
-  so there is no by-parent or subtree query — plus find by id, insert, rename, re-parent,
+- `TermoRepository` port: **find all, in name order** — the read endpoint serves this list
+  verbatim, so there is no by-parent or subtree query, and the order is part of the port's
+  contract rather than the adapter's private choice: the feature promises it to HTTP callers,
+  so a `findAll` free to return rows in any order would not satisfy the port's own consumers.
+  Same for `OrganoRepository.findAll()`. Say so in the method's javadoc — plus find by id,
+  insert, rename, re-parent,
   delete, an `existsByParentId`-style child check the delete rule needs, a
   **children-of-parent read** the sibling-name rule needs (roots included, so a null parent
   is a legal argument), and `lockTaxonomia` — the serialising lock the feature's *Edge cases*
@@ -73,6 +77,12 @@ green twice, so this is a cohesion argument rather than the only workable order.
   foreign key needs the term table to exist already. **V9, not V8** — V8 is taken, and V4
   is reserved by `db/migration-local/V4__seed_demo_user.sql`, so a free-looking number in
   `db/migration/` is not necessarily free.
+- The same migration declares the **Galician ICU collation** both reads order under — a
+  named collation (`CREATE COLLATION … provider = icu, locale = 'gl-ES'`) rather than a
+  locale string repeated at each call site, so the ordering cannot drift between the two
+  queries and the name is greppable. Declaring it here, with the tables, is what stops the
+  order depending on how the cluster happened to be initialised: under the default C/POSIX
+  collation, accented Galician names sort after `Z`.
 - The same migration adds a **unique index on `(parent_id, lower(name))` with
   `NULLS NOT DISTINCT`**, enforcing the feature's sibling-name rule in the one place a
   concurrent create cannot slip past. `NULLS NOT DISTINCT` is what extends it to the roots:
@@ -113,6 +123,10 @@ green twice, so this is a cohesion argument rather than the only workable order.
   rename, re-parent, delete, check for children, read a parent's children, lock the
   taxonomy, set/clear an Órgano's term, clear the placements pointing at a term, and read an
   Órgano by id — and nothing they do not; no infrastructure type leaks into its signatures.
+- The collation exists after the migration and orders accented Galician names as a reader
+  expects — `Á` beside `A`, not after `Z` — asserted with a direct `ORDER BY … COLLATE`
+  query. The queries that depend on it are TASK-0002's; this proves the collation itself is
+  there and behaves, since a missing or misdeclared one fails far from where it is used.
 - The migration applies cleanly on top of the existing schema and creates both the
   `termo` table (with its self-referencing parent foreign key) and
   `organo_contratacion.termo_id` (nullable, foreign-keyed, no `ON DELETE` action).

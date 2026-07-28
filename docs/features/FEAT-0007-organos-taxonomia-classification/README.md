@@ -242,15 +242,30 @@ shape. The cost is that the client owns tree-building and the two responses can 
 apart (see *Edge cases*) — accepted deliberately, because the join is a handful of lines
 in the browser against recursive assembly and a nested contract on the server.
 
-**Neither response promises an order.** Each is `findAll()` serialised, and PostgreSQL
-guarantees no stable order without an `ORDER BY`; the contract says so explicitly rather
-than letting clients infer one from what they happen to observe. **Presentation order is
-the client's**, decided with the rest of the presentation: the admin section sorts terms
-and Órganos by name with locale-aware collation (`localeCompare`, Galician locale), which
-is what keeps the tree from reshuffling on the refetch that follows every mutation. Sorting
-in the browser also keeps accented Galician names correct without depending on the
-database's collation configuration. Should a future consumer need a server-side order, it
-is added as an explicit contract change.
+**Both responses are ordered by name**, and the contract says so. Each read is a whole-table
+`findAll()` with an explicit `ORDER BY name`; a caller may rely on it, and removing it later
+would be a breaking change. Ordering server-side means every consumer gets the same order
+without each one re-deriving it: the admin section, the future contratos filter, and anyone
+reading the contract by hand. It also makes the tree stable across the refetch that follows
+every mutation, which is the property the UI actually needs.
+
+**Collation is the part that has to be got right.** PostgreSQL's default collation depends
+on how the cluster was initialised, and under a C/POSIX collation the accented Galician
+names this catalogue is full of sort after `Z` — `Ávila` last instead of beside `Avión`. So
+the order is not left to whatever the server happens to be configured with: both queries
+sort under an **explicit ICU collation for Galician**, declared in the migration alongside
+the tables, and an integration test asserts the accented cases rather than trusting the
+environment. This is the cost of moving the sort to the server, and it is paid once here
+rather than by every client.
+
+The client renders in the order it receives and **does not re-sort**. Two sorts would be
+two sources of truth, and they would disagree the moment the browser's `localeCompare` and
+the database's collation differed on a name — the failure would look like the server sending
+wrong data.
+
+Ordering is per response, and the taxonomy read is a flat list: terms arrive in global name
+order, so siblings are in name order once the client groups them by parent, since grouping
+preserves relative order. There is no ordering *within* the tree for the server to express.
 
 **The edge is stored once.** `termoId` on the Órgano and `parentId` on the term
 each mirror a column exactly; no response repeats an edge from the other side (a term
@@ -465,7 +480,7 @@ module.
    `shared/` files and the `ProblemError` reader; the slice's HTTP module and the refetch
    hook the later tasks call; the section chrome — tree card and term-content card — as
    containers with empty action rows; the pure tree builder over the two reads; the loading,
-   empty, failed-fetch and dangling-id states; name ordering; and the unclassified worklist
+   empty, failed-fetch and dangling-id states; and the unclassified worklist
    **rendered**. Read-only — no mutation controls.
    *(SPEC-0004 #1 nav gating, #8, #14, #18; SPEC-0001 AC6, AC7)*
 8. **[TASK-0008](TASK-0008-taxonomia-management-ui.md) — Taxonomía management UI**
