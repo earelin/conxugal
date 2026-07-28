@@ -143,9 +143,10 @@ flowchart LR
 - A Micronaut `@Scheduled` job in the application module runs the import on a configurable
   schedule — defaulting to **once daily, overnight** (an early-morning run in the source's
   Europe/Madrid time, during off-peak hours) — invoking the **same** `ImportOrganos` use
-  case and single-run guard as the endpoint (SPEC-0004 R11). It runs on the
-  blocking/virtual-thread executor, so the outbound fetch and JDBC writes block safely
-  without occupying an event-loop thread.
+  case and single-run guard as the endpoint (SPEC-0004 R11). It runs on a dedicated
+  single-thread virtual-thread executor, kept separate from the shared HTTP
+  request-serving executor, so the outbound fetch and JDBC writes block safely without
+  occupying an event-loop thread or constraining request-serving capacity.
 
 ## Sequencing (tasks, one small change each)
 1. **Órgano domain model + repository port** — the `OrganoDeContratacion` aggregate

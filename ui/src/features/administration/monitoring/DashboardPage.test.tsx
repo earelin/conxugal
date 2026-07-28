@@ -119,6 +119,13 @@ describe('DashboardPage', () => {
     expect(screen.queryByText(/sonda/i)).not.toBeInTheDocument();
   });
 
+  it('mounts the lazily-loaded metrics panel alongside the system status', async () => {
+    mockSystemStatus({ status: 'UP', reachable: true });
+    renderDashboard();
+
+    expect(await screen.findByText(strings.admin.dashboard.metrics.title)).toBeInTheDocument();
+  });
+
   it('reflects a changed dependency state on the next dashboard view instead of a cached one', async () => {
     const queryClient = createQueryClient();
 
