@@ -62,7 +62,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
   void cleanUp() throws Exception {
     try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement()) {
-      statement.execute("TRUNCATE TABLE organo_contratacion");
+      statement.execute("TRUNCATE TABLE organo_contratacion, termo");
     }
   }
 
@@ -193,15 +193,81 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(untouched.active()).isTrue();
   }
 
+  @Test
+  void update_preserves_existing_placement() throws Exception {
+    UUID termoId = insertTermo("Deportes", null);
+    UUID id = insertOrgano("consorcio-x", "Consorcio X", true, termoId);
+
+    organoRepository.update(id, "Consorcio X Renamed", true);
+
+    OrganoDeContratacion updated = organoRepository.findById(id).orElseThrow();
+    assertThat(updated.termoId()).isEqualTo(termoId);
+  }
+
+  @Test
+  void updateActive_preserves_existing_placement() throws Exception {
+    UUID termoId = insertTermo("Deportes", null);
+    UUID id = insertOrgano("consorcio-x", "Consorcio X", true, termoId);
+
+    organoRepository.updateActive(id, false);
+
+    OrganoDeContratacion updated = organoRepository.findById(id).orElseThrow();
+    assertThat(updated.termoId()).isEqualTo(termoId);
+  }
+
+  @Test
+  void findAll_reports_termo_id_for_placed_and_unplaced_organos() throws Exception {
+    UUID termoId = insertTermo("Deportes", null);
+    insertOrgano("consorcio-x", "Consorcio X", true, termoId);
+    insertOrgano("axencia-y", "Axencia Y", true, null);
+
+    List<OrganoDeContratacion> organos = organoRepository.findAll();
+
+    assertThat(organos)
+        .extracting(OrganoDeContratacion::sourceKey, OrganoDeContratacion::termoId)
+        .containsExactlyInAnyOrder(
+            tuple("consorcio-x", termoId), tuple("axencia-y", null));
+  }
+
+  @Test
+  void inserted_organo_is_unclassified_by_default() {
+    OrganoDeContratacion created =
+        organoRepository.insert(new OrganoDeContratacion("consorcio-x", "Consorcio X"));
+
+    assertThat(organoRepository.findById(created.id()).orElseThrow().termoId()).isNull();
+  }
+
   private UUID insertOrgano(String sourceKey, String name, boolean active) throws Exception {
+    return insertOrgano(sourceKey, name, active, null);
+  }
+
+  private UUID insertOrgano(String sourceKey, String name, boolean active, UUID termoId)
+      throws Exception {
     String sql =
-        "INSERT INTO organo_contratacion (id, source_key, name, active) "
-            + "VALUES (uuidv7(), ?, ?, ?) RETURNING id";
+        "INSERT INTO organo_contratacion (id, source_key, name, active, termo_id) "
+            + "VALUES (uuidv7(), ?, ?, ?, ?) RETURNING id";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, sourceKey);
       statement.setString(2, name);
       statement.setBoolean(3, active);
+      statement.setObject(4, termoId);
+      try (ResultSet resultSet = statement.executeQuery()) {
+        if (!resultSet.next()) {
+          throw new IllegalStateException("Insert did not return a generated id");
+        }
+        return resultSet.getObject("id", UUID.class);
+      }
+    }
+  }
+
+  private UUID insertTermo(String name, UUID parentId) throws Exception {
+    String sql =
+        "INSERT INTO termo (id, name, parent_id) VALUES (uuidv7(), ?, ?) RETURNING id";
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement statement = connection.prepareStatement(sql)) {
+      statement.setString(1, name);
+      statement.setObject(2, parentId);
       try (ResultSet resultSet = statement.executeQuery()) {
         if (!resultSet.next()) {
           throw new IllegalStateException("Insert did not return a generated id");
