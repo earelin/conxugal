@@ -12,5 +12,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
+    env: {
+      // Small enough that tests filling/evicting the metrics history buffer
+      // stay fast, without needing a raised per-test timeout.
+      VITE_METRICS_HISTORY_LIMIT: '10',
+    },
   },
 });

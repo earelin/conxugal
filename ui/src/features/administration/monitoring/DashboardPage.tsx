@@ -17,10 +17,16 @@ import {
   IconLock,
   IconRefresh,
 } from '@tabler/icons-react';
-import type { ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { HttpError } from '../../../shared/lib/httpClient';
 import { strings } from '../../../shared/lib/strings';
 import { useSystemStatus, type SystemStatus } from './systemStatus';
+
+// Code-split: @mantine/charts (and its recharts peer) are only needed once an
+// ADMIN opens this page, not for every visitor of the app's eager entry chunk.
+const MetricsPanel = lazy(() =>
+  import('./metrics').then((module) => ({ default: module.MetricsPanel })),
+);
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('gl-ES', { dateStyle: 'short', timeStyle: 'short' });
@@ -222,6 +228,9 @@ export function DashboardPage() {
           onRefresh={() => void refetch()}
         />
       )}
+      <Suspense fallback={<Loader />}>
+        <MetricsPanel />
+      </Suspense>
     </Stack>
   );
 }

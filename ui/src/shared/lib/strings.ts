@@ -64,6 +64,76 @@ export const strings = {
       errorTitle: 'Non se puido cargar o estado do sistema',
       errorForbidden: 'Non tes permisos para ver esta información.',
       errorGeneric: 'Téntao de novo máis tarde.',
+      metrics: {
+        title: 'Métricas en tempo real',
+        subtitle:
+          'Mostras en directo do proceso en execución. Actualízanse soas; non se gardan no servidor.',
+
+        stateConnecting: 'CONECTANDO',
+        stateLive: 'EN DIRECTO',
+        stateReconnecting: 'RECONECTANDO',
+
+        awaitingFirstSample: 'Agardando a primeira mostra…',
+        lastSampleAtPrefix: 'Mostra recibida ás',
+        cadenceSuffix: 'cada 5 s',
+        lastKnownSampleAtPrefix: 'Última mostra ás',
+        timeAgoPrefix: 'hai',
+        timeAgoUnit: 's',
+
+        noHistoryYet: 'sen historial aínda',
+        samplesUnit: 'mostras',
+        notUpdating: 'sen actualizar',
+        lastKnownLoad: 'última carga coñecida',
+        lastKnownThreads: 'último valor recibido',
+        noNewSamples: 'sen novas mostras',
+        noValue: '—',
+
+        heapTileLabel: 'Memoria heap',
+        systemLoadTileLabel: 'Carga do sistema',
+        threadsTileLabel: 'Fíos activos',
+        httpTileLabel: 'Peticións HTTP',
+
+        peaksOfHeapPrefix: 'picos do',
+        maxOfLoadPrefix: 'máx.',
+        peakOfThreadsPrefix: 'pico de',
+        recentLoadPrefix: 'carga recente',
+        aliveNowPrefix: 'vivos agora',
+        sinceLastSamplePrefix: 'desde a mostra anterior',
+
+        memoryGcCardTitle: 'Memoria e recolección de lixo',
+        datastorePoolCardTitle: 'Conexións co almacén de datos',
+        httpActivityCardTitle: 'Actividade HTTP',
+
+        heapInUseLabel: 'Heap en uso',
+        nonHeapMemoryLabel: 'Memoria non heap',
+        gcCollectionsLabel: 'Recollidas de lixo',
+        gcTimeLabel: 'Tempo en GC',
+        sinceStartupLabel: 'Desde o arranque',
+
+        poolUsageLabel: 'Ocupación do pool',
+        poolMaxLabel: 'Máximo do pool',
+        poolInUseNowLabel: 'En uso agora',
+        poolOpenUnit: 'abertas',
+        poolConnectionsUnit: 'conexións',
+        poolLegendInUse: 'En uso',
+        poolLegendIdle: 'Inactivas',
+        poolLegendFree: 'Libres',
+        poolPrivacyNote: 'Só reconto: sen URL, usuario nin contrasinal.',
+
+        totalRequestsLabel: 'Peticións totais',
+        errorResponsesLabel: 'Respostas con erro',
+        errorRateLabel: 'Taxa de erro',
+        errorRateNormalBadge: 'NORMAL',
+        errorRateElevatedBadge: 'ELEVADA',
+        errorRateHighBadge: 'ALTA',
+        httpAccumulatedNote: 'Acumulados desde o arranque do proceso.',
+
+        privacyNote:
+          'As métricas nunca inclúen credenciais, cadeas de conexión nin ningún outro valor secreto.',
+        historyNotePrefix: 'O historial das últimas',
+        historyNoteSuffix:
+          'mostras vive só no navegador: ao recargar a páxina, o panel comeza baleiro.',
+      },
     },
     users: {
       title: 'Xestión de usuarios',
