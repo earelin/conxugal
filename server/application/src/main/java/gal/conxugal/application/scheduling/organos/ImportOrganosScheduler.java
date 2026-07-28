@@ -22,6 +22,8 @@ class ImportOrganosScheduler {
       cron = "${conxugal.organos.import.schedule}",
       zoneId = "Europe/Madrid",
       scheduler = "organos-import")
+  // PMD flags the default below as redundant since the switch already covers every known
+  // Status; checkstyle requires it regardless, so the two tools disagree on this pattern.
   @SuppressWarnings("PMD.ExhaustiveSwitchHasDefault")
   void run() {
     ImportOutcome outcome = importOrganos.run();

@@ -11,7 +11,7 @@ depends_on: [TASK-0004]
 A recurring scheduler that runs the import automatically. Governed by
 [ADR-0002](../../architecture/0002-hexagonal-architecture.md) (a scheduler is a driving
 entry point) and [ADR-0011](../../architecture/0011-blocking-io-virtual-threads.md) (runs
-on the blocking/virtual-thread executor).
+on a virtual thread, off the event loop).
 
 ## Scope
 - A Micronaut `@Scheduled` job in the `application` module that invokes the **same**
@@ -19,8 +19,9 @@ on the blocking/virtual-thread executor).
 - The schedule is **configurable** (a configuration property), defaulting to **once
   daily, overnight** (a single early-morning run in the source's local time,
   Europe/Madrid) so the import lands during off-peak hours.
-- Runs on the blocking/virtual-thread executor so the outbound fetch and JDBC writes block
-  safely off the event loop.
+- Runs on a dedicated single-thread virtual-thread executor, kept separate from the
+  shared HTTP request-serving executor, so the outbound fetch and JDBC writes block
+  safely off the event loop without constraining request-serving capacity.
 
 ## Acceptance criteria
 - With no human trigger, the scheduled job runs the import on its configured interval and

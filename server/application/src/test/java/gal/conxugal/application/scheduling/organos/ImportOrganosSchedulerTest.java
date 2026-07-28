@@ -33,4 +33,14 @@ class ImportOrganosSchedulerTest {
 
     // strict stubbing above already fails this test if importOrganos.run() was never called
   }
+
+  @Test
+  void delegates_to_the_import_use_case_on_failure() {
+    when(importOrganos.run()).thenReturn(ImportOutcome.failure());
+    ImportOrganosScheduler scheduler = new ImportOrganosScheduler(importOrganos);
+
+    scheduler.run();
+
+    // strict stubbing above already fails this test if importOrganos.run() was never called
+  }
 }
