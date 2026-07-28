@@ -65,6 +65,20 @@ const baseSample: RuntimeMetrics = {
   datastorePool: { active: 3, idle: 7, max: 10 },
 };
 
+// Emits `count` steady-state (baseSample-shaped) samples, one per second
+// starting at :01, so a preceding spike sample gets evicted once the
+// 30-sample buffer fills.
+function emitSteadyStateSamples(count: number) {
+  for (let i = 1; i <= count; i += 1) {
+    act(() =>
+      currentSource().emitMessage({
+        ...baseSample,
+        timestamp: `2026-07-18T09:30:${String(i).padStart(2, '0')}Z`,
+      }),
+    );
+  }
+}
+
 describe('MetricsPanel', () => {
   beforeEach(() => {
     vi.stubGlobal('EventSource', FakeEventSource);
@@ -120,14 +134,7 @@ describe('MetricsPanel', () => {
     // 34 more steady-state (50% heap) samples: 35 emitted total into a
     // 30-sample buffer, so the 95% spike from the very first sample must be
     // evicted by the time the buffer fills.
-    for (let i = 1; i < 35; i += 1) {
-      act(() =>
-        currentSource().emitMessage({
-          ...baseSample,
-          timestamp: `2026-07-18T09:30:${String(i).padStart(2, '0')}Z`,
-        }),
-      );
-    }
+    emitSteadyStateSamples(34);
 
     expect(screen.getByText(new RegExp(`${t.peaksOfHeapPrefix} 50 %`))).toBeInTheDocument();
     expect(screen.queryByText(new RegExp(`${t.peaksOfHeapPrefix} 95 %`))).not.toBeInTheDocument();
@@ -149,14 +156,7 @@ describe('MetricsPanel', () => {
     // 34 more steady-state samples (35 emitted total into a 30-sample
     // buffer): the spike from the very first sample must be evicted by the
     // time the buffer fills.
-    for (let i = 1; i < 35; i += 1) {
-      act(() =>
-        currentSource().emitMessage({
-          ...baseSample,
-          timestamp: `2026-07-18T09:30:${String(i).padStart(2, '0')}Z`,
-        }),
-      );
-    }
+    emitSteadyStateSamples(34);
 
     expect(screen.getByText(new RegExp(`${t.maxOfLoadPrefix} 35 %`))).toBeInTheDocument();
     expect(screen.queryByText(new RegExp(`${t.maxOfLoadPrefix} 95 %`))).not.toBeInTheDocument();
