@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="540" viewBox="0 0 820 540" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title>Menú de usuario a 360 px — disparador só con iniciais, pechado e aberto</title>
+  <defs>
+    <filter id="menuShadowNarrow" x="-30%" y="-40%" width="160%" height="220%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+      <feOffset dx="0" dy="4" result="menuShadowNarrowBlur"/>
+      <feFlood flood-color="#212529" flood-opacity="0.2"/>
+      <feComposite in2="menuShadowNarrowBlur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="820" height="540" fill="#ffffff"/>
+
+  <text x="20" y="28" font-size="12" font-weight="600" fill="#212529">Pechado — 360 px</text>
+  <text x="152" y="28" font-size="11" fill="#868e96">o disparador queda só coas iniciais</text>
+  <text x="440" y="28" font-size="12" font-weight="600" fill="#212529">Aberto — 360 px</text>
+  <text x="566" y="28" font-size="11" fill="#868e96">o despregable nomea a conta</text>
+
+  <!-- ================= PANEL A — pechado ================= -->
+  <rect x="20" y="40" width="360" height="440" fill="#f8f9fa" stroke="#dee2e6"/>
+
+  <!-- header (navbar pregada tras a hamburguesa) -->
+  <rect x="20" y="40" width="360" height="56" fill="#ffffff"/>
+  <line x1="20" y1="96" x2="380" y2="96" stroke="#dee2e6"/>
+  <g stroke="#495057" stroke-width="1.8" stroke-linecap="round">
+    <line x1="36" y1="62" x2="52" y2="62"/>
+    <line x1="36" y1="68" x2="52" y2="68"/>
+    <line x1="36" y1="74" x2="52" y2="74"/>
+  </g>
+  <g transform="translate(68,54) scale(0.14)">
+    <rect x="0" y="0" width="200" height="200" rx="46" fill="#4c6ef5"/>
+    <path d="M 132 55 A 56 56 0 1 0 132 145" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+    <path d="M 112 100 L 176 100" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round"/>
+    <path d="M 156 80 L 178 100 L 156 120" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="104" y="74" font-size="17" font-weight="700" fill="#212529">conxugal</text>
+
+  <!-- trigger: no email/role text below sm, but the control itself stays -->
+  <circle cx="328" cy="68" r="15" fill="#4c6ef5"/>
+  <text x="328" y="68" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="600" fill="#ffffff">AP</text>
+  <path d="M343 65 l5 5 l5 -5" fill="none" stroke="#868e96" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- page content -->
+  <text x="36" y="138" font-size="22" font-weight="700" fill="#212529">Panel do sistema</text>
+  <text x="36" y="160" font-size="12" fill="#868e96">Estado operativo do sistema.</text>
+
+  <rect x="36" y="194" width="328" height="88" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="36" y="192" width="328" height="88" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <circle cx="72" cy="236" r="20" fill="#ebfbee"/>
+  <path d="M63 236 l5.5 5.5 l11 -12" stroke="#2f9e44" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="104" y="230" font-size="15" font-weight="600" fill="#212529">Servizo operativo</text>
+  <text x="104" y="250" font-size="11" fill="#868e96">Todos os compoñentes responden ben.</text>
+
+  <rect x="36" y="298" width="328" height="116" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="36" y="296" width="328" height="116" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="60" y="326" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">SERVIZO</text>
+  <circle cx="68" cy="362" r="5" fill="#40c057"/>
+  <text x="82" y="370" font-size="22" font-weight="600" fill="#212529">Operativo</text>
+  <rect x="264" y="316" width="84" height="22" rx="11" fill="#ebfbee"/>
+  <text x="306" y="327" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">EN LIÑA</text>
+  <line x1="60" y1="392" x2="340" y2="392" stroke="#f1f3f5"/>
+  <text x="60" y="410" font-size="11" fill="#868e96">Sen incidencias nas últimas 24 h.</text>
+
+  <line x1="36" y1="444" x2="120" y2="444" stroke="#dee2e6" stroke-dasharray="4 4"/>
+  <text x="200" y="448" text-anchor="middle" font-size="10" fill="#adb5bd">resto da pantalla</text>
+  <line x1="280" y1="444" x2="364" y2="444" stroke="#dee2e6" stroke-dasharray="4 4"/>
+
+  <!-- ================= PANEL B — aberto ================= -->
+  <rect x="440" y="40" width="360" height="440" fill="#f8f9fa" stroke="#dee2e6"/>
+
+  <rect x="440" y="40" width="360" height="56" fill="#ffffff"/>
+  <line x1="440" y1="96" x2="800" y2="96" stroke="#dee2e6"/>
+  <g stroke="#495057" stroke-width="1.8" stroke-linecap="round">
+    <line x1="456" y1="62" x2="472" y2="62"/>
+    <line x1="456" y1="68" x2="472" y2="68"/>
+    <line x1="456" y1="74" x2="472" y2="74"/>
+  </g>
+  <g transform="translate(488,54) scale(0.14)">
+    <rect x="0" y="0" width="200" height="200" rx="46" fill="#4c6ef5"/>
+    <path d="M 132 55 A 56 56 0 1 0 132 145" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+    <path d="M 112 100 L 176 100" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round"/>
+    <path d="M 156 80 L 178 100 L 156 120" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="524" y="74" font-size="17" font-weight="700" fill="#212529">conxugal</text>
+
+  <rect x="726" y="46" width="58" height="44" rx="8" fill="#f1f3f5"/>
+  <circle cx="748" cy="68" r="15" fill="#4c6ef5"/>
+  <text x="748" y="68" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="600" fill="#ffffff">AP</text>
+  <path d="M763 70 l5 -5 l5 5" fill="none" stroke="#868e96" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <text x="456" y="138" font-size="22" font-weight="700" fill="#212529">Panel do sistema</text>
+  <text x="456" y="160" font-size="12" fill="#868e96">Estado operativo do sistema.</text>
+
+  <rect x="456" y="194" width="328" height="88" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="456" y="192" width="328" height="88" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <circle cx="492" cy="236" r="20" fill="#ebfbee"/>
+  <path d="M483 236 l5.5 5.5 l11 -12" stroke="#2f9e44" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="524" y="230" font-size="15" font-weight="600" fill="#212529">Servizo operativo</text>
+  <text x="524" y="250" font-size="11" fill="#868e96">Todos os compoñentes responden ben.</text>
+
+  <rect x="456" y="298" width="328" height="116" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="456" y="296" width="328" height="116" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="480" y="326" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">SERVIZO</text>
+  <circle cx="488" cy="362" r="5" fill="#40c057"/>
+  <text x="502" y="370" font-size="22" font-weight="600" fill="#212529">Operativo</text>
+  <rect x="684" y="316" width="84" height="22" rx="11" fill="#ebfbee"/>
+  <text x="726" y="327" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">EN LIÑA</text>
+  <line x1="480" y1="392" x2="760" y2="392" stroke="#f1f3f5"/>
+  <text x="480" y="410" font-size="11" fill="#868e96">Sen incidencias nas últimas 24 h.</text>
+
+  <line x1="456" y1="444" x2="540" y2="444" stroke="#dee2e6" stroke-dasharray="4 4"/>
+  <text x="620" y="448" text-anchor="middle" font-size="10" fill="#adb5bd">resto da pantalla</text>
+  <line x1="700" y1="444" x2="784" y2="444" stroke="#dee2e6" stroke-dasharray="4 4"/>
+
+  <!-- dropdown, anchored to the trigger's right edge, inside the viewport -->
+  <g filter="url(#menuShadowNarrow)">
+    <rect x="496" y="100" width="288" height="108" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  </g>
+  <text x="512" y="126" font-size="13" font-weight="500" fill="#212529">ana.pereira@conxugal.gal</text>
+  <text x="512" y="144" font-size="11" fill="#868e96">Administradora</text>
+  <line x1="496" y1="160" x2="784" y2="160" stroke="#e9ecef"/>
+  <rect x="500" y="166" width="280" height="38" rx="6" fill="#f1f3f5"/>
+  <g transform="translate(512,176) scale(0.7)" fill="none" stroke="#495057" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2"/>
+    <path d="M9 12h12l-3 -3"/>
+    <path d="M18 15l3 -3"/>
+  </g>
+  <text x="538" y="185" dominant-baseline="central" font-size="14" fill="#212529">Pechar sesión</text>
+
+  <!-- footer note -->
+  <g stroke="#adb5bd" stroke-width="1.4" fill="none" stroke-linecap="round">
+    <circle cx="26" cy="498" r="6"/>
+    <line x1="26" y1="497" x2="26" y2="501"/>
+    <circle cx="26" cy="494" r="0.5" fill="#adb5bd" stroke="none"/>
+  </g>
+  <text x="40" y="502" font-size="12" fill="#868e96">O disparador non herda o punto de corte que oculta o correo e o rol: baixo <tspan font-style="italic">sm</tspan> queda un botón só con iniciais,</text>
+  <text x="40" y="520" font-size="12" fill="#868e96">así que pechar sesión segue sendo alcanzable a calquera ancho, e nada desborda horizontalmente.</text>
+</svg>

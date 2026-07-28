@@ -1,0 +1,209 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="880" viewBox="0 0 1280 880" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title>Menú de usuario — disparador, despregable, estados e anatomía</title>
+  <defs>
+    <filter id="menuShadowStates" x="-30%" y="-40%" width="160%" height="220%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+      <feOffset dx="0" dy="4" result="menuShadowStatesBlur"/>
+      <feFlood flood-color="#212529" flood-opacity="0.2"/>
+      <feComposite in2="menuShadowStatesBlur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="880" fill="#f8f9fa"/>
+
+  <text x="40" y="42" font-size="20" font-weight="700" fill="#212529">Menú de usuario — disparador, despregable e estados</text>
+  <text x="40" y="64" font-size="12" fill="#868e96">Chrome da cabeceira. Todo o texto visible procede de strings.userMenu; ningún literal vive no compoñente.</text>
+
+  <!-- ================= 1 · DISPARADOR ================= -->
+  <text x="40" y="106" font-size="15" font-weight="600" fill="#212529">1 · Disparador na cabeceira</text>
+
+  <!-- 1a — en repouso -->
+  <rect x="40" y="124" width="285" height="88" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="231" y="164" text-anchor="end" font-size="13" font-weight="500" fill="#495057">ana.pereira@conxugal.gal</text>
+  <text x="231" y="180" text-anchor="end" font-size="11" fill="#868e96">Administradora</text>
+  <circle cx="257" cy="168" r="18" fill="#4c6ef5"/>
+  <text x="257" y="168" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">AP</text>
+  <path d="M283 165 l6 6 l6 -6" fill="none" stroke="#868e96" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 1b — hover / foco -->
+  <rect x="345" y="124" width="285" height="88" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="365" y="146" width="245" height="44" rx="8" fill="#f1f3f5"/>
+  <rect x="363" y="144" width="249" height="48" rx="10" fill="none" stroke="#4c6ef5" stroke-width="2"/>
+  <text x="536" y="164" text-anchor="end" font-size="13" font-weight="500" fill="#495057">ana.pereira@conxugal.gal</text>
+  <text x="536" y="180" text-anchor="end" font-size="11" fill="#868e96">Administradora</text>
+  <circle cx="562" cy="168" r="18" fill="#4c6ef5"/>
+  <text x="562" y="168" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">AP</text>
+  <path d="M588 165 l6 6 l6 -6" fill="none" stroke="#868e96" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 1c — aberto -->
+  <rect x="650" y="124" width="285" height="88" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="670" y="146" width="245" height="44" rx="8" fill="#f1f3f5"/>
+  <text x="841" y="164" text-anchor="end" font-size="13" font-weight="500" fill="#495057">ana.pereira@conxugal.gal</text>
+  <text x="841" y="180" text-anchor="end" font-size="11" fill="#868e96">Administradora</text>
+  <circle cx="867" cy="168" r="18" fill="#4c6ef5"/>
+  <text x="867" y="168" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">AP</text>
+  <path d="M893 171 l6 -6 l6 6" fill="none" stroke="#868e96" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 1d — baixo sm -->
+  <rect x="955" y="124" width="285" height="88" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="1000" y="152" width="140" height="32" rx="4" fill="none" stroke="#dee2e6" stroke-dasharray="4 3"/>
+  <text x="1070" y="172" text-anchor="middle" font-size="10" fill="#adb5bd">correo e rol ocultos</text>
+  <circle cx="1178" cy="168" r="18" fill="#4c6ef5"/>
+  <text x="1178" y="168" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">AP</text>
+  <path d="M1204 165 l6 6 l6 -6" fill="none" stroke="#868e96" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <text x="40" y="232" font-size="12" font-weight="600" fill="#212529">En repouso</text>
+  <text x="40" y="250" font-size="11" fill="#868e96">Correo, rol e avatar, sen fondo.</text>
+  <text x="345" y="232" font-size="12" font-weight="600" fill="#212529">Co rato ou co teclado</text>
+  <text x="345" y="250" font-size="11" fill="#868e96">Fondo gray.1 e anel de foco visible.</text>
+  <text x="650" y="232" font-size="12" font-weight="600" fill="#212529">Aberto</text>
+  <text x="650" y="250" font-size="11" fill="#868e96">O cheurón inverte; o fondo mantense.</text>
+  <text x="955" y="232" font-size="12" font-weight="600" fill="#212529">Baixo o punto de corte sm</text>
+  <text x="955" y="250" font-size="11" fill="#868e96">Só iniciais: o control nunca desaparece.</text>
+
+  <!-- ================= 2 · DESPREGABLE ================= -->
+  <text x="40" y="298" font-size="15" font-weight="600" fill="#212529">2 · Despregable e estados do elemento</text>
+
+  <!-- 2a — aberto, en repouso -->
+  <g filter="url(#menuShadowStates)">
+    <rect x="40" y="320" width="258" height="110" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  </g>
+  <text x="56" y="346" font-size="13" font-weight="500" fill="#212529">ana.pereira@conxugal.gal</text>
+  <text x="56" y="364" font-size="11" fill="#868e96">Administradora</text>
+  <line x1="40" y1="380" x2="298" y2="380" stroke="#e9ecef"/>
+  <g transform="translate(56,396) scale(0.75)" fill="none" stroke="#495057" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2"/>
+    <path d="M9 12h12l-3 -3"/>
+    <path d="M18 15l3 -3"/>
+  </g>
+  <text x="82" y="405" dominant-baseline="central" font-size="14" fill="#212529">Pechar sesión</text>
+
+  <!-- 2b — elemento con rato ou foco -->
+  <g filter="url(#menuShadowStates)">
+    <rect x="345" y="320" width="258" height="110" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  </g>
+  <text x="361" y="346" font-size="13" font-weight="500" fill="#212529">ana.pereira@conxugal.gal</text>
+  <text x="361" y="364" font-size="11" fill="#868e96">Administradora</text>
+  <line x1="345" y1="380" x2="603" y2="380" stroke="#e9ecef"/>
+  <rect x="349" y="386" width="250" height="38" rx="6" fill="#f1f3f5"/>
+  <rect x="349" y="386" width="250" height="38" rx="6" fill="none" stroke="#4c6ef5" stroke-width="2"/>
+  <g transform="translate(361,396) scale(0.75)" fill="none" stroke="#495057" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2"/>
+    <path d="M9 12h12l-3 -3"/>
+    <path d="M18 15l3 -3"/>
+  </g>
+  <text x="387" y="405" dominant-baseline="central" font-size="14" fill="#212529">Pechar sesión</text>
+
+  <!-- 2c — petición en voo -->
+  <g filter="url(#menuShadowStates)">
+    <rect x="650" y="320" width="258" height="110" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  </g>
+  <text x="666" y="346" font-size="13" font-weight="500" fill="#212529">ana.pereira@conxugal.gal</text>
+  <text x="666" y="364" font-size="11" fill="#868e96">Administradora</text>
+  <line x1="650" y1="380" x2="908" y2="380" stroke="#e9ecef"/>
+  <g transform="translate(666,396) scale(0.75)" fill="none" stroke="#adb5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2"/>
+    <path d="M9 12h12l-3 -3"/>
+    <path d="M18 15l3 -3"/>
+  </g>
+  <text x="692" y="405" dominant-baseline="central" font-size="14" fill="#adb5bd">Pechar sesión</text>
+  <path d="M889 405 a7 7 0 1 0 -2 4.9" fill="none" stroke="#adb5bd" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- 2d — fallo distinto de 401 -->
+  <g filter="url(#menuShadowStates)">
+    <rect x="955" y="320" width="258" height="164" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  </g>
+  <text x="971" y="346" font-size="13" font-weight="500" fill="#212529">ana.pereira@conxugal.gal</text>
+  <text x="971" y="364" font-size="11" fill="#868e96">Administradora</text>
+  <line x1="955" y1="380" x2="1213" y2="380" stroke="#e9ecef"/>
+  <g transform="translate(971,396) scale(0.75)" fill="none" stroke="#495057" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2"/>
+    <path d="M9 12h12l-3 -3"/>
+    <path d="M18 15l3 -3"/>
+  </g>
+  <text x="997" y="405" dominant-baseline="central" font-size="14" fill="#212529">Pechar sesión</text>
+  <rect x="963" y="430" width="242" height="46" rx="6" fill="#fff5f5" stroke="#ffc9c9"/>
+  <g stroke="#e03131" stroke-width="1.5" fill="none">
+    <circle cx="977" cy="453" r="7"/>
+    <line x1="977" y1="449.5" x2="977" y2="453.5" stroke-linecap="round"/>
+    <circle cx="977" cy="456.5" r="0.7" fill="#e03131" stroke="none"/>
+  </g>
+  <text x="991" y="449" font-size="11.5" fill="#c92a2a">Non foi posible pechar a</text>
+  <text x="991" y="465" font-size="11.5" fill="#c92a2a">sesión. Téntao de novo.</text>
+
+  <text x="40" y="512" font-size="12" font-weight="600" fill="#212529">Aberto</text>
+  <text x="40" y="530" font-size="11" fill="#868e96">Identidade, separador e un só elemento.</text>
+  <text x="345" y="512" font-size="12" font-weight="600" fill="#212529">Elemento activo</text>
+  <text x="345" y="530" font-size="11" fill="#868e96">Mesmo aspecto co rato e co teclado.</text>
+  <text x="650" y="512" font-size="12" font-weight="600" fill="#212529">Petición en voo</text>
+  <text x="650" y="530" font-size="11" fill="#868e96">Deshabilitado: dous clics non fan dous peches.</text>
+  <text x="955" y="512" font-size="12" font-weight="600" fill="#212529">Fallo distinto de 401</text>
+  <text x="955" y="530" font-size="11" fill="#868e96">Mensaxe no menú aberto; non se navega.</text>
+
+  <!-- ================= 3 · ANATOMÍA ================= -->
+  <text x="40" y="576" font-size="15" font-weight="600" fill="#212529">3 · Anatomía do despregable</text>
+
+  <g filter="url(#menuShadowStates)">
+    <rect x="470" y="608" width="300" height="118" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  </g>
+  <text x="486" y="636" font-size="14" font-weight="500" fill="#212529">ana.pereira@conxugal.gal</text>
+  <text x="486" y="656" font-size="12" fill="#868e96">Administradora</text>
+  <line x1="470" y1="672" x2="770" y2="672" stroke="#e9ecef"/>
+  <rect x="474" y="678" width="292" height="42" rx="6" fill="#f8f9fa"/>
+  <g transform="translate(488,689) scale(0.83)" fill="none" stroke="#495057" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2"/>
+    <path d="M9 12h12l-3 -3"/>
+    <path d="M18 15l3 -3"/>
+  </g>
+  <text x="518" y="700" dominant-baseline="central" font-size="15" fill="#212529">Pechar sesión</text>
+
+  <g stroke="#ced4da" stroke-width="1" stroke-dasharray="3 3">
+    <line x1="430" y1="644" x2="466" y2="644"/>
+    <line x1="430" y1="672" x2="466" y2="672"/>
+    <line x1="430" y1="699" x2="466" y2="699"/>
+    <line x1="774" y1="630" x2="810" y2="630"/>
+    <line x1="774" y1="702" x2="810" y2="702"/>
+  </g>
+  <g fill="#ced4da">
+    <circle cx="466" cy="644" r="2"/>
+    <circle cx="466" cy="672" r="2"/>
+    <circle cx="466" cy="699" r="2"/>
+    <circle cx="774" cy="630" r="2"/>
+    <circle cx="774" cy="702" r="2"/>
+  </g>
+
+  <text x="424" y="632" text-anchor="end" font-size="12" font-weight="600" fill="#212529">Cabeceira de identidade</text>
+  <text x="424" y="648" text-anchor="end" font-size="11" fill="#868e96">único sitio onde se nomea a conta baixo sm</text>
+  <text x="424" y="676" text-anchor="end" font-size="12" font-weight="600" fill="#212529">Separador</text>
+  <text x="424" y="704" text-anchor="end" font-size="12" font-weight="600" fill="#212529">Icona IconLogout</text>
+
+  <text x="816" y="626" font-size="12" font-weight="600" fill="#212529">Ancorado ao bordo dereito do</text>
+  <text x="816" y="642" font-size="11" fill="#868e96">disparador, cunha sombra md.</text>
+  <text x="816" y="698" font-size="12" font-weight="600" fill="#212529">Elemento neutro, non vermello</text>
+  <text x="816" y="714" font-size="11" fill="#868e96">pechar sesión non é unha acción destrutiva.</text>
+
+  <!-- ================= 4 · TECLADO ================= -->
+  <text x="40" y="782" font-size="15" font-weight="600" fill="#212529">4 · Teclado e accesibilidade</text>
+
+  <text x="40" y="810" font-size="12" font-weight="600" fill="#212529">Tab</text>
+  <text x="76" y="810" font-size="12" fill="#495057">— o disparador entra na orde de tabulación e amosa o anel de foco.</text>
+  <text x="40" y="832" font-size="12" font-weight="600" fill="#212529">Intro ou Espazo</text>
+  <text x="140" y="832" font-size="12" fill="#495057">— abren o despregable e levan o foco ao primeiro elemento.</text>
+  <text x="40" y="854" font-size="12" font-weight="600" fill="#212529">Esc</text>
+  <text x="76" y="854" font-size="12" fill="#495057">— pecha o despregable e devolve o foco ao disparador.</text>
+
+  <text x="680" y="810" font-size="12" font-weight="600" fill="#212529">↓ ↑</text>
+  <text x="712" y="810" font-size="12" fill="#495057">— percorren os elementos do despregable.</text>
+  <text x="680" y="832" font-size="12" font-weight="600" fill="#212529">Intro</text>
+  <text x="722" y="832" font-size="12" fill="#495057">— activa Pechar sesión sen pechar o menú.</text>
+  <g stroke="#adb5bd" stroke-width="1.4" fill="none" stroke-linecap="round">
+    <circle cx="686" cy="850" r="6"/>
+    <line x1="686" y1="849" x2="686" y2="853"/>
+    <circle cx="686" cy="846" r="0.5" fill="#adb5bd" stroke="none"/>
+  </g>
+  <text x="700" y="854" font-size="12" fill="#868e96">O rótulo nomea sempre a acción: nada depende só da cor.</text>
+</svg>

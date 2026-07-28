@@ -224,15 +224,4 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
     .then()
         .statusCode(HttpStatus.BAD_REQUEST.getCode());
   }
-
-  private String loginAs(RequestSpecification spec, User user) {
-    Response response =
-        given(spec)
-            .body(
-                "{\"username\":\"" + user.email() + "\",\"password\":\"" + user.passwordHash()
-                    + "\"}")
-        .when()
-            .post("/login");
-    return sessionCookieOf(response);
-  }
 }
