@@ -38,6 +38,14 @@ describe('AppLayout admin navigation', () => {
     expect(screen.getByText('AD')).toBeInTheDocument();
   });
 
+  it('keeps the user menu trigger reachable regardless of viewport width', async () => {
+    mockCurrentUser('ADMIN');
+    renderShell();
+
+    const trigger = await screen.findByRole('button', { name: strings.userMenu.trigger });
+    expect(trigger.closest('.mantine-visible-from-sm, .mantine-hidden-from-sm')).toBeNull();
+  });
+
   it('hides the administration section for a USER session', async () => {
     const scope = mockCurrentUser('USER');
     renderShell();
