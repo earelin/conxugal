@@ -61,17 +61,18 @@ function MetricTile({
   label,
   value,
   caption,
-  loading,
-  dimmed,
+  state,
   sparkline,
 }: {
   label: string;
   value: string;
   caption: string;
-  loading: boolean;
-  dimmed: boolean;
+  state: MetricsStreamState;
   sparkline: ReactNode;
 }) {
+  const loading = state === 'connecting';
+  const dimmed = state === 'reconnecting';
+
   return (
     <Card withBorder radius="md" padding="lg">
       <Text size="xs" fw={700} c="dimmed" tt="uppercase">
@@ -120,8 +121,7 @@ export function HeapTile({ state, latest, history, variant }: TileProps) {
       label={t.heapTileLabel}
       value={orNoValue(percent, formatPercent)}
       caption={caption}
-      loading={state === 'connecting'}
-      dimmed={state === 'reconnecting'}
+      state={state}
       sparkline={
         <MetricSparkline
           history={history}
@@ -151,8 +151,7 @@ export function SystemLoadTile({ state, latest, history, variant }: TileProps) {
       label={t.systemLoadTileLabel}
       value={orNoValue(percent, formatPercent)}
       caption={caption}
-      loading={state === 'connecting'}
-      dimmed={state === 'reconnecting'}
+      state={state}
       sparkline={
         <MetricSparkline
           history={history}
@@ -182,8 +181,7 @@ export function ThreadsTile({ state, latest, history, variant }: TileProps) {
       label={t.threadsTileLabel}
       value={orNoValue(count, formatCount)}
       caption={caption}
-      loading={state === 'connecting'}
-      dimmed={state === 'reconnecting'}
+      state={state}
       sparkline={
         <MetricSparkline
           history={history}
@@ -217,8 +215,7 @@ export function HttpTile({ state, latest, history, variant }: TileProps) {
       label={t.httpTileLabel}
       value={orNoValue(count, formatCount)}
       caption={caption}
-      loading={state === 'connecting'}
-      dimmed={state === 'reconnecting'}
+      state={state}
       sparkline={
         <MetricSparkline
           history={history}
