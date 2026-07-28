@@ -16,6 +16,11 @@ dependencies {
     implementation(libs.micronaut.http.client)
     implementation(libs.jsoup)
 
+    implementation(platform(libs.resilience4j.bom))
+    implementation(libs.resilience4j.retry)
+    implementation(libs.resilience4j.ratelimiter)
+    implementation(libs.resilience4j.circuitbreaker)
+
     implementation(libs.bouncycastle.provider)
 
     runtimeOnly(libs.micronaut.flyway)
