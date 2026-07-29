@@ -224,6 +224,10 @@ recorded as ADRs before the features that would otherwise settle them silently:
   attribute the system holds for it. Each row also offers a way to reach the corresponding
   publication **at the official source**, so any row can be verified against the original —
   which is what makes the system usable as evidence rather than only as a convenience.
+  The list is **paginated**: a user sees one page of contracts at a time, is told which page
+  they are on and how many pages the current selection has, and can move to the next or
+  previous page or jump to a chosen one. Every contract in the selection is reachable this
+  way.
 - **R17** — An empty contratos menores list is never ambiguous. The three ways a list can be
   empty are **distinguishable to a user**, not only to an administrator:
   - the Órgano's contracts are **not being imported** (R3);
@@ -235,7 +239,7 @@ recorded as ADRs before the features that would otherwise settle them silently:
 - **R18** — A user can **filter** an Órgano's contratos menores **by the year of the
   publication date**, and **sort** them by **publication date** or by **amount**, ascending
   or descending. Clearing the filter returns the unfiltered list. Filtering, sorting and
-  counting apply to the whole selection, not only to the portion currently displayed. No CPV
+  counting apply to the whole selection, not only to the page currently displayed. No CPV
   filter is offered, because the source publishes no CPV for contratos menores.
 
 ### Triggering imports
@@ -275,10 +279,10 @@ recorded as ADRs before the features that would otherwise settle them silently:
   stays responsive at that volume. Measured on the deployment's target environment, with at
   least **5 000 000** stored contracts of which at least **1 500 000** belong to a single
   Órgano, and under at least **10 concurrent readers**: an Órgano's contract list returns
-  its first portion, its count, and any totals it displays within **1 second at the 95th
-  percentile**, and requesting a later portion of the same selection meets the same budget.
-  A user can move through the whole selection in bounded portions; how those portions are
-  presented is a feature's choice.
+  its first page, its count, and any totals it displays within **1 second at the 95th
+  percentile**. A **deep** page — one far into a selection of that size — meets the same
+  budget as the first: paging must not degrade as a user moves through the selection, which
+  is the failure mode a naive implementation falls into at this volume.
 - **R24** — The import is **courteous to the public source**: across everything the system
   retrieves — this spec's imports and SPEC-0004's catalogue import alike — its total request
   rate stays within a budget that keeps it a negligible load on a public service, and it
@@ -363,9 +367,10 @@ recorded as ADRs before the features that would otherwise settle them silently:
 21. **(R15)** Opening an Órgano presents its contracts split into *contratos menores* and
     *licitacións*; a family for which the system holds no data is reachable and states that
     no data is available rather than erroring.
-22. **(R16)** An Órgano's contratos menores list states how many contracts the current
-    selection contains, and that count matches the number of contracts reachable by moving
-    through the selection.
+22. **(R16)** An Órgano's contratos menores list is paginated: it states how many contracts
+    the current selection contains and how many pages it spans, a user can move to the next
+    and previous page and jump to a chosen page, and paging through the whole selection
+    yields exactly that many contracts with none repeated and none skipped.
 23. **(R16)** Each contract row offers a way to reach that contract's publication at the
     official source.
 24. **(R17)** A user can tell apart, without administrator access, an Órgano that is not
@@ -376,9 +381,11 @@ recorded as ADRs before the features that would otherwise settle them silently:
     whose publication date falls in that year; clearing the filter restores the full list. No
     CPV filter control is present.
 26. **(R18)** Sorting by publication date returns contracts in date order, and sorting by
-    amount returns them in amount order, in the chosen direction; the first portion after
+    amount returns them in amount order, in the chosen direction; the first page after
     sorting descending by amount contains the largest-amount contract of the **whole**
-    filtered selection, not merely the largest of the previously displayed portion.
+    filtered selection, not merely the largest of the page previously displayed. Changing the
+    filter or the sort re-pages the selection from its first page rather than leaving the
+    user on a page number that no longer means what it did.
 27. **(R19)** An administrator can trigger an import scoped to all marked Órganos and one
     scoped to a single Órgano; each covered Órgano runs initially if its history was never
     loaded and incrementally otherwise, and the reported outcome states success, Órganos
@@ -393,8 +400,9 @@ recorded as ADRs before the features that would otherwise settle them silently:
     imported for Órganos processed earlier in the same run are retained, and the remaining
     marked Órganos are still imported.
 31. **(R23)** Under the stated dataset, environment and concurrency conditions, an Órgano's
-    contract list returns its first portion, its count and its totals within 1 s at the 95th
-    percentile, and requesting a later portion of the same selection meets the same budget.
+    contract list returns its first page, its count and its totals within 1 s at the 95th
+    percentile, and a page deep into a selection of over a million contracts meets the same
+    budget as the first page.
 32. **(R24)** Across a period covering an initial import, a historical re-read and scheduled
     incremental runs, the system's request rate against the source stays within the
     configured budget, and no mode exceeds it.

@@ -30,7 +30,7 @@ can be assumed away at this volume:
 - **Awardees are not all companies.** Roughly one in seven is a **natural person**,
   published with a personal fiscal identifier. The catalogue therefore models an *operador
   económico* — a person or an entity — rather than an *empresa*, and it means the catalogue
-  handles personal data and produces new derived information about identifiable people. R11
+  handles personal data and produces new derived information about identifiable people. R12
   states that plainly rather than denying it.
 - **Identifiers and names are published inconsistently.** The same identifier appears with
   different padding and casing, and under varying names. Matched naively, one operador
@@ -45,7 +45,7 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
 
 - **In scope:** the derived catalogue, operador identity and matching, the display name
   rule, awardees whose identifier is unusable, operador lifecycle, how a user finds an
-  operador, and the contract history with its totals, filtering and sorting.
+  operador, and the contract history with its totals, filtering, sorting and pagination.
 - **Out of scope — importing contracts.** Every family's import is owned by that family's
   spec; contratos menores by [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md).
 - **Out of scope — anything about an operador the contracts do not say.** No enrichment from
@@ -62,7 +62,7 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
 
 - **R1** — Reading the operadores catalogue (R8) and any operador's contract history (R9) is
   available to any authenticated user, `USER` or `ADMIN`, and grants no ability to modify
-  anything. An unauthenticated visitor is denied — a mitigation R11 depends on. There is no
+  anything. An unauthenticated visitor is denied — a mitigation R12 depends on. There is no
   management surface: the catalogue is derived (R2), so nothing about an operador is
   editable.
 
@@ -75,9 +75,9 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
   Because the source publishes identifiers with inconsistent padding and casing, two awards
   name the same operador when their identifiers are equal **ignoring surrounding whitespace
   and letter case**. This equivalence governs **matching only**: what is displayed is always
-  the value exactly as published (R12). Without it the same operador splits in two and the
+  the value exactly as published (R13). Without it the same operador splits in two and the
   cross-Órgano aggregation this spec exists for fails silently.
-- **R4** — The same identifier is published under **varying names**. Since R12 forbids
+- **R4** — The same identifier is published under **varying names**. Since R13 forbids
   normalising them, an operador is shown under the name from its **most recently published**
   contract, ties broken by the contract identifier. Name variation never produces a second
   operador.
@@ -89,11 +89,11 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
   rejecting them would discard real awards.
 - **R6** — Awardees that are **natural persons** and those that are **legal entities** are
   catalogued and reachable identically. The system does not classify which is which, because
-  the source does not publish that distinction (R12).
+  the source does not publish that distinction (R13).
 - **R7** — An operador exists exactly as long as it has at least one contract. When its last
   contract is removed — the explicit withdrawal of SPEC-0005 R13 — the operador **ceases to
   exist**, so its name and fiscal identifier survive nowhere in the system. This is what
-  makes an erasure obligation over the personal data of R11 dischargeable by acting on
+  makes an erasure obligation over the personal data of R12 dischargeable by acting on
   contracts alone.
 
 ### Finding an operador
@@ -115,30 +115,37 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
   family requires of it (for contratos menores, SPEC-0005 R7).
 - **R10** — A user can **filter** an operador's history **by year** and **sort** it by
   **date** or by **amount**, ascending or descending. Filtering, sorting, counting and
-  totalling apply to the whole selection, not only to the portion currently displayed.
+  totalling apply to the whole selection, not only to the page currently displayed.
+- **R11** — An operador's contract history and the operadores list of R8 are both
+  **paginated**: a user sees one page at a time, is told which page they are on and how many
+  pages the current selection has, and can move to the next or previous page or jump to a
+  chosen one. Every entry in the selection is reachable this way, and the counts and totals
+  of R9 describe the whole selection rather than the page on screen. Changing a filter or a
+  sort re-pages the selection from its first page, rather than leaving the user on a page
+  number that no longer means what it did.
 
 ### Non-functional expectations
 
-- **R11** — Where an operador is a natural person, its name and fiscal identifier are
+- **R12** — Where an operador is a natural person, its name and fiscal identifier are
   **personal data**, and this spec produces genuinely **new derived information** about
   identifiable people that the official source does not publish: R9 assembles into a single
   profile, with running totals, what the source publishes only as isolated per-Órgano
   entries, and R8 makes that profile **searchable by personal fiscal identifier**. Both go
   beyond the source, both are the capability's purpose, and both are acknowledged here
   rather than denied. The mitigations are that every read requires authentication (R1), that
-  no attribute is added beyond what the contracts state (R12 and the Scope exclusions), and
+  no attribute is added beyond what the contracts state (R13 and the Scope exclusions), and
   that R7 makes erasure reachable by removing the underlying contracts.
-- **R12** — Every value displayed about an operador — its name, its fiscal identifier, and
+- **R13** — Every value displayed about an operador — its name, its fiscal identifier, and
   every contract attribute in its history — is exactly as the official source published it,
   with no correction, normalisation, inference or enrichment from any other source. The
   matching equivalence of R3 governs comparison only, never display.
-- **R13** — The catalogue is expected to hold **hundreds of thousands of operadores** over
+- **R14** — The catalogue is expected to hold **hundreds of thousands of operadores** over
   **millions of contracts**, and stays responsive at that volume. Measured under the same
   dataset, environment and concurrency conditions SPEC-0005 R23 states: the operadores list
-  and an operador's contract history each return their first portion, their count and their
-  totals within **1 second at the 95th percentile**, and requesting a later portion of the
-  same selection meets the same budget. A user can move through the whole selection in
-  bounded portions; how those portions are presented is a feature's choice.
+  and an operador's contract history each return their first page, their count and their
+  totals within **1 second at the 95th percentile**, and a **deep** page — one far into a
+  selection of that size — meets the same budget as the first, because paging that degrades
+  with depth is the failure mode a naive implementation falls into at this volume.
 
 ## Acceptance criteria
 
@@ -150,7 +157,7 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
 3. **(R3)** Two contracts whose published fiscal identifiers differ only in surrounding
    whitespace or letter case yield **one** operador, not two, and its history contains both
    contracts.
-4. **(R3, R12)** Each contract row in an operador's history displays the fiscal identifier
+4. **(R3, R13)** Each contract row in an operador's history displays the fiscal identifier
    exactly as published for that contract, including padding and casing the system ignored
    when matching.
 5. **(R4)** Two contracts awarded to the same identifier under different published names
@@ -179,14 +186,19 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
     that year, and the reported count and total reflect that filtered selection rather than
     the whole history; clearing the filter restores both.
 14. **(R10)** Sorting by date returns contracts in date order and sorting by amount returns
-    them in amount order, in the chosen direction; the first portion after sorting descending
-    by amount contains the largest-amount contract of the **whole** filtered selection, not
-    merely the largest of the previously displayed portion.
-15. **(R11)** No operador profile, total, or identifier lookup is reachable without
+    them in amount order, in the chosen direction; the first page after sorting descending by
+    amount contains the largest-amount contract of the **whole** filtered selection, not
+    merely the largest of the page previously displayed.
+15. **(R11)** Both the operadores list and an operador's history are paginated: each states
+    how many entries the current selection contains and how many pages it spans, a user can
+    move to the next and previous page and jump to a chosen page, and paging through the
+    whole selection yields exactly that many entries with none repeated and none skipped.
+    Applying a filter or changing the sort returns the user to the first page.
+16. **(R12)** No operador profile, total, or identifier lookup is reachable without
     authentication.
-16. **(R12)** Every operador name, fiscal identifier and contract attribute displayed matches
+17. **(R13)** Every operador name, fiscal identifier and contract attribute displayed matches
     what the official source published, with no value corrected, normalised, inferred or
     enriched; no attribute is shown that no contract supplies.
-17. **(R13)** Under the stated conditions, the operadores list and an operador's history each
-    return their first portion, their count and their totals within 1 s at the 95th
-    percentile, and requesting a later portion of the same selection meets the same budget.
+18. **(R14)** Under the stated conditions, the operadores list and an operador's history each
+    return their first page, their count and their totals within 1 s at the 95th percentile,
+    and a deep page into a selection of that size meets the same budget as the first.
