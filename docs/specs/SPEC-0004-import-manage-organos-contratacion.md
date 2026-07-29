@@ -50,6 +50,9 @@ features.
 - **R4** — Each stored Órgano carries the attributes the source provides — its name —
   together with a stable identity by which the same Órgano is recognised across
   successive imports, and an active/inactive state (per R6).
+  > [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R4 adds one further
+  > administrator-managed attribute — whether the Órgano's contracts are imported —
+  > which R5 must preserve across re-imports exactly as it preserves taxonomy placement.
 
 ### Identity and reconciliation
 
@@ -69,6 +72,10 @@ features.
 - **R8** — Any authenticated user can view the stored catalogue: a list of all Órganos
   showing, for each, its name, its active/inactive state, and its current taxonomy
   placement (or that it is unclassified).
+  > This list is also a `USER`'s second route to an Órgano's contracts
+  > ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R14). The tree of R9 alone
+  > is not enough: R18 leaves every newly imported Órgano unclassified, so an Órgano can be
+  > imported and yet absent from the tree.
 - **R9** — Any authenticated user can browse the taxonomy as a navigable tree of category
   terms with the Órganos placed within each term, and select an Órgano from it — for
   example, to query contracts by that Órgano. For a `USER` this tree is read-only: it
