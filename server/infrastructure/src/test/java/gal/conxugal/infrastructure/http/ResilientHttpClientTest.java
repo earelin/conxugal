@@ -9,11 +9,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.core.exception.AcquirePermissionCancelledException;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.MutableHttpRequest;
 import io.micronaut.http.client.BlockingHttpClient;
 import io.micronaut.http.client.exceptions.HttpClientException;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
@@ -157,7 +159,7 @@ class ResilientHttpClientTest {
   @Test
   void an_open_circuit_surfaces_as_http_client_exception_and_is_not_retried() {
     when(delegate.exchange(any(HttpRequest.class), eq(byte[].class)))
-        .thenThrow(new HttpClientResponseException("Not Found", HttpResponse.notFound()));
+        .thenThrow(serviceUnavailable());
     ResilientHttpClient client =
         new ResilientHttpClient("breaker-opens", delegate, fastBreakerSettings());
 
@@ -172,6 +174,67 @@ class ResilientHttpClientTest {
         .hasCauseInstanceOf(CallNotPermittedException.class);
     verify(delegate, times(ResilientHttpClient.BREAKER_MINIMUM_NUMBER_OF_CALLS))
         .exchange(any(HttpRequest.class), eq(byte[].class));
+  }
+
+  @Test
+  void client_side_status_does_not_count_as_breaker_failure() {
+    when(delegate.exchange(any(HttpRequest.class), eq(byte[].class)))
+        .thenThrow(new HttpClientResponseException("Not Found", HttpResponse.notFound()))
+        .thenThrow(new HttpClientResponseException("Not Found", HttpResponse.notFound()))
+        .thenThrow(new HttpClientResponseException("Not Found", HttpResponse.notFound()))
+        .thenThrow(new HttpClientResponseException("Not Found", HttpResponse.notFound()))
+        .thenThrow(new HttpClientResponseException("Not Found", HttpResponse.notFound()))
+        .thenReturn(okResponse("ok"));
+    ResilientHttpClient client =
+        new ResilientHttpClient("client-error-breaker", delegate, fastBreakerSettings());
+
+    for (int i = 0; i < ResilientHttpClient.BREAKER_MINIMUM_NUMBER_OF_CALLS; i++) {
+      assertThatThrownBy(() -> exchangeOk(client)).isInstanceOf(HttpClientResponseException.class);
+    }
+
+    assertThat(exchangeOk(client)).isEqualTo("ok");
+  }
+
+  @Test
+  void non_standard_status_code_is_classified_without_crashing() {
+    HttpResponse<?> unknownStatus = HttpResponse.status(520, "Unknown Error");
+    when(delegate.exchange(any(HttpRequest.class), eq(byte[].class)))
+        .thenThrow(new HttpClientResponseException("Unknown Error", unknownStatus));
+    ResilientHttpClient client = new ResilientHttpClient("non-standard", delegate, fastSettings(3));
+
+    assertThatThrownBy(() -> exchangeOk(client)).isInstanceOf(HttpClientResponseException.class);
+    verify(delegate, times(1)).exchange(any(HttpRequest.class), eq(byte[].class));
+  }
+
+  @Test
+  void an_interrupted_permit_wait_surfaces_as_http_client_exception_and_is_not_retried() {
+    ResilientHttpClient client = new ResilientHttpClient("interrupted", delegate, fastSettings(3));
+    Thread.currentThread().interrupt();
+
+    try {
+      assertThatThrownBy(() -> exchangeOk(client))
+          .isInstanceOf(HttpClientException.class)
+          .hasCauseInstanceOf(AcquirePermissionCancelledException.class);
+      assertThat(Thread.currentThread().isInterrupted()).isTrue();
+    } finally {
+      Thread.interrupted();
+    }
+    verify(delegate, times(0)).exchange(any(HttpRequest.class), eq(byte[].class));
+  }
+
+  @Test
+  void reusing_the_same_request_does_not_duplicate_the_user_agent_header() {
+    when(delegate.exchange(any(HttpRequest.class), eq(byte[].class))).thenReturn(okResponse("ok"));
+    ResilientHttpClient client =
+        new ResilientHttpClient("user-agent-reuse", delegate, fastSettings(1));
+    MutableHttpRequest<?> request =
+        HttpRequest.GET("/organos").header(HttpHeaders.USER_AGENT, "caller-ua");
+
+    client.exchange(request, ResilientHttpClientTest::mapToBody, ok -> true);
+    client.exchange(request, ResilientHttpClientTest::mapToBody, ok -> true);
+
+    assertThat(request.getHeaders().getAll(HttpHeaders.USER_AGENT))
+        .containsExactly(ResilientHttpClient.USER_AGENT_VALUE);
   }
 
   @Test

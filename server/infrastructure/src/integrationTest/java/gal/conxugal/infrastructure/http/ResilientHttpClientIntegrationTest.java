@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
-import io.micronaut.http.client.BlockingHttpClient;
 import io.micronaut.http.client.HttpClient;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -14,8 +13,11 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -33,15 +35,24 @@ class ResilientHttpClientIntegrationTest {
   static WireMockContainer wireMock = new WireMockContainer(WireMockContainer.OFFICIAL_IMAGE_NAME);
 
   private final java.net.http.HttpClient adminClient = java.net.http.HttpClient.newHttpClient();
+  private final List<HttpClient> createdClients = new ArrayList<>();
 
   @BeforeEach
   void resetStubs() throws Exception {
-    adminClient.send(
-        java.net.http.HttpRequest.newBuilder(
-                URI.create("%s/__admin/reset".formatted(wireMock.getBaseUrl())))
-            .POST(java.net.http.HttpRequest.BodyPublishers.noBody())
-            .build(),
-        java.net.http.HttpResponse.BodyHandlers.discarding());
+    java.net.http.HttpResponse<Void> response =
+        adminClient.send(
+            java.net.http.HttpRequest.newBuilder(
+                    URI.create("%s/__admin/reset".formatted(wireMock.getBaseUrl())))
+                .POST(java.net.http.HttpRequest.BodyPublishers.noBody())
+                .build(),
+            java.net.http.HttpResponse.BodyHandlers.discarding());
+    assertThat(response.statusCode()).isEqualTo(200);
+  }
+
+  @AfterEach
+  void closeCreatedClients() {
+    createdClients.forEach(HttpClient::close);
+    createdClients.clear();
   }
 
   @Test
@@ -145,6 +156,32 @@ class ResilientHttpClientIntegrationTest {
   }
 
   @Test
+  void pacing_holds_across_retried_attempts_as_well_as_the_first_attempt() throws Exception {
+    stubStatusThenSuccess("pacing-retry", 503);
+    ResilientHttpClientSettings settings =
+        new FixedResilientHttpClientSettings(
+            wireMock.getBaseUrl(),
+            Duration.ofSeconds(2),
+            Duration.ofSeconds(2),
+            Duration.ofSeconds(1),
+            Duration.ofSeconds(3),
+            1,
+            2,
+            Duration.ofMillis(10),
+            Duration.ofSeconds(5),
+            50,
+            Duration.ofSeconds(5));
+    ResilientHttpClient client = client(settings);
+
+    Instant start = Instant.now();
+    String result = client.exchange(HttpRequest.GET(PATH), this::mapToBody, body -> true);
+    Duration elapsed = Duration.between(start, Instant.now());
+
+    assertThat(result).isEqualTo("ok");
+    assertThat(elapsed).isGreaterThanOrEqualTo(Duration.ofSeconds(1));
+  }
+
+  @Test
   void every_outgoing_request_carries_the_identifying_user_agent() throws Exception {
     stubAlwaysOk();
     ResilientHttpClient client = client(fastSettings());
@@ -158,10 +195,12 @@ class ResilientHttpClientIntegrationTest {
     return new String(response.body(), StandardCharsets.UTF_8);
   }
 
+  // Closed in closeCreatedClients() via the createdClients registry, not here.
+  @SuppressWarnings("PMD.CloseResource")
   private ResilientHttpClient client(ResilientHttpClientSettings settings) throws Exception {
-    BlockingHttpClient blockingHttpClient =
-        HttpClient.create(URI.create(wireMock.getBaseUrl()).toURL()).toBlocking();
-    return new ResilientHttpClient("wiremock-test", blockingHttpClient, settings);
+    HttpClient rawClient = HttpClient.create(URI.create(wireMock.getBaseUrl()).toURL());
+    createdClients.add(rawClient);
+    return new ResilientHttpClient("wiremock-test", rawClient.toBlocking(), settings);
   }
 
   private ResilientHttpClientSettings fastSettings() {
@@ -267,13 +306,15 @@ class ResilientHttpClientIntegrationTest {
   }
 
   private void registerMapping(String mappingJson) throws Exception {
-    adminClient.send(
-        java.net.http.HttpRequest.newBuilder(
-                URI.create("%s/__admin/mappings".formatted(wireMock.getBaseUrl())))
-            .POST(java.net.http.HttpRequest.BodyPublishers.ofString(mappingJson))
-            .header("Content-Type", "application/json")
-            .build(),
-        java.net.http.HttpResponse.BodyHandlers.discarding());
+    java.net.http.HttpResponse<String> response =
+        adminClient.send(
+            java.net.http.HttpRequest.newBuilder(
+                    URI.create("%s/__admin/mappings".formatted(wireMock.getBaseUrl())))
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(mappingJson))
+                .header("Content-Type", "application/json")
+                .build(),
+            java.net.http.HttpResponse.BodyHandlers.ofString());
+    assertThat(response.statusCode()).isEqualTo(201);
   }
 
   private int recordedRequestCount() throws Exception {
