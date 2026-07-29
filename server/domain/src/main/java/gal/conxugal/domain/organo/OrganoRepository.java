@@ -2,7 +2,6 @@ package gal.conxugal.domain.organo;
 
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.Insert;
-import io.micronaut.data.annotation.Query;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +17,10 @@ import org.jspecify.annotations.Nullable;
  */
 public interface OrganoRepository {
 
+  /**
+   * Every Órgano, ordered by name. The order is part of this port's own contract, not the
+   * adapter's private choice: the catalogue read endpoint serves this list verbatim.
+   */
   List<OrganoDeContratacion> findAll();
 
   List<OrganoDeContratacion> findAllBySourceKeyIn(Collection<String> sourceKeys);
@@ -37,9 +40,9 @@ public interface OrganoRepository {
   void updateTermo(@Id UUID id, @Nullable UUID termoId);
 
   /**
-   * Clears every Órgano's placement pointing at the given term. Explicit {@code @Query}
-   * because matching and clearing the same column has no derived-method form.
+   * Clears every Órgano's placement pointing at the given term. Matching and clearing the
+   * same column has no derived-method form, so the {@code infrastructure} implementation
+   * backs this with an explicit query — the SQL itself stays out of {@code domain}.
    */
-  @Query("UPDATE organo_contratacion SET termo_id = NULL WHERE termo_id = :termoId")
   void clearPlacementsByTermo(UUID termoId);
 }

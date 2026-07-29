@@ -83,8 +83,8 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
 
   @Test
   void foreign_keys_carry_no_on_delete_action() throws Exception {
-    assertThat(deleteRulesFor("termo")).containsOnly("NO ACTION");
-    assertThat(deleteRulesFor("organo_contratacion")).containsOnly("NO ACTION");
+    assertThat(deleteRulesFor("termo", "parent_id")).containsOnly("NO ACTION");
+    assertThat(deleteRulesFor("organo_contratacion", "termo_id")).containsOnly("NO ACTION");
   }
 
   @Test
@@ -93,7 +93,7 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
     insertTermo("Fútbol", parentId);
 
     assertThatThrownBy(() -> insertTermo("Fútbol", parentId))
-        .isInstanceOf(SQLException.class);
+        .isInstanceOfSatisfying(SQLException.class, this::assertViolatesSiblingNameIndex);
   }
 
   @Test
@@ -101,7 +101,7 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
     insertTermo("Deportes", null);
 
     assertThatThrownBy(() -> insertTermo("Deportes", null))
-        .isInstanceOf(SQLException.class);
+        .isInstanceOfSatisfying(SQLException.class, this::assertViolatesSiblingNameIndex);
   }
 
   @Test
@@ -110,7 +110,14 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
     insertTermo("Fútbol", parentId);
 
     assertThatThrownBy(() -> insertTermo("FÚTBOL", parentId))
-        .isInstanceOf(SQLException.class);
+        .isInstanceOfSatisfying(SQLException.class, this::assertViolatesSiblingNameIndex);
+  }
+
+  private void assertViolatesSiblingNameIndex(SQLException exception) {
+    // SQLSTATE 23505 is unique_violation; pinning the constraint name too rules out a
+    // coincidental different constraint (e.g. the primary key) failing for the wrong reason.
+    assertThat(exception.getSQLState()).isEqualTo("23505");
+    assertThat(exception.getMessage()).contains("termo_sibling_name_key");
   }
 
   @Test
@@ -124,19 +131,24 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
     assertThat(secondId).isNotNull();
   }
 
-  private List<String> deleteRulesFor(String tableName) throws Exception {
+  private List<String> deleteRulesFor(String tableName, String columnName) throws Exception {
     String sql =
         """
         SELECT rc.delete_rule
         FROM information_schema.table_constraints tc
         JOIN information_schema.referential_constraints rc
           ON tc.constraint_name = rc.constraint_name
-        WHERE tc.table_name = ? AND tc.constraint_type = 'FOREIGN KEY'
+          AND tc.constraint_schema = rc.constraint_schema
+        JOIN information_schema.key_column_usage kcu
+          ON kcu.constraint_name = tc.constraint_name
+          AND kcu.constraint_schema = tc.constraint_schema
+        WHERE tc.table_name = ? AND tc.constraint_type = 'FOREIGN KEY' AND kcu.column_name = ?
         """;
     List<String> rules = new ArrayList<>();
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, tableName);
+      statement.setString(2, columnName);
       try (ResultSet resultSet = statement.executeQuery()) {
         while (resultSet.next()) {
           rules.add(resultSet.getString("delete_rule"));
@@ -168,6 +180,8 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
     } catch (SQLException e) {
       try (Connection connection = dataSource.getConnection()) {
         connection.rollback();
+      } catch (SQLException rollbackException) {
+        e.addSuppressed(rollbackException);
       }
       throw e;
     }

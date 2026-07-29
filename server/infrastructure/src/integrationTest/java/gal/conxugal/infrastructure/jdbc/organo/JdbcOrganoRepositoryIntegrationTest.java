@@ -237,6 +237,41 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(organoRepository.findById(created.id()).orElseThrow().termoId()).isNull();
   }
 
+  @Test
+  void updateTermo_sets_then_replaces_then_clears_the_placement() throws Exception {
+    UUID firstTermo = insertTermo("Deportes", null);
+    UUID secondTermo = insertTermo("Cultura", null);
+    UUID id = insertOrgano("consorcio-x", "Consorcio X", true);
+
+    organoRepository.updateTermo(id, firstTermo);
+    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isEqualTo(firstTermo);
+
+    organoRepository.updateTermo(id, secondTermo);
+    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isEqualTo(secondTermo);
+
+    organoRepository.updateTermo(id, null);
+    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isNull();
+  }
+
+  @Test
+  void clearPlacementsByTermo_clears_only_rows_placed_in_that_term() throws Exception {
+    UUID termoId = insertTermo("Deportes", null);
+    UUID otherTermoId = insertTermo("Cultura", null);
+    UUID placedId = insertOrgano("consorcio-x", "Consorcio X", true, termoId);
+    UUID placedElsewhereId = insertOrgano("axencia-y", "Axencia Y", true, otherTermoId);
+
+    organoRepository.clearPlacementsByTermo(termoId);
+
+    assertThat(organoRepository.findById(placedId).orElseThrow().termoId()).isNull();
+    assertThat(organoRepository.findById(placedElsewhereId).orElseThrow().termoId())
+        .isEqualTo(otherTermoId);
+  }
+
+  // Neither helper below commits or rolls back: every test here only expects successful
+  // inserts, and the injected DataSource's shared connection lets the repository calls
+  // under test see these uncommitted writes within the same transaction. Contrast
+  // TermoMigrationIntegrationTest's insertTermo, which does commit/rollback because
+  // several of its tests deliberately trigger a constraint violation.
   private UUID insertOrgano(String sourceKey, String name, boolean active) throws Exception {
     return insertOrgano(sourceKey, name, active, null);
   }

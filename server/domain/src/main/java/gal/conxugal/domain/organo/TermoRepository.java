@@ -25,10 +25,10 @@ public interface TermoRepository {
   Termo insert(Termo termo);
 
   /** Renames an existing term in place. */
-  void rename(@Id UUID id, String name);
+  void updateName(@Id UUID id, String name);
 
   /** Re-parents an existing term; a null {@code parentId} moves it to the root. */
-  void reparent(@Id UUID id, @Nullable UUID parentId);
+  void updateParentId(@Id UUID id, @Nullable UUID parentId);
 
   void deleteById(UUID id);
 
@@ -38,7 +38,9 @@ public interface TermoRepository {
   /**
    * Every term whose parent is the given id. A null {@code parentId} is a legal argument
    * and returns the roots — what the sibling-name rule needs to check roots against each
-   * other too.
+   * other too. A bare derived query binds {@code parent_id = :parentId}, which never
+   * matches when the argument is null; the {@code infrastructure} implementation must use
+   * an explicit {@code parent_id IS NOT DISTINCT FROM :parentId} query instead.
    */
   List<Termo> findByParentId(@Nullable UUID parentId);
 
