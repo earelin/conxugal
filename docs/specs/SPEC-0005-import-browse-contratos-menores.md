@@ -32,12 +32,13 @@ This spec delivers the contratos menores family only; licitacións are a separat
 spec that fills the other side of the same split. Within contratos menores a user filters
 by **year** and sorts by **date** or **amount**.
 
-Because every contrato menor names its awardee together with a fiscal identifier, the
-system also builds a catalogue of **operadores económicos** — the parties that hold these
-contracts. Each operador has its own place in the application where its contract history is
-visible across all Órganos. That cross-Órgano view is the point of the capability: the
-source publishes each Órgano's awards in isolation, so the accumulation of minor contracts
-to one supplier is invisible until someone assembles it.
+Every contrato menor names its awardee together with a fiscal identifier. The catalogue of
+**operadores económicos** built from those awardees, and the cross-Órgano contract history
+each one carries, are specified separately in
+[SPEC-0006](SPEC-0006-operadores-economicos.md): they are fed by every contract family, not
+only this one, so they outlive this spec. What this spec owes SPEC-0006 is the awardee data
+on each stored contract (R7) and the removal rule that keeps a derived operador honest
+(R13).
 
 This spec consumes the Órgano catalogue of SPEC-0004 — it is the first consumer of that
 spec's `USER`-facing taxonomy tree, and it adds one administrator-managed attribute to each
@@ -72,14 +73,13 @@ available for contratos menores, which is materially less than for licitacións:
 
 ## Scope
 
-**Operadores económicos are owned here permanently.** R19–R21 are deliberately written
-family-neutrally: when the licitacións spec lands it extends the same operador catalogue and
-the same contract history rather than defining its own, and cites this spec for that
-behaviour. The title of this spec names the family it *imports*, not the limit of what it
-owns.
-
 Deliberately **out of scope**, each owned elsewhere or by a later spec:
 
+- **Operadores económicos** — the catalogue of awardees, their identity rules, how a user
+  finds one, and the cross-Órgano contract history they carry — belong to
+  [SPEC-0006](SPEC-0006-operadores-economicos.md). They are derived from the contracts of
+  **every** family, so they are not this spec's to own; this spec supplies the awardee data
+  they are derived from.
 - **Licitacións.** This spec establishes the contract-family split and fills only the
   contratos menores side. Requirements are worded so the licitacións spec adds data without
   invalidating anything here.
@@ -103,9 +103,9 @@ recorded as ADRs before the features that would otherwise settle them silently:
 
 1. **How reads are paged over millions of rows** — FEAT-0007 explicitly declined to bind
    this, noting that the contract-querying feature's "volumes are a different order of
-   magnitude". R26 states the budget, not the mechanism.
+   magnitude". R23 states the budget, not the mechanism.
 2. **How a long-running, resumable import job holds its state** — required by R9 and R10.
-3. **The per-source concurrency and pacing model** — R24 and R27 state obligations;
+3. **The per-source concurrency and pacing model** — R21 and R24 state obligations;
    [ADR-0014](../architecture/0014-resilient-throttled-outbound-http-client.md) owns the
    bound and makes it configurable per source. This spec must not harden it.
 
@@ -114,14 +114,13 @@ recorded as ADRs before the features that would otherwise settle them silently:
 ### Access
 
 - **R1** — **Managing** contratos menores is reachable only by users with the `ADMIN` role:
-  selecting which Órganos are imported (R3–R5), triggering an import (R22), requesting a
+  selecting which Órganos are imported (R3–R5), triggering an import (R19), requesting a
   full historical re-read (R10), and removing or restoring a contract (R13). A `USER` or an
   unauthenticated visitor who attempts any of these is denied (consistent with SPEC-0003
   R1).
-- **R2** — **Reading** contratos menores (R14–R18) and operadores económicos with their
-  contract history (R19–R21) is available to any authenticated user, `USER` or `ADMIN`.
-  These reads grant no ability to modify anything. An unauthenticated visitor is denied —
-  which is also the mitigation R28 relies on.
+- **R2** — **Reading** contratos menores (R14–R18) is available to any authenticated user,
+  `USER` or `ADMIN`. These reads grant no ability to modify anything. An unauthenticated
+  visitor is denied — which is also the mitigation R25 relies on.
 
 ### Selecting which Órganos are imported
 
@@ -153,16 +152,18 @@ recorded as ADRs before the features that would otherwise settle them silently:
   independently of the source thereafter.
 - **R7** — Each stored contrato menor carries the attributes the source publishes — the
   Órgano that awarded it, its **publication date**, its object, its amount, its stated
-  duration, and its awardee — together with a stable identity by which the same contract is
-  recognised across successive imports. The amount is the published figure **including
-  VAT**, and is labelled as such wherever it or any total derived from it is shown: the
-  legal thresholds that define a contrato menor are VAT-exclusive, so an unlabelled figure
-  invites exactly the wrong comparison.
+  duration, and its **awardee's name and fiscal identifier** — together with a stable
+  identity by which the same contract is recognised across successive imports. The awardee
+  attributes are what SPEC-0006 derives its catalogue from, and are stored whether or not
+  they yield an operador there. The amount is the published figure **including VAT**, and is
+  labelled as such wherever it or any total derived from it is shown: the legal thresholds
+  that define a contrato menor are VAT-exclusive, so an unlabelled figure invites exactly
+  the wrong comparison.
 - **R8** — Routine importing of an Órgano happens in two modes:
   - an **initial import**, run once when the Órgano is marked (R4), which loads its **full
     published history** — every contrato menor the source holds for it, not only recent
     ones;
-  - thereafter **incremental imports**, run by the scheduler (R23) or on demand (R22), which
+  - thereafter **incremental imports**, run by the scheduler (R20) or on demand (R19), which
     re-read a **recent window** of publication dates rather than the whole history.
 
   The window is what makes R11's refresh achievable: the source offers no "changed since"
@@ -198,10 +199,10 @@ recorded as ADRs before the features that would otherwise settle them silently:
   and a later import that still finds it published does **not** re-add it (which R11 would
   otherwise do). An administrator can restore a removal made in error. Removal is never
   automatic, and it is not the mechanism for a *rectified* publication — a correction inside
-  R8's window is refreshed in place by R11, and one outside it is reached by R10.
-  Removing the last contract of an operador económico removes that operador with it, so no
-  personal data survives the contracts it was derived from; this is how an erasure
-  obligation over the data of R28 is discharged.
+  R8's window is refreshed in place by R11, and one outside it is reached by R10. Because
+  SPEC-0006 derives its catalogue from these contracts, a removal here propagates there
+  under SPEC-0006 R7: an operador left with no contracts ceases to exist, so no awardee
+  data survives the contracts it came from.
 
 ### Finding and browsing contracts
 
@@ -237,113 +238,75 @@ recorded as ADRs before the features that would otherwise settle them silently:
   counting apply to the whole selection, not only to the portion currently displayed. No CPV
   filter is offered, because the source publishes no CPV for contratos menores.
 
-### Operadores económicos
-
-- **R19** — The system maintains a catalogue of **operadores económicos** — the parties
-  awarded the contracts the system holds — derived from those contracts, with no separate
-  import. An operador is identified by the **fiscal identifier** published with the award.
-  Awardees are **not all companies**: a significant share are natural persons published with
-  a personal fiscal identifier, and both are catalogued and reachable identically. Three
-  properties of real published data must be handled rather than assumed away:
-  - **Identifier matching.** The source publishes identifiers with inconsistent padding and
-    casing. Two awards match when their identifiers are equal ignoring surrounding
-    whitespace and letter case. This equivalence governs **matching only** — what is
-    displayed is always the value as published (R29). Without it the same operador splits in
-    two and the cross-Órgano aggregation this catalogue exists for silently fails.
-  - **Name variance.** The same identifier is published under varying names; since R29
-    forbids normalising them, the operador is shown under the name from its **most recently
-    published contract** (ties broken by the contract identifier), and name variation never
-    produces a second operador.
-  - **Unusable identifiers.** An identifier is **unusable** when it is absent, or empty once
-    surrounding whitespace is ignored. A contract published with an unusable identifier is
-    still imported and browsable under its Órgano, and is attributed to **no** operador
-    rather than to an invented or placeholder one. Nothing beyond that emptiness test is
-    validated: the source publishes irregular but genuine identifiers, and rejecting them
-    would discard real awards.
-- **R20** — A user can reach an operador económico in two ways: by following the awardee
-  from any contract row, and from a **list of operadores** that can be looked up by name or
-  by fiscal identifier. Name lookup matches on any part of the name, ignoring letter case
-  and accents; identifier lookup matches the whole identifier under the equivalence of R19.
-  Without the list, the primary question the capability exists to answer — *what has this
-  supplier been awarded?* — could only be asked by first stumbling onto one of its
-  contracts.
-- **R21** — Opening an operador económico shows its **contract history**: every contract
-  awarded to it **across all Órganos**, with the awarding Órgano shown per contract, plus
-  the number of contracts and the total amount awarded **for the current selection**. The
-  history is filterable and sortable exactly as R18 requires of the Órgano list.
-
 ### Triggering imports
 
-- **R22** — An administrator can trigger an import on demand. The trigger states its
+- **R19** — An administrator can trigger an import on demand. The trigger states its
   **scope** — every marked, active Órgano, or one chosen Órgano — and runs each covered
   Órgano in the mode R8 dictates for it: initial if its history has never been loaded,
   incremental otherwise. The administrator is shown the outcome: whether it succeeded, how
-  many Órganos were covered, how many contracts were added and refreshed, and how many
-  operadores económicos are newly known.
-- **R23** — The system runs incremental imports automatically on a recurring schedule,
+  many Órganos were covered, and how many contracts were added and refreshed.
+- **R20** — The system runs incremental imports automatically on a recurring schedule,
   without any human trigger, so newly published contracts appear without administrator
   action. The scheduler covers every Órgano selected under R3 whose initial import has
   completed, and resumes (R9) any whose initial import is incomplete.
-- **R24** — Concurrency is bounded **per Órgano**, not globally: no Órgano is imported by two
+- **R21** — Concurrency is bounded **per Órgano**, not globally: no Órgano is imported by two
   runs at once, but a long-running initial or historical re-read of one Órgano must **not
   indefinitely delay** scheduled incremental imports of the others — every marked Órgano
   whose initial import has completed continues to be brought up to date on a bounded
   cadence while the long run proceeds. A global lock would be unworkable: an initial import
   of a large Órgano runs for far longer than the scheduler's interval, so it would stall
   every other Órgano indefinitely.
-- **R25** — An import is resilient to source failure: if the source is unreachable or
-  returns an unusable response, the contracts already stored, and the operadores derived
-  from them, remain intact and consistent — no partial wipe — and the failure is reported to
-  the administrator (for a manual run) or otherwise recorded. Failure while importing one
-  Órgano does not discard contracts already imported for other Órganos in the same run, nor
-  prevent the remaining Órganos from being imported.
+- **R22** — An import is resilient to source failure: if the source is unreachable or
+  returns an unusable response, the contracts already stored remain intact and consistent —
+  no partial wipe — and the failure is reported to the administrator (for a manual run) or
+  otherwise recorded. Failure while importing one Órgano does not discard contracts already
+  imported for other Órganos in the same run, nor prevent the remaining Órganos from being
+  imported.
 
-> R22–R25 restate SPEC-0004 R10–R13 with contracts in place of Órganos, and **two deliberate
-> divergences**: SPEC-0004 R12's single-run guard is global, whereas R24 here is per-Órgano;
-> and SPEC-0004 R13 makes an import strictly all-or-nothing, whereas R25 is per-Órgano.
+> R19–R22 restate SPEC-0004 R10–R13 with contracts in place of Órganos, and **two deliberate
+> divergences**: SPEC-0004 R12's single-run guard is global, whereas R21 here is per-Órgano;
+> and SPEC-0004 R13 makes an import strictly all-or-nothing, whereas R22 is per-Órgano.
 > Neither is a copy-paste slip — a run spanning many Órganos and millions of records can
 > neither be serialised behind one lock nor discarded in full because one Órgano failed.
 
 ### Non-functional expectations
 
-- **R26** — The stored dataset is expected to reach **millions of contracts**, and browsing
+- **R23** — The stored dataset is expected to reach **millions of contracts**, and browsing
   stays responsive at that volume. Measured on the deployment's target environment, with at
   least **5 000 000** stored contracts of which at least **1 500 000** belong to a single
-  Órgano, and under at least **10 concurrent readers**: an Órgano's contract list, an
-  operador's history, and the operadores list of R20 each return their first portion, their
-  count, and any totals they display within **1 second at the 95th percentile**, and
-  requesting a later portion of the same selection meets the same budget. A user can move
-  through the whole selection in bounded portions; how those portions are presented is a
-  feature's choice.
-- **R27** — The import is **courteous to the public source**: across everything the system
+  Órgano, and under at least **10 concurrent readers**: an Órgano's contract list returns
+  its first portion, its count, and any totals it displays within **1 second at the 95th
+  percentile**, and requesting a later portion of the same selection meets the same budget.
+  A user can move through the whole selection in bounded portions; how those portions are
+  presented is a feature's choice.
+- **R24** — The import is **courteous to the public source**: across everything the system
   retrieves — this spec's imports and SPEC-0004's catalogue import alike — its total request
   rate stays within a budget that keeps it a negligible load on a public service, and it
   never fetches as fast as it can. The concurrency bound and the interval are configured per
   source and decided outside this spec; this requirement fixes the obligation, not the
   number. It binds every mode, and binds most sharply during an initial import or a
   historical re-read, which are the largest bursts of traffic the system ever produces.
-- **R28** — Where the awardee is a natural person, the fiscal identifier and name are
-  **personal data**, and the system produces genuinely **new derived information** about
-  them that the source does not publish: R21 assembles into one profile, with running
-  totals, what the source publishes only as isolated per-Órgano entries, and R20 makes that
-  profile **searchable by personal fiscal identifier**. Both go beyond the source, both are
-  the capability's purpose, and both are acknowledged rather than denied. The mitigations
-  are that every read requires authentication (R2), and that removal under R13 takes the
-  derived operador with the contracts it came from.
-- **R29** — Published values are stored and displayed **as published**, with no correction,
-  normalisation or inference, and enriched from no other source — the matching equivalence
-  of R19 governs comparison only, never display. In particular the stated duration, which
-  the source frequently publishes as a per-Órgano default rather than a per-contract value,
-  is shown **with an indication that it is unreliable**, so a user is not invited to read it
-  as a real contract term.
+- **R25** — Where the awardee is a natural person, the name and fiscal identifier on a
+  contract are **personal data**. At the level this spec owns — a contract row — the system
+  reproduces exactly what the official source already publishes about that award and adds
+  nothing, and every read requires authentication (R2). The genuinely new derived
+  information the system produces about an awardee — aggregating their awards across
+  Órganos and making them searchable by identifier — is created by
+  [SPEC-0006](SPEC-0006-operadores-economicos.md) and acknowledged there, along with the
+  erasure route R13 feeds.
+- **R26** — Published values are stored and displayed **as published**, with no correction,
+  normalisation or inference, and enriched from no other source. In particular the stated
+  duration, which the source frequently publishes as a per-Órgano default rather than a
+  per-contract value, is shown **with an indication that it is unreliable**, so a user is not
+  invited to read it as a real contract term.
 
 ## Acceptance criteria
 
 1. **(R1)** A `USER` or an unauthenticated visitor that attempts to mark or unmark an Órgano
    for import, trigger an import, request a full historical re-read, or remove or restore a
    contract is denied; an authenticated `ADMIN` is allowed.
-2. **(R2)** An authenticated `USER` can view an Órgano's contratos menores and an operador
-   económico's contract history; an unauthenticated visitor that requests either is denied.
+2. **(R2)** An authenticated `USER` can view an Órgano's contratos menores; an
+   unauthenticated visitor that requests them is denied.
 3. **(R3)** After an import run, an Órgano that is active but **unmarked**, and an Órgano
    that is marked but **inactive**, both have no contratos menores stored from that run;
    only Órganos that are active **and** marked do.
@@ -366,30 +329,30 @@ recorded as ADRs before the features that would otherwise settle them silently:
    system holds — with no per-contract screen to open for further data.
 10. **(R7)** Every displayed amount, and every total derived from amounts, is labelled as
     including VAT.
-11. **(R8)** An Órgano's initial import yields contracts published in years before the
+11. **(R7)** A contract whose published awardee data yields no operador under SPEC-0006 R5
+    still stores and displays that awardee's name and fiscal identifier as published.
+12. **(R8)** An Órgano's initial import yields contracts published in years before the
     current one, not only recent ones.
-12. **(R8)** A scheduled import of an Órgano whose initial import has completed re-reads only
+13. **(R8)** A scheduled import of an Órgano whose initial import has completed re-reads only
     a recent window, not the whole history, and picks up a correction published inside that
     window. An Órgano whose initial import has not completed is not treated as up to date by
     the scheduler.
-13. **(R9)** An initial import interrupted part-way retains the contracts it already stored,
+14. **(R9)** An initial import interrupted part-way retains the contracts it already stored,
     and is resumed to completion **without an administrator having to intervene**; an
     administrator can also resume it on demand. Resumption adds no duplicates. While it runs,
     an administrator can see that it is in progress and how far it has got.
-14. **(R10)** An administrator can request a full historical re-read of an already-loaded
+15. **(R10)** An administrator can request a full historical re-read of an already-loaded
     Órgano; a correction to a publication **older** than the incremental window is picked up
     by that re-read and by no routine run, and the re-read creates no duplicates.
-15. **(R11)** Re-importing after a contract's published attributes change updates that
+16. **(R11)** Re-importing after a contract's published attributes change updates that
     contract in place: its identity is unchanged and the refreshed attributes are shown.
-16. **(R12)** Running two imports of the same published contracts in succession yields the
+17. **(R12)** Running two imports of the same published contracts in succession yields the
     same stored set with no duplicates and no attribute changes; a contract stored by an
     earlier import that is absent from a later import's results is still present and
     unchanged afterwards.
-17. **(R13)** An administrator can remove a stored contract, after which it appears in no
+18. **(R13)** An administrator can remove a stored contract, after which it appears in no
     Órgano list and no operador history; a subsequent import that still finds it published
     does not re-add it; and an administrator can restore it.
-18. **(R13)** Removing the last remaining contract of an operador económico removes that
-    operador, so its name and fiscal identifier are no longer reachable anywhere.
 19. **(R14)** A `USER` reaches an Órgano's contracts by browsing the taxonomy tree and
     selecting an Órgano from it; that tree offers the `USER` no control to create, rename,
     move, delete or reassign anything. *(Also satisfies SPEC-0004 #9 and the deferred half
@@ -416,51 +379,29 @@ recorded as ADRs before the features that would otherwise settle them silently:
     amount returns them in amount order, in the chosen direction; the first portion after
     sorting descending by amount contains the largest-amount contract of the **whole**
     filtered selection, not merely the largest of the previously displayed portion.
-27. **(R19)** Two contracts whose published fiscal identifiers differ only in surrounding
-    whitespace or letter case yield **one** operador, not two — even when the published names
-    differ — and the name shown is the one from the most recently published of them, while
-    each contract row still displays its own identifier exactly as published.
-28. **(R19)** An awardee published as a natural person with a personal fiscal identifier is
-    catalogued as an operador económico in the same way as a legal entity, and is reachable
-    through the same views.
-29. **(R19)** A contract published with an absent or whitespace-only fiscal identifier is
-    imported and appears in its Órgano's list, attached to no operador and creating no
-    placeholder operador; a contract with an irregular but non-empty identifier **is**
-    attached to an operador rather than rejected.
-30. **(R20)** A user can reach an operador by following the awardee from a contract row, and
-    can find it from the operadores list by a partial, case- and accent-insensitive fragment
-    of its name, and by its full fiscal identifier.
-31. **(R21)** Opening an operador económico shows every contract awarded to it across **more
-    than one** Órgano, with the awarding Órgano shown per contract, and reports the number of
-    contracts and the total amount awarded; with a year filter applied, both figures reflect
-    the filtered selection and equal the sum over the listed contracts.
-32. **(R21)** An operador's history can be filtered by year and sorted by publication date or
-    amount, with the same behaviour criteria 25 and 26 require of the Órgano list.
-33. **(R22)** An administrator can trigger an import scoped to all marked Órganos and one
+27. **(R19)** An administrator can trigger an import scoped to all marked Órganos and one
     scoped to a single Órgano; each covered Órgano runs initially if its history was never
     loaded and incrementally otherwise, and the reported outcome states success, Órganos
-    covered, contracts added and refreshed, and operadores newly known.
-34. **(R23)** With no human trigger, the scheduler runs and contracts published since the
+    covered, and contracts added and refreshed.
+28. **(R20)** With no human trigger, the scheduler runs and contracts published since the
     previous run become browsable for every marked, active, initially-imported Órgano.
-35. **(R24)** A second run for an Órgano already being imported does not start; meanwhile,
+29. **(R21)** A second run for an Órgano already being imported does not start; meanwhile,
     while a multi-hour initial import of one Órgano is running, scheduled incremental imports
     of other Órganos start and complete on their normal cadence rather than waiting for it.
-36. **(R25)** When the source is unreachable or returns an unusable response for one Órgano,
+30. **(R22)** When the source is unreachable or returns an unusable response for one Órgano,
     the import reports failure for it, contracts already stored are unchanged, contracts
     imported for Órganos processed earlier in the same run are retained, and the remaining
     marked Órganos are still imported.
-37. **(R26)** Under the stated dataset, environment and concurrency conditions, an Órgano's
-    contract list, an operador's history, and the operadores list each return their first
-    portion, their count and their totals within 1 s at the 95th percentile, and requesting a
-    later portion of the same selection meets the same budget.
-38. **(R27)** Across a period covering an initial import, a historical re-read and scheduled
+31. **(R23)** Under the stated dataset, environment and concurrency conditions, an Órgano's
+    contract list returns its first portion, its count and its totals within 1 s at the 95th
+    percentile, and requesting a later portion of the same selection meets the same budget.
+32. **(R24)** Across a period covering an initial import, a historical re-read and scheduled
     incremental runs, the system's request rate against the source stays within the
     configured budget, and no mode exceeds it.
-39. **(R28)** No operador's history, totals, or identifier lookup is reachable without
-    authentication.
-40. **(R29)** Every awardee name, fiscal identifier, amount and duration displayed matches
-    what the official source publishes for that contract — including identifiers whose
-    padding or casing the system ignored when matching — with no value corrected, normalised,
-    inferred, or enriched from elsewhere.
-41. **(R29)** A displayed duration is accompanied by an indication that the source frequently
+33. **(R25)** No contract list is reachable without authentication, and every awardee name
+    and fiscal identifier on a contract row matches what the official source publishes for
+    that award.
+34. **(R26)** Every value displayed matches what the official source publishes for that
+    contract, with no value corrected, normalised, inferred, or enriched from elsewhere.
+35. **(R26)** A displayed duration is accompanied by an indication that the source frequently
     publishes a per-Órgano default rather than a per-contract value.
