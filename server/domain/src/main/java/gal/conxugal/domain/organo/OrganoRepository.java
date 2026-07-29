@@ -21,7 +21,7 @@ public interface OrganoRepository {
    * Every Órgano, ordered by name. The order is part of this port's own contract, not the
    * adapter's private choice: the catalogue read endpoint serves this list verbatim.
    */
-  List<OrganoDeContratacion> findAll();
+  List<OrganoDeContratacion> findAllOrderByName();
 
   List<OrganoDeContratacion> findAllBySourceKeyIn(Collection<String> sourceKeys);
 

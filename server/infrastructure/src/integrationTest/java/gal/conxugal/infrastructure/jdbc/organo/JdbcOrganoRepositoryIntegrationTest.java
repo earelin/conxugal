@@ -71,7 +71,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     insertOrgano("consorcio-x", "Consorcio X", true);
     insertOrgano("axencia-y", "Axencia Y", false);
 
-    List<OrganoDeContratacion> organos = organoRepository.findAll();
+    List<OrganoDeContratacion> organos = organoRepository.findAllOrderByName();
 
     assertThat(organos)
         .extracting(
@@ -103,7 +103,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     OrganoDeContratacion created = organoRepository.insert(newOrgano);
 
     assertThat(created.id()).isNotNull();
-    assertThat(organoRepository.findAll())
+    assertThat(organoRepository.findAllOrderByName())
         .extracting(OrganoDeContratacion::sourceKey, OrganoDeContratacion::active)
         .containsExactly(tuple("consorcio-x", true));
   }
@@ -221,7 +221,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     insertOrgano("consorcio-x", "Consorcio X", true, termoId);
     insertOrgano("axencia-y", "Axencia Y", true, null);
 
-    List<OrganoDeContratacion> organos = organoRepository.findAll();
+    List<OrganoDeContratacion> organos = organoRepository.findAllOrderByName();
 
     assertThat(organos)
         .extracting(OrganoDeContratacion::sourceKey, OrganoDeContratacion::termoId)

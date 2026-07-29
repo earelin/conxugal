@@ -106,7 +106,7 @@ class ImportOrganosAtomicityIntegrationTest implements TestPropertyProvider {
     Exception failure = runOnItsOwnThread(importOrganos::run);
 
     assertThat(failure).isInstanceOf(RuntimeException.class);
-    List<OrganoDeContratacion> organos = organoRepository.findAll();
+    List<OrganoDeContratacion> organos = organoRepository.findAllOrderByName();
     assertThat(organos)
         .extracting(
             OrganoDeContratacion::sourceKey, OrganoDeContratacion::name,

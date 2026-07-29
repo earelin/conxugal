@@ -32,7 +32,7 @@ class OrganoReconcilerTest {
 
   @Test
   void adds_new_source_entry_as_active() {
-    when(organoRepository.findAll()).thenReturn(List.of());
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of());
     ArgumentCaptor<OrganoDeContratacion> inserted = ArgumentCaptor.forClass(
         OrganoDeContratacion.class);
 
@@ -50,7 +50,7 @@ class OrganoReconcilerTest {
   @Test
   void refreshes_matched_entrys_name_in_place_preserving_its_id() {
     OrganoDeContratacion stored = organo("consorcio-x", "Old Name", true);
-    when(organoRepository.findAll()).thenReturn(List.of(stored));
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of(stored));
 
     ImportOutcome outcome =
         reconciler.reconcile(List.of(new OrganoSourceEntry("consorcio-x", "New Name")));
@@ -62,7 +62,7 @@ class OrganoReconcilerTest {
   @Test
   void refreshing_deactivated_matched_entrys_name_also_reactivates_it() {
     OrganoDeContratacion stored = organo("consorcio-x", "Old Name", false);
-    when(organoRepository.findAll()).thenReturn(List.of(stored));
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of(stored));
 
     ImportOutcome outcome =
         reconciler.reconcile(List.of(new OrganoSourceEntry("consorcio-x", "New Name")));
@@ -74,7 +74,7 @@ class OrganoReconcilerTest {
   @Test
   void matching_deactivated_entry_with_unchanged_name_reactivates_it() {
     OrganoDeContratacion stored = organo("consorcio-x", "Consorcio X", false);
-    when(organoRepository.findAll()).thenReturn(List.of(stored));
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of(stored));
 
     ImportOutcome outcome =
         reconciler.reconcile(List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X")));
@@ -86,7 +86,7 @@ class OrganoReconcilerTest {
   @Test
   void matching_an_active_entry_with_an_unchanged_name_writes_nothing() {
     OrganoDeContratacion stored = organo("consorcio-x", "Consorcio X", true);
-    when(organoRepository.findAll()).thenReturn(List.of(stored));
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of(stored));
 
     ImportOutcome outcome =
         reconciler.reconcile(List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X")));
@@ -99,7 +99,7 @@ class OrganoReconcilerTest {
 
   @Test
   void collapses_duplicate_source_keys_in_one_payload_into_single_insert() {
-    when(organoRepository.findAll()).thenReturn(List.of());
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of());
     ArgumentCaptor<OrganoDeContratacion> inserted = ArgumentCaptor.forClass(
         OrganoDeContratacion.class);
 
@@ -118,7 +118,7 @@ class OrganoReconcilerTest {
   @Test
   void marks_stored_entry_absent_from_the_source_inactive_and_keeps_it() {
     OrganoDeContratacion stored = organo("consorcio-x", "Consorcio X", true);
-    when(organoRepository.findAll()).thenReturn(List.of(stored));
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of(stored));
 
     ImportOutcome outcome =
         reconciler.reconcile(List.of(new OrganoSourceEntry("other-key", "Other Org")));
@@ -132,7 +132,7 @@ class OrganoReconcilerTest {
     OrganoDeContratacion active = organo("consorcio-x", "Consorcio X", true);
     OrganoDeContratacion nowInactive =
         new OrganoDeContratacion(active.id(), active.sourceKey(), active.name(), false, null);
-    when(organoRepository.findAll())
+    when(organoRepository.findAllOrderByName())
         .thenReturn(List.of(active))
         .thenReturn(List.of(nowInactive));
     List<OrganoSourceEntry> entries = List.of(new OrganoSourceEntry("other-key", "Other Org"));
@@ -149,7 +149,7 @@ class OrganoReconcilerTest {
   void reimporting_the_same_list_adds_nothing_and_changes_no_state() {
     OrganoSourceEntry entry = new OrganoSourceEntry("consorcio-x", "Consorcio X");
     OrganoDeContratacion inserted = organo("consorcio-x", "Consorcio X", true);
-    when(organoRepository.findAll()).thenReturn(List.of()).thenReturn(List.of(inserted));
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of()).thenReturn(List.of(inserted));
 
     reconciler.reconcile(List.of(entry));
     ImportOutcome outcome = reconciler.reconcile(List.of(entry));
@@ -166,7 +166,7 @@ class OrganoReconcilerTest {
   void reports_added_refreshed_and_deactivated_counts_together() {
     OrganoDeContratacion stays = organo("stays", "Stays", true);
     OrganoDeContratacion goesInactive = organo("goes-inactive", "Goes Inactive", true);
-    when(organoRepository.findAll()).thenReturn(List.of(stays, goesInactive));
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of(stays, goesInactive));
 
     ImportOutcome outcome =
         reconciler.reconcile(
