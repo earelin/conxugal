@@ -19,6 +19,8 @@ variables, e.g. `"%s/%s".formatted(base, path)`.
 Prefer a text block (`"""..."""`) over a regular string literal whenever it avoids
 escape characters — e.g. a literal containing `"` (JSON, HTML, quoted attributes).
 
+Use Java 25 features and other modern features.
+
 Fluent call chains are formatted vertically, regardless of chain length. If the call
 chain has multiple clear stages each stage keyword sits at the base indent, 
 calls chained onto that stage indent one level (4 spaces) deeper, and the next
