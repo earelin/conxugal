@@ -35,6 +35,23 @@ plus its `feat:` frontmatter. Governing decisions are cited in `adrs:`.
    cites; honour `depends_on:` ordering and flip `status:` as work moves.
 4. Keep scope to the single task: a small, self-contained change.
 
+## Do not over-engineer
+
+Build the simplest thing that satisfies the task's acceptance criteria, then let
+real usage data drive the next increment. Complexity is only justified by evidence
+that it is needed — not by a scenario we imagine we might hit.
+
+- **Solve today's requirement**, not a hypothetical future one. No speculative
+  extension points, config flags, abstraction layers, or generality "for later".
+- **No premature optimisation**: pick the straightforward implementation until
+  measurements (query timings, request latency, dataset size) show it falls short.
+- **Prefer fewer moving parts** — a plain method over a strategy interface, an
+  existing table over a new service, the framework's default over custom wiring.
+- **Improve progressively**: when usage or profiling reveals a real limit, raise it
+  in the feature (or a new one) and address it in its own small task.
+- If a task's design looks heavier than the problem it solves, say so and propose
+  the smaller slice before implementing.
+
 ## Code style
 
 Do not add unnecessary comments. Skip anything the code already states plainly;
