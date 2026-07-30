@@ -1,5 +1,4 @@
 import {
-  Avatar,
   AppShell,
   Burger,
   Group,
@@ -12,8 +11,8 @@ import { useDisclosure } from '@mantine/hooks';
 import { NavLink, Outlet } from 'react-router';
 import { useCurrentUser } from '../../shared/entities/currentUser';
 import { strings } from '../../shared/lib/strings';
-import { initialsOf } from '../../shared/ui/avatar';
 import { visibleNavSections } from '../nav';
+import { UserMenu } from './UserMenu';
 
 /**
  * Persistent application shell: a header with the product name and a navbar
@@ -52,19 +51,7 @@ export function AppLayout() {
             </Stack>
           </Group>
 
-          {currentUser && (
-            <Group gap="sm" wrap="nowrap" visibleFrom="sm">
-              <Stack gap={0} align="flex-end">
-                <Text size="sm">{currentUser.email}</Text>
-                <Text size="xs" c="dimmed">
-                  {strings.roleLabel[currentUser.role]}
-                </Text>
-              </Stack>
-              <Avatar radius="xl" color="indigo">
-                {initialsOf(currentUser.email)}
-              </Avatar>
-            </Group>
-          )}
+          {currentUser && <UserMenu currentUser={currentUser} />}
         </Group>
       </AppShell.Header>
 
