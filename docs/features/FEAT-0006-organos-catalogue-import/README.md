@@ -15,9 +15,9 @@ administrators' work safe across runs, and the two ways the import is triggered 
 `ADMIN`-only manual endpoint and a recurring scheduler.
 
 It exposes **no user-facing read endpoint**: authenticated users read the catalogue
-through FEAT-0007's `GET /api/organos/taxonomy`, which returns the Órganos in their
-taxonomy positions plus the unclassified ones, so there is no second, flat view of the
-same catalogue.
+through FEAT-0007's `GET /api/organos`, which returns each Órgano together with the
+taxonomy placement this feature does not yet model. The read ships once, complete, rather
+than shipping here without the placement and being widened a feature later.
 
 The design sits in the hexagonal server of
 **[ADR-0002](../../architecture/0002-hexagonal-architecture.md)**: the scraper is a
@@ -57,16 +57,16 @@ contract-first in the [OpenAPI document](../../api/openapi.yaml)
     case and guard (SPEC-0004 R11).
 
 **Out of scope (owned by future features):**
-- The **taxonomy of categories, classifying Órganos into it, the unclassified set, the
-  authenticated read endpoint, and the admin UI** — the read contract of SPEC-0004 R2, R8
+- The **taxonomy of categories, classifying Órganos into it, both authenticated read
+  endpoints, and the admin UI** — the read contract of SPEC-0004 R2, R8
   and R9, the admin management tree, the catalogue table, the import-trigger button, and
   the outcome display (SPEC-0004 R1 write ops, R14–R18) — belong to a separate feature,
   *FEAT-0007. Órganos taxonomy & classification*. This feature stops at the stored
-  catalogue those screens consume. In particular, the **entire** authenticated read is
-  FEAT-0007's `GET /api/organos/taxonomy`: a catalogue view without the placement would not
-  satisfy R8 anyway, so the read ships with the placement rather than here. The
-  `USER`-facing tree of R9 is built later still, as the Órgano filter of the contratos
-  list.
+  catalogue those screens consume. In particular, **both** authenticated reads —
+  `GET /api/organos` and `GET /api/organos/taxonomia` — are FEAT-0007's: a catalogue view
+  without the placement would not satisfy R8 anyway, so the read ships with the placement
+  rather than here. The `USER`-facing tree of R9 is built later still, as the Órgano filter
+  of the contratos list.
 - Importing **contracts/tenders** themselves (a different spec), and authentication /
   the `USER`/`ADMIN` roles (delivered by
   [FEAT-0002](../FEAT-0002-user-authentication/README.md)).
@@ -133,9 +133,9 @@ flowchart LR
 - `POST /api/admin/organos/import` — `@Secured("ADMIN")`: trigger an import; returns the
   `ImportOutcome` (success + added/refreshed/deactivated counts, or "already running").
   A `USER` or anonymous caller gets 403 (SPEC-0004 R1).
-- **No read endpoint.** The single authenticated read of the catalogue is FEAT-0007's
-  `GET /api/organos/taxonomy`, so an Órgano is never serialised by two endpoints in two
-  shapes and there is no flat list to keep in step with the tree.
+- **No read endpoint.** The authenticated read of the catalogue is FEAT-0007's
+  `GET /api/organos`, added there because it carries each Órgano's taxonomy placement; an
+  Órgano is serialised by exactly one endpoint.
 - The contract is authored in [`docs/api/openapi.yaml`](../../api/openapi.yaml) before the
   controller exists, and CI enforces conformance (ADR-0010).
 
@@ -204,6 +204,6 @@ flowchart LR
   mojibake so the catalogue is stable.
 - **Nothing here is user-readable** — this feature's only endpoint is the `ADMIN` import
   trigger, denied to a `USER` at the server; the authenticated read that SPEC-0004 #2 and
-  #8 call for arrives with FEAT-0007's taxonomy endpoint. Until then the catalogue is
+  #8 call for arrives with FEAT-0007's catalogue endpoint. Until then the catalogue is
   populated but unreadable over HTTP, which is deliberate: both features land before the
   system is user-complete for SPEC-0004 (SPEC-0004 #1, #2).
