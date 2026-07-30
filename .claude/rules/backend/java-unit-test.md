@@ -1,6 +1,6 @@
 ---
 paths:
-  - "**/test/java/**/*Test.java"
+  - "server/{commons,domain,application,infrastructure}/src/test/java/**/*Test.java"
 ---
 
 # Java unit tests
@@ -10,9 +10,11 @@ network, or filesystem. Assert with **AssertJ**, double collaborators with
 **Mockito** under strict stubbing, name test methods in **snake_case**, and prefer
 stubs and recording fakes over mocks and `verify(...)`.
 
-Scope note: the `acceptance` module and the `architecture` module's ArchUnit tests
-also live under `src/test/java` but follow their own conventions; integration tests
-live in the `src/integrationTest` source set.
+Scope note: the modules are enumerated rather than globbed because the `acceptance`
+module and the `architecture` module's ArchUnit tests also live under
+`src/test/java` but follow their own conventions. Add a new module here when it
+gains unit tests. Integration tests need no exclusion — they live in the
+`src/integrationTest` source set.
 
 ## Rules
 
