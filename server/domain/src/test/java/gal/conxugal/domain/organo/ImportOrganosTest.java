@@ -33,7 +33,6 @@ class ImportOrganosTest {
     ImportOutcome outcome = importOrganos.run();
 
     assertThat(outcome).isEqualTo(reconciled);
-    verify(organoReconciler).reconcile(entries);
   }
 
   @Test

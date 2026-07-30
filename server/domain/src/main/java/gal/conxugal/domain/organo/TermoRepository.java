@@ -27,7 +27,11 @@ public interface TermoRepository {
   /** Renames an existing term in place. */
   void updateName(@Id UUID id, String name);
 
-  /** Re-parents an existing term; a null {@code parentId} moves it to the root. */
+  /**
+   * Re-parents an existing term; a null {@code parentId} moves it to the root. Pointing a
+   * term at itself is refused by the schema, leaving only multi-term cycles for a caller's
+   * own acyclic check under {@link #lockTaxonomia}.
+   */
   void updateParentId(@Id UUID id, @Nullable UUID parentId);
 
   void deleteById(UUID id);

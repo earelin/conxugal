@@ -78,8 +78,23 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
             OrganoDeContratacion::sourceKey,
             OrganoDeContratacion::name,
             OrganoDeContratacion::active)
-        .containsExactlyInAnyOrder(
-            tuple("consorcio-x", "Consorcio X", true), tuple("axencia-y", "Axencia Y", false));
+        .containsExactly(
+            tuple("axencia-y", "Axencia Y", false), tuple("consorcio-x", "Consorcio X", true));
+  }
+
+  @Test
+  void orders_accented_names_under_the_galician_collation() throws Exception {
+    insertOrgano("zamora", "Zamora", true);
+    insertOrgano("avila", "Ávila", true);
+    insertOrgano("avion", "Avión", true);
+
+    List<OrganoDeContratacion> organos = organoRepository.findAllOrderByName();
+
+    // Under the cluster default this returns Avión, Zamora, Ávila — the accent sorting
+    // after Z is exactly what the column's collation exists to prevent.
+    assertThat(organos)
+        .extracting(OrganoDeContratacion::name)
+        .containsExactly("Ávila", "Avión", "Zamora");
   }
 
   @Test
@@ -216,7 +231,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
-  void findAll_reports_termo_id_for_placed_and_unplaced_organos() throws Exception {
+  void findAllOrderByName_reports_termo_id_for_placed_and_unplaced_organos() throws Exception {
     UUID termoId = insertTermo("Deportes", null);
     insertOrgano("consorcio-x", "Consorcio X", true, termoId);
     insertOrgano("axencia-y", "Axencia Y", true, null);
@@ -225,8 +240,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
     assertThat(organos)
         .extracting(OrganoDeContratacion::sourceKey, OrganoDeContratacion::termoId)
-        .containsExactlyInAnyOrder(
-            tuple("consorcio-x", termoId), tuple("axencia-y", null));
+        .containsExactly(tuple("axencia-y", null), tuple("consorcio-x", termoId));
   }
 
   @Test

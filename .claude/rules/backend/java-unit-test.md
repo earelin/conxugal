@@ -28,8 +28,10 @@ their own conventions. Add a new module here when it gains unit tests.
   under strict stubbing a stub you assert against already proves the collaborator was
   called with those arguments. Two exceptions: asserting that an interaction did *not*
   happen (`never()`, `verifyNoInteractions`), which stubbing cannot express, and a
-  side effect with no return value (an event published, a row deleted) — record it in
-  a small hand-written fake and assert on what it captured.
+  void side effect on a collaborator (a row written, an event published), which leaves
+  nothing to assert on — `verify` the mock for that one call. Don't hand-roll a fake to
+  capture it instead; a fake that has to reimplement the collaborator can quietly
+  diverge from it and make every test that leans on it lie.
 - **One behaviour per test**, structured Arrange / Act / Assert with a single
   assertion focus. Reach for `SoftAssertions` rather than sprawling unrelated checks.
 

@@ -2,6 +2,7 @@ package gal.conxugal.infrastructure.jdbc.organo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.db.api.Assertions.assertThat;
 
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -17,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.sql.DataSource;
+import org.assertj.db.type.AssertDbConnection;
+import org.assertj.db.type.AssertDbConnectionFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -25,9 +28,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Verifies V9's schema directly — the collation, the foreign keys' delete rule, and the
- * sibling-name index — rather than through a repository, since none of the JDBC
- * repository code these behaviours will eventually back exists yet.
+ * Verifies V9's schema directly — the collation, what the foreign keys refuse on delete, the
+ * self-parent check, and the sibling-name index — rather than through a repository, since
+ * none of the JDBC repository code these behaviours will eventually back exists yet.
  */
 @MicronautTest(startApplication = false)
 @Testcontainers(disabledWithoutDocker = true)
@@ -82,9 +85,70 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
-  void foreign_keys_carry_no_on_delete_action() throws Exception {
-    assertThat(deleteRulesFor("termo", "parent_id")).containsOnly("NO ACTION");
-    assertThat(deleteRulesFor("organo_contratacion", "termo_id")).containsOnly("NO ACTION");
+  void bare_order_by_name_inherits_the_galician_collation_from_the_column() throws Exception {
+    insertTermo("Zamora", null);
+    insertTermo("Ávila", null);
+
+    List<String> names = new ArrayList<>();
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement();
+        ResultSet resultSet = statement.executeQuery("SELECT name FROM termo ORDER BY name")) {
+      while (resultSet.next()) {
+        names.add(resultSet.getString("name"));
+      }
+    }
+
+    assertThat(names).containsExactly("Ávila", "Zamora");
+  }
+
+  @Test
+  void delete_is_rejected_while_the_term_has_children() throws Exception {
+    UUID parentId = insertTermo("Deportes", null);
+    insertTermo("Fútbol", parentId);
+
+    assertThatThrownBy(() -> deleteTermo(parentId))
+        .isInstanceOfSatisfying(
+            SQLException.class, exception -> assertViolatesForeignKey(exception,
+                "termo_parent_id_fkey"));
+  }
+
+  @Test
+  void delete_is_rejected_while_an_organo_is_placed_in_the_term() throws Exception {
+    UUID termoId = insertTermo("Deportes", null);
+    insertOrgano("consorcio-x", "Consorcio X", termoId);
+
+    assertThatThrownBy(() -> deleteTermo(termoId))
+        .isInstanceOfSatisfying(
+            SQLException.class, exception -> assertViolatesForeignKey(exception,
+                "organo_contratacion_termo_id_fkey"));
+  }
+
+  @Test
+  void delete_is_accepted_once_nothing_references_the_term() throws Exception {
+    UUID termoId = insertTermo("Deportes", null);
+
+    deleteTermo(termoId);
+
+    AssertDbConnection assertDbConnection = AssertDbConnectionFactory.of(dataSource).create();
+    assertThat(assertDbConnection.table("termo").build()).hasNumberOfRows(0);
+  }
+
+  @Test
+  void check_rejects_inserting_term_as_its_own_parent() {
+    UUID id = UUID.randomUUID();
+
+    assertThatThrownBy(
+        () -> executeUpdate(
+            "INSERT INTO termo (id, name, parent_id) VALUES (?, ?, ?)", id, "Deportes", id))
+        .isInstanceOfSatisfying(SQLException.class, this::assertViolatesSelfParentCheck);
+  }
+
+  @Test
+  void check_rejects_re_parenting_term_onto_itself() throws Exception {
+    UUID id = insertTermo("Deportes", null);
+
+    assertThatThrownBy(() -> executeUpdate("UPDATE termo SET parent_id = id WHERE id = ?", id))
+        .isInstanceOfSatisfying(SQLException.class, this::assertViolatesSelfParentCheck);
   }
 
   @Test
@@ -113,13 +177,6 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
         .isInstanceOfSatisfying(SQLException.class, this::assertViolatesSiblingNameIndex);
   }
 
-  private void assertViolatesSiblingNameIndex(SQLException exception) {
-    // SQLSTATE 23505 is unique_violation; pinning the constraint name too rules out a
-    // coincidental different constraint (e.g. the primary key) failing for the wrong reason.
-    assertThat(exception.getSQLState()).isEqualTo("23505");
-    assertThat(exception.getMessage()).contains("termo_sibling_name_key");
-  }
-
   @Test
   void sibling_index_accepts_the_same_name_under_two_different_parents() throws Exception {
     UUID firstParent = insertTermo("Deportes", null);
@@ -131,38 +188,38 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
     assertThat(secondId).isNotNull();
   }
 
-  private List<String> deleteRulesFor(String tableName, String columnName) throws Exception {
-    String sql =
-        """
-        SELECT rc.delete_rule
-        FROM information_schema.table_constraints tc
-        JOIN information_schema.referential_constraints rc
-          ON tc.constraint_name = rc.constraint_name
-          AND tc.constraint_schema = rc.constraint_schema
-        JOIN information_schema.key_column_usage kcu
-          ON kcu.constraint_name = tc.constraint_name
-          AND kcu.constraint_schema = tc.constraint_schema
-        WHERE tc.table_name = ? AND tc.constraint_type = 'FOREIGN KEY' AND kcu.column_name = ?
-        """;
-    List<String> rules = new ArrayList<>();
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setString(1, tableName);
-      statement.setString(2, columnName);
-      try (ResultSet resultSet = statement.executeQuery()) {
-        while (resultSet.next()) {
-          rules.add(resultSet.getString("delete_rule"));
-        }
-      }
-    }
-    return rules;
+  private void assertViolatesSiblingNameIndex(SQLException exception) {
+    // SQLSTATE 23505 is unique_violation; pinning the constraint name too rules out a
+    // coincidental different constraint (e.g. the primary key) failing for the wrong reason.
+    assertThat(exception.getSQLState()).isEqualTo("23505");
+    assertThat(exception.getMessage()).contains("termo_sibling_name_key");
   }
 
-  private UUID insertTermo(String name, UUID parentId) throws Exception {
-    // The injected DataSource is Micronaut Data's connection-context-aware proxy, so every
-    // call here shares one underlying connection: a failed insert aborts that connection's
-    // transaction, and it must be rolled back before any later statement (including a
-    // following test's @AfterEach TRUNCATE) can run on it.
+  private void assertViolatesSelfParentCheck(SQLException exception) {
+    // SQLSTATE 23514 is check_violation.
+    assertThat(exception.getSQLState()).isEqualTo("23514");
+    assertThat(exception.getMessage()).contains("termo_parent_not_self");
+  }
+
+  private void assertViolatesForeignKey(SQLException exception, String constraintName) {
+    // SQLSTATE 23503 is foreign_key_violation — the delete was refused rather than
+    // cascading, which is the whole point of leaving both keys without an ON DELETE action.
+    assertThat(exception.getSQLState()).isEqualTo("23503");
+    assertThat(exception.getMessage()).contains(constraintName);
+  }
+
+  private void deleteTermo(UUID id) throws SQLException {
+    executeUpdate("DELETE FROM termo WHERE id = ?", id);
+  }
+
+  private void insertOrgano(String sourceKey, String name, UUID termoId) throws SQLException {
+    executeUpdate(
+        "INSERT INTO organo_contratacion (id, source_key, name, active, termo_id) "
+            + "VALUES (uuidv7(), ?, ?, TRUE, ?)",
+        sourceKey, name, termoId);
+  }
+
+  private UUID insertTermo(String name, UUID parentId) throws SQLException {
     String sql =
         "INSERT INTO termo (id, name, parent_id) VALUES (uuidv7(), ?, ?) RETURNING id";
     try (Connection connection = dataSource.getConnection();
@@ -178,12 +235,34 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
         return id;
       }
     } catch (SQLException e) {
-      try (Connection connection = dataSource.getConnection()) {
-        connection.rollback();
-      } catch (SQLException rollbackException) {
-        e.addSuppressed(rollbackException);
-      }
+      rollbackQuietly(e);
       throw e;
+    }
+  }
+
+  private void executeUpdate(String sql, Object... parameters) throws SQLException {
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement statement = connection.prepareStatement(sql)) {
+      for (int index = 0; index < parameters.length; index++) {
+        statement.setObject(index + 1, parameters[index]);
+      }
+      statement.executeUpdate();
+      connection.commit();
+    } catch (SQLException e) {
+      rollbackQuietly(e);
+      throw e;
+    }
+  }
+
+  // The injected DataSource is Micronaut Data's connection-context-aware proxy, so every call
+  // here shares one underlying connection: a failed statement aborts that connection's
+  // transaction, and it must be rolled back before any later statement (including a following
+  // test's @AfterEach TRUNCATE) can run on it.
+  private void rollbackQuietly(SQLException cause) {
+    try (Connection connection = dataSource.getConnection()) {
+      connection.rollback();
+    } catch (SQLException rollbackException) {
+      cause.addSuppressed(rollbackException);
     }
   }
 }
