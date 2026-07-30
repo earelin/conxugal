@@ -19,10 +19,7 @@ import org.jspecify.annotations.Nullable;
 public interface JdbcTermoRepository
     extends TermoRepository, GenericRepository<Termo, UUID> {
 
-  /**
-   * A derived query would bind {@code parent_id = :parentId}, which matches nothing when the
-   * argument is null, so the roots would come back empty rather than as the roots.
-   */
+  /** The one query that cannot derive — see the port for why. */
   @Override
   @Query("SELECT * FROM termo WHERE parent_id IS NOT DISTINCT FROM :parentId")
   List<Termo> findByParentId(@Nullable UUID parentId);

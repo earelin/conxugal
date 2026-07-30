@@ -93,13 +93,27 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
-  void inserts_termo_with_database_generated_id() {
+  void inserts_root_termo_with_database_generated_id() {
     Termo created = termoRepository.insert(new Termo("Deportes", null));
 
+    // Reading back by the returned id is what proves it is the id the database assigned,
+    // rather than merely non-null.
     assertThat(created.id()).isNotNull();
-    assertThat(termoRepository.findAllOrderByName())
-        .extracting(Termo::name, Termo::parentId)
-        .containsExactly(tuple("Deportes", null));
+    Termo stored = termoRepository.findById(created.id()).orElseThrow();
+    assertThat(stored.name()).isEqualTo("Deportes");
+    assertThat(stored.parentId()).isNull();
+  }
+
+  @Test
+  void inserts_child_termo_under_an_existing_parent() {
+    Termo parent = termoRepository.insert(new Termo("Deportes", null));
+
+    Termo child = termoRepository.insert(new Termo("Fútbol", parent.id()));
+
+    // The path CreateTermo takes for every term but the first, and the one the generated
+    // INSERT has to carry parent_id on.
+    assertThat(termoRepository.findById(child.id()).orElseThrow().parentId())
+        .isEqualTo(parent.id());
   }
 
   @Test
@@ -129,6 +143,9 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
     Termo renamed = termoRepository.findById(id).orElseThrow();
     assertThat(renamed.name()).isEqualTo("Fútbol Sala");
     assertThat(renamed.parentId()).isEqualTo(parentId);
+    // A table-wide UPDATE would rename both rows and still satisfy the assertions above:
+    // the two sit under different parents, so the sibling-name index would not object.
+    assertThat(termoRepository.findById(parentId).orElseThrow().name()).isEqualTo("Deportes");
   }
 
   @Test
@@ -139,6 +156,11 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
     termoRepository.updateParentId(id, secondParent);
     assertThat(termoRepository.findById(id).orElseThrow().parentId()).isEqualTo(secondParent);
+    // The move left the old parent, and took nothing else with it: an unscoped UPDATE would
+    // put every row under secondParent, including the two roots. Asserted here rather than
+    // after the move to the root, where both roots are already null and would pass anyway.
+    assertThat(termoRepository.findByParentId(firstParent)).isEmpty();
+    assertThat(termoRepository.findById(firstParent).orElseThrow().parentId()).isNull();
 
     termoRepository.updateParentId(id, null);
     assertThat(termoRepository.findById(id).orElseThrow().parentId()).isNull();
@@ -163,6 +185,8 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
     assertThat(termoRepository.existsByParentId(parentId)).isTrue();
     assertThat(termoRepository.existsByParentId(leafId)).isFalse();
+    // The read CreateTermo makes before adding the first child under a parent.
+    assertThat(termoRepository.findByParentId(leafId)).isEmpty();
   }
 
   @Test
@@ -174,9 +198,12 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
     List<Termo> children = termoRepository.findByParentId(parentId);
 
+    // Every column asserted, not just the name: this is the one hand-written SELECT *, so
+    // its mapping onto Termo is a different code path from the derived reads. Were id or
+    // parentId to arrive null, name alone would still match.
     assertThat(children)
-        .extracting(Termo::name)
-        .containsExactly("Fútbol");
+        .extracting(Termo::id, Termo::name, Termo::parentId)
+        .containsExactly(tuple(childId, "Fútbol", parentId));
   }
 
   @Test
@@ -187,13 +214,18 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
     List<Termo> roots = termoRepository.findByParentId(null);
 
-    // A derived query would bind `parent_id = null` and match nothing at all, silently
-    // disabling the sibling-name rule for roots rather than failing loudly.
     assertThat(roots)
-        .extracting(Termo::name)
-        .containsExactlyInAnyOrder("Deportes", "Cultura");
+        .extracting(Termo::name, Termo::parentId)
+        .containsExactlyInAnyOrder(tuple("Deportes", null), tuple("Cultura", null));
   }
 
+  // This helper neither commits nor rolls back, because every test here expects its writes
+  // to succeed: the injected DataSource is Micronaut Data's connection-context-aware proxy,
+  // so these writes and the repository call under test share one connection and one
+  // transaction, and the repository sees them uncommitted. A test that deliberately
+  // triggers a constraint violation cannot use it as-is — an aborted statement poisons that
+  // shared connection until it is rolled back, including for the next test's @AfterEach
+  // truncate. See TermoMigrationIntegrationTest's commit/rollbackQuietly variant.
   private UUID insertTermo(String name, UUID parentId) throws Exception {
     String sql = "INSERT INTO termo (id, name, parent_id) VALUES (uuidv7(), ?, ?) RETURNING id";
     try (Connection connection = dataSource.getConnection();

@@ -51,9 +51,9 @@ JDBC/SQL stays entirely in `infrastructure`.
   placement pointing at a given term, and read by id. **Expect to write no code for most of
   these** — both repositories are bare derived interfaces, so Micronaut Data generates the
   bodies from the port's method names, and it does so during *TASK-0001's* build, not this
-  one. What is left here is the `@Query` operations that cannot derive (the children-of-parent
-  read, and *clear every placement pointing at a term* if an update matched on a non-id
-  column does not derive), and proving the rest against a real database.
+  one. What is left here is the one `@Query` that cannot derive — the children-of-parent read
+  — and proving the rest against a real database. *Clear every placement pointing at a term*
+  needed one too, but it shipped with TASK-0001 rather than waiting for this task.
   No `findByTermo` and no `findUnclassified` — `findAllOrderByName()` already carries
   `termo_id` on every row.
 
