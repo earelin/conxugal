@@ -3,6 +3,7 @@ import org.gradle.testing.jacoco.tasks.JacocoReport
 plugins {
     id("gal.conxugal.java-conventions")
     alias(libs.plugins.micronaut.library)
+    `java-test-fixtures`
 }
 
 dependencies {
@@ -46,6 +47,7 @@ testing {
 
             dependencies {
                 implementation(project())
+                implementation(testFixtures(project()))
                 implementation(project(":domain"))
                 implementation(libs.micronaut.jdbc.hikari)
                 implementation(libs.micronaut.test.junit5)

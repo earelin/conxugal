@@ -57,6 +57,15 @@ class RetryAfterTest {
   }
 
   @Test
+  void negative_delay_seconds_clamps_to_zero_instead_of_negative() {
+    when(response.header(HttpHeaders.RETRY_AFTER)).thenReturn("-30");
+
+    Optional<Duration> wait = RetryAfter.parse(response, FIXED_CLOCK);
+
+    assertThat(wait).contains(Duration.ZERO);
+  }
+
+  @Test
   void returns_empty_when_the_header_is_absent() {
     when(response.header(HttpHeaders.RETRY_AFTER)).thenReturn(null);
 

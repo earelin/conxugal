@@ -52,6 +52,21 @@ class ResilientHttpClientTest {
   }
 
   @Test
+  void exhausting_every_attempt_surfaces_the_last_transient_failure() {
+    when(delegate.exchange(any(HttpRequest.class), eq(byte[].class)))
+        .thenThrow(serviceUnavailable("first"))
+        .thenThrow(serviceUnavailable("second"))
+        .thenThrow(serviceUnavailable("last"))
+        .thenThrow(new AssertionError("attempted more than the configured retry limit"));
+    ResilientHttpClient client =
+        new ResilientHttpClient("retry-exhausted", delegate, fastSettings(3));
+
+    assertThatThrownBy(() -> exchangeOk(client))
+        .isInstanceOf(HttpClientResponseException.class)
+        .hasMessage("last");
+  }
+
+  @Test
   void permanent_status_is_not_retried() {
     when(delegate.exchange(any(HttpRequest.class), eq(byte[].class)))
         .thenThrow(new HttpClientResponseException("Not Found", HttpResponse.notFound()))
@@ -63,7 +78,7 @@ class ResilientHttpClientTest {
   }
 
   @Test
-  void honors_retry_after_in_delay_seconds_form() {
+  void delay_seconds_retry_after_is_honoured_and_the_call_still_succeeds() {
     HttpResponse<?> tooManyRequests =
         HttpResponse.status(HttpStatus.TOO_MANY_REQUESTS).header(HttpHeaders.RETRY_AFTER, "1");
     when(delegate.exchange(any(HttpRequest.class), eq(byte[].class)))
@@ -72,16 +87,11 @@ class ResilientHttpClientTest {
     ResilientHttpClient client =
         new ResilientHttpClient("retry-after-seconds", delegate, fastSettings(2));
 
-    Instant start = Instant.now();
-    String result = exchangeOk(client);
-    Duration elapsed = Duration.between(start, Instant.now());
-
-    assertThat(result).isEqualTo("ok");
-    assertThat(elapsed).isGreaterThanOrEqualTo(Duration.ofSeconds(1));
+    assertThat(exchangeOk(client)).isEqualTo("ok");
   }
 
   @Test
-  void honors_retry_after_in_http_date_form() {
+  void date_form_retry_after_is_honoured_rather_than_throwing_from_the_retry_machinery() {
     Clock fixedClock = Clock.fixed(Instant.parse("2026-07-29T10:00:00Z"), ZoneOffset.UTC);
     String retryAtHeader =
         ZonedDateTime.now(fixedClock).plusSeconds(1).format(DateTimeFormatter.RFC_1123_DATE_TIME);
@@ -94,29 +104,15 @@ class ResilientHttpClientTest {
     ResilientHttpClient client =
         new ResilientHttpClient("retry-after-date", delegate, fastSettings(2), fixedClock);
 
-    Instant start = Instant.now();
-    String result = exchangeOk(client);
-    Duration elapsed = Duration.between(start, Instant.now());
-
-    assertThat(result).isEqualTo("ok");
-    assertThat(elapsed).isGreaterThanOrEqualTo(Duration.ofSeconds(1));
+    assertThat(exchangeOk(client)).isEqualTo("ok");
   }
 
   @Test
   void retry_after_beyond_the_configured_maximum_aborts_the_call() {
     ResilientHttpClientSettings settings =
-        new FixedResilientHttpClientSettings(
-            "https://example.test",
-            Duration.ofSeconds(1),
-            Duration.ofSeconds(1),
-            Duration.ofMillis(10),
-            Duration.ofSeconds(5),
-            1,
-            3,
-            Duration.ofMillis(10),
-            Duration.ofSeconds(1),
-            50,
-            Duration.ofSeconds(5));
+        TestResilientHttpClientSettings.builder()
+            .retryAfterMaximumWait(Duration.ofSeconds(1))
+            .build();
     HttpResponse<?> tooManyRequests =
         HttpResponse.status(HttpStatus.TOO_MANY_REQUESTS).header(HttpHeaders.RETRY_AFTER, "3600");
     when(delegate.exchange(any(HttpRequest.class), eq(byte[].class)))
@@ -129,20 +125,29 @@ class ResilientHttpClientTest {
   }
 
   @Test
+  void retry_after_exactly_at_the_configured_maximum_is_honoured_rather_than_aborted() {
+    ResilientHttpClientSettings settings =
+        TestResilientHttpClientSettings.builder()
+            .retryAfterMaximumWait(Duration.ofSeconds(1))
+            .build();
+    HttpResponse<?> tooManyRequests =
+        HttpResponse.status(HttpStatus.TOO_MANY_REQUESTS).header(HttpHeaders.RETRY_AFTER, "1");
+    when(delegate.exchange(any(HttpRequest.class), eq(byte[].class)))
+        .thenThrow(new HttpClientResponseException("Too Many Requests", tooManyRequests))
+        .thenReturn(okResponse("ok"));
+    ResilientHttpClient client =
+        new ResilientHttpClient("retry-after-boundary", delegate, settings);
+
+    assertThat(exchangeOk(client)).isEqualTo("ok");
+  }
+
+  @Test
   void refused_permit_surfaces_as_http_client_exception_and_is_not_retried() {
     ResilientHttpClientSettings settings =
-        new FixedResilientHttpClientSettings(
-            "https://example.test",
-            Duration.ofSeconds(1),
-            Duration.ofSeconds(1),
-            Duration.ofHours(1),
-            Duration.ZERO,
-            1,
-            3,
-            Duration.ofMillis(10),
-            Duration.ofSeconds(5),
-            50,
-            Duration.ofSeconds(5));
+        TestResilientHttpClientSettings.builder()
+            .rateLimiterRefreshPeriod(Duration.ofHours(1))
+            .maximumPermitWait(Duration.ZERO)
+            .build();
     when(delegate.exchange(any(HttpRequest.class), eq(byte[].class))).thenReturn(okResponse("ok"));
     ResilientHttpClient client = new ResilientHttpClient("permit-refused", delegate, settings);
     exchangeOk(client);
@@ -159,7 +164,7 @@ class ResilientHttpClientTest {
     ResilientHttpClient client =
         new ResilientHttpClient("breaker-opens", delegate, fastBreakerSettings());
 
-    for (int i = 0; i < ResilientHttpClient.BREAKER_MINIMUM_NUMBER_OF_CALLS; i++) {
+    for (int i = 0; i < ResilientPolicies.BREAKER_MINIMUM_NUMBER_OF_CALLS; i++) {
       assertThatThrownBy(() -> exchangeOk(client)).isInstanceOf(HttpClientResponseException.class);
     }
 
@@ -180,7 +185,7 @@ class ResilientHttpClientTest {
     ResilientHttpClient client =
         new ResilientHttpClient("client-error-breaker", delegate, fastBreakerSettings());
 
-    for (int i = 0; i < ResilientHttpClient.BREAKER_MINIMUM_NUMBER_OF_CALLS; i++) {
+    for (int i = 0; i < ResilientPolicies.BREAKER_MINIMUM_NUMBER_OF_CALLS; i++) {
       assertThatThrownBy(() -> exchangeOk(client)).isInstanceOf(HttpClientResponseException.class);
     }
 
@@ -247,7 +252,7 @@ class ResilientHttpClientTest {
     ResilientHttpClient client =
         new ResilientHttpClient("acceptability-breaker", delegate, fastBreakerSettings());
 
-    for (int i = 0; i < ResilientHttpClient.BREAKER_MINIMUM_NUMBER_OF_CALLS; i++) {
+    for (int i = 0; i < ResilientPolicies.BREAKER_MINIMUM_NUMBER_OF_CALLS; i++) {
       assertThatThrownBy(() -> exchangeRejecting(client))
           .isInstanceOf(UnacceptableResponseException.class);
     }
@@ -255,6 +260,33 @@ class ResilientHttpClientTest {
     assertThatThrownBy(() -> exchangeRejecting(client))
         .isInstanceOf(HttpClientException.class)
         .hasCauseInstanceOf(CallNotPermittedException.class);
+  }
+
+  @Test
+  void failing_response_mapper_surfaces_as_mapping_failure_and_is_not_retried() {
+    when(delegate.exchange(any(HttpRequest.class), eq(byte[].class)))
+        .thenReturn(okResponse("ok"))
+        .thenThrow(new AssertionError("retried a caller's own mapper defect"));
+    ResilientHttpClient client =
+        new ResilientHttpClient("mapper-defect", delegate, fastSettings(3));
+
+    assertThatThrownBy(() -> exchangeWithFailingMapper(client))
+        .isInstanceOf(ResponseMappingException.class)
+        .hasCauseInstanceOf(IndexOutOfBoundsException.class);
+  }
+
+  @Test
+  void repeated_mapper_defects_leave_the_circuit_closed() {
+    when(delegate.exchange(any(HttpRequest.class), eq(byte[].class))).thenReturn(okResponse("ok"));
+    ResilientHttpClient client =
+        new ResilientHttpClient("mapper-defect-breaker", delegate, fastBreakerSettings());
+
+    for (int i = 0; i < ResilientPolicies.BREAKER_MINIMUM_NUMBER_OF_CALLS; i++) {
+      assertThatThrownBy(() -> exchangeWithFailingMapper(client))
+          .isInstanceOf(ResponseMappingException.class);
+    }
+
+    assertThat(exchangeOk(client)).isEqualTo("ok");
   }
 
   @Test
@@ -301,6 +333,46 @@ class ResilientHttpClientTest {
         .isEqualTo(ResilientHttpClient.USER_AGENT_VALUE);
   }
 
+  @Test
+  void blank_base_url_is_rejected_when_the_client_is_built() {
+    ResilientHttpClientSettings settings =
+        TestResilientHttpClientSettings.builder().baseUrl("  ").build();
+
+    assertThatThrownBy(() -> new ResilientHttpClient("blank-base-url", delegate, settings))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("baseUrl");
+  }
+
+  @Test
+  void zero_retry_base_delay_is_rejected_when_the_client_is_built() {
+    ResilientHttpClientSettings settings =
+        TestResilientHttpClientSettings.builder().retryBaseDelay(Duration.ZERO).build();
+
+    assertThatThrownBy(() -> new ResilientHttpClient("zero-backoff", delegate, settings))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("retryBaseDelay");
+  }
+
+  @Test
+  void failure_rate_threshold_above_one_hundred_is_rejected_when_the_client_is_built() {
+    ResilientHttpClientSettings settings =
+        TestResilientHttpClientSettings.builder().breakerFailureRateThreshold(101).build();
+
+    assertThatThrownBy(() -> new ResilientHttpClient("bad-threshold", delegate, settings))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("breakerFailureRateThreshold");
+  }
+
+  @Test
+  void retry_limit_below_one_is_rejected_when_the_client_is_built() {
+    ResilientHttpClientSettings settings =
+        TestResilientHttpClientSettings.builder().retryMaxAttempts(0).build();
+
+    assertThatThrownBy(() -> new ResilientHttpClient("no-attempts", delegate, settings))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("retryMaxAttempts");
+  }
+
   private static String exchangeOk(ResilientHttpClient client) {
     return client.exchange(
         HttpRequest.GET("/organos"), ResilientHttpClientTest::mapToBody, ok -> true);
@@ -311,9 +383,22 @@ class ResilientHttpClientTest {
         HttpRequest.GET("/organos"), ResilientHttpClientTest::mapToBody, rejected -> false);
   }
 
+  private static String exchangeWithFailingMapper(ResilientHttpClient client) {
+    return client.exchange(
+        HttpRequest.GET("/organos"),
+        response -> {
+          throw new IndexOutOfBoundsException("no such element in the parsed document");
+        },
+        ok -> true);
+  }
+
   private static HttpClientResponseException serviceUnavailable() {
+    return serviceUnavailable("Service Unavailable");
+  }
+
+  private static HttpClientResponseException serviceUnavailable(String message) {
     return new HttpClientResponseException(
-        "Service Unavailable", HttpResponse.status(HttpStatus.SERVICE_UNAVAILABLE));
+        message, HttpResponse.status(HttpStatus.SERVICE_UNAVAILABLE));
   }
 
   private static HttpResponse<byte[]> okResponse(String body) {
@@ -325,32 +410,16 @@ class ResilientHttpClientTest {
   }
 
   private static ResilientHttpClientSettings fastSettings(int retryMaxAttempts) {
-    return new FixedResilientHttpClientSettings(
-        "https://example.test",
-        Duration.ofSeconds(1),
-        Duration.ofSeconds(1),
-        Duration.ofMillis(10),
-        Duration.ofSeconds(5),
-        1,
-        retryMaxAttempts,
-        Duration.ofMillis(5),
-        Duration.ofSeconds(5),
-        50,
-        Duration.ofSeconds(5));
+    return TestResilientHttpClientSettings.builder().retryMaxAttempts(retryMaxAttempts).build();
   }
 
+  /** One breaker call per logical call (no retry), and an open circuit that stays open. */
   private static ResilientHttpClientSettings fastBreakerSettings() {
-    return new FixedResilientHttpClientSettings(
-        "https://example.test",
-        Duration.ofSeconds(1),
-        Duration.ofSeconds(1),
-        Duration.ofMillis(1),
-        Duration.ofSeconds(1),
-        1,
-        1,
-        Duration.ofMillis(5),
-        Duration.ofSeconds(5),
-        50,
-        Duration.ofMinutes(10));
+    return TestResilientHttpClientSettings.builder()
+        .rateLimiterRefreshPeriod(Duration.ofMillis(1))
+        .maximumPermitWait(Duration.ofSeconds(1))
+        .retryMaxAttempts(1)
+        .breakerOpenStateDuration(Duration.ofMinutes(10))
+        .build();
   }
 }

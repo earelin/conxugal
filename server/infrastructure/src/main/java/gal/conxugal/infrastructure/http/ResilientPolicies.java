@@ -9,7 +9,6 @@ import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.github.resilience4j.retry.RetryConfig;
 import io.micronaut.http.client.exceptions.HttpClientException;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
-import io.micronaut.http.client.exceptions.NoHostException;
 import io.micronaut.http.client.exceptions.ReadTimeoutException;
 import io.micronaut.http.client.exceptions.ResponseClosedException;
 import java.time.Clock;
@@ -27,7 +26,31 @@ final class ResilientPolicies {
   private static final double RETRY_BACKOFF_MULTIPLIER = 2.0;
   private static final double RETRY_BACKOFF_RANDOMIZATION_FACTOR = 0.5;
 
+  /** Resilience4j's own floor: {@code IntervalFunction} rejects anything below one millisecond. */
+  private static final Duration MINIMUM_BACKOFF = Duration.ofMillis(1);
+
   private ResilientPolicies() {}
+
+  /**
+   * Rejects a settings combination Resilience4j would only reject later, from inside the first
+   * outbound call. Each of these otherwise surfaces as an {@code IllegalArgumentException} naming
+   * a library-internal class, long after the process started cleanly.
+   */
+  static void validate(ResilientHttpClientSettings settings) {
+    requireText(settings.baseUrl(), "baseUrl");
+    requireAtLeast(settings.connectTimeout(), MINIMUM_BACKOFF, "connectTimeout");
+    requireAtLeast(settings.readTimeout(), MINIMUM_BACKOFF, "readTimeout");
+    requireAtLeast(
+        settings.rateLimiterRefreshPeriod(), MINIMUM_BACKOFF, "rateLimiterRefreshPeriod");
+    requireNotNegative(settings.maximumPermitWait(), "maximumPermitWait");
+    requireAtLeast(settings.maxConcurrentCalls(), 1, "maxConcurrentCalls");
+    requireAtLeast(settings.retryMaxAttempts(), 1, "retryMaxAttempts");
+    requireAtLeast(settings.retryBaseDelay(), MINIMUM_BACKOFF, "retryBaseDelay");
+    requireNotNegative(settings.retryAfterMaximumWait(), "retryAfterMaximumWait");
+    requireInRange(settings.breakerFailureRateThreshold(), 1, 100, "breakerFailureRateThreshold");
+    requireAtLeast(
+        settings.breakerOpenStateDuration(), MINIMUM_BACKOFF, "breakerOpenStateDuration");
+  }
 
   static RateLimiterConfig rateLimiterConfig(ResilientHttpClientSettings settings) {
     return RateLimiterConfig.custom()
@@ -45,7 +68,9 @@ final class ResilientPolicies {
         .slidingWindowSize(BREAKER_SLIDING_WINDOW_SIZE)
         .minimumNumberOfCalls(BREAKER_MINIMUM_NUMBER_OF_CALLS)
         // Failure-rate detection only: the limiter wait this breaker encloses would otherwise
-        // trip slow-call detection as a false symptom of source health.
+        // trip slow-call detection as a false symptom of source health. A 100% rate is what
+        // actually disables it — the duration threshold alone would still arm it on a default.
+        .slowCallRateThreshold(100)
         .slowCallDurationThreshold(Duration.ofHours(1))
         // Our own throttling, not a source-health signal: neither counts toward the failure rate.
         .ignoreException(ResilientPolicies::isOwnThrottling)
@@ -104,11 +129,19 @@ final class ResilientPolicies {
    * Which failures count toward the breaker's failure rate. A response is only a source-health
    * signal when its status is one of the transient ones or any {@code 5xx}; a plain client-side
    * {@code 4xx} (missing resource, bad request) means the exchange itself succeeded and is
-   * recorded as a breaker success, not a failure. Everything else that reaches here — connection
-   * failures, an unacceptable response, a {@code Retry-After} beyond the configured maximum — is
-   * a genuine failure.
+   * recorded as a breaker success, not a failure. A {@link ResponseMappingException} is the
+   * caller's own parsing defect rather than anything the source did, so it is excluded too.
+   * Everything else that reaches here — connection failures, an unacceptable response — is a
+   * genuine failure.
+   *
+   * <p>A {@code Retry-After} beyond the configured maximum never reaches this predicate: it is
+   * thrown from the retry interval function, outside the breaker's decorator. The response that
+   * carried the header was already recorded here on its own status.
    */
   private static boolean isBreakerFailure(Throwable throwable) {
+    if (throwable instanceof ResponseMappingException) {
+      return false;
+    }
     if (throwable instanceof HttpClientResponseException responseException) {
       int code = responseException.code();
       return code >= 500 || RETRYABLE_STATUSES.contains(code);
@@ -128,9 +161,44 @@ final class ResilientPolicies {
     }
     return throwable instanceof ReadTimeoutException
         || throwable instanceof ResponseClosedException
-        || throwable instanceof NoHostException
-        // Any other named subtype (e.g. ContentLengthExceededException) is a structural mismatch
-        // retrying cannot fix; only the plain, undecorated class means "connection unreachable".
+        // Any other named subtype is either a structural mismatch retrying cannot fix
+        // (ContentLengthExceededException) or a wiring defect that will fail identically every
+        // time (NoHostException); only the plain, undecorated class means "connection
+        // unreachable".
         || throwable.getClass() == HttpClientException.class;
+  }
+
+  private static void requireText(String value, String name) {
+    if (value == null || value.isBlank()) {
+      throw new IllegalArgumentException("%s must not be blank".formatted(name));
+    }
+  }
+
+  private static void requireAtLeast(Duration value, Duration minimum, String name) {
+    if (value == null || value.compareTo(minimum) < 0) {
+      throw new IllegalArgumentException(
+          "%s must be at least %s, was %s".formatted(name, minimum, value));
+    }
+  }
+
+  private static void requireAtLeast(int value, int minimum, String name) {
+    if (value < minimum) {
+      throw new IllegalArgumentException(
+          "%s must be at least %d, was %d".formatted(name, minimum, value));
+    }
+  }
+
+  private static void requireNotNegative(Duration value, String name) {
+    if (value == null || value.isNegative()) {
+      throw new IllegalArgumentException(
+          "%s must not be negative, was %s".formatted(name, value));
+    }
+  }
+
+  private static void requireInRange(int value, int minimum, int maximum, String name) {
+    if (value < minimum || value > maximum) {
+      throw new IllegalArgumentException(
+          "%s must be between %d and %d, was %d".formatted(name, minimum, maximum, value));
+    }
   }
 }

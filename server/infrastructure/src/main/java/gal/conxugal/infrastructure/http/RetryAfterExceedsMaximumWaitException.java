@@ -9,10 +9,6 @@ import io.micronaut.http.client.exceptions.HttpClientException;
  */
 public class RetryAfterExceedsMaximumWaitException extends HttpClientException {
 
-  public RetryAfterExceedsMaximumWaitException(String message) {
-    super(message);
-  }
-
   public RetryAfterExceedsMaximumWaitException(String message, Throwable cause) {
     super(message, cause);
   }
