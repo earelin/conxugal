@@ -55,6 +55,43 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
   official publication.
 - **Out of scope — exporting an operador's history.** Left to the future export spec
   SPEC-0005 also defers to.
+- **Out of scope — erasing an operador.** No function removes an operador's data. R7 governs
+  when an operador stops being *reachable*; nothing here destroys what it was derived from,
+  because the families that feed it never delete a contract either. R12 records what that
+  means and why it is judged acceptable.
+
+### What a contract family must supply
+
+The catalogue is family-neutral, so it depends on every feeding family supplying the same
+facts about each contract. Stated here rather than left implicit, because a family that
+cannot supply them cannot feed this catalogue, and that is worth discovering while writing
+that family's spec rather than while building it:
+
+- an **awardee name** and an **awardee fiscal identifier**, as published (R3, R4);
+- a single **publication date** per contract, comparable across families — R4's most-recent
+  rule, R10's year filter and R10's date sort all order contracts of different families
+  against one another;
+- an **amount**, on the VAT basis R9 fixes;
+- the **awarding Órgano**;
+- a **stable contract identity**, comparable across families, since R4 breaks ties on it;
+- an **explicit removal rule** — a family must say what it means for one of its contracts to
+  be withdrawn, because R7's lifecycle hooks onto it.
+
+Contratos menores supply all six ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md)).
+Licitacións publish more and differently, and the licitacións spec is where any mismatch has
+to be resolved.
+
+### Decisions this spec leaves open
+
+1. **Whether the catalogue is stored state or computed on read.** R2 says the catalogue is
+   derived; it does not say whether it is maintained as its own stored projection or assembled
+   from the contracts at query time. That choice decides whether R7's lifecycle happens
+   automatically or has to be driven, and whether R14's budget is reachable at all over
+   hundreds of thousands of operadores. It is architecturally significant and should be an ADR
+   before a feature settles it.
+2. **How reads are paged.** R11 requires jumping to a chosen page and an exact count, and R14
+   states the budget. This is the same tension SPEC-0005 records, at a comparable volume;
+   whichever ADR settles paging there settles it here, and the two must not diverge.
 
 ## Requirements
 
@@ -77,42 +114,82 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
   and letter case**. This equivalence governs **matching only**: what is displayed is always
   the value exactly as published (R13). Without it the same operador splits in two and the
   cross-Órgano aggregation this spec exists for fails silently.
-- **R4** — The same identifier is published under **varying names**. Since R13 forbids
-  normalising them, an operador is shown under the name from its **most recently published**
-  contract, ties broken by the contract identifier. Name variation never produces a second
-  operador.
+- **R4** — The same identifier is published under **varying names**, and with varying padding
+  and casing. Since R13 forbids normalising either, an operador is shown under the **name and
+  the identifier spelling** taken from its **most recently published** contract — ties broken
+  by taking the **higher** contract identifier, so the choice is deterministic and not merely
+  "some tie-break". The rule covers the identifier as well as the name because R3 deliberately
+  matches `b12345678`, ` B12345678 ` and `B12345678` as one operador, and that operador must
+  still be shown under exactly one of those published spellings rather than an invented
+  canonical form. Neither name nor spelling variation ever produces a second operador.
 - **R5** — An identifier is **unusable** when it is absent, or empty once surrounding
-  whitespace is ignored. A contract published with an unusable identifier is still stored and
-  browsable under its Órgano and still displays its awardee's name as published, but it
-  yields **no** operador — never an invented or placeholder one. Nothing beyond that
-  emptiness test is validated: the source publishes irregular but genuine identifiers, and
-  rejecting them would discard real awards.
+  whitespace is ignored. Such a contract yields **no** operador — never an invented or
+  placeholder one — while remaining stored, browsable and displaying its awardee's name as its
+  own family requires ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) already
+  guarantees that for contratos menores; this spec neither adds to it nor repeats it as its
+  own rule). Nothing beyond the emptiness test is validated: the source publishes irregular but
+  genuine identifiers, and rejecting them would discard real awards.
 - **R6** — Awardees that are **natural persons** and those that are **legal entities** are
-  catalogued and reachable identically. The system does not classify which is which, because
-  the source does not publish that distinction (R13).
-- **R7** — An operador exists exactly as long as it has at least one contract. When its last
-  contract is removed — the explicit withdrawal of SPEC-0005 R13 — the operador **ceases to
-  exist**, so its name and fiscal identifier survive nowhere in the system. This is what
-  makes an erasure obligation over the personal data of R12 dischargeable by acting on
-  contracts alone.
+  catalogued and reachable identically, and the system does not classify which is which. The
+  reason is the no-inference rule of this spec's Scope, not an absence in the source: the kind
+  of identifier published does in practice distinguish the two, which is how the roughly
+  one-in-seven figure in the Summary is known at all. Deriving and storing that classification
+  would be new information about identifiable people, so the system declines to, even though it
+  could.
+- **R7** — An operador is **reachable exactly as long as it has at least one visible
+  contract**. When its last contract is withdrawn under its family's removal rule, the operador
+  appears in no list, no lookup and no history — it ceases to exist as far as every surface of
+  this spec is concerned.
+
+  It is **not erased**, and this spec does not claim otherwise. The families that feed the
+  catalogue never delete a contract: a withdrawal is remembered and can be undone, which is
+  what makes restoration possible. So the awardee data an operador was derived from is
+  retained, and restoring the contract restores the operador. R12 records why that is
+  acceptable here.
+
+  The catalogue **re-derives from the contracts as they currently stand**, not only when
+  contracts appear and disappear. Because a family may refresh a stored contract's
+  published attributes in place, and may re-read old publications to catch corrections, a
+  correction can change the fiscal identifier or the name a contract was published under.
+  When it does: the contract's contribution **moves** to the operador its corrected identifier
+  names, creating that operador if no contract named it before; an operador left with no
+  visible contracts becomes unreachable under R7, however that came about; and a contract that
+  becomes visible again — newly imported, or restored after withdrawal — makes its operador
+  reachable again. R4's display name and identifier follow from whatever the contracts say
+  after the change, not from what they said when the operador first appeared.
 
 ### Finding an operador
 
 - **R8** — A user can reach an operador in two ways: by following the **awardee from any
-  contract row**, and from a **list of operadores** that can be looked up by name or by
-  fiscal identifier. Name lookup matches any part of the name, ignoring letter case and
-  accents; identifier lookup matches the whole identifier under the equivalence of R3.
+  contract row that has one** — a row whose identifier is unusable (R5) has no operador to
+  follow, and offers no route that dead-ends — and from a **list of operadores** that can be
+  looked up by name or by fiscal identifier. Name lookup matches any part of the name,
+  ignoring letter case and accents; identifier lookup matches the **whole** identifier under
+  the equivalence of R3, so a padded or differently-cased query still finds it.
+
+  That asymmetry — partial matching on names, whole-identifier matching on identifiers — is
+  **deliberate and load-bearing**, not an oversight: it means the catalogue cannot be walked
+  by feeding it fragments of fiscal identifiers, which R12 relies on. Relaxing identifier
+  lookup to a prefix or substring match would quietly remove that protection.
+
   Without the list, the primary question this capability exists to answer — *what has this
-  supplier been awarded?* — could only be asked by first stumbling onto one of its
-  contracts.
+  supplier been awarded?* — could only be asked by first stumbling onto one of its contracts.
 
 ### Contract history
 
 - **R9** — Opening an operador shows its **contract history**: every contract awarded to it
-  **across all Órganos and all contract families**, showing per contract the awarding Órgano
-  and the family it belongs to, plus the number of contracts and the total amount awarded
-  **for the current selection**. Totals carry the same VAT labelling the contract's own
-  family requires of it (for contratos menores, SPEC-0005 R7).
+  **across all Órganos and all contract families**, showing per contract the awarding Órgano,
+  the family it belongs to, and the same published attributes that family shows in its own
+  list — including, where that family offers one, the route to the contract's publication at
+  the official source, so a row here is as verifiable as a row there. It also shows the number
+  of contracts and the total amount awarded **for the current selection**.
+
+  Every family publishes its awarded amount **including VAT** — contratos menores at award,
+  licitacións at resolución — so a total spanning families sums figures on **one basis** and is
+  labelled **VAT-inclusive**, exactly as each family labels its own amounts. This is stated
+  rather than left to each family because a cross-family total is the whole point of the
+  history, and a total silently mixing VAT bases would be a number no one should act on. A
+  family that could not supply an amount on this basis could not feed the catalogue.
 - **R10** — A user can **filter** an operador's history **by year** and **sort** it by
   **date** or by **amount**, ascending or descending. Filtering, sorting, counting and
   totalling apply to the whole selection, not only to the page currently displayed.
@@ -130,22 +207,47 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
   **personal data**, and this spec produces genuinely **new derived information** about
   identifiable people that the official source does not publish: R9 assembles into a single
   profile, with running totals, what the source publishes only as isolated per-Órgano
-  entries, and R8 makes that profile **searchable by personal fiscal identifier**. Both go
-  beyond the source, both are the capability's purpose, and both are acknowledged here
-  rather than denied. The mitigations are that every read requires authentication (R1), that
-  no attribute is added beyond what the contracts state (R13 and the Scope exclusions), and
-  that R7 makes erasure reachable by removing the underlying contracts.
+  entries, and R8 makes that profile **searchable by personal fiscal identifier**. The
+  catalogue is moreover a **directory**: R8's list plus R11's guarantee that every entry is
+  reachable means an authenticated user can page through every operador the system holds,
+  roughly one in seven of them a natural person. All three go beyond the source, all three are
+  the capability's purpose, and all three are acknowledged here rather than denied.
+
+  The mitigations are that the application is **private, with no public exposure** and every
+  read behind authentication (R1); and that identifier lookup matches only whole identifiers
+  (R8), so the catalogue cannot be enumerated by feeding it fragments. Two things are recorded
+  as **not** mitigations, so nobody mistakes them for protection later: the Scope exclusions
+  limit what is added but do nothing about the aggregate, which is the risk named here; and
+  R7 is **not** an erasure route — no operador data is removed, by decision.
+
+  Two dependencies this rests on, named because they are outside this spec: the strength of
+  the authentication mitigation is the strength of **account provisioning**, which SPEC-0002
+  puts out of its own scope and no spec yet owns; and the **export capability** SPEC-0001
+  promises and this spec defers must revisit this requirement when it lands, because bulk
+  export of a directory is a materially different risk from paging one.
 - **R13** — Every value displayed about an operador — its name, its fiscal identifier, and
   every contract attribute in its history — is exactly as the official source published it,
   with no correction, normalisation, inference or enrichment from any other source. The
   matching equivalence of R3 governs comparison only, never display.
 - **R14** — The catalogue is expected to hold **hundreds of thousands of operadores** over
-  **millions of contracts**, and stays responsive at that volume. Measured under the same
-  dataset, environment and concurrency conditions SPEC-0005 R23 states: the operadores list
-  and an operador's contract history each return their first page, their count and their
-  totals within **1 second at the 95th percentile**, and a **deep** page — one far into a
-  selection of that size — meets the same budget as the first, because paging that degrades
-  with depth is the failure mode a naive implementation falls into at this volume.
+  **millions of contracts**, and stays responsive at that volume. It inherits the **reference
+  environment** and the **10 concurrent readers** of SPEC-0005 R23, and states its own dataset,
+  because that requirement fixes a contract volume and says nothing about how many operadores
+  those contracts name or how deep any one history runs: at least **300 000** operadores, of
+  which at least one has **10 000** or more contracts spanning **more than one Órgano**. Under
+  those conditions:
+  - the **operadores list** returns its first page and its count, and any page within the
+    first 100 of a selection, within **1 second at the 95th percentile**; a page beyond the
+    first 100 returns within **5 seconds**, matching SPEC-0005 R23's tiering rather than
+    diverging from it;
+  - an **operador's contract history** returns its first page, its count and its totals within
+    **1 second at the 95th percentile**, and the same tiering applies to it.
+
+  The operadores **list** carries no per-operador counts or totals — R8 describes it as the way
+  to find an operador by name or identifier, and R9 puts the aggregates on the profile, where
+  they are computed for one operador rather than for every row of a list hundreds of thousands
+  long. A list that displayed them would dominate the cost model and would need R8 to require
+  them first.
 
 ## Acceptance criteria
 
@@ -157,48 +259,73 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
 3. **(R3)** Two contracts whose published fiscal identifiers differ only in surrounding
    whitespace or letter case yield **one** operador, not two, and its history contains both
    contracts.
-4. **(R3, R13)** Each contract row in an operador's history displays the fiscal identifier
+4. **(R3)** Two contracts whose published fiscal identifiers differ in any way **other** than
+   surrounding whitespace or letter case — including internal spacing, punctuation, or a
+   differing character — yield **two** operadores, not one. Over-merging is as much a failure
+   as under-merging, and nothing else about an identifier is ignored.
+5. **(R3, R13)** Each contract row in an operador's history displays the fiscal identifier
    exactly as published for that contract, including padding and casing the system ignored
    when matching.
-5. **(R4)** Two contracts awarded to the same identifier under different published names
+6. **(R4)** Two contracts awarded to the same identifier under different published names
    yield one operador shown under the name from the more recently published of them; neither
    name creates a second operador.
-6. **(R5)** A contract published with an absent or whitespace-only fiscal identifier is
+7. **(R4)** An operador matched from contracts publishing its identifier with different
+   padding and casing is displayed under **one** of those published spellings — the one from
+   its most recently published contract — and never under an invented canonical form; two runs
+   over the same data choose the same spelling.
+8. **(R5)** A contract published with an absent or whitespace-only fiscal identifier is
    stored, appears in its Órgano's list, and displays its awardee name — while creating no
-   operador and appearing in no operador's history.
-7. **(R5)** A contract published with an irregular but non-empty identifier **is** attached
+   operador and appearing in no operador's history, and offering no awardee route that leads
+   nowhere.
+9. **(R5)** A contract published with an irregular but non-empty identifier **is** attached
    to an operador rather than rejected or discarded.
-8. **(R6)** An awardee published as a natural person with a personal fiscal identifier is
-   catalogued and reachable exactly as a legal entity is; no view distinguishes the two.
-9. **(R7)** Removing an operador's last remaining contract removes the operador: its name
-   and fiscal identifier are afterwards reachable through neither the operadores list nor
-   lookup by name or identifier.
-10. **(R7)** Removing one of an operador's several contracts leaves the operador in place
-    with the remaining contracts, and its count and total reflect the removal.
-11. **(R8)** A user can reach an operador by following the awardee from a contract row, and
+10. **(R6)** An awardee published as a natural person with a personal fiscal identifier is
+    catalogued and reachable exactly as a legal entity is; no view distinguishes the two, and
+    no stored attribute records which it is.
+11. **(R7)** Withdrawing an operador's last remaining visible contract makes the operador
+    unreachable: it is afterwards found through neither the operadores list nor lookup by name
+    or identifier, and appears on no contract row.
+12. **(R7)** Restoring that withdrawn contract makes the same operador reachable again, with
+    its history intact — demonstrating that the withdrawal hid it rather than erased it.
+13. **(R7)** Withdrawing one of an operador's several contracts leaves the operador reachable
+    with the remaining contracts, and its count and total reflect the withdrawal.
+14. **(R7)** When a correction changes a contract's published fiscal identifier, that
+    contract's contribution moves to the operador the corrected identifier names — creating it
+    if no contract named it before — and disappears from the previous operador's history,
+    which becomes unreachable if that was its last contract.
+15. **(R8)** A user can reach an operador by following the awardee from a contract row, and
     can find the same operador from the operadores list by a partial, case- and
-    accent-insensitive fragment of its name, and by its full fiscal identifier.
-12. **(R9)** Opening an operador shows every contract awarded to it across **more than one**
-    Órgano, showing per contract the awarding Órgano and its contract family, and reports the
-    number of contracts and the total amount awarded; the totals equal the sum over the
-    listed contracts and are labelled as their family requires.
-13. **(R10)** Filtering an operador's history by a given year returns only contracts dated in
+    accent-insensitive fragment of its name, and by its fiscal identifier — including when the
+    query is padded or differently cased from the published spelling.
+16. **(R8)** A fragment of a fiscal identifier that is not the whole identifier finds no
+    operador, so the catalogue cannot be walked by identifier fragments.
+17. **(R9)** Opening an operador shows every contract awarded to it across **more than one**
+    Órgano, showing per contract the awarding Órgano, its contract family and that family's
+    published attributes, and reports the number of contracts and the total amount awarded;
+    the totals equal the sum over the listed contracts.
+18. **(R9)** For an operador holding contracts of **two different families**, the reported
+    total is a single figure summing both, labelled as including VAT — no total mixes VAT
+    bases and none is reported per family.
+19. **(R10)** Filtering an operador's history by a given year returns only contracts dated in
     that year, and the reported count and total reflect that filtered selection rather than
     the whole history; clearing the filter restores both.
-14. **(R10)** Sorting by date returns contracts in date order and sorting by amount returns
+20. **(R10)** Sorting by date returns contracts in date order and sorting by amount returns
     them in amount order, in the chosen direction; the first page after sorting descending by
     amount contains the largest-amount contract of the **whole** filtered selection, not
     merely the largest of the page previously displayed.
-15. **(R11)** Both the operadores list and an operador's history are paginated: each states
+21. **(R11)** Both the operadores list and an operador's history are paginated: each states
     how many entries the current selection contains and how many pages it spans, a user can
     move to the next and previous page and jump to a chosen page, and paging through the
     whole selection yields exactly that many entries with none repeated and none skipped.
     Applying a filter or changing the sort returns the user to the first page.
-16. **(R12)** No operador profile, total, or identifier lookup is reachable without
-    authentication.
-17. **(R13)** Every operador name, fiscal identifier and contract attribute displayed matches
+22. **(R12)** No surface offers a way to delete or erase an operador, and no function removes
+    an operador's name or fiscal identifier from the system.
+23. **(R13)** Every operador name, fiscal identifier and contract attribute displayed matches
     what the official source published, with no value corrected, normalised, inferred or
     enriched; no attribute is shown that no contract supplies.
-18. **(R14)** Under the stated conditions, the operadores list and an operador's history each
-    return their first page, their count and their totals within 1 s at the 95th percentile,
-    and a deep page into a selection of that size meets the same budget as the first.
+24. **(R14)** Under the reference environment and the dataset R14 states — at least 300 000
+    operadores, one of them holding 10 000 or more contracts across more than one Órgano — the
+    operadores list returns its first page and its count, and an operador's history returns its
+    first page, count and totals, within 1 s at the 95th percentile; a page beyond the first
+    100 of either selection returns within 5 s.
+25. **(R14)** The operadores list displays no per-operador contract count or amount total.
