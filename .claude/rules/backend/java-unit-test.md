@@ -54,9 +54,11 @@ gains unit tests. Integration tests need no exclusion — they live in the
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
 
-  @Mock private OrderRepository orderRepository;
+  @Mock
+  private OrderRepository orderRepository;
 
-  @InjectMocks private OrderService orderService;
+  @InjectMocks
+  private OrderService orderService;
 
   @Test
   void returns_total_of_all_orders_for_customer() {
