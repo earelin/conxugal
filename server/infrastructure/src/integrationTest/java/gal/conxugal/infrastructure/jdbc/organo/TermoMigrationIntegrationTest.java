@@ -107,9 +107,7 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
     insertTermo("Fútbol", parentId);
 
     assertThatThrownBy(() -> deleteTermo(parentId))
-        .isInstanceOfSatisfying(
-            SQLException.class, exception -> assertViolatesForeignKey(exception,
-                "termo_parent_id_fkey"));
+        .isInstanceOfSatisfying(SQLException.class, this::assertViolatesParentForeignKey);
   }
 
   @Test
@@ -118,9 +116,7 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
     insertOrgano("consorcio-x", "Consorcio X", termoId);
 
     assertThatThrownBy(() -> deleteTermo(termoId))
-        .isInstanceOfSatisfying(
-            SQLException.class, exception -> assertViolatesForeignKey(exception,
-                "organo_contratacion_termo_id_fkey"));
+        .isInstanceOfSatisfying(SQLException.class, this::assertViolatesPlacementForeignKey);
   }
 
   @Test
@@ -137,9 +133,7 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
   void check_rejects_inserting_term_as_its_own_parent() {
     UUID id = UUID.randomUUID();
 
-    assertThatThrownBy(
-        () -> executeUpdate(
-            "INSERT INTO termo (id, name, parent_id) VALUES (?, ?, ?)", id, "Deportes", id))
+    assertThatThrownBy(() -> insertTermoWithId(id, "Deportes", id))
         .isInstanceOfSatisfying(SQLException.class, this::assertViolatesSelfParentCheck);
   }
 
@@ -201,6 +195,14 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
     assertThat(exception.getMessage()).contains("termo_parent_not_self");
   }
 
+  private void assertViolatesParentForeignKey(SQLException exception) {
+    assertViolatesForeignKey(exception, "termo_parent_id_fkey");
+  }
+
+  private void assertViolatesPlacementForeignKey(SQLException exception) {
+    assertViolatesForeignKey(exception, "organo_contratacion_termo_id_fkey");
+  }
+
   private void assertViolatesForeignKey(SQLException exception, String constraintName) {
     // SQLSTATE 23503 is foreign_key_violation — the delete was refused rather than
     // cascading, which is the whole point of leaving both keys without an ON DELETE action.
@@ -210,6 +212,11 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
 
   private void deleteTermo(UUID id) throws SQLException {
     executeUpdate("DELETE FROM termo WHERE id = ?", id);
+  }
+
+  private void insertTermoWithId(UUID id, String name, UUID parentId) throws SQLException {
+    executeUpdate(
+        "INSERT INTO termo (id, name, parent_id) VALUES (?, ?, ?)", id, name, parentId);
   }
 
   private void insertOrgano(String sourceKey, String name, UUID termoId) throws SQLException {

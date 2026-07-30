@@ -79,7 +79,8 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
             OrganoDeContratacion::name,
             OrganoDeContratacion::active)
         .containsExactly(
-            tuple("axencia-y", "Axencia Y", false), tuple("consorcio-x", "Consorcio X", true));
+            tuple("axencia-y", "Axencia Y", false),
+            tuple("consorcio-x", "Consorcio X", true));
   }
 
   @Test
@@ -240,7 +241,9 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
     assertThat(organos)
         .extracting(OrganoDeContratacion::sourceKey, OrganoDeContratacion::termoId)
-        .containsExactly(tuple("axencia-y", null), tuple("consorcio-x", termoId));
+        .containsExactly(
+            tuple("axencia-y", null),
+            tuple("consorcio-x", termoId));
   }
 
   @Test
