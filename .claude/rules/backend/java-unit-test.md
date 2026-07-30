@@ -24,12 +24,12 @@ their own conventions. Add a new module here when it gains unit tests.
   Never relax it: no `lenient()`, `@MockitoSettings(strictness = LENIENT)`, or
   `withSettings().lenient()`. An unused stub means the test or the code is wrong; fix
   the cause instead of silencing it.
-- **Prefer stubs over `verify(...)`.** Configure return values and assert on the
-  unit's output. Strict stubbing already fails the test when a stubbed call never
-  happens, so a stub you assert against proves the collaborator was called with those
-  arguments — `verify(...)` would only restate it. For a genuine side effect with no
-  return value (an event published, a row deleted), use a small recording fake and
-  assert on what it captured.
+- **Never `verify(...)`.** Configure return values and assert on the unit's output;
+  under strict stubbing a stub you assert against already proves the collaborator was
+  called with those arguments. Two exceptions: asserting that an interaction did *not*
+  happen (`never()`, `verifyNoInteractions`), which stubbing cannot express, and a
+  side effect with no return value (an event published, a row deleted) — record it in
+  a small hand-written fake and assert on what it captured.
 - **One behaviour per test**, structured Arrange / Act / Assert with a single
   assertion focus. Reach for `SoftAssertions` rather than sprawling unrelated checks.
 

@@ -33,11 +33,12 @@ needs a Docker daemon; `application`'s only needs a JVM.
   serialization, status codes, validation, security — is under test. Drive endpoints
   with REST-assured through the injected `RequestSpecification spec` test parameter,
   formatted as a staircase per the backend code style rule.
-- **Strict stubbing, never `verify(...)`.** Stub only what the endpoint needs and
-  assert the HTTP response; a strict stub already fails the test if the collaborator
-  is never called.
+- **Stub only what the endpoint needs, and never `verify(...)`** — assert the HTTP
+  response instead. The exception is asserting that an interaction did *not* happen
+  (`never()`, `verifyNoInteractions`), which stubbing cannot express.
 - **Name test methods in snake_case**, describing the interaction — e.g.
   `persists_organo_and_assigns_generated_id`, `returns_404_when_organo_is_unknown`.
-- **Keep the class order-independent.** One container lifecycle per class
-  (`@TestInstance(PER_CLASS)`); clean state per test — truncate the tables touched in
-  `@AfterEach`, reset WireMock stubs in `@BeforeEach`.
+- **Clean state per test** so the class stays order-independent — truncate the tables
+  the test touched in `@AfterEach`, reset WireMock stubs in `@BeforeEach`. A `static`
+  `@Container` is already per-class; `@TestInstance(PER_CLASS)` is for sharing setup
+  across the class, not for container lifecycle.
