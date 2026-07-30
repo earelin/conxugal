@@ -21,7 +21,7 @@ escape characters — e.g. a literal containing `"` (JSON, HTML, quoted attribut
 
 Use Java 25 features and other modern features.
 
-Fluent call chains are formatted vertically, regardless of chain length. If the call
+Fluent call chains must be formatted vertically, regardless of chain length. If the call
 chain has multiple clear stages each stage keyword sits at the base indent, 
 calls chained onto that stage indent one level (4 spaces) deeper, and the next
 stage keyword steps back out to the base indent:
