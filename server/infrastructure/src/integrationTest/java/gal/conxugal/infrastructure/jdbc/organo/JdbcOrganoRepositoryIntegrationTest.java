@@ -62,7 +62,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
   void cleanUp() throws Exception {
     try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement()) {
-      statement.execute("TRUNCATE TABLE organo_contratacion");
+      statement.execute("TRUNCATE TABLE organo_contratacion, termo");
     }
   }
 
@@ -71,15 +71,31 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     insertOrgano("consorcio-x", "Consorcio X", true);
     insertOrgano("axencia-y", "Axencia Y", false);
 
-    List<OrganoDeContratacion> organos = organoRepository.findAll();
+    List<OrganoDeContratacion> organos = organoRepository.findAllOrderByName();
 
     assertThat(organos)
         .extracting(
             OrganoDeContratacion::sourceKey,
             OrganoDeContratacion::name,
             OrganoDeContratacion::active)
-        .containsExactlyInAnyOrder(
-            tuple("consorcio-x", "Consorcio X", true), tuple("axencia-y", "Axencia Y", false));
+        .containsExactly(
+            tuple("axencia-y", "Axencia Y", false),
+            tuple("consorcio-x", "Consorcio X", true));
+  }
+
+  @Test
+  void orders_accented_names_under_the_galician_collation() throws Exception {
+    insertOrgano("zamora", "Zamora", true);
+    insertOrgano("avila", "Ávila", true);
+    insertOrgano("avion", "Avión", true);
+
+    List<OrganoDeContratacion> organos = organoRepository.findAllOrderByName();
+
+    // Under the cluster default this returns Avión, Zamora, Ávila — the accent sorting
+    // after Z is exactly what the column's collation exists to prevent.
+    assertThat(organos)
+        .extracting(OrganoDeContratacion::name)
+        .containsExactly("Ávila", "Avión", "Zamora");
   }
 
   @Test
@@ -103,7 +119,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     OrganoDeContratacion created = organoRepository.insert(newOrgano);
 
     assertThat(created.id()).isNotNull();
-    assertThat(organoRepository.findAll())
+    assertThat(organoRepository.findAllOrderByName())
         .extracting(OrganoDeContratacion::sourceKey, OrganoDeContratacion::active)
         .containsExactly(tuple("consorcio-x", true));
   }
@@ -193,15 +209,117 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(untouched.active()).isTrue();
   }
 
+  @Test
+  void update_preserves_existing_placement() throws Exception {
+    UUID termoId = insertTermo("Deportes", null);
+    UUID id = insertOrgano("consorcio-x", "Consorcio X", true, termoId);
+
+    organoRepository.update(id, "Consorcio X Renamed", true);
+
+    OrganoDeContratacion updated = organoRepository.findById(id).orElseThrow();
+    assertThat(updated.termoId()).isEqualTo(termoId);
+  }
+
+  @Test
+  void updateActive_preserves_existing_placement() throws Exception {
+    UUID termoId = insertTermo("Deportes", null);
+    UUID id = insertOrgano("consorcio-x", "Consorcio X", true, termoId);
+
+    organoRepository.updateActive(id, false);
+
+    OrganoDeContratacion updated = organoRepository.findById(id).orElseThrow();
+    assertThat(updated.termoId()).isEqualTo(termoId);
+  }
+
+  @Test
+  void findAllOrderByName_reports_termo_id_for_placed_and_unplaced_organos() throws Exception {
+    UUID termoId = insertTermo("Deportes", null);
+    insertOrgano("consorcio-x", "Consorcio X", true, termoId);
+    insertOrgano("axencia-y", "Axencia Y", true, null);
+
+    List<OrganoDeContratacion> organos = organoRepository.findAllOrderByName();
+
+    assertThat(organos)
+        .extracting(OrganoDeContratacion::sourceKey, OrganoDeContratacion::termoId)
+        .containsExactly(
+            tuple("axencia-y", null),
+            tuple("consorcio-x", termoId));
+  }
+
+  @Test
+  void inserted_organo_is_unclassified_by_default() {
+    OrganoDeContratacion created =
+        organoRepository.insert(new OrganoDeContratacion("consorcio-x", "Consorcio X"));
+
+    assertThat(organoRepository.findById(created.id()).orElseThrow().termoId()).isNull();
+  }
+
+  @Test
+  void updateTermo_sets_then_replaces_then_clears_the_placement() throws Exception {
+    UUID firstTermo = insertTermo("Deportes", null);
+    UUID secondTermo = insertTermo("Cultura", null);
+    UUID id = insertOrgano("consorcio-x", "Consorcio X", true);
+
+    organoRepository.updateTermo(id, firstTermo);
+    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isEqualTo(firstTermo);
+
+    organoRepository.updateTermo(id, secondTermo);
+    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isEqualTo(secondTermo);
+
+    organoRepository.updateTermo(id, null);
+    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isNull();
+  }
+
+  @Test
+  void clearPlacementsByTermo_clears_only_rows_placed_in_that_term() throws Exception {
+    UUID termoId = insertTermo("Deportes", null);
+    UUID otherTermoId = insertTermo("Cultura", null);
+    UUID placedId = insertOrgano("consorcio-x", "Consorcio X", true, termoId);
+    UUID placedElsewhereId = insertOrgano("axencia-y", "Axencia Y", true, otherTermoId);
+
+    organoRepository.clearPlacementsByTermo(termoId);
+
+    assertThat(organoRepository.findById(placedId).orElseThrow().termoId()).isNull();
+    assertThat(organoRepository.findById(placedElsewhereId).orElseThrow().termoId())
+        .isEqualTo(otherTermoId);
+  }
+
+  // Neither helper below commits or rolls back: every test here only expects successful
+  // inserts, and the injected DataSource's shared connection lets the repository calls
+  // under test see these uncommitted writes within the same transaction. Contrast
+  // TermoMigrationIntegrationTest's insertTermo, which does commit/rollback because
+  // several of its tests deliberately trigger a constraint violation.
   private UUID insertOrgano(String sourceKey, String name, boolean active) throws Exception {
+    return insertOrgano(sourceKey, name, active, null);
+  }
+
+  private UUID insertOrgano(String sourceKey, String name, boolean active, UUID termoId)
+      throws Exception {
     String sql =
-        "INSERT INTO organo_contratacion (id, source_key, name, active) "
-            + "VALUES (uuidv7(), ?, ?, ?) RETURNING id";
+        "INSERT INTO organo_contratacion (id, source_key, name, active, termo_id) "
+            + "VALUES (uuidv7(), ?, ?, ?, ?) RETURNING id";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, sourceKey);
       statement.setString(2, name);
       statement.setBoolean(3, active);
+      statement.setObject(4, termoId);
+      try (ResultSet resultSet = statement.executeQuery()) {
+        if (!resultSet.next()) {
+          throw new IllegalStateException("Insert did not return a generated id");
+        }
+        return resultSet.getObject("id", UUID.class);
+      }
+    }
+  }
+
+  private UUID insertTermo(String name, UUID parentId) throws Exception {
+    String sql =
+        "INSERT INTO termo (id, name, parent_id) VALUES (uuidv7(), ?, ?) RETURNING id";
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement statement = connection.prepareStatement(sql)) {
+      statement.setString(1, name);
+      statement.setObject(2, parentId);
       try (ResultSet resultSet = statement.executeQuery()) {
         if (!resultSet.next()) {
           throw new IllegalStateException("Insert did not return a generated id");

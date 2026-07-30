@@ -11,4 +11,8 @@ import java.util.UUID;
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public interface JdbcOrganoRepository
     extends OrganoRepository, GenericRepository<OrganoDeContratacion, UUID> {
+
+  @Override
+  @Query("UPDATE organo_contratacion SET termo_id = NULL WHERE termo_id = :termoId")
+  void clearPlacementsByTermo(UUID termoId);
 }
