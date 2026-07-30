@@ -30,37 +30,30 @@ in `domain`, not in a controller.
   (roots being siblings of each other). It binds `CreateTermo`, `RenameTermo` and the
   `MoveTermo` that lands a term beside a new set of siblings. Length and blankness are
   rejected at the edge by the request record; the sibling comparison lives here, where the
-  repository read it needs is available, and TASK-0001's unique index is what makes it
-  race-proof — this check exists to produce a civil refusal, not to be the only guard.
-- **This task owns two of the feature's four term-scoped rejection exceptions** — cycle and
-  term still has children — as distinct domain types in `domain.organo`, so
-  [TASK-0006](TASK-0006-taxonomia-admin-endpoints.md) can map each to its own status and
-  problem type without inspecting messages. The other two, **unknown term and duplicate
-  sibling name, are declared by
-  [TASK-0002](TASK-0002-taxonomia-store-infrastructure.md)** — it translates the database
-  backstops into them and cannot compile without them, and it is a sibling of this task
-  rather than a predecessor, so it cannot wait for them. This task **reuses** those two; it
-  must not declare either again.
-  [TASK-0004](TASK-0004-organo-classification-use-cases.md) likewise reuses the
-  unknown-**term** type rather than declaring a second one; it is listed here so two tasks
-  picked up in parallel do not each invent one. The fifth type in the feature's failure
-  contract,
+  repository read it needs is available. TASK-0001's unique index stays underneath it as an
+  integrity backstop, but this check is what produces the refusal a caller sees.
+- **This task owns the feature's four term-scoped rejection exceptions** — unknown term,
+  cycle, term still has children, duplicate sibling name — as distinct domain types in
+  `domain.organo`, so [TASK-0006](TASK-0006-taxonomia-admin-endpoints.md) can map each to
+  its own status and problem type without inspecting messages.
+  [TASK-0004](TASK-0004-organo-classification-use-cases.md) reuses the unknown-**term** type
+  rather than declaring a second one; it is listed here so two tasks picked up in parallel
+  do not each invent one. The fifth type in the feature's failure contract,
   **unknown Órgano, is TASK-0004's** and lives in `domain.organo` — it is about an Órgano,
-  not the taxonomy.
-- **Tree-shape mutations serialise.** `MoveTermo` and `DeleteTermo` carry `@Transactional`
+  not the taxonomy. Every one of them is raised by a check in this task; none comes from
+  translating a database error.
+- **`DeleteTermo` is atomic.** It carries `@Transactional`
   (`io.micronaut.transaction.annotation`) on the use-case method — the same boundary
-  `SetUserEnabled` and `CreateUser` already use — and call `lockTaxonomia` before their first
-  read, holding it through the write. **The annotation is not optional decoration**: the
-  lock is transaction-scoped, so without an ambient transaction it is released inside its
-  own statement and serialises nothing, while every single-threaded test still passes. For
-  `MoveTermo` this is what
-  makes the cycle guard sound at all — a check-then-write over a tree another admin is
-  reshaping is not a guard (see the feature's *Edge cases*). For `DeleteTermo` the same
-  transaction also covers the placement clearing, so a concurrent reader never sees an
-  Órgano pointing at a term that is already gone. `CreateTermo` and `RenameTermo` do not
-  reshape the tree and take no lock: the only thing they can race on is the sibling-name
-  rule, and the unique index settles that in the database rather than by making every
-  create wait.
+  `SetUserEnabled` and `CreateUser` already use — so its delete and the placement clearing
+  it triggers either both land or neither does. Without it a failure between the two leaves
+  Órganos pointing at a term that is gone, which the foreign key then refuses.
+- **No lock, and the check-then-write window is accepted.** Every rule here reads and then
+  writes, so two admins acting in the same instant could in principle both pass. The
+  taxonomy is an `ADMIN`-only table of a few dozen rows edited a handful of times in its
+  life; serialising every mutation to close that window costs more machinery than the risk
+  warrants (see the feature's *Edge cases*). The schema's unique index and foreign keys
+  remain as integrity backstops, and a violation reaching the adapter surfaces as a 500 —
+  accepted, not translated.
 
 ## Acceptance criteria
 - A term can be created at the root and under a parent, renamed, and moved to a different
@@ -82,15 +75,8 @@ in `domain`, not in a controller.
   under a different parent is accepted. (SPEC-0004 #14)
 - Each rejection surfaces as its own exception type, and unknown-term is a single type
   shared with [TASK-0004](TASK-0004-organo-classification-use-cases.md), not a second one.
-- `MoveTermo` and `DeleteTermo` take the taxonomy lock before their first read; `CreateTermo`
-  and `RenameTermo` do not. Provable against the test double by recording the call order —
-  a guard that reads before locking is the bug this exists to prevent, and it looks
-  identical to a correct one in a single-threaded test otherwise.
-- **The serialisation is proven for real**, not only by call order: an integration test
-  drives the injected `MoveTermo` from concurrent threads against a real database and shows
-  that two moves which would jointly create a cycle cannot both commit, following
-  `SetUserEnabledConcurrencyIntegrationTest`. This is the only criterion in the feature that
-  can fail when `@Transactional` is missing — every other test passes with the lock doing
-  nothing at all.
+- `DeleteTermo`'s delete and its placement clearing are atomic: a failure partway through
+  leaves the term and every placement exactly as they were. Proven against a real database,
+  since a test double cannot show a rollback.
 - Unit-tested against a test double of `TermoRepository` / `OrganoRepository`; the
   cycle guard is tested at depth, not only one level down.

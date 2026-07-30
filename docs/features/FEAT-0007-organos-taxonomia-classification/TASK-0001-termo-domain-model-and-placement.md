@@ -48,9 +48,9 @@ green twice, so this is a cohesion argument rather than the only workable order.
   insert, rename, re-parent,
   delete, an `existsByParentId`-style child check the delete rule needs, a
   **children-of-parent read** the sibling-name rule needs (roots included, so a null parent
-  is a legal argument), and `lockTaxonomia` — the serialising lock the feature's *Edge cases*
-  require, declared in the domain's own terms so the advisory-lock mechanism stays in
-  `infrastructure` (ADR-0002).
+  is a legal argument). No lock operation: the rules are use-case checks and the taxonomy is
+  written to too rarely for contention to be a real condition (see the feature's
+  *Edge cases*).
 - Placement on the Órgano: a **nullable** `UUID termoId` on `OrganoDeContratacion`,
   and the `OrganoRepository` operations that write it — set the term, clear it, and clear
   every placement pointing at a given term (what `DeleteTermo` needs). Placement is exactly
@@ -89,11 +89,10 @@ green twice, so this is a cohesion argument rather than the only workable order.
   adapters derive that `ORDER BY` from the method name, so there is no hand-written query
   to attach an explicit `COLLATE` to — declared on the column, every derived read inherits
   it and the port's ordering contract holds without the adapter doing anything.
-- The same migration adds a **`CHECK (parent_id IS DISTINCT FROM id)`** on `termo`. The
-  feature's serialising lock exists to stop a *multi-row* cycle forming between two
-  concurrent re-parents; a term pointing at itself needs no second row, so no lock and no
-  read-then-write window is involved, and a foreign key is satisfied by a self-reference.
-  It is the one cycle the schema can reject outright, so it does.
+- The same migration adds a **`CHECK (parent_id IS DISTINCT FROM id)`** on `termo`. A
+  multi-row cycle is `MoveTermo`'s own check to make; a term pointing at itself needs no
+  second row and a foreign key is satisfied by a self-reference. It is the one cycle the
+  schema can reject outright, so it does.
 - The same migration adds a **unique index on `(parent_id, lower(name))` with
   `NULLS NOT DISTINCT`**, enforcing the feature's sibling-name rule in the one place a
   concurrent create cannot slip past. `NULLS NOT DISTINCT` is what extends it to the roots:

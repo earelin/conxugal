@@ -7,7 +7,6 @@ import static org.assertj.db.api.Assertions.assertThat;
 
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoRepository;
-import gal.conxugal.domain.organo.TermoNotFoundException;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -268,29 +267,6 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(organoRepository.findById(id).orElseThrow().termoId()).isEqualTo(secondTermo);
 
     organoRepository.updateTermo(id, null);
-    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isNull();
-  }
-
-  @Test
-  void updateTermo_naming_an_unknown_term_raises_termo_not_found() throws Exception {
-    UUID id = insertOrgano("consorcio-x", "Consorcio X", true);
-    // See the duplicate-source-key test above for why this commits before the violation and
-    // rolls back after: the repository call below shares this connection.
-    try (Connection connection = dataSource.getConnection()) {
-      connection.commit();
-    }
-    UUID unknownTermo = UUID.randomUUID();
-
-    // The placement foreign key is what an assign racing a DeleteTermo hits; without this
-    // translation the admin surface answers 500 where the contract promises 404.
-    assertThatThrownBy(() -> organoRepository.updateTermo(id, unknownTermo))
-        .isInstanceOfSatisfying(
-            TermoNotFoundException.class,
-            refusal -> assertThat(refusal.getTermoId()).isEqualTo(unknownTermo));
-
-    try (Connection rollbackConnection = dataSource.getConnection()) {
-      rollbackConnection.rollback();
-    }
     assertThat(organoRepository.findById(id).orElseThrow().termoId()).isNull();
   }
 

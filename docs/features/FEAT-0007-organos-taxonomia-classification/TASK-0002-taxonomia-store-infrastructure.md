@@ -39,34 +39,21 @@ JDBC/SQL stays entirely in `infrastructure`.
   `ORDER BY name`.
   So both reads are plain derived methods with no `@Query`, and the collation is still the
   whole point: the accented-name criterion below is what holds it.
-- `lockTaxonomia` has no derivable form: implement it as
-  `SELECT pg_advisory_xact_lock(<fixed key>)` via `@Query`, pinning how the result is
-  mapped — a `void`/`Void` return over a `SELECT` is the wrinkle to settle here rather than
-  at the call site. Record the chosen key where the next person will find it.
-  **It only serialises inside a transaction**, which
-  [TASK-0003](TASK-0003-taxonomia-management-use-cases.md)'s use cases open: called without
-  one, it is acquired and released within its own statement and quietly does nothing.
-- **Translate the two constraint violations into domain exceptions**, so a raced refusal
-  reaches the same problem type as a checked one instead of a 500: the unique-index
-  violation on `(parent_id, lower(name))` becomes the duplicate-sibling-name exception, and
-  the foreign-key violation on `termo_id` becomes term-not-found. Match on
-  SQLSTATE/constraint name, not on message text. This is the layer that keeps SQLSTATE
-  knowledge out of `domain` and out of the controllers.
-- **This task therefore declares the two exceptions it translates into** —
-  `DuplicateSiblingNameException` and `TermoNotFoundException`, in
-  `gal.conxugal.domain.organo` — rather than waiting on
-  [TASK-0003](TASK-0003-taxonomia-management-use-cases.md), which the feature README
-  originally gave all four term-scoped types to. TASK-0003 is a *sibling* of this task, not a
-  predecessor (both depend only on TASK-0001), so the translation layer above cannot compile
-  without them. TASK-0003 keeps the other two — cycle and still-has-children — and reuses
-  these. The [feature README](README.md) records the same split.
+- **No rule and no exception here.** The adapter does not inspect SQLSTATEs and does not
+  translate constraint violations into domain exceptions: every refusal this feature makes
+  is a use-case check in [TASK-0003](TASK-0003-taxonomia-management-use-cases.md), reading
+  through the ports above. The schema's unique index and foreign keys stay as **integrity
+  backstops** — a violation reaching the adapter means two admins wrote in the same instant,
+  and it surfaces as a 500 rather than as one of the feature's problem types. The taxonomy
+  is written to a handful of times in its life, so that window is accepted rather than
+  closed with a translation layer and a lock; the feature's *Edge cases* records the trade.
 - Placement operations on `JdbcOrganoRepository`: set an Órgano's term, clear it, clear every
   placement pointing at a given term, and read by id. **Expect to write no code for most of
   these** — both repositories are bare derived interfaces, so Micronaut Data generates the
   bodies from the port's method names, and it does so during *TASK-0001's* build, not this
-  one. What is left here is the `@Query` operations that cannot derive (`lockTaxonomia`, and
-  *clear every placement pointing at a term* if an update matched on a non-id column does
-  not derive), the translation layer above, and proving the rest against a real database.
+  one. What is left here is the `@Query` operations that cannot derive (the children-of-parent
+  read, and *clear every placement pointing at a term* if an update matched on a non-id
+  column does not derive), and proving the rest against a real database.
   No `findByTermo` and no `findUnclassified` — `findAllOrderByName()` already carries
   `termo_id` on every row.
 
@@ -89,18 +76,9 @@ JDBC/SQL stays entirely in `infrastructure`.
   wrong answer here silently disables both.
 - Setting an Órgano's term, then setting a different one, leaves exactly one placement on
   the row; clearing it leaves none. (SPEC-0004 #17)
-- `lockTaxonomia` actually serialises: two concurrent transactions that both call it are
-  ordered, the second proceeding only once the first commits or rolls back, and the lock is
-  released without an explicit unlock. Proven with two real connections — a single-threaded
-  test cannot tell a working lock from a no-op.
-- Inserting a duplicate sibling name raises the **duplicate-sibling-name domain exception**,
-  not a raw `DataAccessException`; deleting a term that still has placements raises
-  **term-not-found**. Without this the raced paths return 500 where the contract promises
-  409 and 404 — and the happy paths would still pass every other criterion here.
-- Deleting a term whose placements were **not** cleared first is refused by the database —
-  the foreign key raises rather than cascading or nulling. This is the criterion that
-  distinguishes TASK-0001's bare foreign key from an `ON DELETE CASCADE` or `SET NULL` one;
-  the clear-then-delete happy path is `DeleteTermo`'s, in
-  [TASK-0003](TASK-0003-taxonomia-management-use-cases.md). (SPEC-0004 #16)
+- The schema still refuses what TASK-0001 built it to refuse — a delete blocked by children
+  or by an uncleared placement, and a duplicate sibling name — which
+  `TermoMigrationIntegrationTest` already asserts directly. This task neither translates nor
+  re-tests those; it must simply not paper over them. (SPEC-0004 #16)
 - The adapters satisfy the domain port contracts, integration-tested against PostgreSQL
   (Testcontainers).

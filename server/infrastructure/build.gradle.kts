@@ -11,7 +11,7 @@ dependencies {
     implementation(libs.micronaut.jdbc.hikari)
     implementation(libs.micronaut.data.jdbc)
     annotationProcessor(libs.micronaut.data.processor)
-    implementation(libs.postgresql)
+    runtimeOnly(libs.postgresql)
 
     implementation(libs.micronaut.http.client)
     implementation(libs.jsoup)
@@ -43,7 +43,6 @@ testing {
                 implementation(project())
                 implementation(project(":domain"))
                 implementation(libs.micronaut.jdbc.hikari)
-                implementation(libs.micronaut.data.tx)
                 implementation(libs.micronaut.test.junit5)
                 implementation(libs.testcontainers.junit.jupiter)
                 implementation(libs.testcontainers.postgresql)
