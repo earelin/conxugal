@@ -94,6 +94,13 @@ Deliberately **out of scope**, each owned elsewhere or by a later spec:
 - **Exporting results.** SPEC-0001 (`active`) promises export across the contract dataset
   and no requirement here delivers it. It is left to a future export spec, which does not
   yet exist; recorded here so the gap is visible rather than assumed closed.
+- **Import run history and the administration surface that reviews it.** R9, R19 and R22 say
+  what an administrator must be able to see about a run; the durable per-run record, the
+  progress indicator, the diagnostics that make a failure debuggable, and the admin page over
+  all of it belong to [SPEC-0007](SPEC-0007-monitor-import-runs.md). It is importer-neutral —
+  it covers SPEC-0004's catalogue import and this spec's four modes alike — so it is not this
+  spec's to own. What this spec owes it is the facts a run produces: its mode, its counts, its
+  outcome, and how far a resumable run has got.
 - **Contracts of Órganos that are inactive.** See the note under R3.
 
 ### Decisions this spec leaves open
@@ -105,6 +112,8 @@ recorded as ADRs before the features that would otherwise settle them silently:
    this, noting that the contract-querying feature's "volumes are a different order of
    magnitude". R23 states the budget, not the mechanism.
 2. **How a long-running, resumable import job holds its state** — required by R9 and R10.
+   [SPEC-0007](SPEC-0007-monitor-import-runs.md) R5 and R7 require that state to be *visible*
+   without binding where it lives; whichever ADR settles the job state should settle both.
 3. **The per-source concurrency and pacing model** — R21 and R24 state obligations;
    [ADR-0014](../architecture/0014-resilient-throttled-outbound-http-client.md) owns the
    bound and makes it configurable per source. This spec must not harden it.
@@ -178,6 +187,10 @@ recorded as ADRs before the features that would otherwise settle them silently:
   on demand by an administrator — adding no duplicates (R12). It is never left permanently
   incomplete for want of a trigger. While it is in progress an administrator can see that it
   is running and how far it has got.
+  > That last obligation — seeing a run in flight and how far it has got — is rendered by
+  > [SPEC-0007](SPEC-0007-monitor-import-runs.md) R5–R7, which also relates successive
+  > resumptions of one Órgano's initial import to each other so an administrator sees it
+  > converging rather than a sequence of unrelated failures.
 - **R10** — Beyond those two routine modes, an administrator can request a **full historical
   re-read** of a single Órgano: a re-run of the initial import over an Órgano already loaded.
   This is the only way corrections to publications older than R8's incremental window are
@@ -266,6 +279,12 @@ recorded as ADRs before the features that would otherwise settle them silently:
   otherwise recorded. Failure while importing one Órgano does not discard contracts already
   imported for other Órganos in the same run, nor prevent the remaining Órganos from being
   imported.
+  > *"Otherwise recorded"* is made concrete by
+  > [SPEC-0007](SPEC-0007-monitor-import-runs.md): every run is recorded whatever triggered it
+  > (SPEC-0007 R2), with diagnostics sufficient to identify the failure without server logs
+  > (R9). Because this requirement makes a run carry on past a failing Órgano, SPEC-0007 R4
+  > treats a **partially succeeded** run as a normal outcome and R10 records the result **per
+  > Órgano**, so an administrator can tell which Órgano needs attention.
 
 > R19–R22 restate SPEC-0004 R10–R13 with contracts in place of Órganos, and **two deliberate
 > divergences**: SPEC-0004 R12's single-run guard is global, whereas R21 here is per-Órgano;
@@ -344,7 +363,9 @@ recorded as ADRs before the features that would otherwise settle them silently:
 14. **(R9)** An initial import interrupted part-way retains the contracts it already stored,
     and is resumed to completion **without an administrator having to intervene**; an
     administrator can also resume it on demand. Resumption adds no duplicates. While it runs,
-    an administrator can see that it is in progress and how far it has got.
+    an administrator can see that it is in progress and how far it has got. *(That last half is
+    proven by [SPEC-0007](SPEC-0007-monitor-import-runs.md) #7; a task claiming this criterion
+    should say which half it proves.)*
 15. **(R10)** An administrator can request a full historical re-read of an already-loaded
     Órgano; a correction to a publication **older** than the incremental window is picked up
     by that re-read and by no routine run, and the re-read creates no duplicates.

@@ -8,15 +8,27 @@ status: draft
 
 The system provides an **administration area** reachable only by an administrator,
 where they monitor the running system and manage the user accounts that
-[SPEC-0002](SPEC-0002-user-authentication.md) assumes already exist. It offers two
-capabilities: a **system dashboard** that reports the server's operational status, and
-**user administration** to list, create, and disable accounts. Accounts are never
-deleted — disabling is the only way to remove access. The dashboard also offers, for
-administrators, a **live view of detailed runtime metrics** for debugging a running
-instance; these metrics are transient and are not stored by the system.
+[SPEC-0002](SPEC-0002-user-authentication.md) assumes already exist. This spec
+establishes the area and contributes two capabilities to it: a **system dashboard** that
+reports the server's operational status, and **user administration** to list, create, and
+disable accounts. Accounts are never deleted — disabling is the only way to remove access.
+The dashboard also offers, for administrators, a **live view of detailed runtime metrics**
+for debugging a running instance; these metrics are transient and are not stored by the
+system.
+
+The area is **extensible, and this spec does not enumerate it**: later specs add their own
+administrative surfaces to the same area and each owns what it adds — importing and
+organising the Órgano catalogue
+([SPEC-0004](SPEC-0004-import-manage-organos-contratacion.md)), selecting which Órganos are
+imported and removing a withdrawn contract
+([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md)), and reviewing the outcome of
+import runs ([SPEC-0007](SPEC-0007-monitor-import-runs.md)). What every such surface
+inherits from here is the access rule of R1; what none of them inherits is R20 — the
+prohibition on storing detailed metrics binds this spec's metrics view and nothing else, and
+SPEC-0007's run history is durable by design.
 
 Access control for the area itself is established by SPEC-0002 (the admin area is
-`ADMIN`-only); this spec describes what the area *contains*.
+`ADMIN`-only); this spec describes what it *contributes* to the area.
 
 ## Requirements
 

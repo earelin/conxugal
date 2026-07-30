@@ -95,6 +95,11 @@ features.
   partially clearing the stored catalogue — the previously stored Órganos, their states,
   and their taxonomy remain intact — and the failure is reported to the administrator (for
   a manual run) or otherwise recorded.
+  > *"Otherwise recorded"* is made concrete by
+  > [SPEC-0007](SPEC-0007-monitor-import-runs.md), which records every run of this import —
+  > including the scheduled runs of R11, which have no requester to report to — with enough
+  > detail to diagnose the failure (SPEC-0007 R2, R9), and gives administrators a page to
+  > review them. This spec states the obligation; that one owns the record and the surface.
 
 ### Managing the taxonomy
 
