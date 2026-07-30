@@ -32,13 +32,19 @@ in `domain`, not in a controller.
   rejected at the edge by the request record; the sibling comparison lives here, where the
   repository read it needs is available, and TASK-0001's unique index is what makes it
   race-proof — this check exists to produce a civil refusal, not to be the only guard.
-- **This task owns the feature's four term-scoped rejection exceptions** — unknown term,
-  cycle, term still has children, duplicate sibling name — as distinct domain types in
-  `domain.organo`, so [TASK-0006](TASK-0006-taxonomia-admin-endpoints.md) can map each to
-  its own status and problem type without inspecting messages.
-  [TASK-0004](TASK-0004-organo-classification-use-cases.md) reuses the unknown-**term** type
-  rather than declaring a second one; it is listed here so two tasks picked up in parallel
-  do not each invent one. The fifth type in the feature's failure contract,
+- **This task owns two of the feature's four term-scoped rejection exceptions** — cycle and
+  term still has children — as distinct domain types in `domain.organo`, so
+  [TASK-0006](TASK-0006-taxonomia-admin-endpoints.md) can map each to its own status and
+  problem type without inspecting messages. The other two, **unknown term and duplicate
+  sibling name, are declared by
+  [TASK-0002](TASK-0002-taxonomia-store-infrastructure.md)** — it translates the database
+  backstops into them and cannot compile without them, and it is a sibling of this task
+  rather than a predecessor, so it cannot wait for them. This task **reuses** those two; it
+  must not declare either again.
+  [TASK-0004](TASK-0004-organo-classification-use-cases.md) likewise reuses the
+  unknown-**term** type rather than declaring a second one; it is listed here so two tasks
+  picked up in parallel do not each invent one. The fifth type in the feature's failure
+  contract,
   **unknown Órgano, is TASK-0004's** and lives in `domain.organo` — it is about an Órgano,
   not the taxonomy.
 - **Tree-shape mutations serialise.** `MoveTermo` and `DeleteTermo` carry `@Transactional`

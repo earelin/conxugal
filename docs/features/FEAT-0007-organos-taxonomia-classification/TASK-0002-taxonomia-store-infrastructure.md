@@ -2,7 +2,7 @@
 feat: FEAT-0007
 domain: backend
 adrs: [0002, 0008]
-status: todo
+status: done
 depends_on: [TASK-0001]
 ---
 
@@ -27,11 +27,18 @@ JDBC/SQL stays entirely in `infrastructure`.
   No recursive CTE and no subtree query — the endpoint serves the whole table and the client
   builds the tree.
 - **Both whole-table reads order by name** under TASK-0001's Galician collation:
-  `TermoRepository.findAll()` and `OrganoRepository.findAll()` each carry
-  `ORDER BY name COLLATE <the declared collation>`. A derived `findAllOrderByName()` would
-  give the ordering but not the collation, so these are `@Query` — the collation is the
-  whole point, not a detail. The feature's *API surface* promises this order to callers, so
-  it is a contract, not a convenience.
+  `TermoRepository.findAllOrderByName()` and `OrganoRepository.findAllOrderByName()`. The
+  feature's *API surface* promises this order to callers, so it is a contract, not a
+  convenience.
+
+  **Corrected against what TASK-0001 shipped.** This bullet originally called for `@Query`
+  with an explicit `ORDER BY name COLLATE <the declared collation>`, on the reasoning that a
+  derived method would give the ordering but not the collation. TASK-0001 then declared the
+  collation **on the `name` columns themselves**, precisely so every derived `ORDER BY name`
+  inherits it — and `TermoMigrationIntegrationTest` asserts exactly that against a bare
+  `ORDER BY name`.
+  So both reads are plain derived methods with no `@Query`, and the collation is still the
+  whole point: the accented-name criterion below is what holds it.
 - `lockTaxonomia` has no derivable form: implement it as
   `SELECT pg_advisory_xact_lock(<fixed key>)` via `@Query`, pinning how the result is
   mapped — a `void`/`Void` return over a `SELECT` is the wrinkle to settle here rather than
@@ -45,6 +52,14 @@ JDBC/SQL stays entirely in `infrastructure`.
   the foreign-key violation on `termo_id` becomes term-not-found. Match on
   SQLSTATE/constraint name, not on message text. This is the layer that keeps SQLSTATE
   knowledge out of `domain` and out of the controllers.
+- **This task therefore declares the two exceptions it translates into** —
+  `DuplicateSiblingNameException` and `TermoNotFoundException`, in
+  `gal.conxugal.domain.organo` — rather than waiting on
+  [TASK-0003](TASK-0003-taxonomia-management-use-cases.md), which the feature README
+  originally gave all four term-scoped types to. TASK-0003 is a *sibling* of this task, not a
+  predecessor (both depend only on TASK-0001), so the translation layer above cannot compile
+  without them. TASK-0003 keeps the other two — cycle and still-has-children — and reuses
+  these. The [feature README](README.md) records the same split.
 - Placement operations on `JdbcOrganoRepository`: set an Órgano's term, clear it, clear every
   placement pointing at a given term, and read by id. **Expect to write no code for most of
   these** — both repositories are bare derived interfaces, so Micronaut Data generates the
@@ -52,22 +67,22 @@ JDBC/SQL stays entirely in `infrastructure`.
   one. What is left here is the `@Query` operations that cannot derive (`lockTaxonomia`, and
   *clear every placement pointing at a term* if an update matched on a non-id column does
   not derive), the translation layer above, and proving the rest against a real database.
-  No `findByTermo` and no `findUnclassified` — `findAll()` already carries
+  No `findByTermo` and no `findUnclassified` — `findAllOrderByName()` already carries
   `termo_id` on every row.
 
 ## Acceptance criteria
-- Terms persist and reload with their edges intact: `findAll` returns a root with a null
-  `parentId` and a child carrying its parent's id, so several levels of nesting round-trip
+- Terms persist and reload with their edges intact: `findAllOrderByName` returns a root with a
+  null `parentId` and a child carrying its parent's id, so several levels of nesting round-trip
   as a flat list a caller can rebuild the tree from.
   ([SPEC-0004](../../specs/SPEC-0004-import-manage-organos-contratacion.md) #14)
-- Both `findAll` methods return rows **in name order**, from a fixture inserted in a
+- Both `findAllOrderByName` methods return rows **in name order**, from a fixture inserted in a
   deliberately different order, and accented Galician names land where a reader expects
   (`Ávila` beside `Avión`, not after `Zamora`). The accent case is the one that fails on a
   default-collation cluster, which is exactly the failure this ordering exists to prevent.
-- Every term operation round-trips against the database, not just `findAll`: a rename shows
-  the new name and nothing else changed; a re-parent moves the term between parents and to
-  the root (null); find-by-id returns the stored term and nothing for an unknown id; delete
-  removes exactly one term. (SPEC-0004 #14)
+- Every term operation round-trips against the database, not just the whole-table read: a
+  rename shows the new name and nothing else changed; a re-parent moves the term between
+  parents and to the root (null); find-by-id returns the stored term and nothing for an
+  unknown id; delete removes exactly one term. (SPEC-0004 #14)
 - The child check answers true for a term with children and false for a leaf, and the
   children-of-parent read returns a parent's direct children — and, given a null parent, the
   roots. These are what `DeleteTermo`'s refusal and the sibling-name rule stand on, so a

@@ -332,11 +332,22 @@ blocked-by-children delete are both 409 — so each rejection gets its own `type
 | `urn:conxugal:problem-type:duplicate-sibling-name` | 409 | a create/rename/move colliding with a sibling name |
 
 **Who declares each exception.** All five live in `gal.conxugal.domain.organo` alongside
-`Termo` itself (see *Where the taxonomy lives* below). The four term-scoped types are
-[TASK-0003](TASK-0003-taxonomia-management-use-cases.md)'s;
-`organo-not-found` is **[TASK-0004](TASK-0004-organo-classification-use-cases.md)'s**. What
-TASK-0004 must not do is declare a *second* unknown-**term** type; that one it reuses. Five
-types, five distinct statuses-plus-`type` pairs, no duplicates.
+`Termo` itself (see *Where the taxonomy lives* below).
+
+- `termo-not-found` and `duplicate-sibling-name` are
+  **[TASK-0002](TASK-0002-taxonomia-store-infrastructure.md)'s**, because it is the task that
+  translates the database backstops below into them and cannot compile without them.
+- `termo-cycle` and `termo-has-children` are
+  **[TASK-0003](TASK-0003-taxonomia-management-use-cases.md)'s** — the two refusals that
+  exist only as a use-case check, with no constraint behind them. TASK-0003 *reuses* the
+  first two rather than declaring them again.
+- `organo-not-found` is **[TASK-0004](TASK-0004-organo-classification-use-cases.md)'s**.
+  What TASK-0004 must not do is declare a *second* unknown-**term** type; that one it reuses.
+
+This originally gave all four term-scoped types to TASK-0003. That could not hold: TASK-0002
+and TASK-0003 both depend only on TASK-0001, so they are siblings with no ordering between
+them, and TASK-0002's translation layer needs two of the four. Five types, five distinct
+statuses-plus-`type` pairs, no duplicates.
 
 **The database backstops must reach the same contract.** Two refusals can arrive as
 constraint violations rather than as a use case's own check — the unique index when two
@@ -450,17 +461,19 @@ module.
 2. **[TASK-0002](TASK-0002-taxonomia-store-infrastructure.md) — Taxonomía store
    infrastructure** *(backend)*: the JDBC `TermoRepository` (including
    `lockTaxonomia`) and the translation of the two constraint violations into domain
-   exceptions, against the schema TASK-0001 created. Both repositories are bare derived
-   interfaces, so Micronaut Data generates most method bodies from the port — this task's
-   work is the two `@Query` operations that cannot derive, the translation layer, and
-   proving the rest against a real database. Every endpoint task depends on it: without the
-   adapter there is nothing for an HTTP integration test to run against.
+   exceptions — **including declaring the two exception types it translates into** —
+   against the schema TASK-0001 created. Micronaut Data generates most method bodies from
+   the port's method names, so this task's work is the two `@Query` operations that cannot
+   derive, the translation layer, and proving the rest against a real database. Every
+   endpoint task depends on it: without the adapter there is nothing for an HTTP
+   integration test to run against.
    *(SPEC-0004 #14, #16, #17)*
 3. **[TASK-0003](TASK-0003-taxonomia-management-use-cases.md) — Taxonomía management use
    cases** *(backend)*: `CreateTermo`, `RenameTermo`, `MoveTermo` (cycle guard), `DeleteTermo`
    (reject with children; return directly-assigned Órganos to unclassified), the serialising
-   lock, the sibling-name rule, and **the rejection exceptions the whole feature shares**.
-   *(SPEC-0004 #14, #15, #16)*
+   lock, the sibling-name rule, and **the cycle and still-has-children rejection
+   exceptions** — reusing the unknown-term and duplicate-sibling-name types TASK-0002
+   declares. *(SPEC-0004 #14, #15, #16)*
 4. **[TASK-0004](TASK-0004-organo-classification-use-cases.md) — Órgano classification &
    catalogue reads** *(backend)*: `AssignOrganoToTermo` (single placement, replaces any
    current), `ClearOrganoTermo`, and the two thin reads `ListOrganos` / `ListTermos`.
