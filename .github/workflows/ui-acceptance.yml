@@ -71,9 +71,11 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       # The stub the built SPA is proxied to (preview.proxy in vite.config.ts).
-      # `api:up` already waits for the container's healthcheck.
+      # `api:up` already waits for the container's healthcheck; --quiet-pull
+      # keeps the per-layer download bars out of the log, where they are noise
+      # rather than feedback.
       - name: Start the stubbed API
-        run: npm run api:up
+        run: npm run api:up -- --quiet-pull
 
       # Built here rather than from playwright's webServer command, which a
       # reused server would skip — leaving the run to assert against a stale
