@@ -2,6 +2,7 @@ package gal.conxugal.infrastructure.jdbc.organo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.assertj.db.api.Assertions.assertThat;
 
 import gal.conxugal.domain.organo.Termo;
 import gal.conxugal.domain.organo.TermoRepository;
@@ -17,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.sql.DataSource;
+import org.assertj.db.type.AssertDbConnectionFactory;
+import org.assertj.db.type.Table;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -96,12 +99,16 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
   void inserts_root_termo_with_database_generated_id() {
     Termo created = termoRepository.insert(new Termo("Deportes", null));
 
-    // Reading back by the returned id is what proves it is the id the database assigned,
-    // rather than merely non-null.
     assertThat(created.id()).isNotNull();
-    Termo stored = termoRepository.findById(created.id()).orElseThrow();
-    assertThat(stored.name()).isEqualTo("Deportes");
-    assertThat(stored.parentId()).isNull();
+    Table termos = termoTable();
+    assertThat(termos).hasNumberOfRows(1);
+    // Matching the stored id against the returned one is what proves the latter is the id
+    // the database assigned, rather than merely non-null.
+    assertThat(termos)
+        .row(0)
+            .value("id").isEqualTo(created.id())
+            .value("name").isEqualTo("Deportes")
+            .value("parent_id").isNull();
   }
 
   @Test
@@ -110,10 +117,12 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
     Termo child = termoRepository.insert(new Termo("Fútbol", parent.id()));
 
-    // The path CreateTermo takes for every term but the first, and the one the generated
-    // INSERT has to carry parent_id on.
-    assertThat(termoRepository.findById(child.id()).orElseThrow().parentId())
-        .isEqualTo(parent.id());
+    // The one insert the generated statement has to carry parent_id on.
+    assertThat(termoTable())
+        .row(1)
+            .value("id").isEqualTo(child.id())
+            .value("name").isEqualTo("Fútbol")
+            .value("parent_id").isEqualTo(parent.id());
   }
 
   @Test
@@ -140,12 +149,16 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
     termoRepository.updateName(id, "Fútbol Sala");
 
-    Termo renamed = termoRepository.findById(id).orElseThrow();
-    assertThat(renamed.name()).isEqualTo("Fútbol Sala");
-    assertThat(renamed.parentId()).isEqualTo(parentId);
-    // A table-wide UPDATE would rename both rows and still satisfy the assertions above:
-    // the two sit under different parents, so the sibling-name index would not object.
-    assertThat(termoRepository.findById(parentId).orElseThrow().name()).isEqualTo("Deportes");
+    Table termos = termoTable();
+    assertThat(termos).hasNumberOfRows(2);
+    assertThat(termos)
+        .row(0)
+            .value("name").isEqualTo("Deportes")
+            .value("parent_id").isNull()
+        .row(1)
+            .value("id").isEqualTo(id)
+            .value("name").isEqualTo("Fútbol Sala")
+            .value("parent_id").isEqualTo(parentId);
   }
 
   @Test
@@ -155,15 +168,28 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
     UUID id = insertTermo("Fútbol", firstParent);
 
     termoRepository.updateParentId(id, secondParent);
-    assertThat(termoRepository.findById(id).orElseThrow().parentId()).isEqualTo(secondParent);
-    // The move left the old parent, and took nothing else with it: an unscoped UPDATE would
-    // put every row under secondParent, including the two roots. Asserted here rather than
-    // after the move to the root, where both roots are already null and would pass anyway.
-    assertThat(termoRepository.findByParentId(firstParent)).isEmpty();
-    assertThat(termoRepository.findById(firstParent).orElseThrow().parentId()).isNull();
+
+    Table afterMove = termoTable();
+    assertThat(afterMove).hasNumberOfRows(3);
+    // Asserting the two roots here rather than after the move to the root, where they are
+    // already null and would pass anyway.
+    assertThat(afterMove)
+        .row(0)
+            .value("id").isEqualTo(secondParent)
+            .value("parent_id").isNull()
+        .row(1)
+            .value("id").isEqualTo(firstParent)
+            .value("parent_id").isNull()
+        .row(2)
+            .value("id").isEqualTo(id)
+            .value("parent_id").isEqualTo(secondParent);
 
     termoRepository.updateParentId(id, null);
-    assertThat(termoRepository.findById(id).orElseThrow().parentId()).isNull();
+
+    assertThat(termoTable())
+        .row(2)
+            .value("id").isEqualTo(id)
+            .value("parent_id").isNull();
   }
 
   @Test
@@ -173,9 +199,11 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
     termoRepository.deleteById(id);
 
-    assertThat(termoRepository.findAllOrderByName())
-        .extracting(Termo::name)
-        .containsExactly("Cultura");
+    Table termos = termoTable();
+    assertThat(termos).hasNumberOfRows(1);
+    assertThat(termos)
+        .row(0)
+            .value("name").isEqualTo("Cultura");
   }
 
   @Test
@@ -217,6 +245,15 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(roots)
         .extracting(Termo::name, Termo::parentId)
         .containsExactlyInAnyOrder(tuple("Deportes", null), tuple("Cultura", null));
+  }
+
+  // Ordered by name so row(n) is stable, rather than leaning on uuidv7 insertion order.
+  private Table termoTable() {
+    return AssertDbConnectionFactory.of(dataSource)
+        .create()
+        .table("termo")
+        .columnsToOrder(new Table.Order[] {Table.Order.asc("name")})
+        .build();
   }
 
   // This helper neither commits nor rolls back, because every test here expects its writes
