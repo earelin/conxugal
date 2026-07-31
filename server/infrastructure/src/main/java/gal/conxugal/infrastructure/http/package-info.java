@@ -1,11 +1,8 @@
 /**
- * The shared resilient outbound HTTP package: a retry, rate-limiter and circuit-breaker decorator
- * over Micronaut's {@link io.micronaut.http.client.BlockingHttpClient}, used by every driven-side
- * adapter that calls an external source. Depends on {@code domain} only, same as the rest of
- * {@code infrastructure}; carries no source-specific knowledge — each source declares its own
- * {@code @ConfigurationProperties} record implementing {@link
- * gal.conxugal.infrastructure.http.ResilientHttpClientSettings} and builds both clients from it,
- * the raw one through {@link gal.conxugal.infrastructure.http.RawHttpClients} and the decorated
- * one through {@link gal.conxugal.infrastructure.http.ResilientHttpClient}.
+ * The shared outbound resilience advice: {@link gal.conxugal.infrastructure.http.ResilientClient}
+ * marks a declarative {@code @Client} interface, and {@code ResilientClientInterceptor} runs its
+ * methods under a rate limiter, a circuit breaker and a retry. Carries no source-specific
+ * knowledge — {@link gal.conxugal.infrastructure.http.ResilientClientPolicies} decides what the
+ * numbers mean, and each source supplies its own from its own configuration.
  */
 package gal.conxugal.infrastructure.http;

@@ -15,55 +15,36 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.Set;
 
-/** Builds the Resilience4j policy configs {@link ResilientHttpClient} composes. */
-final class ResilientPolicies {
+/**
+ * The outbound policy semantics {@link ResilientClientInterceptor} applies: which failures are
+ * transient, which count against a source's health, and how long to wait before trying again. A
+ * source supplies only its own numbers; what those numbers mean is decided here, once.
+ */
+public final class ResilientClientPolicies {
 
   static final int BREAKER_SLIDING_WINDOW_SIZE = 20;
   static final int BREAKER_MINIMUM_NUMBER_OF_CALLS = 5;
 
-  private static final Set<Integer> RETRYABLE_STATUSES =
-      Set.of(408, 425, 429, 500, 502, 503, 504);
+  private static final Set<Integer> RETRYABLE_STATUSES = Set.of(408, 425, 429, 500, 502, 503, 504);
   private static final double RETRY_BACKOFF_MULTIPLIER = 2.0;
   private static final double RETRY_BACKOFF_RANDOMIZATION_FACTOR = 0.5;
 
-  /** Resilience4j's own floor: {@code IntervalFunction} rejects anything below one millisecond. */
-  private static final Duration MINIMUM_BACKOFF = Duration.ofMillis(1);
+  private ResilientClientPolicies() {}
 
-  private ResilientPolicies() {}
-
-  /**
-   * Rejects a settings combination Resilience4j would only reject later, from inside the first
-   * outbound call. Each of these otherwise surfaces as an {@code IllegalArgumentException} naming
-   * a library-internal class, long after the process started cleanly.
-   */
-  static void validate(ResilientHttpClientSettings settings) {
-    requireText(settings.baseUrl(), "baseUrl");
-    requireAtLeast(settings.connectTimeout(), MINIMUM_BACKOFF, "connectTimeout");
-    requireAtLeast(settings.readTimeout(), MINIMUM_BACKOFF, "readTimeout");
-    requireAtLeast(
-        settings.rateLimiterRefreshPeriod(), MINIMUM_BACKOFF, "rateLimiterRefreshPeriod");
-    requireNotNegative(settings.maximumPermitWait(), "maximumPermitWait");
-    requireAtLeast(settings.maxConcurrentCalls(), 1, "maxConcurrentCalls");
-    requireAtLeast(settings.retryMaxAttempts(), 1, "retryMaxAttempts");
-    requireAtLeast(settings.retryBaseDelay(), MINIMUM_BACKOFF, "retryBaseDelay");
-    requireNotNegative(settings.retryAfterMaximumWait(), "retryAfterMaximumWait");
-    requireInRange(settings.breakerFailureRateThreshold(), 1, 100, "breakerFailureRateThreshold");
-    requireAtLeast(
-        settings.breakerOpenStateDuration(), MINIMUM_BACKOFF, "breakerOpenStateDuration");
-  }
-
-  static RateLimiterConfig rateLimiterConfig(ResilientHttpClientSettings settings) {
+  /** {@code limitForPeriod} is fixed at 1, so the refresh period alone sets the pace. */
+  public static RateLimiterConfig rateLimiter(Duration refreshPeriod, Duration maximumPermitWait) {
     return RateLimiterConfig.custom()
         .limitForPeriod(1)
-        .limitRefreshPeriod(settings.rateLimiterRefreshPeriod())
-        .timeoutDuration(settings.maximumPermitWait())
+        .limitRefreshPeriod(refreshPeriod)
+        .timeoutDuration(maximumPermitWait)
         .build();
   }
 
-  static CircuitBreakerConfig circuitBreakerConfig(ResilientHttpClientSettings settings) {
+  public static CircuitBreakerConfig circuitBreaker(
+      int failureRateThreshold, Duration openStateDuration) {
     return CircuitBreakerConfig.custom()
-        .failureRateThreshold(settings.breakerFailureRateThreshold())
-        .waitDurationInOpenState(settings.breakerOpenStateDuration())
+        .failureRateThreshold(failureRateThreshold)
+        .waitDurationInOpenState(openStateDuration)
         .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
         .slidingWindowSize(BREAKER_SLIDING_WINDOW_SIZE)
         .minimumNumberOfCalls(BREAKER_MINIMUM_NUMBER_OF_CALLS)
@@ -73,23 +54,21 @@ final class ResilientPolicies {
         .slowCallRateThreshold(100)
         .slowCallDurationThreshold(Duration.ofHours(1))
         // Our own throttling, not a source-health signal: neither counts toward the failure rate.
-        .ignoreException(ResilientPolicies::isOwnThrottling)
+        .ignoreException(ResilientClientPolicies::isOwnThrottling)
         // A source health signal, not a caller mistake: a plain 4xx (missing/bad request) means
         // the exchange itself succeeded, so it is recorded as a breaker success, not a failure.
-        .recordException(ResilientPolicies::isBreakerFailure)
+        .recordException(ResilientClientPolicies::isBreakerFailure)
         .build();
   }
 
-  static RetryConfig retryConfig(ResilientHttpClientSettings settings, Clock clock) {
+  public static RetryConfig retry(
+      int maxAttempts, Duration baseDelay, Duration retryAfterMaximumWait, Clock clock) {
     IntervalFunction jitteredBackoff =
         IntervalFunction.ofExponentialRandomBackoff(
-            settings.retryBaseDelay(),
-            RETRY_BACKOFF_MULTIPLIER,
-            RETRY_BACKOFF_RANDOMIZATION_FACTOR);
-    Duration retryAfterMaximumWait = settings.retryAfterMaximumWait();
+            baseDelay, RETRY_BACKOFF_MULTIPLIER, RETRY_BACKOFF_RANDOMIZATION_FACTOR);
     return RetryConfig.<Object>custom()
-        .maxAttempts(settings.retryMaxAttempts())
-        .retryOnException(ResilientPolicies::isTransientFailure)
+        .maxAttempts(maxAttempts)
+        .retryOnException(ResilientClientPolicies::isTransientFailure)
         .intervalBiFunction(
             (attempt, outcome) ->
                 computeWaitMillis(attempt, outcome, retryAfterMaximumWait, clock, jitteredBackoff))
@@ -128,20 +107,15 @@ final class ResilientPolicies {
   /**
    * Which failures count toward the breaker's failure rate. A response is only a source-health
    * signal when its status is one of the transient ones or any {@code 5xx}; a plain client-side
-   * {@code 4xx} (missing resource, bad request) means the exchange itself succeeded and is
-   * recorded as a breaker success, not a failure. A {@link ResponseMappingException} is the
-   * caller's own parsing defect rather than anything the source did, so it is excluded too.
-   * Everything else that reaches here — connection failures, an unacceptable response — is a
-   * genuine failure.
+   * {@code 4xx} (missing resource, bad request) means the exchange itself succeeded and is recorded
+   * as a breaker success, not a failure. Everything else that reaches here — connection failures, a
+   * body the client could not decode — is a genuine failure.
    *
    * <p>A {@code Retry-After} beyond the configured maximum never reaches this predicate: it is
    * thrown from the retry interval function, outside the breaker's decorator. The response that
    * carried the header was already recorded here on its own status.
    */
   private static boolean isBreakerFailure(Throwable throwable) {
-    if (throwable instanceof ResponseMappingException) {
-      return false;
-    }
     if (throwable instanceof HttpClientResponseException responseException) {
       int code = responseException.code();
       return code >= 500 || RETRYABLE_STATUSES.contains(code);
@@ -150,10 +124,9 @@ final class ResilientPolicies {
   }
 
   /**
-   * The closed, explicit set of retryable failures: connection failures, resets, read timeouts,
-   * and the transient statuses. {@link #isBreakerFailure} and this predicate are deliberately
-   * independent — an unacceptable response or a non-transient status is recorded as a failure
-   * above but never retried here.
+   * The closed, explicit set of retryable failures: connection failures, resets, read timeouts, and
+   * the transient statuses. {@link #isBreakerFailure} and this predicate are deliberately
+   * independent — a non-transient status is recorded as a failure above but never retried here.
    */
   private static boolean isTransientFailure(Throwable throwable) {
     if (throwable instanceof HttpClientResponseException responseException) {
@@ -166,39 +139,5 @@ final class ResilientPolicies {
         // time (NoHostException); only the plain, undecorated class means "connection
         // unreachable".
         || throwable.getClass() == HttpClientException.class;
-  }
-
-  private static void requireText(String value, String name) {
-    if (value == null || value.isBlank()) {
-      throw new IllegalArgumentException("%s must not be blank".formatted(name));
-    }
-  }
-
-  private static void requireAtLeast(Duration value, Duration minimum, String name) {
-    if (value == null || value.compareTo(minimum) < 0) {
-      throw new IllegalArgumentException(
-          "%s must be at least %s, was %s".formatted(name, minimum, value));
-    }
-  }
-
-  private static void requireAtLeast(int value, int minimum, String name) {
-    if (value < minimum) {
-      throw new IllegalArgumentException(
-          "%s must be at least %d, was %d".formatted(name, minimum, value));
-    }
-  }
-
-  private static void requireNotNegative(Duration value, String name) {
-    if (value == null || value.isNegative()) {
-      throw new IllegalArgumentException(
-          "%s must not be negative, was %s".formatted(name, value));
-    }
-  }
-
-  private static void requireInRange(int value, int minimum, int maximum, String name) {
-    if (value < minimum || value > maximum) {
-      throw new IllegalArgumentException(
-          "%s must be between %d and %d, was %d".formatted(name, minimum, maximum, value));
-    }
   }
 }
