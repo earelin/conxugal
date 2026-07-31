@@ -37,10 +37,8 @@ when.
 
 The page lives in the administration area of
 [SPEC-0003](SPEC-0003-administration-area.md) and follows its access rule — administrators
-only. It is not that spec's detailed-metrics view and must not be confused with it: those
-metrics are transient by requirement (SPEC-0003 forbids the backend storing them), while
-import history is durable by definition. What the two share is an expectation of liveness,
-and there is prior art for it in
+only. It is not that spec's detailed-metrics view and must not be confused with it (see
+Scope). What the two share is an expectation of liveness, and there is prior art for it in
 [ADR-0009](../architecture/0009-sse-admin-realtime-metrics.md).
 
 ## Scope
@@ -99,9 +97,10 @@ Two decisions this spec previously left open are now **settled**:
 
 - **R1** — Every function in this spec — the run list, its filters, a run's detail and its
   diagnostics (R12–R14), the Órgano-side history route (R15), and live progress (R6) — is
-  reachable only by users with the `ADMIN` role. A `USER` or an unauthenticated visitor who requests any of them is denied (consistent
-  with SPEC-0003's administration-area access rule). There is **no `USER`-facing surface**:
-  import history is operational data about the system, not information about contracts.
+  reachable only by users with the `ADMIN` role. A `USER` or an unauthenticated visitor who
+  requests any of them is denied (consistent with SPEC-0003's administration-area access
+  rule). There is **no `USER`-facing surface**: import history is operational data about the
+  system, not information about contracts.
 
 ### Recording every run
 
@@ -195,9 +194,9 @@ Two decisions this spec previously left open are now **settled**:
   describe.
 - **R10** — For a run covering several Órganos, the record states the **outcome per Órgano**
   under R4's vocabulary — which succeeded, which failed and why, and which were stopped — not
-  only the run's aggregate state. SPEC-0005 guarantees the run continues past a failing Órgano, so an aggregate verdict
-  alone hides the only thing an administrator needs: *which* Órgano needs attention, and
-  whether it was even attempted.
+  only the run's aggregate state. Because a run continues past a failing Órgano (R4), an
+  aggregate verdict alone hides the only thing an administrator needs: *which* Órgano needs
+  attention, and whether it was even attempted.
 - **R11** — **No secret and no personal data ever appears in a record.** No credential, token,
   key or connection password, whatever the underlying failure was (the same rule SPEC-0003
   applies to its status and metrics views). Nor any awardee name or fiscal identifier: a
@@ -237,9 +236,9 @@ Two decisions this spec previously left open are now **settled**:
   and whether its initial import has completed (a fact SPEC-0005 already requires the system
   to hold, and which no administrator-facing surface shows). *Is this Órgano actually up to
   date?* is the question the capability is most often opened to answer, and it is asked about
-  an Órgano, not about a run. This Órgano-side route is an **`ADMIN`-only affordance** and
-  leaves the `USER`-readable catalogue and taxonomy views of SPEC-0004 unchanged: R1 admits no
-  `USER` surface, so this history is never reached by enriching a shared view. It is hosted on
+  an Órgano, not about a run. Under R1 the route is **`ADMIN`-only**, so it leaves the
+  `USER`-readable catalogue and taxonomy views of SPEC-0004 unchanged rather than enriching a
+  shared view. It is hosted on
   the `ADMIN`-only surface where an administrator already chooses which Órganos are imported
   ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R4), which is the one place an
   administrator already looks at Órganos one at a time — naming it here so no feature has to

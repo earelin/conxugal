@@ -33,9 +33,9 @@ can be assumed away at this volume:
   handles personal data and produces new derived information about identifiable people. R12
   states that plainly rather than denying it.
 - **Identifiers and names are published inconsistently.** The same identifier appears with
-  different padding and casing, and under varying names. Matched naively, one operador
-  splits into several and the aggregation this spec exists for silently fails — the failure
-  mode is a quiet undercount, which is worse than an error.
+  different padding and casing, and under varying names, so matching and display each need a
+  rule of their own (R3, R4, R13). Matched naively the aggregation fails silently, and a quiet
+  undercount is worse than an error.
 
 Reading operadores is available to any authenticated user, consistent with
 [SPEC-0002](SPEC-0002-user-authentication.md). There is no administrative surface here: the
@@ -55,10 +55,9 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
   official publication.
 - **Out of scope — exporting an operador's history.** Left to the future export spec
   SPEC-0005 also defers to.
-- **Out of scope — erasing an operador.** No function removes an operador's data. R7 governs
-  when an operador stops being *reachable*; nothing here destroys what it was derived from,
-  because the families that feed it never delete a contract either. R12 records what that
-  means and why it is judged acceptable.
+- **Out of scope — erasing an operador.** No function removes an operador's data; R7 governs
+  only when an operador stops being *reachable*, and R12 records why that is judged
+  acceptable.
 
 ### What a contract family must supply
 
@@ -87,11 +86,9 @@ to be resolved.
 [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) closes it: paging stays positional,
 with an exact count and a jump to a chosen page, and its cost is measured before it is
 optimised. R11 and R14 here follow that, as this spec said they must. The reasoning does
-**not** transfer intact, though, and the difference is worth stating: SPEC-0005 bounds every
-selection to one Órgano in one publication year, whereas the operadores list of R8 is a
-directory over the whole catalogue with no such scope. This spec's list is therefore the deeper
-read of the two and the one where positional paging is likeliest to need attention first —
-which is what R14's measurements exist to find out.
+**not** transfer intact, though: SPEC-0005 bounds every selection to one Órgano in one
+publication year and this spec's operadores list has no such scope, which is why R14 states
+its own dataset and reads the deferral as the larger bet of the two.
 
 One decision remains open:
 
@@ -134,10 +131,9 @@ One decision remains open:
 - **R5** — An identifier is **unusable** when it is absent, or empty once surrounding
   whitespace is ignored. Such a contract yields **no** operador — never an invented or
   placeholder one — while remaining stored, browsable and displaying its awardee's name as its
-  own family requires ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) already
-  guarantees that for contratos menores; this spec neither adds to it nor repeats it as its
-  own rule). Nothing beyond the emptiness test is validated: the source publishes irregular but
-  genuine identifiers, and rejecting them would discard real awards.
+  own family requires ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R7). Nothing
+  beyond the emptiness test is validated: the source publishes irregular but genuine
+  identifiers, and rejecting them would discard real awards.
 - **R6** — Awardees that are **natural persons** and those that are **legal entities** are
   catalogued and reachable identically, and the system does not classify which is which. The
   reason is the no-inference rule of this spec's Scope, not an absence in the source: the kind
@@ -203,15 +199,14 @@ One decision remains open:
   **date** or by **amount**, ascending or descending. Filtering, sorting, counting and
   totalling apply to the whole selection, not only to the page currently displayed.
 - **R11** — An operador's contract history and the operadores list of R8 are both
-  **paginated**: a user sees one page at a time, is told which page they are on and how many
-  pages the current selection has, and can move to the **first**, previous, next or **last**
-  page, or jump to a chosen one — the same control
-  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R16 offers, because a user meets
-  both lists in the same session and neither should page differently from the other. Every
-  entry in the selection is reachable this way, and the counts and totals
-  of R9 describe the whole selection rather than the page on screen. Changing a filter or a
-  sort re-pages the selection from its first page, rather than leaving the user on a page
-  number that no longer means what it did.
+  **paginated**, under the same control
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R16 defines — first, previous,
+  next, last or a chosen page, over a selection whose exact size is stated — because a user
+  meets both lists in the same session and neither should page differently from the other.
+  Every entry in the selection is reachable this way, and the counts and totals of R9 describe
+  the whole selection rather than the page on screen. Changing a filter or a sort re-pages the
+  selection from its first page, rather than leaving the user on a page number that no longer
+  means what it did.
 
 ### Non-functional expectations
 
@@ -252,7 +247,7 @@ One decision remains open:
   and a page deep into the selection — and an **operador's contract history**, its first page,
   its count and its totals. A budget is set once those measurements exist.
 
-  Deferring it is a smaller bet here than in SPEC-0005 and should be read as such. That spec
+  Deferring it is a bigger bet here than in SPEC-0005 and should be read as such. That spec
   can point to a bound — one Órgano, one year — that keeps its selections far below its stored
   volume. This one cannot: the operadores list spans the whole catalogue, so its deep pages are
   as deep as the catalogue is large. The measurements above are therefore the first place the

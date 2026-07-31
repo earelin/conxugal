@@ -76,10 +76,9 @@ features.
 - **R8** — Any authenticated user can view the stored catalogue: a list of all Órganos
   showing, for each, its name, its active/inactive state, and its current taxonomy
   placement (or that it is unclassified).
-  > This list is also a `USER`'s second route to an Órgano's contracts
-  > ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R14). The tree of R9 alone
-  > is not enough: R18 leaves every newly imported Órgano unclassified, so an Órgano can be
-  > imported and yet absent from the tree.
+  > This list is also a `USER`'s second route to an Órgano's contracts, which
+  > [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R14 requires alongside the tree
+  > of R9 — and which R18 explains, by leaving every newly imported Órgano unclassified.
 - **R9** — Any authenticated user can browse the taxonomy as a navigable tree of category
   terms with the Órganos placed within each term, and select an Órgano from it — for
   example, to query contracts by that Órgano. For a `USER` this tree is read-only: it

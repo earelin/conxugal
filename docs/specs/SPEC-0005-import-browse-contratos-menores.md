@@ -125,23 +125,14 @@ Two decisions that earlier drafts deferred are **settled**:
    optimised.** R16 keeps the full control — first, previous, next, last, or a chosen page —
    over a selection whose exact size is known. No ADR is raised for the mechanism, because
    the constraint that made this hard was overstated: a user never pages over the stored
-   dataset, only over **one Órgano's contracts of one family in one publication year** — R18
-   makes that year mandatory precisely so the bound holds. The deep-offset problem is
-   therefore bounded by the largest Órgano's busiest year, not by the table, and at that scale
-   the straightforward positional read is the thing to build first. R23 accordingly states
-   **no latency budget** — it states the conditions under which one will be measured. This is
-   a deliberate application of the project's rule against premature optimisation, and it
-   carries a known risk: the largest Órgano publishes on the order of 1.4 million contratos
-   menores across the years the source covers, so its busiest year is still a substantial
-   selection, and an arbitrarily sorted read deep into that year is where this choice will be
-   tested first. The answer is to measure it, not to design around a number nobody has
-   observed.
+   dataset, only over **one Órgano's contracts of one family in one publication year**, which
+   R18 makes mandatory precisely so that bound holds. At that scale the straightforward
+   positional read is the thing to build first, so R23 states **no latency budget** — only the
+   conditions under which one will be measured, and what would falsify the bet.
 2. **A long-running, resumable import job holds its state in the database** — required by R9
    and R10, and recorded in
-   [ADR-0017](../architecture/0017-import-run-state-in-postgresql.md). That record also
-   settles what [SPEC-0007](SPEC-0007-monitor-import-runs.md) R5, R7 and R8 need, by putting
-   the resumption point, the progress measure and the last-advanced time in the very record
-   SPEC-0007 reports, rather than in a second store the two would have to keep agreeing.
+   [ADR-0017](../architecture/0017-import-run-state-in-postgresql.md), which also settles what
+   [SPEC-0007](SPEC-0007-monitor-import-runs.md) R5, R7 and R8 need.
 
 One decision remains outside this spec:
 
@@ -261,9 +252,7 @@ One decision remains outside this spec:
   R8's window is refreshed in place by R11, and one outside it is reached by R10. Because
   SPEC-0006 derives its catalogue from these contracts, a removal here propagates there under
   that spec's **operador lifecycle** rule (R7): an operador left with no visible contracts
-  becomes unreachable. Note what removal is **not**: the contract is remembered, not
-  destroyed, which is why restoration is possible at all — so neither this rule nor
-  SPEC-0006's erases the awardee data it came from.
+  becomes unreachable, without either rule erasing the awardee data it came from.
 
 ### Finding and browsing contracts
 
@@ -314,11 +303,9 @@ One decision remains outside this spec:
   need it, exposing it is a later increment rather than something this rule forecloses.
 
   **Once the section is present it is never empty**, because R18 offers only years the Órgano
-  actually has contracts in — so a chosen year yielding nothing is unreachable by construction
-  rather than a state a user has to be told apart from the others. What the section must still
-  make plain is that it is **incomplete**: while the **initial import has not finished** what
-  is shown is partial (R9), and it says so, because a user must not read a growing list as a
-  complete one.
+  actually has contracts in. What the section must still make plain is that it is
+  **incomplete**: while the **initial import has not finished** what is shown is partial (R9),
+  and it says so, because a user must not read a growing list as a complete one.
 
   An Órgano that was imported and has since been unmarked or become inactive keeps its section
   and the contracts retained under R5, and says that it is no longer being updated.
@@ -344,11 +331,8 @@ One decision remains outside this spec:
   menores.
 
   The year is mandatory rather than optional because it is what **bounds the size of every
-  paged read**. Unscoped, the largest Órgano's selection is its entire published history — on
-  the order of 1.4 million contracts; scoped to a year it is that history divided across the
-  years the source covers. This is the constraint that makes R23's decision to defer a latency
-  budget a reasonable bet rather than an optimistic one, and it is the reason the affordance is
-  a requirement here instead of a default a feature might quietly relax.
+  paged read** — the constraint R23 relies on when it defers a latency budget. That is why the
+  scoping is a requirement here rather than a default a feature might quietly relax.
 
 ### Triggering imports
 
@@ -393,8 +377,7 @@ One decision remains outside this spec:
 
   **The cost is real and accepted.** An initial import of a large Órgano runs for days, and for
   those days no other Órgano is imported and no scheduled incremental run starts. Nothing is
-  lost by that — R8 requires the next incremental run to cover the whole period since that
-  Órgano's last successful import, so a backlog is absorbed rather than skipped — but Órganos
+  lost by that — R8's window floor absorbs the backlog rather than skipping it — but Órganos
   do go stale while a long import proceeds, and an administrator should expect it rather than
   discover it. Prioritising which import runs first when several are due is left to the feature;
   this requirement fixes only that they do not overlap.
@@ -406,10 +389,9 @@ One decision remains outside this spec:
   imported.
   > *"Otherwise recorded"* is made concrete by
   > [SPEC-0007](SPEC-0007-monitor-import-runs.md): every run is recorded whatever triggered it
-  > (SPEC-0007 R2), with diagnostics sufficient to identify the failure without server logs
-  > (SPEC-0007 R9). Because this requirement makes a run carry on past a failing Órgano, SPEC-0007 R4
-  > treats a **partially succeeded** run as a normal outcome and R10 records the result **per
-  > Órgano**, so an administrator can tell which Órgano needs attention.
+  > (R2), with diagnostics sufficient to identify the failure without server logs (R9) and the
+  > outcome recorded **per Órgano** (R10), so an administrator can tell which one needs
+  > attention.
 
 > R19–R22 restate SPEC-0004 R10–R13 with contracts in place of Órganos. R21 matches SPEC-0004
 > R12 exactly — one import at a time, system-wide — and the guard spans both specs rather than
@@ -471,11 +453,9 @@ One decision remains outside this spec:
   A published amount or date that **cannot be interpreted** is not a reason to reject the
   contract: it is stored and displayed as published like any other, and it simply takes no
   part in the ordering it cannot support, being ordered last when sorting by the value it
-  lacks. A contract whose **date** cannot be interpreted belongs to no year, and because R18
-  makes a year mandatory it is reached through that requirement's **undated** selection —
-  remaining browsable rather than becoming stored-but-unreachable. Discarding such contracts
-  would lose real awards, which is the same reasoning SPEC-0006 applies to an unusable fiscal
-  identifier.
+  lacks. A contract whose **date** cannot be interpreted belongs to no year and is reached
+  through R18's **undated** selection. Discarding such contracts would lose real awards, which
+  is the same reasoning SPEC-0006 applies to an unusable fiscal identifier.
 
 ## Acceptance criteria
 
@@ -520,10 +500,8 @@ One decision remains outside this spec:
     and is resumed to completion **without an administrator having to intervene**; an
     administrator can also resume it on demand. Resumption adds no duplicates. While it runs,
     an administrator can see that it is in progress and how far it has got. *(That last half is
-    proven by [SPEC-0007](SPEC-0007-monitor-import-runs.md)'s progress requirement (R5) and the
-    criterion that claims it — cited by name rather than by number, because criterion numbers
-    move whenever one is inserted; a task claiming this criterion should say which half it
-    proves.)*
+    proven by [SPEC-0007](SPEC-0007-monitor-import-runs.md)'s progress requirement (R5); a task
+    claiming this criterion should say which half it proves.)*
 15. **(R10)** An administrator can request a full historical re-read of an already-loaded
     Órgano; a correction to a publication **older** than the incremental window is picked up
     by that re-read and by no routine run, and the re-read creates no duplicates.
