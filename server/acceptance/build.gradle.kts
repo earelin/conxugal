@@ -9,6 +9,7 @@ dependencies {
 
     testImplementation(libs.rest.assured)
     testImplementation(libs.assertj.core)
+    testImplementation(libs.postgresql)
 
     testImplementation(libs.wiremock)
     testImplementation(libs.playwright)
@@ -37,8 +38,8 @@ tasks.register<Test>("acceptance") {
     testClassesDirs = sourceSets.test.get().output.classesDirs
     classpath = sourceSets.test.get().runtimeClasspath
     useJUnitPlatform()
-    if (System.getProperty("app.baseUrl") != null) {
-        systemProperty("app.baseUrl", System.getProperty("app.baseUrl"))
+    listOf("app.baseUrl", "db.url", "db.username", "db.password").forEach { property ->
+        System.getProperty(property)?.let { systemProperty(property, it) }
     }
     outputs.cacheIf { false }
     outputs.upToDateWhen { false }
