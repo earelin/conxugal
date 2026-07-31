@@ -85,6 +85,25 @@ class MoveTermoTest {
   }
 
   @Test
+  void rejects_move_when_the_stored_ancestry_already_contains_cycle() {
+    UUID termoId = UUID.randomUUID();
+    UUID firstId = UUID.randomUUID();
+    UUID secondId = UUID.randomUUID();
+    when(termoRepository.findById(termoId))
+        .thenReturn(Optional.of(new Termo(termoId, "Deportes", null)));
+    // Two concurrent moves can leave these two pointing at each other, since the feature
+    // accepts the check-then-write window. Walking that chain must end, not circle it.
+    when(termoRepository.findById(firstId))
+        .thenReturn(Optional.of(new Termo(firstId, "Cultura", secondId)));
+    when(termoRepository.findById(secondId))
+        .thenReturn(Optional.of(new Termo(secondId, "Música", firstId)));
+
+    assertThatThrownBy(() -> moveTermo.move(termoId, firstId))
+        .isInstanceOf(TermoCycleException.class);
+    verify(termoRepository, never()).updateParentId(any(), any());
+  }
+
+  @Test
   void rejects_unknown_term_and_writes_nothing() {
     UUID unknownId = UUID.randomUUID();
     when(termoRepository.findById(unknownId)).thenReturn(Optional.empty());

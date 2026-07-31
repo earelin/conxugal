@@ -1,6 +1,8 @@
 package gal.conxugal.domain.organo.taxonomia;
 
 import jakarta.inject.Singleton;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
@@ -36,10 +38,17 @@ public class MoveTermo {
     termoRepository.updateParentId(termoId, newParentId);
   }
 
+  /**
+   * Walks up from the target to the root, refusing the move if it passes through the term being
+   * moved. Revisiting an id means the stored ancestry already loops without involving this term
+   * — two concurrent moves can jointly produce that, since the rules are not serialised — so the
+   * walk refuses rather than circling it forever.
+   */
   private void requireNotSelfOrDescendant(UUID termoId, UUID targetParentId) {
+    Set<UUID> visited = new HashSet<>();
     UUID ancestorId = targetParentId;
     while (ancestorId != null) {
-      if (termoId.equals(ancestorId)) {
+      if (termoId.equals(ancestorId) || !visited.add(ancestorId)) {
         throw new TermoCycleException(termoId, targetParentId);
       }
       ancestorId = termoRepository.findById(ancestorId).map(Termo::parentId).orElse(null);

@@ -97,7 +97,12 @@ class DeleteTermoAtomicityIntegrationTest implements TestPropertyProvider {
 
     Exception failure = runOnItsOwnThread(() -> deleteTermo.delete(termoId));
 
-    assertThat(failure).isInstanceOf(RuntimeException.class);
+    // Asserting the stubbed failure specifically: any RuntimeException would also satisfy the
+    // placement assertions below, including one thrown before the clearing ever ran, leaving
+    // the test green having proven nothing.
+    assertThat(failure)
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("delete failed");
     Table organos = organoTable();
     assertThat(organos).hasNumberOfRows(2);
     assertThat(organos)
@@ -107,6 +112,11 @@ class DeleteTermoAtomicityIntegrationTest implements TestPropertyProvider {
         .row(1)
             .value("name").isEqualTo("Axencia Y")
             .value("termo_id").isEqualTo(termoId);
+    Table termos = termoTable();
+    assertThat(termos).hasNumberOfRows(1);
+    assertThat(termos)
+        .row(0)
+            .value("id").isEqualTo(termoId);
   }
 
   private static Table organoTable() {
@@ -114,6 +124,15 @@ class DeleteTermoAtomicityIntegrationTest implements TestPropertyProvider {
             postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
         .create()
         .table("organo_contratacion")
+        .columnsToOrder(new Table.Order[] {Table.Order.asc("name")})
+        .build();
+  }
+
+  private static Table termoTable() {
+    return AssertDbConnectionFactory.of(
+            postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
+        .create()
+        .table("termo")
         .columnsToOrder(new Table.Order[] {Table.Order.asc("name")})
         .build();
   }
