@@ -20,7 +20,25 @@ Governing decisions: [ADR-0003](../docs/architecture/0003-react-router-ui-served
 
 ```bash
 npm install
+npm run api:up     # start the stubbed API (WireMock, http://localhost:8081)
 npm run dev        # start the dev server (http://localhost:5173)
+```
+
+## The local API
+
+The SPA calls same-origin relative paths (`/api/me`, `/api/admin/*`, `POST /logout`)
+because in production one server serves both the assets and the API (ADR-0003,
+ADR-0006). Locally that origin is a **WireMock** container
+([`docker-compose.yml`](docker-compose.yml)) that Vite proxies to, so the whole app —
+the `ADMIN`-only administration area included — runs with no backend and no database
+([ADR-0017](../docs/architecture/0017-frontend-acceptance-tests-against-a-stubbed-api.md)).
+
+Its stub state lives in [`wiremock/mappings/`](wiremock/README.md) and is shared by
+`npm run dev`, `npm run preview` and the acceptance suite. To develop against a real
+backend instead, point the proxy at it:
+
+```bash
+UI_API_TARGET=http://localhost:8080 npm run dev
 ```
 
 ## Scripts
@@ -35,6 +53,27 @@ npm run dev        # start the dev server (http://localhost:5173)
 | `npm run format:check` | Check formatting without writing.              |
 | `npm test`             | Run the Vitest suite once.                     |
 | `npm run test:watch`   | Run Vitest in watch mode.                      |
+| `npm run test:e2e`     | Run the Playwright acceptance suite.           |
+| `npm run test:e2e:ui`  | Run the acceptance suite in Playwright's UI.   |
+| `npm run api:up`       | Start the stubbed API (WireMock).              |
+| `npm run api:down`     | Stop it.                                       |
+
+## Acceptance tests
+
+Black-box journeys through the built SPA, driven by
+[Playwright](https://playwright.dev) with the API stubbed by the same WireMock
+container. They start the app themselves (`vite preview`); you only need the browser
+once:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+Specs live in [`e2e/specs`](e2e/specs) and are deliberately limited to high-value
+journeys — dashboard status, the user list, creating an account, disabling and
+re-enabling one, and admin-nav gating. They run serially: WireMock is a single shared
+process, so scenarios that program it would otherwise stomp on each other.
 
 ## Structure
 
@@ -67,6 +106,10 @@ src/
       strings.ts          # Galician interface text (i18n seam)
   test/
     setup.ts              # jsdom/Mantine test setup
+e2e/                      # Playwright acceptance suite (outside the src module graph)
+  specs/                  # one file per area of the UI
+  support/                # WireMock admin client + fixture values
+wiremock/mappings/        # the stubbed API's default state
 ```
 
 ## Notes

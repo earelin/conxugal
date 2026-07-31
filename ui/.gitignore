@@ -17,3 +17,7 @@ npm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# playwright
+playwright-report
+test-results

@@ -64,7 +64,7 @@ function DashboardError({ error }: { error: unknown }) {
 
 function StatCard({ label, value, healthy }: { label: string; value: string; healthy: boolean }) {
   return (
-    <Card withBorder radius="md" padding="lg">
+    <Card component="section" aria-label={label} withBorder radius="md" padding="lg">
       <Text size="xs" fw={700} c="dimmed" tt="uppercase">
         {label}
       </Text>
