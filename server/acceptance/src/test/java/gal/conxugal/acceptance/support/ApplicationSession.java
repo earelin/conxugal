@@ -41,17 +41,23 @@ public final class ApplicationSession {
     return anonymous().header("Cookie", sessionCookie);
   }
 
-  /** The session cookie the credentials earn, or empty when the instance refuses them. */
-  public static Optional<String> logIn(String email, String password) {
-    Response response =
-        anonymous()
-            .body(
-                """
-                {"username":"%s","password":"%s"}\
-                """.formatted(email, password))
-        .when()
-            .post("/login");
-    return response.getHeaders()
+  /**
+   * The instance's whole answer to a login attempt, so a scenario can assert how a refusal
+   * looks and not merely that no session came back.
+   */
+  public static Response logInResponse(String email, String password) {
+    return anonymous()
+        .body(
+            """
+            {"username":"%s","password":"%s"}\
+            """.formatted(email, password))
+    .when()
+        .post("/login");
+  }
+
+  /** The session cookie a login answer carries, or empty when it granted none. */
+  public static Optional<String> sessionCookieOf(Response loginResponse) {
+    return loginResponse.getHeaders()
         .getValues("Set-Cookie")
         .stream()
         .map(setCookie -> setCookie.split(";", 2)[0])
@@ -60,7 +66,7 @@ public final class ApplicationSession {
   }
 
   public static String logInOrFail(String email, String password) {
-    return logIn(email, password)
+    return sessionCookieOf(logInResponse(email, password))
         .orElseThrow(
             () -> new NoSuchElementException("Login refused for %s".formatted(email)));
   }

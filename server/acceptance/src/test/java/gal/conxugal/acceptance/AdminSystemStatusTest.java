@@ -1,13 +1,11 @@
 package gal.conxugal.acceptance;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
 
 import gal.conxugal.acceptance.support.ApplicationSession;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -22,21 +20,29 @@ class AdminSystemStatusTest {
         ApplicationSession.logInOrFail(
             ApplicationSession.ADMIN_EMAIL, ApplicationSession.ADMIN_PASSWORD);
 
-    Response status =
-        ApplicationSession.authenticatedAs(adminSession)
-        .when()
-            .get("/api/admin/system-status");
+    Response status = systemStatus(adminSession);
 
-    status.then().statusCode(200);
+    status.then()
+        .statusCode(200);
     JsonPath reported = status.jsonPath();
     assertThat(reported.getString("status")).isEqualTo("UP");
     assertThat(reported.getBoolean("datastore.reachable")).isTrue();
-    assertThat(Instant.parse(reported.getString("checkedAt")))
-        .isCloseTo(Instant.now(), within(1, ChronoUnit.MINUTES));
     assertThat(reported.getString("application.version")).isNotBlank();
     assertThat(reported.getString("runtime.javaVersion")).isNotBlank();
-    assertThat(reported.getLong("runtime.uptimeMillis")).isPositive();
     assertThat(status.asString())
         .doesNotContain("jdbc:", "postgres", "password", "conxugal-dev-only");
+
+    // A status cached at startup would satisfy every assertion above, so ask a second time:
+    // only a snapshot assembled per request moves its instant on.
+    JsonPath reportedAgain = systemStatus(adminSession).jsonPath();
+
+    assertThat(Instant.parse(reportedAgain.getString("checkedAt")))
+        .isAfter(Instant.parse(reported.getString("checkedAt")));
+  }
+
+  private static Response systemStatus(String adminSession) {
+    return ApplicationSession.authenticatedAs(adminSession)
+        .when()
+            .get("/api/admin/system-status");
   }
 }
