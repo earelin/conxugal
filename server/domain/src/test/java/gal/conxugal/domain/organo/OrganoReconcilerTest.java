@@ -1,113 +1,107 @@
 package gal.conxugal.domain.organo;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 class OrganoReconcilerTest {
+
+  @Mock
+  private OrganoRepository organoRepository;
+
+  private OrganoReconciler reconciler;
+
+  @BeforeEach
+  void setUp() {
+    reconciler = new OrganoReconciler(organoRepository);
+  }
 
   @Test
   void adds_new_source_entry_as_active() {
-    FakeOrganoRepository repository = new FakeOrganoRepository();
-    OrganoReconciler reconciler = new OrganoReconciler(repository);
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of());
+    ArgumentCaptor<OrganoDeContratacion> inserted = ArgumentCaptor.forClass(
+        OrganoDeContratacion.class);
 
     ImportOutcome outcome =
         reconciler.reconcile(List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X")));
 
     assertThat(outcome.status()).isEqualTo(ImportOutcome.Status.SUCCESS);
     assertThat(outcome.added()).isEqualTo(1);
-    assertThat(repository.findAll())
-        .singleElement()
-        .satisfies(
-            organo -> {
-              assertThat(organo.sourceKey()).isEqualTo("consorcio-x");
-              assertThat(organo.name()).isEqualTo("Consorcio X");
-              assertThat(organo.active()).isTrue();
-            });
+    verify(organoRepository).insert(inserted.capture());
+    assertThat(inserted.getValue().sourceKey()).isEqualTo("consorcio-x");
+    assertThat(inserted.getValue().name()).isEqualTo("Consorcio X");
+    assertThat(inserted.getValue().active()).isTrue();
   }
 
   @Test
   void refreshes_matched_entrys_name_in_place_preserving_its_id() {
-    FakeOrganoRepository repository = new FakeOrganoRepository();
-    OrganoDeContratacion stored = repository.seed("consorcio-x", "Old Name", true);
-    OrganoReconciler reconciler = new OrganoReconciler(repository);
+    OrganoDeContratacion stored = organo("consorcio-x", "Old Name", true);
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of(stored));
 
     ImportOutcome outcome =
         reconciler.reconcile(List.of(new OrganoSourceEntry("consorcio-x", "New Name")));
 
     assertThat(outcome.refreshed()).isEqualTo(1);
-    assertThat(repository.findAll())
-        .singleElement()
-        .satisfies(
-            organo -> {
-              assertThat(organo.id()).isEqualTo(stored.id());
-              assertThat(organo.name()).isEqualTo("New Name");
-            });
+    verify(organoRepository).update(stored.id(), "New Name", true);
   }
 
   @Test
   void refreshing_deactivated_matched_entrys_name_also_reactivates_it() {
-    FakeOrganoRepository repository = new FakeOrganoRepository();
-    OrganoDeContratacion stored = repository.seed("consorcio-x", "Old Name", false);
-    OrganoReconciler reconciler = new OrganoReconciler(repository);
+    OrganoDeContratacion stored = organo("consorcio-x", "Old Name", false);
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of(stored));
 
     ImportOutcome outcome =
         reconciler.reconcile(List.of(new OrganoSourceEntry("consorcio-x", "New Name")));
 
     assertThat(outcome.refreshed()).isEqualTo(1);
-    assertThat(repository.findAll())
-        .singleElement()
-        .satisfies(
-            organo -> {
-              assertThat(organo.id()).isEqualTo(stored.id());
-              assertThat(organo.name()).isEqualTo("New Name");
-              assertThat(organo.active()).isTrue();
-            });
+    verify(organoRepository).update(stored.id(), "New Name", true);
   }
 
   @Test
   void matching_deactivated_entry_with_unchanged_name_reactivates_it() {
-    FakeOrganoRepository repository = new FakeOrganoRepository();
-    OrganoDeContratacion stored = repository.seed("consorcio-x", "Consorcio X", false);
-    OrganoReconciler reconciler = new OrganoReconciler(repository);
+    OrganoDeContratacion stored = organo("consorcio-x", "Consorcio X", false);
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of(stored));
 
     ImportOutcome outcome =
         reconciler.reconcile(List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X")));
 
     assertThat(outcome.refreshed()).isEqualTo(1);
-    assertThat(repository.findAll())
-        .singleElement()
-        .satisfies(
-            organo -> {
-              assertThat(organo.id()).isEqualTo(stored.id());
-              assertThat(organo.active()).isTrue();
-            });
+    verify(organoRepository).update(stored.id(), "Consorcio X", true);
   }
 
   @Test
   void matching_an_active_entry_with_an_unchanged_name_writes_nothing() {
-    FakeOrganoRepository repository = new FakeOrganoRepository();
-    OrganoDeContratacion stored = repository.seed("consorcio-x", "Consorcio X", true);
-    OrganoReconciler reconciler = new OrganoReconciler(repository);
+    OrganoDeContratacion stored = organo("consorcio-x", "Consorcio X", true);
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of(stored));
 
     ImportOutcome outcome =
         reconciler.reconcile(List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X")));
 
     assertThat(outcome.refreshed()).isZero();
-    assertThat(repository.findAll())
-        .singleElement()
-        .satisfies(
-            organo -> {
-              assertThat(organo.id()).isEqualTo(stored.id());
-              assertThat(organo.active()).isTrue();
-            });
+    verify(organoRepository, never()).update(any(), any(), anyBoolean());
+    verify(organoRepository, never()).insert(any());
+    verify(organoRepository, never()).updateActive(any(), anyBoolean());
   }
 
   @Test
   void collapses_duplicate_source_keys_in_one_payload_into_single_insert() {
-    FakeOrganoRepository repository = new FakeOrganoRepository();
-    OrganoReconciler reconciler = new OrganoReconciler(repository);
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of());
+    ArgumentCaptor<OrganoDeContratacion> inserted = ArgumentCaptor.forClass(
+        OrganoDeContratacion.class);
 
     ImportOutcome outcome =
         reconciler.reconcile(
@@ -117,77 +111,62 @@ class OrganoReconcilerTest {
 
     assertThat(outcome.status()).isEqualTo(ImportOutcome.Status.SUCCESS);
     assertThat(outcome.added()).isEqualTo(1);
-    assertThat(repository.findAll())
-        .singleElement()
-        .satisfies(organo -> assertThat(organo.name()).isEqualTo("Last Name"));
+    verify(organoRepository, times(1)).insert(inserted.capture());
+    assertThat(inserted.getValue().name()).isEqualTo("Last Name");
   }
 
   @Test
   void marks_stored_entry_absent_from_the_source_inactive_and_keeps_it() {
-    FakeOrganoRepository repository = new FakeOrganoRepository();
-    OrganoDeContratacion stored = repository.seed("consorcio-x", "Consorcio X", true);
-    OrganoReconciler reconciler = new OrganoReconciler(repository);
+    OrganoDeContratacion stored = organo("consorcio-x", "Consorcio X", true);
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of(stored));
 
     ImportOutcome outcome =
         reconciler.reconcile(List.of(new OrganoSourceEntry("other-key", "Other Org")));
 
     assertThat(outcome.deactivated()).isEqualTo(1);
-    assertThat(repository.findAll())
-        .filteredOn(organo -> "consorcio-x".equals(organo.sourceKey()))
-        .singleElement()
-        .satisfies(
-            organo -> {
-              assertThat(organo.id()).isEqualTo(stored.id());
-              assertThat(organo.active()).isFalse();
-            });
+    verify(organoRepository).updateActive(stored.id(), false);
   }
 
   @Test
   void redeactivating_an_already_inactive_absentee_reports_zero_deactivated() {
-    FakeOrganoRepository repository = new FakeOrganoRepository();
-    OrganoDeContratacion stored = repository.seed("consorcio-x", "Consorcio X", true);
-    OrganoReconciler reconciler = new OrganoReconciler(repository);
+    OrganoDeContratacion active = organo("consorcio-x", "Consorcio X", true);
+    OrganoDeContratacion nowInactive =
+        new OrganoDeContratacion(active.id(), active.sourceKey(), active.name(), false, null);
+    when(organoRepository.findAllOrderByName())
+        .thenReturn(List.of(active))
+        .thenReturn(List.of(nowInactive));
     List<OrganoSourceEntry> entries = List.of(new OrganoSourceEntry("other-key", "Other Org"));
-    ImportOutcome firstOutcome = reconciler.reconcile(entries);
 
+    ImportOutcome firstOutcome = reconciler.reconcile(entries);
     ImportOutcome secondOutcome = reconciler.reconcile(entries);
 
     assertThat(firstOutcome.deactivated()).isEqualTo(1);
     assertThat(secondOutcome.deactivated()).isZero();
-    assertThat(repository.findAll())
-        .filteredOn(organo -> "consorcio-x".equals(organo.sourceKey()))
-        .singleElement()
-        .satisfies(
-            organo -> {
-              assertThat(organo.id()).isEqualTo(stored.id());
-              assertThat(organo.active()).isFalse();
-            });
+    verify(organoRepository, times(1)).updateActive(active.id(), false);
   }
 
   @Test
   void reimporting_the_same_list_adds_nothing_and_changes_no_state() {
-    FakeOrganoRepository repository = new FakeOrganoRepository();
-    OrganoReconciler reconciler = new OrganoReconciler(repository);
-    List<OrganoSourceEntry> entries =
-        List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X"));
-    reconciler.reconcile(entries);
+    OrganoSourceEntry entry = new OrganoSourceEntry("consorcio-x", "Consorcio X");
+    OrganoDeContratacion inserted = organo("consorcio-x", "Consorcio X", true);
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of()).thenReturn(List.of(inserted));
 
-    ImportOutcome outcome = reconciler.reconcile(entries);
+    reconciler.reconcile(List.of(entry));
+    ImportOutcome outcome = reconciler.reconcile(List.of(entry));
 
     assertThat(outcome.added()).isZero();
     assertThat(outcome.refreshed()).isZero();
     assertThat(outcome.deactivated()).isZero();
-    assertThat(repository.findAll())
-        .singleElement()
-        .satisfies(organo -> assertThat(organo.active()).isTrue());
+    verify(organoRepository, times(1)).insert(any());
+    verify(organoRepository, never()).update(any(), any(), anyBoolean());
+    verify(organoRepository, never()).updateActive(any(), anyBoolean());
   }
 
   @Test
   void reports_added_refreshed_and_deactivated_counts_together() {
-    FakeOrganoRepository repository = new FakeOrganoRepository();
-    repository.seed("stays", "Stays", true);
-    repository.seed("goes-inactive", "Goes Inactive", true);
-    OrganoReconciler reconciler = new OrganoReconciler(repository);
+    OrganoDeContratacion stays = organo("stays", "Stays", true);
+    OrganoDeContratacion goesInactive = organo("goes-inactive", "Goes Inactive", true);
+    when(organoRepository.findAllOrderByName()).thenReturn(List.of(stays, goesInactive));
 
     ImportOutcome outcome =
         reconciler.reconcile(
@@ -199,5 +178,9 @@ class OrganoReconcilerTest {
     assertThat(outcome.added()).isEqualTo(1);
     assertThat(outcome.refreshed()).isEqualTo(1);
     assertThat(outcome.deactivated()).isEqualTo(1);
+  }
+
+  private static OrganoDeContratacion organo(String sourceKey, String name, boolean active) {
+    return new OrganoDeContratacion(UUID.randomUUID(), sourceKey, name, active, null);
   }
 }

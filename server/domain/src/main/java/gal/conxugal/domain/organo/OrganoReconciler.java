@@ -32,7 +32,7 @@ public class OrganoReconciler {
   public ImportOutcome reconcile(List<OrganoSourceEntry> sourceEntries) {
     Map<String, OrganoSourceEntry> distinctBySourceKey = distinctBySourceKey(sourceEntries);
     Map<String, OrganoDeContratacion> storedByKey =
-        organoRepository.findAll().stream()
+        organoRepository.findAllOrderByName().stream()
             .collect(Collectors.toMap(OrganoDeContratacion::sourceKey, Function.identity()));
 
     ReconciliationCounts addRefreshCounts = addOrRefresh(distinctBySourceKey, storedByKey);
