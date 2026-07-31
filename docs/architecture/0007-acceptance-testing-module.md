@@ -69,6 +69,16 @@ flowchart LR
   stubs and verify recorded requests. The database is a real PostgreSQL seeded with a
   fixed dataset per scenario, using file fixtures for canned HTTP/DB payloads; how it's
   (re)seeded before a run is the external environment's responsibility, not this module's.
+- **A scenario owns the rows it creates.** Bringing the environment up stays external, but
+  a scenario that writes state through the application's own API must remove that state
+  afterwards, connecting to the instance's database directly — the API deliberately offers
+  no delete for some of it (accounts are never deleted, per
+  [SPEC-0003](../specs/SPEC-0003-administration-area.md)), so the datastore is the only
+  route back. Those credentials arrive the same way the base URL does, as system
+  properties; because the two are supplied independently, a suite must refuse to run
+  rather than drive one instance while cleaning up another's datastore. This narrows the
+  "no automatic teardown" consequence below: the environment still owns the *baseline*,
+  and a scenario owns only its own writes.
 - Test method names are snake_case; assertions use AssertJ. API scenarios drive HTTP
   with REST-assured, matching this repo's `backend:java-acceptance-test` convention;
   the UI scenario drives a real browser with Playwright instead, since that convention
@@ -102,9 +112,11 @@ flowchart LR
 - Requires an external orchestration mechanism (docker-compose, CI job, or documented
   manual steps) to exist; `acceptance` cannot run standalone from a clean checkout with
   a single Gradle command the way the other three modules' `test` tasks can.
-- The suite provides no automatic teardown/reset between runs — whatever starts the
-  external environment (or the tests themselves, via admin APIs like WireMock's reset
-  endpoint or a reseed script run before the suite) is responsible for known-good state.
+- The suite resets no more than its own writes — whatever starts the external environment
+  (or the tests themselves, via admin APIs like WireMock's reset endpoint or a reseed
+  script run before the suite) is responsible for the known-good baseline. Owning its
+  writes costs the module a JDBC dependency and a second set of connection settings per
+  environment, which must be kept pointing at the same instance as the base URL.
 - A second HTTP-driving toolchain: unlike REST-assured, Playwright's first run downloads
   a real Chromium binary (network-dependent, tens of seconds to minutes), so the module
   is no longer JVM-only at test time. Confined to the UI scenario for now.
