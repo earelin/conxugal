@@ -95,8 +95,8 @@ Deliberately **out of scope**:
 ### Access
 
 - **R1** — Every function in this spec — the run list, its filters, a run's detail and its
-  diagnostics (R12–R14), and live progress (R6) — is reachable only by users with the `ADMIN`
-  role. A `USER` or an unauthenticated visitor who requests any of them is denied (consistent
+  diagnostics (R12–R14), the Órgano-side history route (R15), and live progress (R6) — is
+  reachable only by users with the `ADMIN` role. A `USER` or an unauthenticated visitor who requests any of them is denied (consistent
   with SPEC-0003's administration-area access rule). There is **no `USER`-facing surface**:
   import history is operational data about the system, not information about contracts.
 
@@ -109,19 +109,27 @@ Deliberately **out of scope**:
   receive the outcome: the automatic runs the importing specs promise are precisely the ones
   with no other witness. This requirement is what SPEC-0004 and SPEC-0005 mean by *"or
   otherwise recorded"* when they describe a failure.
-- **R3** — A run's record is written **when the run is recorded** and completed **when it
-  ends**.
+- **R3** — A run's record comes into existence **when the run is triggered** — by an
+  administrator, by the scheduler, or by an automatic resumption — and is completed in stages
+  as the run progresses. A record is **complete for its stage**, never incomplete.
 
-  From the moment it exists, the record states **what is being imported** — which importer,
-  and for a per-Órgano import which Órgano; the **mode** it runs in; **what triggered it**,
-  distinguishing an administrator from the scheduler from an automatic resumption, and naming
-  the administrator for a manual trigger; and **when it started**, where it started at all.
+  **From the moment it is triggered**, the record states **when it was triggered**; **what is
+  being imported** — which importer, and for a per-Órgano import which Órgano; the **mode** it
+  runs in; and **what triggered it**, distinguishing an administrator from the scheduler from
+  an automatic resumption, and naming the administrator for a manual trigger. Every record has
+  a trigger time, including one that never runs, so every record can be ordered and
+  date-filtered (R12, R13).
 
-  When the run ends, the record additionally states **when it ended**, its **terminal state**
-  (R4), and the **counts the importer reports** — for contratos menores, contracts added and
-  refreshed; for the catalogue, Órganos added, refreshed and marked inactive. A run that never
-  started (R4, *refused*) has no start, no end and no counts, and a run still executing has
-  none of the three: the record is complete for its stage, not incomplete.
+  **If the run starts**, the record states **when it started**. A run refused under R4 never
+  starts and so has no start time.
+
+  **When the run reaches a terminal state**, the record states that state (R4), **when it
+  reached it**, and the **counts the importer reports** — for contratos menores, contracts
+  added and refreshed; for the catalogue, Órganos added, refreshed and marked inactive. A
+  **refused** run is terminal at the moment it is refused, having neither started nor run, and
+  so carries no start, no duration and no counts. A run still executing has no terminal state,
+  no end and no counts either — what it has instead is progress (R5), which is not a count of
+  what the importer reported.
 - **R4** — An outcome distinguishes, at minimum:
   - **succeeded** — it completed and did what it set out to do;
   - **failed** — it could not;
@@ -132,7 +140,10 @@ Deliberately **out of scope**:
     an import in progress;
   - **refused** — not started because an import of that same target was already in progress. A
     refused trigger is recorded rather than silently dropped, because a trigger that did
-    nothing must not be indistinguishable from one that ran.
+    nothing must not be indistinguishable from one that ran;
+  - **abandoned** — it stopped reporting and never reached any of the above, which is the state
+    R8 gives a run whose process died. It is deliberately not *failed*: nothing observed a
+    failure, and recording one would assert more than is known.
 
   These states describe **both a run as a whole and each Órgano within it**. A run covering
   many Órganos can succeed for most, fail for one, be refused for another that was already
@@ -154,19 +165,29 @@ Deliberately **out of scope**:
   restarted it, and can see an Órgano converging over several attempts instead of a sequence
   of unrelated failures.
 - **R8** — A run whose process dies without ever recording an end is **not left reported as in
-  progress**. Within a bounded, configurable period an abandoned run becomes distinguishable
-  from one genuinely still executing — otherwise the single most important thing the page
-  shows, what is running now, is the thing it is least able to be trusted about. The period is
-  not fixed here; that it is bounded is.
+  progress**. Within a bounded, configurable period it takes the **abandoned** state of R4,
+  becoming distinguishable from one genuinely still executing — otherwise the single most
+  important thing the page shows, what is running now, is the thing it is least able to be
+  trusted about. Naming the state matters as much as bounding the period: without a name, two
+  implementations could record an abandoned run as *failed* and as *stopped* and both be
+  defensible. The period is not fixed here; that it is bounded is.
 
 ### Diagnosing failures
 
-- **R9** — A record whose outcome is not full success carries enough detail to diagnose the
-  failure **without reading server logs**: which stage of the run failed, what the source did
-  — unreachable, refused the request, or returned a response the system could not use,
-  together with the status or the respect in which it was unusable — and the underlying error.
-  This is the requirement the capability exists for; a record that says only "failed" moves
-  the debugging problem rather than solving it.
+- **R9** — A record that **failed or partially succeeded**, at the level of the run or of any
+  Órgano within it, carries enough detail to diagnose the failure **without reading server
+  logs**: which stage of the run failed, what the source did — unreachable, refused the
+  request, or returned a response the system could not use, together with the status or the
+  respect in which it was unusable — the underlying error, and **which source publication the
+  failure concerned**, identified by the publication identifier its family stores. That last
+  is what keeps R11 survivable: barred from reproducing awardee data, a diagnostic still has to
+  say *which* of a million publications broke, and the publication identifier is not personal
+  data. This is the requirement the capability exists for; a record that says only "failed"
+  moves the debugging problem rather than solving it.
+
+  A **refused**, **stopped** or **abandoned** outcome carries a **reason** rather than
+  diagnostics: nothing failed, so there is no failing stage and no source interaction to
+  describe.
 - **R10** — For a run covering several Órganos, the record states the **outcome per Órgano**
   under R4's vocabulary — which succeeded, which failed and why, which were refused because
   that Órgano was already importing, and which were stopped — not only the run's aggregate
@@ -180,15 +201,23 @@ Deliberately **out of scope**:
   data into a record retained under R17 serves no debugging purpose. Together these are what
   make R9's technical detail safe to retain and to display.
 
+  This bars **reproducing** personal data, not **pointing at** the record that carried it: the
+  publication identifier R9 requires is assigned by the source and identifies a publication,
+  not a person, so a diagnostic can always say which publication broke without saying who it
+  named.
+
 ### Reviewing runs
 
-- **R12** — An administrator can open a page listing recorded runs, **most recent first**,
-  showing for each what was imported, its mode, what triggered it, when it ran, how long it
-  took, its outcome and its counts (R3). Runs **in progress** are presented distinctly from
+- **R12** — An administrator can open a page listing recorded runs, **most recent first** by
+  trigger time, showing for each what R3 records **for that run's stage** — what was imported,
+  its mode, what triggered it and when, and where the stage supplies them, its duration, its
+  outcome and its counts. A refused run showing no duration and no counts is displaying a
+  complete record, not a broken row. Runs **in progress** are presented distinctly from
   finished ones: they are the operationally urgent rows, and sorting alone does not make them
   stand out.
 - **R13** — The list can be **narrowed** — by what was imported, by Órgano, by mode, by what
-  triggered it, by outcome, and by when the run happened — and is **paginated**: an
+  triggered it, by **state including *in progress***, and by when the run happened — and is
+  **paginated**: an
   administrator sees one page at a time, is told how many runs the current selection contains
   and how many pages it spans, and can move to the next or previous page or jump to a chosen
   one. Narrowing by trigger is what answers *"what has the scheduler been doing?"*, which is
@@ -206,7 +235,11 @@ Deliberately **out of scope**:
   date?* is the question the capability is most often opened to answer, and it is asked about
   an Órgano, not about a run. This Órgano-side route is an **`ADMIN`-only affordance** and
   leaves the `USER`-readable catalogue and taxonomy views of SPEC-0004 unchanged: R1 admits no
-  `USER` surface, so this history is never reached by enriching a shared view.
+  `USER` surface, so this history is never reached by enriching a shared view. It is hosted on
+  the `ADMIN`-only surface where an administrator already chooses which Órganos are imported
+  ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R4), which is the one place an
+  administrator already looks at Órganos one at a time — naming it here so no feature has to
+  decide the question, and so this spec adds no third Órgano screen of its own.
 - **R16** — An Órgano with **no retained runs** is not presented as one that was **never
   imported**. Retention is bounded (R17), so those two states converge over time unless they
   are kept apart deliberately.
@@ -220,15 +253,21 @@ Deliberately **out of scope**:
   the Órgano's own outcome (R10), not on the run's aggregate state, because R4 makes
   *partially succeeded* the likely verdict on a multi-Órgano run — so keying it on a
   successful *run* would discard exactly the last-success fact R15 promises stays answerable.
-  Pruning is automatic; the bound is configurable and is not fixed here.
+  For an importer whose runs are **not** per-Órgano — the catalogue import, which reports no
+  per-Órgano outcome under R10 — the exception keys on the importer alone: its most recent
+  successful run is always retained. Pruning is automatic; the bound is configurable and is not
+  fixed here.
 - **R18** — Pruning run history **never touches imported data**: no contract, Órgano, taxonomy
   placement, import mark, or record of a completed initial import is altered or lost when a
   run record is discarded. Monitoring data is derived from the act of importing and is
   disposable; what was imported is not — and the importing specs never delete it.
-- **R19** — Run records are **not editable**. No function amends or deletes an individual run
-  — pruning under R17 is automatic and wholesale, never selective. A debugging trail that can
-  be selectively rewritten is not a trail, and an operational record that can be tidied cannot
-  be used to establish what happened.
+- **R19** — Run records are **not editable by anyone**. No administrative function amends or
+  deletes an individual run — pruning under R17 is automatic and wholesale, never selective.
+  This constrains what the administration area offers, not what the system writes: completing
+  a record as its run advances through R3's stages, and advancing R5's progress, are how a
+  record is built, not amendments to it. A debugging trail that can be selectively rewritten is
+  not a trail, and an operational record that can be tidied cannot be used to establish what
+  happened.
 
 ### Non-functional expectations
 
@@ -239,17 +278,20 @@ Deliberately **out of scope**:
   requirement wins**: the import proceeds and the record is what is sacrificed. Observability
   is subordinate to the thing it observes; the failure mode where monitoring takes down the
   import it was added to protect is the one to design out.
-- **R21** — **Recording is cheap.** Observing an import does not slow it by more than **5 %**
-  against the same import unobserved, measured on the deployment's target environment over an
-  initial import of at least 100 000 contracts. R5 requires progress that advances and is
-  timely, which this budget leaves ample room for.
+- **R21** — **Recording is cheap.** Observing an import does not slow it by more than **5 %**,
+  measured on the **reference environment** SPEC-0005 R23 defines and shares across all three
+  specs, over an initial import of at least 100 000 contracts. The comparison is against the
+  same import with recording disabled — a **measurement configuration**, not a state the
+  running system admits, since R2 makes recording unconditional. R5 requires progress that
+  advances and is timely, which this budget leaves ample room for.
 - **R22** — The monitoring page stays responsive at the volume history reaches. Measured on
-  the deployment's target environment, at the **maximum volume R17's configured bound
-  permits** and in any case with at least **100 000** retained run records: the run list
-  returns its first page and its count within **1 second at the 95th percentile**, and a page
-  deep into that history meets the same budget as the first. Unlike the contract and operador
-  lists, this volume is small enough that paging need not degrade with depth at all, so the
-  budget here is uniform rather than tiered.
+  the same **reference environment**, under at least **10 concurrent readers** as SPEC-0005 R23
+  stipulates, holding whichever is **greater** of the maximum volume R17's configured bound
+  permits and **100 000** retained run records: the run list returns its first page and its
+  count within **1 second at the 95th percentile**, and a page deep into that history meets the
+  same budget as the first. Unlike the contract and operador lists, this volume is small enough
+  that paging need not degrade with depth at all, so the budget here is uniform rather than
+  tiered.
 
 ## Acceptance criteria
 
@@ -261,79 +303,90 @@ Deliberately **out of scope**:
    what SPEC-0004 and SPEC-0005 mean by "otherwise recorded".)*
 3. **(R2)** A record exists for each of: the catalogue import, an Órgano's initial import, an
    incremental import, a resumption of an incomplete initial import, and a historical re-read.
-4. **(R3)** From the moment a run is recorded, and before it ends, its record states what is
-   being imported, its mode, its trigger and its start; for a manually triggered run it names
-   the administrator who triggered it, and for a scheduled run it identifies the trigger as the
-   scheduler.
-5. **(R3)** Once a run ends, its record additionally states its end time, its outcome and its
-   counts; a refused run carries no start, end or counts, and this is not treated as a
-   malformed record.
-6. **(R4)** A run that completed, one that failed outright, one that covered several Órganos of
+4. **(R3)** From the moment a run is triggered, and before it ends, its record states its
+   trigger time, what is being imported, its mode and its trigger — naming the administrator
+   for a manual trigger and identifying the scheduler for a scheduled one — and, once the run
+   starts, its start time.
+5. **(R3)** Once a run reaches a terminal state, its record additionally states that state,
+   when it reached it, and its counts.
+6. **(R3)** A **refused** run carries a trigger time but no start, no duration and no counts,
+   and is terminal from the moment it is refused; it is orderable and date-filterable in the
+   run list on its trigger time like any other record, and is not treated as malformed.
+7. **(R4)** A run that completed, one that failed outright, one that covered several Órganos of
    which some failed, one halted by unmarking its Órgano, and one refused because an import of
    that target was already running are each recorded in a **distinguishable** outcome; a run
    still executing is recorded as in progress and not as any terminal state.
-7. **(R4)** Triggering an import of an Órgano already being imported produces a record of a
+8. **(R4)** Triggering an import of an Órgano already being imported produces a record of a
    **refused** run, rather than no record at all.
-8. **(R4, R10)** In a single run covering several Órganos where one succeeds, one fails, one is
+9. **(R4, R10)** In a single run covering several Órganos where one succeeds, one fails, one is
    already importing and one is unmarked mid-run, the record shows those four Órganos in four
    distinguishable outcomes, and the run as a whole reports **partially succeeded**.
-9. **(R5)** While an initial import runs, its record reports that it is running, a measure of
+10. **(R5)** While an initial import runs, its record reports that it is running, a measure of
    progress that increases as the run advances and never decreases, and the time it last
    advanced. *(Also satisfies the progress half of SPEC-0005's initial-import criterion.)*
-10. **(R6)** An administrator watching a run sees its progress advance and sees it reach its
+11. **(R6)** An administrator watching a run sees its progress advance and sees it reach its
     terminal state without manually refreshing.
-11. **(R7)** After an initial import is interrupted and resumed, the record shows how much was
+12. **(R7)** After an initial import is interrupted and resumed, the record shows how much was
     already stored and the point reached, and an administrator can relate the resumption to the
     earlier attempt for the same Órgano rather than seeing two unrelated runs.
-12. **(R8)** A run whose process terminates without recording an end stops being reported as in
-    progress within the configured period, and is thereafter distinguishable from a run that is
-    genuinely executing.
-13. **(R9)** When the source is unreachable, the failed run's record identifies the stage that
+13. **(R4, R8)** A run whose process terminates without recording an end stops being reported as
+    in progress within the configured period and is recorded as **abandoned** — not as failed
+    and not as stopped — so two implementations cannot label the same event differently and
+    both pass.
+14. **(R9)** When the source is unreachable, the failed run's record identifies the stage that
     failed and states that the source was unreachable; when the source returns an unusable
     response, the record states the status or the respect in which it was unusable — in both
     cases sufficiently that an administrator diagnoses the failure without consulting server
     logs.
-14. **(R10)** For a run covering several Órganos where one fails, the record states which
+15. **(R10)** For a run covering several Órganos where one fails, the record states which
     Órganos succeeded and which failed, with a reason per failure, in addition to the run's
     aggregate outcome.
-15. **(R11)** When an import fails because the datastore or the source rejects the system's
+16. **(R11)** When an import fails because the datastore or the source rejects the system's
     credentials, the recorded diagnostics identify the failure without reproducing the
     credential, token, key or password anywhere in the record.
-16. **(R11)** When an import fails on a source record the system cannot parse, the recorded
-    diagnostics identify what was unusable about it without reproducing any awardee name or
-    fiscal identifier from it.
-17. **(R12)** An administrator opening the page sees recorded runs most recent first with each
-    run's target, mode, trigger, timing, duration, outcome and counts; a run currently in
-    progress is presented distinctly from finished runs.
-18. **(R13)** The run list can be narrowed by target, by Órgano, by mode, by trigger, by outcome
+17. **(R9, R11)** When an import fails on a source record the system cannot parse, the recorded
+    diagnostics identify what was unusable about it **and name the publication identifier**, so
+    an administrator can find that publication among millions — without reproducing any awardee
+    name or fiscal identifier from it.
+18. **(R12)** An administrator opening the page sees recorded runs most recent first by trigger
+    time, each showing what R3 records for its stage — and a list containing a refused run and
+    an in-progress run alongside finished ones renders all of them, the refused row showing no
+    duration and no counts without being treated as malformed. A run currently in progress is
+    presented distinctly from finished runs.
+19. **(R13)** The run list can be narrowed by target, by Órgano, by mode, by trigger, by state
     and by date, and each narrowing changes the reported count accordingly; narrowing by
-    trigger returns the scheduler's runs and no others.
-19. **(R13)** The run list is paginated: it states how many runs the current selection contains
+    trigger returns the scheduler's runs and no others, and narrowing by state to **in
+    progress** returns exactly the runs currently executing.
+20. **(R13)** The run list is paginated: it states how many runs the current selection contains
     and how many pages it spans, an administrator can move to the next and previous page and
     jump to a chosen page, and paging through the selection yields exactly that many runs with
     none repeated and none skipped.
-20. **(R14)** Opening a single run shows everything recorded about it — including progress if
+21. **(R14)** Opening a single run shows everything recorded about it — including progress if
     it is running, resumption detail if it is resumable, and diagnostics if it did not fully
     succeed.
-21. **(R15)** From a run of a per-Órgano import an administrator reaches that Órgano; from an
+22. **(R15)** From a run of a per-Órgano import an administrator reaches that Órgano; from an
     Órgano they see its run history, when it was last successfully imported, and whether its
     initial import has completed.
-22. **(R16)** An Órgano whose run records have been pruned is presented differently from an
+23. **(R16)** An Órgano whose run records have been pruned is presented differently from an
     Órgano that has never been imported.
-23. **(R17)** Run records beyond the configured bound are no longer retained, whether the bound
+24. **(R17)** Run records beyond the configured bound are no longer retained, whether the bound
     is expressed as an age or as a count.
-24. **(R17)** An Órgano that succeeded inside a run whose aggregate outcome was **partially
+25. **(R17)** An Órgano that succeeded inside a run whose aggregate outcome was **partially
     succeeded** still has that run retained as its most recent success after pruning, and
     "last imported successfully" remains answerable for it.
-25. **(R18)** After run history is pruned, every imported contract and Órgano, every taxonomy
+26. **(R18)** After run history is pruned, every imported contract and Órgano, every taxonomy
     placement, every import mark, and every record of a completed initial import is unchanged.
-26. **(R19)** The administration area exposes no operation that amends or deletes an individual
+27. **(R19)** The administration area exposes no operation that amends or deletes an individual
     run record.
-27. **(R20)** When recording a run's progress or its outcome fails, the import itself still
+28. **(R20)** When recording a run's progress or its outcome fails, the import itself still
     completes and its imported records are complete, unduplicated and consistent — the record
     is what is lost, not the import.
-28. **(R21)** An initial import of at least 100 000 contracts, observed under this spec, takes
-    no more than 5 % longer than the same import unobserved on the target environment.
-29. **(R22)** At the maximum volume R17's bound permits, and with at least 100 000 retained run
+29. **(R21)** On the reference environment, an initial import of at least 100 000 contracts
+    takes no more than 5 % longer with recording enabled than the same import measured with
+    recording disabled — a measurement configuration, since the running system always records.
+30. **(R22)** On the reference environment, under at least 10 concurrent readers, holding
+    whichever is greater of the maximum volume R17's bound permits and 100 000 retained run
     records, the run list returns its first page and its count within 1 s at the 95th
     percentile, and a page deep into that history meets the same budget as the first page.
+31. **(R17)** For the catalogue import, whose runs carry no per-Órgano outcome, the most recent
+    successful run is retained after pruning, so its last-success fact stays answerable too.

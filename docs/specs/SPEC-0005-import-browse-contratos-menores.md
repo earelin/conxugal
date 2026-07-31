@@ -445,8 +445,10 @@ recorded as ADRs before the features that would otherwise settle them silently:
     and is resumed to completion **without an administrator having to intervene**; an
     administrator can also resume it on demand. Resumption adds no duplicates. While it runs,
     an administrator can see that it is in progress and how far it has got. *(That last half is
-    proven by [SPEC-0007](SPEC-0007-monitor-import-runs.md) #7; a task claiming this criterion
-    should say which half it proves.)*
+    proven by [SPEC-0007](SPEC-0007-monitor-import-runs.md)'s progress requirement (R5) and the
+    criterion that claims it — cited by name rather than by number, because criterion numbers
+    move whenever one is inserted; a task claiming this criterion should say which half it
+    proves.)*
 15. **(R10)** An administrator can request a full historical re-read of an already-loaded
     Órgano; a correction to a publication **older** than the incremental window is picked up
     by that re-read and by no routine run, and the re-read creates no duplicates.
