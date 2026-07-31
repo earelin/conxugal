@@ -86,10 +86,10 @@ Two decisions this spec previously left open are now **settled**:
   have to keep agreeing — which is what this spec asked for when it said R5, R7 and R8 must
   not be read as requiring two separate stores. That record also derives R8's *abandoned* from
   R5's last-advanced time, so liveness needs no mechanism of its own.
-- **How the run list is paged.** R13's jump-to-a-chosen-page and exact count stand, and no ADR
-  governs them: [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) settled positional
-  paging for the surfaces that actually strain it, and at this spec's volume the question was
-  never close.
+- **How the run list is paged.** R13 takes the whole control
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R16 defines, and no ADR governs it:
+  that spec settled positional paging for the surfaces that actually strain it, and at this
+  spec's volume the question was never close.
 
 ## Requirements
 
@@ -220,10 +220,14 @@ Two decisions this spec previously left open are now **settled**:
   stand out.
 - **R13** — The list can be **narrowed** — by what was imported, by Órgano, by mode, by what
   triggered it, by **state including *in progress***, and by when the run happened — and is
-  **paginated**: an
-  administrator sees one page at a time, is told how many runs the current selection contains
-  and how many pages it spans, and can move to the next or previous page or jump to a chosen
-  one. Narrowing by trigger is what answers *"what has the scheduler been doing?"*, which is
+  **paginated**, under the same control
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R16 defines: first, previous, next,
+  last or a chosen page, over a selection whose exact size is stated. Every list in the system
+  pages alike, and an administrator meets this one and the `USER`-facing lists of SPEC-0005 and
+  SPEC-0006 in the same session. **Last** earns its place here rather than merely inheriting
+  it: R12 orders runs most recent first, so the oldest retained run — the far end of what R17
+  still holds — is otherwise reachable only by counting.
+  Narrowing by trigger is what answers *"what has the scheduler been doing?"*, which is
   otherwise unaskable. History accumulates at the scheduler's cadence multiplied by the number
   of marked Órganos, so an unfiltered, unpaginated list stops being usable long before it
   stops being correct.
@@ -291,8 +295,10 @@ Two decisions this spec previously left open are now **settled**:
   the same **reference environment**, under at least **10 concurrent readers** as SPEC-0005 R23
   stipulates, holding whichever is **greater** of the maximum volume R17's configured bound
   permits and **100 000** retained run records: the run list returns its first page and its
-  count within **1 second at the 95th percentile**, and a page deep into that history meets the
-  same budget as the first. This spec keeps a stated budget where SPEC-0005 R23 and SPEC-0006
+  count within **1 second at the 95th percentile**, and its **last** page meets the same budget
+  as its first — R13 puts that page one click away, so it is the deepest read an administrator
+  can actually reach and the one the budget has to cover. This spec keeps a stated budget where
+  SPEC-0005 R23 and SPEC-0006
   R14 defer theirs, and the asymmetry is deliberate: those two page over millions of rows where
   no honest number can be picked before measuring, whereas retained run history is bounded by
   R17 to a volume at which a uniform budget is safe to commit to now.
@@ -362,10 +368,12 @@ Two decisions this spec previously left open are now **settled**:
     and by date, and each narrowing changes the reported count accordingly; narrowing by
     trigger returns the scheduler's runs and no others, and narrowing by state to **in
     progress** returns exactly the runs currently executing.
-20. **(R13)** The run list is paginated: it states how many runs the current selection contains
-    and how many pages it spans, an administrator can move to the next and previous page and
-    jump to a chosen page, and paging through the selection yields exactly that many runs with
-    none repeated and none skipped.
+20. **(R13)** The run list is paginated under the same control as every other list in the
+    system: it states how many runs the current selection contains and how many pages it spans,
+    an administrator can move to the **first**, previous, next and **last** page and jump to a
+    chosen page, and paging through the selection yields exactly that many runs with none
+    repeated and none skipped. From the last page the control offers no further next, and from
+    the first no further previous.
 21. **(R14)** Opening a single run shows everything recorded about it — including progress if
     it is running, resumption detail if it is resumable, and diagnostics if it did not fully
     succeed.
@@ -392,6 +400,6 @@ Two decisions this spec previously left open are now **settled**:
 30. **(R22)** On the reference environment, under at least 10 concurrent readers, holding
     whichever is greater of the maximum volume R17's bound permits and 100 000 retained run
     records, the run list returns its first page and its count within 1 s at the 95th
-    percentile, and a page deep into that history meets the same budget as the first page.
+    percentile, and its last page — reached in one click under R13 — meets the same budget.
 31. **(R17)** For the catalogue import, whose runs carry no per-Órgano outcome, the most recent
     successful run is retained after pruning, so its last-success fact stays answerable too.
