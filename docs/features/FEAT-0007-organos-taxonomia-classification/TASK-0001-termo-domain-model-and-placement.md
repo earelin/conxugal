@@ -135,9 +135,9 @@ green twice, so this is a cohesion argument rather than the only workable order.
 - An Órgano built without a placement is unclassified, and that is the state a newly
   imported one starts in. (SPEC-0004 #18)
 - The port exposes every operation the later use cases need — find all, find by id, insert,
-  rename, re-parent, delete, check for children, read a parent's children, lock the
-  taxonomy, set/clear an Órgano's term, clear the placements pointing at a term, and read an
-  Órgano by id — and nothing they do not; no infrastructure type leaks into its signatures.
+  rename, re-parent, delete, check for children, read a parent's children, set/clear an
+  Órgano's term, clear the placements pointing at a term, and read an Órgano by id — and
+  nothing they do not; no infrastructure type leaks into its signatures.
 - The collation exists after the migration and orders accented Galician names as a reader
   expects — `Á` beside `A`, not after `Z` — asserted with a direct `ORDER BY … COLLATE`
   query, since a missing or misdeclared collation fails far from where it is used.

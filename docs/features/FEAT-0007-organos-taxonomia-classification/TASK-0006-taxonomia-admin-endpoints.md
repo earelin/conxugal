@@ -62,11 +62,13 @@ here: this is the whole `ADMIN` surface of the feature.
 - Every operation carries the ADR-0012 rate-limit contract — the three `RateLimit-*`
   headers and the shared `TooManyRequests` 429 — plus the 400, 401 and 500 responses
   `vacuum:owasp` requires.
-- The two refusals that can arrive as **constraint violations** rather than as a use case's
-  own check — a raced duplicate name and an assign racing a delete — reach these same
-  statuses, because TASK-0002 translates them into the domain exceptions first. Nothing
-  extra is needed here; it is noted so the 500 does not get re-introduced by handling them
-  separately.
+- The two refusals that can also arrive as **constraint violations** rather than as a use
+  case's own check — a raced duplicate name and an assign racing a delete — are **not**
+  among these types. The adapter translates no SQLSTATE into a domain exception, so a write
+  that loses one of those races surfaces as a **500**. That window is accepted against how
+  rarely this taxonomy is written to (see the feature's *Edge cases*, *Concurrent edits to
+  the tree*); it is noted here so it is not mistaken for a gap to close with per-SQLSTATE
+  handling at this layer.
 
 ## Acceptance criteria
 - As an `ADMIN`, a term can be created at the root and under a parent, renamed, moved and
