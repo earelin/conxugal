@@ -116,11 +116,20 @@ Two decisions this spec previously left open are now **settled**:
   as the run progresses. A record is **complete for its stage**, never incomplete.
 
   **From the moment it is triggered**, the record states **when it was triggered**; **what is
-  being imported** — which importer, and for a per-Órgano import which Órgano; the **mode** it
-  runs in; and **what triggered it**, distinguishing an administrator from the scheduler from
-  an automatic resumption, and naming the administrator for a manual trigger. Every record has
-  a trigger time, including one that never runs, so every record can be ordered and
-  date-filtered (R12, R13).
+  being imported** — which importer, and for a per-Órgano import its **scope**: the one Órgano
+  chosen, or that it covers every marked, active Órgano; the **mode**, which for a per-Órgano
+  importer is recorded **per covered Órgano rather than for the run**; and **what triggered
+  it**, distinguishing an administrator from the scheduler from an automatic resumption, and
+  naming the administrator for a manual trigger. Every record has a trigger time, including one
+  that never runs, so every record can be ordered and date-filtered (R12, R13).
+
+  Scope and mode are levelled this way because
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R19 and R20 make the multi-Órgano
+  run the **normal** case — the scheduler covers every marked Órgano — and R8 fixes the mode
+  per Órgano, so one run may be initial for one Órgano, resumed for another and incremental for
+  a third. A record with one Órgano and one run-level mode could not express the run the system
+  most often performs. An importer that is not per-Órgano — the catalogue import — has one mode
+  and no per-Órgano scope, and records it at the run level.
 
   **If the run starts**, the record states **when it started**. A run refused under R4 never
   starts and so has no start time.
@@ -194,15 +203,23 @@ Two decisions this spec previously left open are now **settled**:
   describe.
 - **R10** — For a run covering several Órganos, the record states the **outcome per Órgano**
   under R4's vocabulary — which succeeded, which failed and why, and which were stopped — not
-  only the run's aggregate state. Because a run continues past a failing Órgano (R4), an
-  aggregate verdict alone hides the only thing an administrator needs: *which* Órgano needs
-  attention, and whether it was even attempted.
-- **R11** — **No secret and no personal data ever appears in a record.** No credential, token,
-  key or connection password, whatever the underlying failure was (the same rule SPEC-0003
-  applies to its status and metrics views). Nor any awardee name or fiscal identifier: a
-  diagnostic exists to identify a technical failure, and reproducing an awardee's personal
-  data into a record retained under R17 serves no debugging purpose. Together these are what
-  make R9's technical detail safe to retain and to display.
+  only the run's aggregate state. Because
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R22 requires a run to continue past
+  a failing Órgano, an aggregate verdict alone hides the only thing an administrator needs:
+  *which* Órgano needs attention, and whether it was even attempted.
+- **R11** — **No secret, and no personal data drawn from the imported source, ever appears in a
+  record.** No credential, token, key or connection password, whatever the underlying failure
+  was (the same rule SPEC-0003 applies to its status and metrics views). Nor any awardee name
+  or fiscal identifier: a diagnostic exists to identify a technical failure, and reproducing an
+  awardee's personal data into a record retained under R17 serves no debugging purpose.
+  Together these are what make R9's technical detail safe to retain and to display.
+
+  **The one identity a record does carry is the administrator who triggered a manual run**
+  (R3), and that is deliberate rather than an exception to be read narrowly. It is operational
+  attribution — who acted on the system, not who a contract named — about an account SPEC-0003
+  already provisions and lists, and it is the only thing that makes a manual trigger
+  accountable. R17 may retain it indefinitely on a run that anchors an Órgano's last success,
+  which is a consequence to accept knowingly rather than discover.
 
   This bars **reproducing** personal data, not **pointing at** the record that carried it: the
   publication identifier R9 requires is assigned by the source and identifies a publication,
@@ -212,19 +229,24 @@ Two decisions this spec previously left open are now **settled**:
 ### Reviewing runs
 
 - **R12** — An administrator can open a page listing recorded runs, **most recent first** by
-  trigger time, showing for each what R3 records **for that run's stage** — what was imported,
-  its mode, what triggered it and when, and where the stage supplies them, its duration, its
-  outcome and its counts. A refused run showing no duration and no counts is displaying a
+  trigger time, showing for each what R3 records **for that run's stage** — what was imported
+  and its scope, the mode or modes it ran in, what triggered it and when, and where the stage
+  supplies them, its duration, its outcome and its counts. A run covering many Órganos in
+  differing modes is a normal row, not a special case. A refused run showing no duration and no
+  counts is displaying a
   complete record, not a broken row. Runs **in progress** are presented distinctly from
   finished ones: they are the operationally urgent rows, and sorting alone does not make them
   stand out.
 - **R13** — The list can be **narrowed** — by what was imported, by Órgano, by mode, by what
-  triggered it, by **state including *in progress***, and by when the run happened — and is
-  **paginated**, under the same control
+  triggered it, by **state including *in progress***, and by when the run happened. Because R3
+  records scope and mode per covered Órgano, narrowing by Órgano or by mode returns every run
+  in which **any** covered Órgano matches, so a scheduled sweep is found by any of the Órganos
+  it touched. The list is **paginated**, under the same control
   [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R16 defines: first, previous, next,
-  last or a chosen page, over a selection whose exact size is stated. Every list in the system
-  pages alike, and an administrator meets this one and the `USER`-facing lists of SPEC-0005 and
-  SPEC-0006 in the same session. **Last** earns its place here rather than merely inheriting
+  last or a chosen page, over a selection whose exact size is stated. Every **paginated** list
+  in the system takes that same control — this one and the `USER`-facing lists of SPEC-0005 and
+  [SPEC-0006](SPEC-0006-operadores-economicos.md) R11, which an administrator meets in the same
+  session. **Last** earns its place here rather than merely inheriting
   it: R12 orders runs most recent first, so the oldest retained run — the far end of what R17
   still holds — is otherwise reachable only by counting.
   Narrowing by trigger is what answers *"what has the scheduler been doing?"*, which is
@@ -235,7 +257,7 @@ Two decisions this spec previously left open are now **settled**:
   together with R5's progress if it is still running, R7's resumption detail if it is
   resumable, and R9's and R10's diagnostics if it did not fully succeed.
 - **R15** — History is navigable **from the Órgano as well as from the run**: from a run of a
-  per-Órgano import an administrator reaches the Órgano it covered, and from an Órgano they
+  per-Órgano import an administrator reaches **each Órgano it covered**, and from an Órgano they
   reach that Órgano's own run history — including **when it was last imported successfully**,
   and whether its initial import has completed (a fact SPEC-0005 already requires the system
   to hold, and which no administrator-facing surface shows). *Is this Órgano actually up to
@@ -314,9 +336,9 @@ Two decisions this spec previously left open are now **settled**:
 3. **(R2)** A record exists for each of: the catalogue import, an Órgano's initial import, an
    incremental import, a resumption of an incomplete initial import, and a historical re-read.
 4. **(R3)** From the moment a run is triggered, and before it ends, its record states its
-   trigger time, what is being imported, its mode and its trigger — naming the administrator
-   for a manual trigger and identifying the scheduler for a scheduled one — and, once the run
-   starts, its start time.
+   trigger time, what is being imported and its scope, its mode and its trigger — naming the
+   administrator for a manual trigger and identifying the scheduler for a scheduled one — and,
+   once the run starts, its start time.
 5. **(R3)** Once a run reaches a terminal state, its record additionally states that state,
    when it reached it, and its counts.
 6. **(R3)** A **refused** run carries a trigger time but no start, no duration and no counts,
@@ -368,8 +390,8 @@ Two decisions this spec previously left open are now **settled**:
     and by date, and each narrowing changes the reported count accordingly; narrowing by
     trigger returns the scheduler's runs and no others, and narrowing by state to **in
     progress** returns exactly the runs currently executing.
-20. **(R13)** The run list is paginated under the same control as every other list in the
-    system: it states how many runs the current selection contains and how many pages it spans,
+20. **(R13)** The run list is paginated under the control SPEC-0005 R16 defines: it states how
+    many runs the current selection contains and how many pages it spans,
     an administrator can move to the **first**, previous, next and **last** page and jump to a
     chosen page, and paging through the selection yields exactly that many runs with none
     repeated and none skipped. From the last page the control offers no further next, and from
@@ -377,9 +399,9 @@ Two decisions this spec previously left open are now **settled**:
 21. **(R14)** Opening a single run shows everything recorded about it — including progress if
     it is running, resumption detail if it is resumable, and diagnostics if it did not fully
     succeed.
-22. **(R15)** From a run of a per-Órgano import an administrator reaches that Órgano; from an
-    Órgano they see its run history, when it was last successfully imported, and whether its
-    initial import has completed.
+22. **(R15)** From a run of a per-Órgano import an administrator reaches **every** Órgano it
+    covered, not only one; from an Órgano they see its run history, when it was last
+    successfully imported, and whether its initial import has completed.
 23. **(R16)** An Órgano whose run records have been pruned is presented differently from an
     Órgano that has never been imported.
 24. **(R17)** Run records beyond the configured bound are no longer retained, whether the bound
@@ -403,3 +425,14 @@ Two decisions this spec previously left open are now **settled**:
     percentile, and its last page — reached in one click under R13 — meets the same budget.
 31. **(R17)** For the catalogue import, whose runs carry no per-Órgano outcome, the most recent
     successful run is retained after pruning, so its last-success fact stays answerable too.
+32. **(R3)** A single scheduled run covering several Órganos in **differing** modes — initial
+    for one, resumed for another, incremental for a third — records its scope as covering every
+    marked, active Órgano and records a mode **per covered Órgano**, not one mode for the run.
+    The run list renders that row without treating it as malformed.
+33. **(R13)** Narrowing the run list by an Órgano returns the multi-Órgano sweeps that covered
+    it as well as any run scoped to it alone; narrowing by a mode returns every run in which at
+    least one covered Órgano ran in that mode.
+34. **(R3, R11)** A manually triggered run's record names the administrator who triggered it,
+    while no record anywhere reproduces an awardee's name or fiscal identifier, or any
+    credential, token, key or password — so recording operational attribution and excluding
+    imported personal data are satisfied together, not traded against each other.

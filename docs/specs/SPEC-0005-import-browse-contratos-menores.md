@@ -164,12 +164,19 @@ One decision remains outside this spec:
 - **R4** — An administrator can **mark and unmark** an Órgano for import and see which
   Órganos are currently marked. An Órgano newly added to the catalogue starts **unmarked**:
   importing is opted into deliberately, never by default. Marking an Órgano starts an import
-  without the administrator having to trigger one or wait for the scheduler: an **initial
-  import** (R8) for an Órgano whose history has never been loaded, and for one that was
-  marked, unmarked and marked again, a run that covers **everything published since its last
-  successful import** — closing the gap accumulated while it was unmarked without reloading a
-  history already stored. A re-mark is not a reason to re-read a million rows, and it is not a
-  reason to lose what was published in the meantime.
+  without the administrator having to trigger one or wait for the scheduler, **in whatever mode
+  R8 dictates for it** — which settles all three ways an Órgano can arrive at a mark:
+
+  - never loaded before: an **initial import**;
+  - **left half-loaded** by an earlier interruption, including one caused by unmarking it
+    mid-import (R5): a **resumed** import, which continues that load rather than restarting it
+    and never treats the Órgano as up to date;
+  - fully loaded, then unmarked and marked again: an **incremental** import covering
+    **everything published since its last successful import** under R8's window floor — closing
+    the gap accumulated while it was unmarked without reloading a history already stored.
+
+  A re-mark is not a reason to re-read a million rows, it is not a reason to lose what was
+  published in the meantime, and it is not a reason to abandon a history only partly loaded.
 - **R5** — The mark is an administrator's decision and survives re-imports of the Órgano
   catalogue: reconciling the catalogue against its source (SPEC-0004 R5, R6) never sets or
   clears it. Unmarking an Órgano, or an Órgano becoming inactive, stops **future**
@@ -197,14 +204,27 @@ One decision remains outside this spec:
   labelled as such wherever it or any total derived from it is shown: the legal thresholds
   that define a contrato menor are VAT-exclusive, so an unlabelled figure invites exactly
   the wrong comparison.
-- **R8** — Routine importing of an Órgano happens in two modes:
-  - an **initial import**, run once when the Órgano is marked (R4), which loads its **full
-    published history** — every contrato menor the source holds for it, not only recent
-    ones;
-  - thereafter **incremental imports**, run by the scheduler (R20) or on demand (R19), which
-    re-read a **recent window** of publication dates rather than the whole history.
+- **R8** — An Órgano is imported in one of **four modes**. This requirement enumerates them and
+  fixes the single rule that picks between them, wherever the import was triggered — by marking
+  (R4), by an administrator (R19), by the scheduler (R20), or by automatic resumption (R9):
+  - an **initial import**, which loads the Órgano's **full published history** — every contrato
+    menor the source holds for it, not only recent ones. It is the mode for an Órgano whose
+    history has **never been loaded**;
+  - a **resumed** import, which continues an initial import left incomplete rather than
+    restarting it (R9). It is the mode for an Órgano whose initial import **has not completed,
+    however it was interrupted** — by failure, by the process dying, or by the Órgano being
+    unmarked mid-import and marked again (R4, R5);
+  - an **incremental** import, which re-reads a **recent window** of publication dates rather
+    than the whole history. It is the mode for an Órgano whose initial import **has completed**;
+  - a **historical re-read** (R10), which an administrator requests explicitly for a single
+    Órgano and which no trigger ever selects automatically.
 
-  The window always covers **at least the period since that Órgano's last successful import**,
+  The mode is chosen **per Órgano, not per run**: one run covering many Órganos may be initial
+  for one, resumed for another and incremental for a third. The system knows, per Órgano,
+  whether its initial import has completed, which is what makes the rule decidable — and it
+  never treats a half-loaded Órgano as though it were up to date.
+
+  For an incremental import the window always covers **at least the period since that Órgano's last successful import**,
   plus a lookback margin for corrections. Without that floor a fixed window is a silent
   data-loss mechanism: a scheduler outage, or the days an Órgano waits while R21's single-import
   guard is held by a long initial import elsewhere, would leave publications that no future run
@@ -215,9 +235,7 @@ One decision remains outside this spec:
   The window is what makes R11's refresh achievable: the source offers no "changed since"
   facility, so a correction is only discoverable by re-reading the period it falls in.
   Corrections published inside the window are picked up automatically; corrections to older
-  publications are not, and R10 is how they are reached. The system knows, per Órgano,
-  whether its initial import has completed, so it never treats a half-loaded Órgano as
-  though it were up to date.
+  publications are not, and R10 is how they are reached.
 - **R9** — An initial import is **long-running and interruptible without loss**: a single
   Órgano may hold over a million contracts, so one that fails or is interrupted part-way
   keeps everything it already stored and is **resumed to completion** — automatically, and
@@ -338,21 +356,19 @@ One decision remains outside this spec:
 
 - **R19** — An administrator can trigger an import on demand. The trigger states its
   **scope** — every marked, active Órgano, or one chosen Órgano — and runs each covered
-  Órgano in the mode R8 dictates for it: **initial** if its history has never been loaded,
-  **resumed** if its initial import was interrupted and is incomplete, **incremental**
-  otherwise. The middle case is not a nicety: without it an Órgano half-loaded by an
-  interrupted run would be treated as up to date and the rest of its history silently
-  abandoned, contradicting R9.
+  Órgano in the mode R8 dictates for it, which for a multi-Órgano trigger may differ from one
+  Órgano to the next.
 
   The administrator is shown the outcome: whether it **succeeded, failed, or partially
   succeeded**, which Órganos were covered and which of them failed, and how many contracts
   were added and refreshed. Partial success has to be expressible here because R22 requires a
   run to carry on past a failing Órgano, which makes it the likeliest verdict on a
   multi-Órgano run — a binary succeeded/failed would report the normal case as a lie.
-- **R20** — The system runs incremental imports automatically on a recurring schedule,
-  without any human trigger, so newly published contracts appear without administrator
-  action. The scheduler covers every Órgano selected under R3 whose initial import has
-  completed, and resumes (R9) any whose initial import is incomplete.
+- **R20** — The system imports automatically on a recurring schedule, without any human
+  trigger, so newly published contracts appear without administrator action. The scheduler
+  covers every Órgano selected under R3, each in the mode R8 dictates for it — **incremental**
+  for an Órgano already loaded, **resumed** for one whose initial import is incomplete (R9), so
+  no Órgano is left incomplete for want of a trigger.
 - **R21** — **At most one import runs at a time, across the whole system.** The guard is
   global, not per Órgano: while any import is in progress — this spec's, in any of its four
   modes, or SPEC-0004's catalogue import — a further trigger does not start. It is **refused**
@@ -389,9 +405,9 @@ One decision remains outside this spec:
   imported.
   > *"Otherwise recorded"* is made concrete by
   > [SPEC-0007](SPEC-0007-monitor-import-runs.md): every run is recorded whatever triggered it
-  > (R2), with diagnostics sufficient to identify the failure without server logs (R9) and the
-  > outcome recorded **per Órgano** (R10), so an administrator can tell which one needs
-  > attention.
+  > (SPEC-0007 R2), with diagnostics sufficient to identify the failure without server logs
+  > (SPEC-0007 R9) and the outcome recorded **per Órgano** (SPEC-0007 R10), so an administrator
+  > can tell which one needs attention.
 
 > R19–R22 restate SPEC-0004 R10–R13 with contracts in place of Órganos. R21 matches SPEC-0004
 > R12 exactly — one import at a time, system-wide — and the guard spans both specs rather than
@@ -406,9 +422,11 @@ One decision remains outside this spec:
   stays responsive at that volume. This requirement fixes the **conditions under which that is
   measured**, and deliberately fixes **no latency budget**.
 
-  The conditions are the **reference environment** — the deployment's stated target hardware
-  and configuration, recorded outside this spec and shared with SPEC-0006 and SPEC-0007 so all
-  three are measured alike — holding at least **5 000 000** stored contracts of which at least
+  The conditions are the **reference environment** — the **production deployment**: the
+  hardware and configuration the system actually runs on, not a separate rig provisioned for
+  measurement. SPEC-0006 and SPEC-0007 measure on the same one, so all three are comparable,
+  and no environment has to be kept in step with production for their numbers to mean anything.
+  Under it, the dataset holds at least **5 000 000** stored contracts of which at least
   **1 500 000** belong to a single Órgano, under at least **10 concurrent readers**. What is
   measured under them is an Órgano's contract list, taken at **the busiest single year of that
   largest Órgano**: its **first page and its count**; a page **deep** in that year's selection;
@@ -500,7 +518,8 @@ One decision remains outside this spec:
     and is resumed to completion **without an administrator having to intervene**; an
     administrator can also resume it on demand. Resumption adds no duplicates. While it runs,
     an administrator can see that it is in progress and how far it has got. *(That last half is
-    proven by [SPEC-0007](SPEC-0007-monitor-import-runs.md)'s progress requirement (R5); a task
+    proven by [SPEC-0007](SPEC-0007-monitor-import-runs.md)'s progress requirement
+    (SPEC-0007 R5); a task
     claiming this criterion should say which half it proves.)*
 15. **(R10)** An administrator can request a full historical re-read of an already-loaded
     Órgano; a correction to a publication **older** than the incremental window is picked up
@@ -597,3 +616,14 @@ One decision remains outside this spec:
     the scheduler was down, or because a long import elsewhere held R21's single-import guard —
     loses no publications when importing resumes: the next run covers the whole period since
     its last successful import.
+41. **(R4, R8)** An Órgano **unmarked while its initial import was still running** and later
+    marked again is **resumed**, not treated as up to date: the import continues from what was
+    already stored, adds no duplicates, and completes the Órgano's full published history.
+    Contrast #39, where the same unmark-and-re-mark sequence on an Órgano whose history was
+    **already complete** runs incrementally instead — the two differ only in whether the
+    initial import had finished, which is the fact R8 makes the system track.
+42. **(R8)** Each of the four modes is distinguishable in what it retrieves: an initial import
+    reaches the Órgano's earliest publication, a resumed import continues an incomplete one
+    without restarting it, an incremental import reads only the recent window, and a historical
+    re-read covers the full history of an already-loaded Órgano. No trigger selects a
+    historical re-read automatically.
