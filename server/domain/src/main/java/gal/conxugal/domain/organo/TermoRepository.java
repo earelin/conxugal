@@ -30,7 +30,7 @@ public interface TermoRepository {
   /**
    * Re-parents an existing term; a null {@code parentId} moves it to the root. Pointing a
    * term at itself is refused by the schema, leaving only multi-term cycles for a caller's
-   * own acyclic check under {@link #lockTaxonomia}.
+   * own acyclic check.
    */
   void updateParentId(@Id UUID id, @Nullable UUID parentId);
 
@@ -47,14 +47,4 @@ public interface TermoRepository {
    * an explicit {@code parent_id IS NOT DISTINCT FROM :parentId} query instead.
    */
   List<Termo> findByParentId(@Nullable UUID parentId);
-
-  /**
-   * Acquires the transaction-scoped serialising lock over the whole taxonomy, held until
-   * the calling transaction commits or rolls back. Tree-shape mutations call this before
-   * their first read so two concurrent moves cannot each pass an acyclic check and jointly
-   * create a cycle. The mechanism is a PostgreSQL advisory lock, confined to the {@code
-   * infrastructure} implementation; taking it with no ambient transaction acquires and
-   * releases it within its own statement and serialises nothing.
-   */
-  void lockTaxonomia();
 }
