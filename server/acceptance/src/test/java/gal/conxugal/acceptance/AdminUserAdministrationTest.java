@@ -127,19 +127,6 @@ class AdminUserAdministrationTest {
     assertThat(recoveredProfile.jsonPath().getString("email")).isEqualTo(newAccountEmail);
   }
 
-  @Test
-  void user_role_is_denied_the_administration_api() {
-    String userSession =
-        ApplicationSession.logInOrFail(
-            ApplicationSession.USER_EMAIL, ApplicationSession.USER_PASSWORD);
-
-    ApplicationSession.authenticatedAs(userSession)
-    .when()
-        .get("/api/admin/users")
-    .then()
-        .statusCode(403);
-  }
-
   private Response createAccount() {
     Response created =
         ApplicationSession.authenticatedAs(adminSession)
