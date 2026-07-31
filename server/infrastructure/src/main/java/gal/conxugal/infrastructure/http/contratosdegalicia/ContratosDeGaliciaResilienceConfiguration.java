@@ -1,4 +1,4 @@
-package gal.conxugal.infrastructure.contratosdegalicia;
+package gal.conxugal.infrastructure.http.contratosdegalicia;
 
 import io.micronaut.context.annotation.ConfigurationProperties;
 import io.micronaut.core.bind.annotation.Bindable;

@@ -1,4 +1,4 @@
-package gal.conxugal.infrastructure.contratosdegalicia;
+package gal.conxugal.infrastructure.http.contratosdegalicia;
 
 import gal.conxugal.infrastructure.http.ResilientClient;
 import io.micronaut.http.annotation.Body;

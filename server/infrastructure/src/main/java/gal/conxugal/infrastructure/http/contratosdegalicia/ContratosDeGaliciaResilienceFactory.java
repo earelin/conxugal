@@ -1,4 +1,4 @@
-package gal.conxugal.infrastructure.contratosdegalicia;
+package gal.conxugal.infrastructure.http.contratosdegalicia;
 
 import gal.conxugal.infrastructure.http.ResilientClientPolicies;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;

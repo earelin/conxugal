@@ -1,4 +1,4 @@
-package gal.conxugal.infrastructure.contratosdegalicia;
+package gal.conxugal.infrastructure.http.contratosdegalicia;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
