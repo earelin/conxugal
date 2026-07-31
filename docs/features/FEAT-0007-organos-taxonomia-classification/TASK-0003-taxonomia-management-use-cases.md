@@ -2,7 +2,7 @@
 feat: FEAT-0007
 domain: backend
 adrs: [0002]
-status: todo
+status: done
 depends_on: [TASK-0001]
 ---
 
@@ -34,8 +34,8 @@ in `domain`, not in a controller.
   integrity backstop, but this check is what produces the refusal a caller sees.
 - **This task owns the feature's four term-scoped rejection exceptions** — unknown term,
   cycle, term still has children, duplicate sibling name — as distinct domain types in
-  `domain.organo`, so [TASK-0006](TASK-0006-taxonomia-admin-endpoints.md) can map each to
-  its own status and problem type without inspecting messages.
+  `domain.organo.taxonomia`, so [TASK-0006](TASK-0006-taxonomia-admin-endpoints.md) can map
+  each to its own status and problem type without inspecting messages.
   [TASK-0004](TASK-0004-organo-classification-use-cases.md) reuses the unknown-**term** type
   rather than declaring a second one; it is listed here so two tasks picked up in parallel
   do not each invent one. The fifth type in the feature's failure contract,

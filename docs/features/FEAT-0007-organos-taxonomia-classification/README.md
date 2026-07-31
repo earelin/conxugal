@@ -141,12 +141,16 @@ Should a second taxonomy ever be wanted (one for contratos, say), it becomes a r
 then, against a real requirement, and every term gains an owner — a change worth making
 once it has a reason rather than in advance.
 
-**Where the taxonomy lives.** `Termo`, `TermoRepository` and the rejection exceptions all
-sit in **`gal.conxugal.domain.organo`**, beside `OrganoDeContratacion` — not in a package of
-their own. Terms exist to classify Órganos and have no meaning apart from them, so the
-package boundary follows the same line the URL does: the taxonomy is *part of* the Órganos
-model, not a neighbouring one. The JDBC adapter likewise joins
-`gal.conxugal.infrastructure.jdbc.organo`.
+**Where the taxonomy lives.** `Termo`, `TermoRepository`, the four management use cases and
+the term-scoped rejection exceptions sit in **`gal.conxugal.domain.organo.taxonomia`**, a
+package *beneath* `gal.conxugal.domain.organo` rather than beside it. Terms exist to classify
+Órganos and have no meaning apart from them, so the package boundary follows the same line
+the URL does: the taxonomy is *part of* the Órganos model, not a neighbouring one — nested,
+not separate. `OrganoDeContratacion` and `OrganoRepository` stay in the parent package,
+since the placement is a column on the Órgano rather than part of the tree; the
+unknown-Órgano exception stays with them. The JDBC adapter joins
+`gal.conxugal.infrastructure.jdbc.organo`, which is not subdivided — it holds one class per
+table either way.
 
 **Naming.** The aggregate is `Termo` and the paths use `termos` / `termo`, per ADR-0016's
 rule that a path takes the noun the domain uses — the same reason `/api/organos` is Galician
@@ -331,8 +335,10 @@ blocked-by-children delete are both 409 — so each rejection gets its own `type
 | `urn:conxugal:problem-type:termo-has-children` | 409 | a delete of a term with child terms |
 | `urn:conxugal:problem-type:duplicate-sibling-name` | 409 | a create/rename/move colliding with a sibling name |
 
-**Who declares each exception.** All five live in `gal.conxugal.domain.organo` alongside
-`Termo` itself (see *Where the taxonomy lives* below). The four term-scoped types are
+**Who declares each exception.** The four term-scoped types live in
+`gal.conxugal.domain.organo.taxonomia` alongside `Termo` itself, and `organo-not-found` in
+`gal.conxugal.domain.organo` alongside the Órgano it is about (see *Where the taxonomy
+lives* below). The four term-scoped types are
 [TASK-0003](TASK-0003-taxonomia-management-use-cases.md)'s;
 `organo-not-found` is **[TASK-0004](TASK-0004-organo-classification-use-cases.md)'s**. What
 TASK-0004 must not do is declare a *second* unknown-**term** type; that one it reuses. Five

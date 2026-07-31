@@ -35,7 +35,7 @@ it as an inconsistency. The reverse split — migration first, model second — 
 green twice, so this is a cohesion argument rather than the only workable order.
 
 ## Scope
-- `Termo` record in `gal.conxugal.domain.organo`: system-assigned `UUID id`
+- `Termo` record in `gal.conxugal.domain.organo.taxonomia`: system-assigned `UUID id`
   (`@GeneratedValue`, null until the database assigns it), `String name`, and a
   **nullable** `UUID parentId` — a null parent is a root, which is what makes the taxonomy
   many-rooted and arbitrarily deep. The parent is held as the parent's **id**, not a nested
