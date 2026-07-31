@@ -2,7 +2,7 @@
 feat: FEAT-0007
 domain: backend
 adrs: [0002, 0008]
-status: todo
+status: done
 depends_on: []
 ---
 
@@ -83,6 +83,17 @@ green twice, so this is a cohesion argument rather than the only workable order.
   queries and the name is greppable. Declaring it here, with the tables, is what stops the
   order depending on how the cluster happened to be initialised: under the default C/POSIX
   collation, accented Galician names sort after `Z`.
+- The collation is applied **as the column collation** on `termo.name` and on
+  `organo_contratacion.name` (the latter by `ALTER COLUMN … TYPE … COLLATE`, since V6
+  predates it), not left for each query to remember. Both ports order by name and both
+  adapters derive that `ORDER BY` from the method name, so there is no hand-written query
+  to attach an explicit `COLLATE` to — declared on the column, every derived read inherits
+  it and the port's ordering contract holds without the adapter doing anything.
+- The same migration adds a **`CHECK (parent_id IS DISTINCT FROM id)`** on `termo`. The
+  feature's serialising lock exists to stop a *multi-row* cycle forming between two
+  concurrent re-parents; a term pointing at itself needs no second row, so no lock and no
+  read-then-write window is involved, and a foreign key is satisfied by a self-reference.
+  It is the one cycle the schema can reject outright, so it does.
 - The same migration adds a **unique index on `(parent_id, lower(name))` with
   `NULLS NOT DISTINCT`**, enforcing the feature's sibling-name rule in the one place a
   concurrent create cannot slip past. `NULLS NOT DISTINCT` is what extends it to the roots:
@@ -98,16 +109,21 @@ green twice, so this is a cohesion argument rather than the only workable order.
   clearing into a loud constraint violation rather than a silent mass-unclassify. This is
   settled in the feature's *Placement and classification* section; no later task revisits
   it.
-- **No JDBC repository code here.** The migration is schema only; the
-  `JdbcTermoRepository` and the placement operations on `JdbcOrganoRepository` are
-  [TASK-0002](TASK-0002-taxonomia-store-infrastructure.md).
-- Update **`FakeOrganoRepository`** (`domain/src/test/.../organo/`) for the widened record
-  and port. It implements `OrganoRepository`, so it stops compiling here, and its
-  `update`/`updateActive` rebuild the record component-by-component: the quickest fix is to
-  pass `null` for the new component, which would make the fake **silently drop placements
-  on every reconciliation write** — the exact invariant SPEC-0004 #5 protects, defeated in
-  the test double that is supposed to prove it. It must preserve the existing placement
-  instead, and grow the by-id read.
+- **Almost no JDBC repository code here.** `JdbcTermoRepository`, and every placement
+  operation Micronaut Data can derive, are
+  [TASK-0002](TASK-0002-taxonomia-store-infrastructure.md). The single exception is
+  `clearPlacementsByTermo`: matching and clearing the same column has no derived-method
+  form, so without its `@Query` here `infrastructure` would not compile against the widened
+  port at all.
+- Delete **`FakeOrganoRepository`** (`domain/src/test/.../organo/`) and stub
+  `OrganoRepository` with Mockito in the tests that used it. The fake implements the port,
+  so it stops compiling here, and its `update`/`updateActive` rebuild the record
+  component-by-component: the quickest fix is to pass `null` for the new component, which
+  would make the fake **silently drop placements on every reconciliation write** — the
+  exact invariant SPEC-0004 #5 protects, defeated in the test double that is supposed to
+  prove it. A mock cannot drift that way because it reimplements nothing, and the invariant
+  is proved where it actually lives: against the generated SQL, in the repository
+  integration suite.
 
 ## Acceptance criteria
 - A `Termo` can be constructed as a root (null parent) or as a child of another
@@ -125,11 +141,21 @@ green twice, so this is a cohesion argument rather than the only workable order.
   Órgano by id — and nothing they do not; no infrastructure type leaks into its signatures.
 - The collation exists after the migration and orders accented Galician names as a reader
   expects — `Á` beside `A`, not after `Z` — asserted with a direct `ORDER BY … COLLATE`
-  query. The queries that depend on it are TASK-0002's; this proves the collation itself is
-  there and behaves, since a missing or misdeclared one fails far from where it is used.
+  query, since a missing or misdeclared collation fails far from where it is used.
+- Both name columns *carry* that collation, asserted the way a caller will actually meet
+  it: a **bare `ORDER BY name`** — no explicit `COLLATE` — returns `Ávila` before `Zamora`,
+  and `OrganoRepository.findAllOrderByName` returns `Ávila, Avión, Zamora`. Declaring the
+  collation without applying it to the columns leaves every derived read on the cluster
+  default, which is the whole failure this criterion exists to catch.
 - The migration applies cleanly on top of the existing schema and creates both the
   `termo` table (with its self-referencing parent foreign key) and
   `organo_contratacion.termo_id` (nullable, foreign-keyed, no `ON DELETE` action).
+- Deleting a term is **refused by the database**, not merely configured to be: deleting one
+  that still has a child term, and deleting one an Órgano is still placed in, each raise a
+  foreign-key violation naming the constraint — the loud failure the missing `ON DELETE`
+  action is there to produce. A term nothing references still deletes.
+- A term cannot be its own parent, on insert or on re-parent; both are refused by the
+  check constraint rather than left to a use case that has not been written yet.
 - The sibling-name index does what it claims, asserted directly against the database:
   two same-named children of one parent are refused, **two same-named roots are refused**
   (the `NULLS NOT DISTINCT` case, which a default index would silently allow), a
@@ -144,9 +170,9 @@ green twice, so this is a cohesion argument rather than the only workable order.
 - The reconciliation write paths leave the placement alone: `update` and `updateActive`
   against a **placed** Órgano change name/active and leave `termo_id` intact — an
   import can neither move nor drop a placement, and an Órgano going inactive keeps its term.
-  Verified in the repository integration suite and in `FakeOrganoRepository`'s own tests,
-  since a fake that drops the placement would make every downstream use-case test lie.
-  (SPEC-0004 #5, #6)
+  Verified in the repository integration suite, against the SQL Micronaut Data actually
+  generates — the one place the guarantee is real, rather than in a test double that would
+  be reimplementing the very invariant under test. (SPEC-0004 #5, #6)
 - The domain model is unit-tested at the record level (construction, null-parent root,
   null-placement unclassified) without a database; the migration and the two criteria above
   are covered by the existing Testcontainers integration suite, which applies it on startup.

@@ -15,15 +15,19 @@ import org.jspecify.annotations.Nullable;
  */
 @MappedEntity("organo_contratacion")
 public record OrganoDeContratacion(
-    @Id @GeneratedValue @Nullable UUID id, String sourceKey, String name, boolean active) {
+    @Id @GeneratedValue @Nullable UUID id,
+    String sourceKey,
+    String name,
+    boolean active,
+    @Nullable UUID termoId) {
 
   public OrganoDeContratacion {
     Objects.requireNonNull(sourceKey, "sourceKey must not be null");
     Objects.requireNonNull(name, "name must not be null");
   }
 
-  /** A newly discovered Órgano: active until a later import shows it's no longer there. */
+  /** A newly discovered Órgano: active and unclassified until later touched. */
   public OrganoDeContratacion(String sourceKey, String name) {
-    this(null, sourceKey, name, true);
+    this(null, sourceKey, name, true, null);
   }
 }

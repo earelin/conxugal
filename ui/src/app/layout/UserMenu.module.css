@@ -1,0 +1,10 @@
+.trigger {
+  border-radius: var(--mantine-radius-md);
+  padding: rem(4px);
+  transition: background-color 150ms ease;
+}
+
+.trigger:hover,
+.trigger[data-expanded] {
+  background-color: var(--mantine-color-gray-1);
+}

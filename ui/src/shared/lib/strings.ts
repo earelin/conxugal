@@ -18,6 +18,11 @@ export const strings = {
     ADMIN: 'Administradora',
     USER: 'Usuario',
   },
+  userMenu: {
+    trigger: 'Abrir o menú da conta',
+    logout: 'Pechar sesión',
+    logoutError: 'Non foi posible pechar a sesión. Téntao de novo.',
+  },
   home: {
     title: 'Benvido/a a conxugal',
     description:
