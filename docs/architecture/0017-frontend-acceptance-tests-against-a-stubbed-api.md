@@ -86,9 +86,10 @@ flowchart LR
   | Answers | "does the system work?" | "does the UI journey work?" |
   | Cost | docker image build, DB, seeded users | `docker compose up` |
 
-- **Not wired into CI yet.** `ui-ci.yml` keeps running lint/test/build; the suite is a
-  documented local command. Adding a CI job is left to a later task, once the suite has
-  proven stable locally.
+- **Its own CI workflow.** `.github/workflows/ui-acceptance.yml` runs the suite on pull
+  requests and pushes to `trunk` that touch the SPA's sources, the suite and its stubs, or
+  the UI's dependencies — a narrower trigger than `ui-ci.yml`'s `ui/**`, since this job
+  boots a container and a browser. `ui-ci.yml` keeps its lint/test/build responsibility.
 
 ## Consequences
 
