@@ -66,9 +66,27 @@ jobs:
 
       - run: npm ci
 
-      # playwright.config.ts declares only the chromium project.
+      # Keyed on the resolved Playwright version rather than package-lock.json:
+      # the version pins the browser build, so an unrelated dependency bump does
+      # not discard the cache.
+      - name: Resolve the Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      # playwright.config.ts declares only the chromium project. Left
+      # unconditional so a partially populated cache self-heals; on a hit this
+      # only verifies. No --with-deps: ubuntu-latest already carries every
+      # browser library, and the sole packages it adds are CJK/Cyrillic fonts
+      # this Galician, text-assertion-only suite never renders — fonts whose
+      # mirror once stalled this step for ten minutes.
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       # The stub the built SPA is proxied to (preview.proxy in vite.config.ts).
       # `api:up` already waits for the container's healthcheck; --quiet-pull
