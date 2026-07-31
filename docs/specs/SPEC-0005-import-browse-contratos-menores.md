@@ -29,8 +29,8 @@ the catalogue list of
 [SPEC-0004](SPEC-0004-import-manage-organos-contratacion.md) — and opening its contracts,
 which are presented **split by contract family**: *contratos menores* and *licitacións*.
 This spec delivers the contratos menores family only; licitacións are a separate, future
-spec that fills the other side of the same split. Within contratos menores a user filters
-by **year** and sorts by **date** or **amount**.
+spec that fills the other side of the same split. Within contratos menores a user browses
+**one publication year at a time** and sorts by **date** or **amount**.
 
 Every contrato menor names its awardee together with a fiscal identifier. The catalogue of
 **operadores económicos** built from those awardees, and the cross-Órgano contract history
@@ -117,25 +117,40 @@ Deliberately **out of scope**, each owned elsewhere or by a later spec:
   outcome, and how far a resumable run has got.
 - **Contracts of Órganos that are inactive.** See the note under R3.
 
-### Decisions this spec leaves open
+### Decisions taken, and what is left open
 
-Three decisions are architecturally significant, are **not** settled here, and should be
-recorded as ADRs before the features that would otherwise settle them silently:
+Two decisions that earlier drafts deferred are **settled**:
 
-1. **How reads are paged over millions of rows.** R23 states the budget, not the mechanism —
-   but R16 and R23 together **do** constrain what the ADR can choose, and the ADR author
-   should meet that deliberately rather than discover it. R16 requires jumping to a chosen
-   page and an exact count of the selection, which rules out pure cursor paging; R23 requires
-   a deep page to stay within a stated bound, which is where offset paging degrades. The
-   tiering in R23 is the deliberate release valve: the front of a selection carries the strict
-   budget, the deep tail a looser one, so an offset-based read remains viable without
-   promising that depth is free.
-2. **How a long-running, resumable import job holds its state** — required by R9 and R10.
-   [SPEC-0007](SPEC-0007-monitor-import-runs.md) R5 and R7 require that state to be *visible*
-   without binding where it lives; whichever ADR settles the job state should settle both.
-3. **The per-source concurrency and pacing model** — R21 and R24 state obligations;
-   [ADR-0014](../architecture/0014-resilient-throttled-outbound-http-client.md) owns the
-   bound and makes it configurable per source. This spec must not harden it.
+1. **Reads are paged by position, and the cost of doing so is measured before it is
+   optimised.** R16 keeps the full control — first, previous, next, last, or a chosen page —
+   over a selection whose exact size is known. No ADR is raised for the mechanism, because
+   the constraint that made this hard was overstated: a user never pages over the stored
+   dataset, only over **one Órgano's contracts of one family in one publication year** — R18
+   makes that year mandatory precisely so the bound holds. The deep-offset problem is
+   therefore bounded by the largest Órgano's busiest year, not by the table, and at that scale
+   the straightforward positional read is the thing to build first. R23 accordingly states
+   **no latency budget** — it states the conditions under which one will be measured. This is
+   a deliberate application of the project's rule against premature optimisation, and it
+   carries a known risk: the largest Órgano publishes on the order of 1.4 million contratos
+   menores across the years the source covers, so its busiest year is still a substantial
+   selection, and an arbitrarily sorted read deep into that year is where this choice will be
+   tested first. The answer is to measure it, not to design around a number nobody has
+   observed.
+2. **A long-running, resumable import job holds its state in the database** — required by R9
+   and R10, and recorded in
+   [ADR-0017](../architecture/0017-import-run-state-in-postgresql.md). That record also
+   settles what [SPEC-0007](SPEC-0007-monitor-import-runs.md) R5, R7 and R8 need, by putting
+   the resumption point, the progress measure and the last-advanced time in the very record
+   SPEC-0007 reports, rather than in a second store the two would have to keep agreeing.
+
+One decision remains outside this spec:
+
+- **The pacing model against the source** — how fast requests may be issued and at what
+  interval. R24 states the obligation;
+  [ADR-0014](../architecture/0014-resilient-throttled-outbound-http-client.md) owns the bound
+  and makes it configurable per source, and this spec must not harden it. Note that **run
+  concurrency is no longer part of this**: R21 fixes it at one import at a time, system-wide.
+  What remains open is the rate a single run may sustain, not how many runs may sustain one.
 
 ## Requirements
 
@@ -200,10 +215,11 @@ recorded as ADRs before the features that would otherwise settle them silently:
 
   The window always covers **at least the period since that Órgano's last successful import**,
   plus a lookback margin for corrections. Without that floor a fixed window is a silent
-  data-loss mechanism: a scheduler outage, or an Órgano repeatedly skipped under R21's
-  contention rule, would leave publications that no future run ever re-reads and that only
-  R10 could reach — and no requirement obliges anyone to run R10. With the floor, importing
-  simply catches up when it resumes.
+  data-loss mechanism: a scheduler outage, or the days an Órgano waits while R21's single-import
+  guard is held by a long initial import elsewhere, would leave publications that no future run
+  ever re-reads and that only R10 could reach — and no requirement obliges anyone to run R10.
+  With the floor, importing simply catches up when it resumes. The floor is what makes R21's
+  serialisation affordable: waiting costs freshness, never data.
 
   The window is what makes R11's refresh achievable: the source offers no "changed since"
   facility, so a correction is only discoverable by re-reading the period it falls in.
@@ -262,9 +278,9 @@ recorded as ADRs before the features that would otherwise settle them silently:
 - **R15** — An Órgano's contracts are presented **split by contract family**, one section per
   family, of which this spec delivers *contratos menores* and the licitacións spec delivers
   the second. Each family is reachable independently, and a family for which the system holds
-  no data says so rather than appearing broken. The split is **additive**: a family the system
-  gains later takes its place alongside the others without this requirement changing, because
-  more families than the two known today are expected.
+  no data is **omitted** rather than shown empty (R17). The split is **additive**: a family the
+  system gains later takes its place alongside the others without this requirement changing,
+  because more families than the two known today are expected.
 - **R16** — Within an Órgano's contratos menores, a user sees a list showing, for each
   contract, its identifier, its publication date, its object, its amount, its stated
   duration, and its awardee, together with how many contracts the current selection
@@ -277,24 +293,62 @@ recorded as ADRs before the features that would otherwise settle them silently:
   can be reached by following the awardee from any contract row (R8) is an affordance rendered
   **here**, on this row, so both specs' features know which side builds it.
   The list is **paginated**: a user sees one page of contracts at a time, is told which page
-  they are on and how many pages the current selection has, and can move to the next or
-  previous page or jump to a chosen one. Every contract in the selection is reachable this
-  way.
-- **R17** — An empty contratos menores list is never ambiguous. Every way a list can be empty
-  is **distinguishable to a user**, not only to an administrator:
-  - the Órgano's contracts are **not being imported** (R3);
-  - the Órgano's **initial import has not finished**, so what is shown is partial (R9);
-  - the Órgano **was imported and awarded none**;
-  - the Órgano has contracts, but the **current filter matches none of them** (R18) — which
-    must never be mistaken for an Órgano that awarded nothing.
+  they are on and how many pages the current selection has, and can move to the **first**,
+  previous, next or **last** page, or jump to a chosen one. Every contract in the selection is
+  reachable this way. The two ends are offered directly because they are the two a user asks
+  for by name — the newest and the oldest of a selection — and reaching them by counting is
+  the one navigation a page number cannot express.
+- **R17** — **An Órgano holding no contratos menores shows no contratos menores section at
+  all.** The section appears once at least one contract is stored for that Órgano, and not
+  before — whether it is empty because the Órgano is not being imported (R3), because it was
+  imported and awarded none, or because its initial import has not yet stored anything (R9).
+  An empty section is never rendered.
 
-  An Órgano that was imported and has since been unmarked or become inactive keeps showing
-  the contracts retained under R5, and says that it is no longer being updated.
-- **R18** — A user can **filter** an Órgano's contratos menores **by the year of the
-  publication date**, and **sort** them by **publication date** or by **amount**, ascending
-  or descending. Clearing the filter returns the unfiltered list. Filtering, sorting and
-  counting apply to the whole selection, not only to the page currently displayed. No CPV
-  filter is offered, because the source publishes no CPV for contratos menores.
+  This is a deliberate trade-off, and what it costs is worth stating: absence is silent, so a
+  user cannot tell an Órgano the system does not import from one that was imported and awarded
+  nothing. Both simply have no section. The judgement is that an empty section on the many
+  Órganos that publish no contratos menores at all — 234 of the catalogue's 429 organismos are
+  Concellos, which publish none — is noise on every one of them to disambiguate a question few
+  users are asking. Whether an Órgano is imported remains answerable by an administrator
+  (SPEC-0004, [SPEC-0007](SPEC-0007-monitor-import-runs.md) R15), and if users turn out to
+  need it, exposing it is a later increment rather than something this rule forecloses.
+
+  **Once the section is present it is never empty**, because R18 offers only years the Órgano
+  actually has contracts in — so a chosen year yielding nothing is unreachable by construction
+  rather than a state a user has to be told apart from the others. What the section must still
+  make plain is that it is **incomplete**: while the **initial import has not finished** what
+  is shown is partial (R9), and it says so, because a user must not read a growing list as a
+  complete one.
+
+  An Órgano that was imported and has since been unmarked or become inactive keeps its section
+  and the contracts retained under R5, and says that it is no longer being updated.
+- **R18** — An Órgano's contratos menores are **always scoped to a single publication year**.
+  A year is part of every selection; there is no unfiltered, all-years list, and no way to
+  clear the year to obtain one. A user changes which year they are looking at, never whether
+  they are looking at one.
+
+  The year in effect when the section is first opened is the **most recent year for which the
+  Órgano has contracts**, so a user lands on data rather than on a chooser. Only years the
+  Órgano actually has contracts in are offered, so choosing a year can never be the reason a
+  list is empty.
+
+  Alongside those years the chooser offers an **undated** selection wherever the Órgano holds
+  contracts whose publication date cannot be interpreted (R26). Without it a mandatory year
+  would make those contracts unreachable — stored, never shown — which would cost by omission
+  exactly what R26 refuses to cost by rejecting them at import. The selection is offered only
+  when such contracts exist, so it is absent for the Órganos that have none.
+
+  Within that year a user can **sort** by **publication date** or by **amount**, ascending or
+  descending. Sorting and counting apply to the **whole year's selection**, not only to the
+  page displayed. No CPV filter is offered, because the source publishes no CPV for contratos
+  menores.
+
+  The year is mandatory rather than optional because it is what **bounds the size of every
+  paged read**. Unscoped, the largest Órgano's selection is its entire published history — on
+  the order of 1.4 million contracts; scoped to a year it is that history divided across the
+  years the source covers. This is the constraint that makes R23's decision to defer a latency
+  budget a reasonable bet rather than an optimistic one, and it is the reason the affordance is
+  a requirement here instead of a default a feature might quietly relax.
 
 ### Triggering imports
 
@@ -315,19 +369,35 @@ recorded as ADRs before the features that would otherwise settle them silently:
   without any human trigger, so newly published contracts appear without administrator
   action. The scheduler covers every Órgano selected under R3 whose initial import has
   completed, and resumes (R9) any whose initial import is incomplete.
-- **R21** — Concurrency is bounded **per Órgano**, not globally: no Órgano is imported by two
-  runs at once, but a long-running initial or historical re-read of one Órgano must **not
-  indefinitely delay** scheduled incremental imports of the others — every marked Órgano
-  whose initial import has completed continues to be brought up to date on a bounded
-  cadence while the long run proceeds. Bounding it globally would be unworkable: an initial
-  import of a large Órgano runs for far longer than the scheduler's interval, so a single
-  system-wide guard would stall every other Órgano indefinitely.
+- **R21** — **At most one import runs at a time, across the whole system.** The guard is
+  global, not per Órgano: while any import is in progress — this spec's, in any of its four
+  modes, or SPEC-0004's catalogue import — a further trigger does not start. It is **refused**
+  and recorded as such (SPEC-0007 R4), never queued and never silently dropped, so a trigger
+  that did nothing is distinguishable from one that ran.
 
-  Contention is likewise resolved **per Órgano**: a run covering many Órganos that reaches one
-  already being imported **skips that Órgano and proceeds with the rest** rather than being
-  refused as a whole. The skip is not silent — it is recorded as that Órgano's own outcome
-  (SPEC-0007 R10), so it can be told apart from an Órgano that was imported and yielded
-  nothing.
+  **Within a run, Órganos are imported serially too** — one Órgano is finished before the next
+  is begun, never several in parallel. The guard above stops two *runs* overlapping; this stops
+  a single run from reintroducing the same concurrency internally, which would produce exactly
+  the aggregate request stream the guard exists to prevent. It also gives R19's per-Órgano
+  outcomes and SPEC-0007 R5's progress a well-defined order to report: at any moment a run is
+  working on one identifiable Órgano.
+
+  The reason is the source, not the system. Everything the system retrieves comes from one
+  public site that owes us nothing, and being throttled or blocked by it costs every capability
+  at once. [ADR-0014](../architecture/0014-resilient-throttled-outbound-http-client.md) already
+  paces requests, but a pace shared between concurrent runs is a pace each run experiences as
+  contention and the source experiences as one aggregate stream; serialising runs keeps the
+  aggregate stream identical to what any single run produces, which is the behaviour least
+  likely to be read as abuse. It also makes the request budget something an administrator can
+  reason about, rather than a quantity divided among however many runs happen to overlap.
+
+  **The cost is real and accepted.** An initial import of a large Órgano runs for days, and for
+  those days no other Órgano is imported and no scheduled incremental run starts. Nothing is
+  lost by that — R8 requires the next incremental run to cover the whole period since that
+  Órgano's last successful import, so a backlog is absorbed rather than skipped — but Órganos
+  do go stale while a long import proceeds, and an administrator should expect it rather than
+  discover it. Prioritising which import runs first when several are due is left to the feature;
+  this requirement fixes only that they do not overlap.
 - **R22** — An import is resilient to source failure: if the source is unreachable or
   returns an unusable response, the contracts already stored remain intact and consistent —
   no partial wipe — and the failure is reported to the administrator (for a manual run) or
@@ -341,34 +411,37 @@ recorded as ADRs before the features that would otherwise settle them silently:
   > treats a **partially succeeded** run as a normal outcome and R10 records the result **per
   > Órgano**, so an administrator can tell which Órgano needs attention.
 
-> R19–R22 restate SPEC-0004 R10–R13 with contracts in place of Órganos, and **two deliberate
-> divergences**: SPEC-0004 R12's single-run guard is global, whereas R21 here is per-Órgano;
-> and SPEC-0004 R13 makes an import strictly all-or-nothing, whereas R22 is per-Órgano.
-> Neither is a copy-paste slip — a run spanning many Órganos and millions of records can
-> neither be serialised behind one lock nor discarded in full because one Órgano failed.
+> R19–R22 restate SPEC-0004 R10–R13 with contracts in place of Órganos. R21 matches SPEC-0004
+> R12 exactly — one import at a time, system-wide — and the guard spans both specs rather than
+> each holding its own, since they draw on the same source. **One deliberate divergence
+> remains**: SPEC-0004 R13 makes an import strictly all-or-nothing, whereas R22 is per-Órgano.
+> That is not a copy-paste slip — a run spanning many Órganos and millions of records cannot be
+> discarded in full because one Órgano failed.
 
 ### Non-functional expectations
 
 - **R23** — The stored dataset is expected to reach **millions of contracts**, and browsing
-  stays responsive at that volume. The measurement conditions are the **reference
-  environment** — the deployment's stated target hardware and configuration, recorded outside
-  this spec and shared with SPEC-0006 and SPEC-0007 so all three are measured alike — holding
-  at least **5 000 000** stored contracts of which at least **1 500 000** belong to a single
-  Órgano, under at least **10 concurrent readers**. Under those conditions:
-  - an Órgano's contract list returns **its first page, its count, and any totals it
-    displays** within **1 second at the 95th percentile**, and so does any page within the
-    **first 100** of a selection;
-  - a page **beyond** the first 100 returns within **5 seconds at the 95th percentile**;
-  - both budgets hold for a selection that is **filtered by year and sorted by amount**, not
-    only for the default ordering — an arbitrary sort over a filtered million-row selection is
-    the read that actually breaks, and measuring only the unsorted first page would prove
-    nothing about it.
+  stays responsive at that volume. This requirement fixes the **conditions under which that is
+  measured**, and deliberately fixes **no latency budget**.
 
-  The tiering is deliberate. R16 offers jumping to a chosen page, which requires addressing a
-  page by its position; that is what makes deep reads expensive, and promising they cost what
-  the first page costs would over-constrain the paging decision this spec leaves open.
-  Degrading with depth is accepted; degrading **without bound** is not, which is what the
-  second budget forbids.
+  The conditions are the **reference environment** — the deployment's stated target hardware
+  and configuration, recorded outside this spec and shared with SPEC-0006 and SPEC-0007 so all
+  three are measured alike — holding at least **5 000 000** stored contracts of which at least
+  **1 500 000** belong to a single Órgano, under at least **10 concurrent readers**. What is
+  measured under them is an Órgano's contract list, taken at **the busiest single year of that
+  largest Órgano**: its **first page and its count**; a page **deep** in that year's selection;
+  and both of those **sorted by amount descending**, not only in the default ordering — an
+  arbitrary sort over the largest selection the system can produce is the read that actually
+  breaks, and measuring only the default first page would prove nothing about it.
+
+  No number is asserted because none has been observed. A user pages over one Órgano's
+  contracts of one family **in one publication year** (R18), never over the whole stored
+  dataset, so the deepest selection reachable is the largest Órgano's busiest year rather than
+  the table — a bound smaller than the stored volume by the number of years the source covers.
+  Whether positional paging is adequate there is a question for measurement, not for a figure
+  chosen in advance. A budget is set once these measurements exist, in whatever requirement or
+  task then owns it. Until then the obligation is to **measure and record**, which is what
+  makes "responsive" falsifiable rather than decorative.
 - **R24** — The import is **courteous to the public source**: across everything the system
   retrieves — this spec's imports and SPEC-0004's catalogue import alike — its total request
   rate stays within a budget that keeps it a negligible load on a public service, and it
@@ -397,8 +470,10 @@ recorded as ADRs before the features that would otherwise settle them silently:
 
   A published amount or date that **cannot be interpreted** is not a reason to reject the
   contract: it is stored and displayed as published like any other, and it simply takes no
-  part in the ordering or filtering it cannot support — appearing in no year's filtered
-  selection, and ordered last when sorting by the value it lacks. Discarding such contracts
+  part in the ordering it cannot support, being ordered last when sorting by the value it
+  lacks. A contract whose **date** cannot be interpreted belongs to no year, and because R18
+  makes a year mandatory it is reached through that requirement's **undated** selection —
+  remaining browsable rather than becoming stored-but-unreachable. Discarding such contracts
   would lose real awards, which is the same reasoning SPEC-0006 applies to an unusable fiscal
   identifier.
 
@@ -470,26 +545,30 @@ recorded as ADRs before the features that would otherwise settle them silently:
     has since become inactive but retains contracts under R5.
 21. **(R15)** Opening an Órgano presents its contracts split by family, with *contratos
     menores* as one family among those the system knows about; a family for which the system
-    holds no data is reachable and states that no data is available rather than erroring.
+    holds no data is omitted from the presentation rather than shown as an empty section, and
+    its absence causes no error in the families that remain.
 22. **(R16)** An Órgano's contratos menores list is paginated: it states how many contracts
-    the current selection contains and how many pages it spans, a user can move to the next
-    and previous page and jump to a chosen page, and paging through the whole selection
-    yields exactly that many contracts with none repeated and none skipped.
+    the current selection contains and how many pages it spans, a user can move to the first,
+    previous, next and last page and jump to a chosen page, and paging through the whole
+    selection yields exactly that many contracts with none repeated and none skipped. From the
+    last page the control offers no further next, and from the first no further previous.
 23. **(R16)** Each contract row offers a way to reach that contract's publication at the
     official source, and a way to reach its awardee's operador where one exists.
-24. **(R17)** A user can tell apart, without administrator access, an Órgano that is not
-    being imported, an Órgano whose initial import is still running (where what is shown is
-    partial), an Órgano that was fully imported and awarded no contratos menores, and an
-    Órgano whose contracts none of the current filter's values match. All four present
-    differently.
-25. **(R18)** Filtering an Órgano's contratos menores by a given year returns only contracts
-    whose publication date falls in that year; clearing the filter restores the full list. No
-    CPV filter control is present.
+24. **(R17)** An Órgano with no stored contratos menores presents no contratos menores section
+    at all — equally so whether it is unmarked, or marked and imported having awarded none —
+    while an Órgano holding at least one presents the section; and an Órgano whose initial
+    import is still running presents it stating that what is shown is partial, distinguishably
+    from one whose import has completed.
+25. **(R18)** An Órgano's contratos menores are always scoped to one publication year: opening
+    the section selects the most recent year the Órgano has contracts in, the years offered are
+    exactly those it has contracts in, no control clears the year to produce an all-years list,
+    and the contracts shown for a chosen year are exactly those whose publication date falls in
+    it. No CPV filter control is present.
 26. **(R18)** Sorting by publication date returns contracts in date order, and sorting by
     amount returns them in amount order, in the chosen direction; the first page after
     sorting descending by amount contains the largest-amount contract of the **whole**
-    filtered selection, not merely the largest of the page previously displayed. Changing the
-    filter or the sort re-pages the selection from its first page rather than leaving the
+    selected year, not merely the largest of the page previously displayed. Changing the
+    year or the sort re-pages the selection from its first page rather than leaving the
     user on a page number that no longer means what it did.
 27. **(R19)** An administrator can trigger an import scoped to all marked Órganos and one
     scoped to a single Órgano; each covered Órgano runs **initially** if its history was never
@@ -500,42 +579,43 @@ recorded as ADRs before the features that would otherwise settle them silently:
     succeeded** and names the failing Órgano — not a bare success and not a bare failure.
 29. **(R20)** With no human trigger, the scheduler runs and contracts published since the
     previous run become browsable for every marked, active, initially-imported Órgano.
-30. **(R21)** A second import of an Órgano already being imported does not start for that
-    Órgano; a run covering many Órganos that reaches a busy one **skips it and imports the
-    rest** rather than being refused as a whole, and the skip is recorded as that Órgano's own
-    outcome.
+30. **(R21)** While any import is in progress, a further trigger — of the same Órgano, of a
+    different Órgano, of all marked Órganos, or of SPEC-0004's catalogue import — does not
+    start a second import, and is recorded as a **refused** run rather than being queued or
+    dropped without trace. Within a run covering several Órganos, no two are imported at the
+    same time: each is finished before the next begins.
 31. **(R21)** While a long-running initial import of one Órgano is in progress — simulated if
-    necessary rather than waited out — scheduled incremental imports of other Órganos start
-    and complete on their normal cadence rather than waiting for it.
+    necessary rather than waited out — the scheduler's incremental runs do not start, and once
+    that import ends the next incremental run for each affected Órgano covers the whole period
+    since its last successful import, so nothing published during the wait is missed.
 32. **(R22)** When the source is unreachable or returns an unusable response for one Órgano,
     the import reports failure for it, contracts already stored are unchanged, contracts
     imported for Órganos processed earlier in the same run are retained, and the remaining
     marked Órganos are still imported.
 33. **(R23)** Under the reference environment, dataset and concurrency conditions R23 states,
-    an Órgano's contract list returns its first page, its count and any totals it displays
-    within 1 s at the 95th percentile, and so does any page within the first 100 of the
-    selection.
-34. **(R23)** Under the same conditions, a page beyond the first 100 of a selection of over a
-    million contracts returns within 5 s at the 95th percentile — bounded, though not equal to
-    the first page.
-35. **(R23)** Both budgets hold for a selection filtered by year and sorted by amount
-    descending, not only for the default ordering.
-36. **(R24)** Across a period covering an initial import, a historical re-read and scheduled
+    the read latency of an Órgano's contract list is **measured and recorded** at the busiest
+    single year of the largest Órgano — its first page and its count, a page deep in that
+    year's selection, and both of those sorted by amount descending. The criterion is met by
+    the measurements existing and being recorded against those conditions; it asserts no
+    threshold, because R23 sets none until they do.
+34. **(R24)** Across a period covering an initial import, a historical re-read and scheduled
     incremental runs, the system's request rate against the source stays within the
     configured budget, and no mode exceeds it.
-37. **(R25)** No contract list is reachable without authentication, and every awardee name
+35. **(R25)** No contract list is reachable without authentication, and every awardee name
     and fiscal identifier on a contract row matches what the official source publishes for
     that award.
-38. **(R26)** Every value displayed matches what the official source publishes for that
+36. **(R26)** Every value displayed matches what the official source publishes for that
     contract, with no value corrected, normalised, inferred, or enriched from elsewhere.
-39. **(R26)** A displayed duration is accompanied by an indication that the source frequently
+37. **(R26)** A displayed duration is accompanied by an indication that the source frequently
     publishes a per-Órgano default rather than a per-contract value.
-40. **(R26)** A contract whose published amount or publication date cannot be interpreted is
-    stored and displayed as published, appears in no year's filtered selection, and is ordered
-    last when sorting by the value it lacks — rather than being rejected at import.
-41. **(R4)** An Órgano that is marked, unmarked, and marked again imports everything published
+38. **(R26)** A contract whose published amount or publication date cannot be interpreted is
+    stored and displayed as published and is ordered last when sorting by the value it lacks,
+    rather than being rejected at import; one whose date cannot be interpreted appears in no
+    year's selection but is reachable through the undated selection of R18, so no stored
+    contract is unreachable.
+39. **(R4)** An Órgano that is marked, unmarked, and marked again imports everything published
     while it was unmarked, without re-reading the history it had already stored.
-42. **(R8)** An Órgano that goes un-imported for longer than the incremental window — because
-    the scheduler was down, or because contention repeatedly skipped it — loses no publications
-    when importing resumes: the next run covers the whole period since its last successful
-    import.
+40. **(R8)** An Órgano that goes un-imported for longer than the incremental window — because
+    the scheduler was down, or because a long import elsewhere held R21's single-import guard —
+    loses no publications when importing resumes: the next run covers the whole period since
+    its last successful import.

@@ -77,18 +77,21 @@ Deliberately **out of scope**:
    recording either way: ADR-0009's reasoning is written around transient metrics
    specifically, so carrying a second, differently-shaped payload over it is a change to that
    decision's context, not merely an application of it.
-2. **Where a run's progress, its resumption point, and its liveness are held.** SPEC-0005
-   already lists "how a long-running, resumable import job holds its state" as an open,
-   ADR-grade decision. R5, R7 and R8 here describe what an administrator must be able to
-   *see* — including that an abandoned run stops being reported as running; they must not be
-   read as binding that state to this spec's records, nor as requiring two separate stores.
-   Whichever ADR settles the job state should settle all three with it.
-3. **How retention is enforced.** R17 fixes the bound and the exception to it, not the
+2. **How retention is enforced.** R17 fixes the bound and the exception to it, not the
    mechanism or the cadence.
-4. **How the run list is paged.** R13 requires jumping to a chosen page and an exact count,
-   and R22 requires a deep page to cost what the first does. At this spec's volume those hold
-   together comfortably; they are stated here so the paging ADR that SPEC-0005 and SPEC-0006
-   trigger covers this surface too rather than leaving it to diverge.
+
+Two decisions this spec previously left open are now **settled**:
+
+- **Where a run's progress, its resumption point and its liveness are held.**
+  [ADR-0017](../architecture/0017-import-run-state-in-postgresql.md) puts them in the
+  database, in the very record this spec reports, rather than in a second store the two would
+  have to keep agreeing — which is what this spec asked for when it said R5, R7 and R8 must
+  not be read as requiring two separate stores. That record also derives R8's *abandoned* from
+  R5's last-advanced time, so liveness needs no mechanism of its own.
+- **How the run list is paged.** R13's jump-to-a-chosen-page and exact count stand, and no ADR
+  governs them: [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) settled positional
+  paging for the surfaces that actually strain it, and at this spec's volume the question was
+  never close.
 
 ## Requirements
 
@@ -138,19 +141,21 @@ Deliberately **out of scope**:
     multi-Órgano run is more likely to end here than in either of the above;
   - **stopped** — ended deliberately rather than by failure, as when unmarking an Órgano halts
     an import in progress;
-  - **refused** — not started because an import of that same target was already in progress. A
-    refused trigger is recorded rather than silently dropped, because a trigger that did
-    nothing must not be indistinguishable from one that ran;
+  - **refused** — not started because another import was already in progress. SPEC-0005 R21
+    allows one import at a time system-wide, so this is a whole-run verdict: the trigger never
+    began, whatever it was going to cover. A refused trigger is recorded rather than silently
+    dropped, because a trigger that did nothing must not be indistinguishable from one that ran;
   - **abandoned** — it stopped reporting and never reached any of the above, which is the state
     R8 gives a run whose process died. It is deliberately not *failed*: nothing observed a
     failure, and recording one would assert more than is known.
 
-  These states describe **both a run as a whole and each Órgano within it**. A run covering
-  many Órganos can succeed for most, fail for one, be refused for another that was already
-  importing, and be stopped for a third that was unmarked while the run was under way — so the
-  same vocabulary has to work at both levels, and *partially succeeded* is how a run reports
-  that its Órganos did not all end the same way. A run or an Órgano currently executing is
-  **in progress**, which is not a terminal state.
+  These states describe **both a run as a whole and each Órgano within it**, with one
+  exception: *refused* is a run-level verdict only, since under a single-import guard no Órgano
+  inside a running import can meet another import of itself. A run covering many Órganos can
+  succeed for most, fail for one, and be stopped for another that was unmarked while the run
+  was under way — so the same vocabulary has to work at both levels, and *partially succeeded*
+  is how a run reports that its Órganos did not all end the same way. A run or an Órgano
+  currently executing is **in progress**, which is not a terminal state.
 - **R5** — While a run is in progress its record reports **progress**: that it is running, a
   measure of how far it has got that only ever advances, and **when it last advanced**. For an
   initial import of over a million contracts, "running" is not progress — an administrator's
@@ -189,9 +194,8 @@ Deliberately **out of scope**:
   diagnostics: nothing failed, so there is no failing stage and no source interaction to
   describe.
 - **R10** — For a run covering several Órganos, the record states the **outcome per Órgano**
-  under R4's vocabulary — which succeeded, which failed and why, which were refused because
-  that Órgano was already importing, and which were stopped — not only the run's aggregate
-  state. SPEC-0005 guarantees the run continues past a failing Órgano, so an aggregate verdict
+  under R4's vocabulary — which succeeded, which failed and why, and which were stopped — not
+  only the run's aggregate state. SPEC-0005 guarantees the run continues past a failing Órgano, so an aggregate verdict
   alone hides the only thing an administrator needs: *which* Órgano needs attention, and
   whether it was even attempted.
 - **R11** — **No secret and no personal data ever appears in a record.** No credential, token,
@@ -289,9 +293,10 @@ Deliberately **out of scope**:
   stipulates, holding whichever is **greater** of the maximum volume R17's configured bound
   permits and **100 000** retained run records: the run list returns its first page and its
   count within **1 second at the 95th percentile**, and a page deep into that history meets the
-  same budget as the first. Unlike the contract and operador lists, this volume is small enough
-  that paging need not degrade with depth at all, so the budget here is uniform rather than
-  tiered.
+  same budget as the first. This spec keeps a stated budget where SPEC-0005 R23 and SPEC-0006
+  R14 defer theirs, and the asymmetry is deliberate: those two page over millions of rows where
+  no honest number can be picked before measuring, whereas retained run history is bounded by
+  R17 to a volume at which a uniform budget is safe to commit to now.
 
 ## Acceptance criteria
 
@@ -313,14 +318,15 @@ Deliberately **out of scope**:
    and is terminal from the moment it is refused; it is orderable and date-filterable in the
    run list on its trigger time like any other record, and is not treated as malformed.
 7. **(R4)** A run that completed, one that failed outright, one that covered several Órganos of
-   which some failed, one halted by unmarking its Órgano, and one refused because an import of
-   that target was already running are each recorded in a **distinguishable** outcome; a run
+   which some failed, one halted by unmarking its Órgano, and one refused because another
+   import was already running are each recorded in a **distinguishable** outcome; a run
    still executing is recorded as in progress and not as any terminal state.
-8. **(R4)** Triggering an import of an Órgano already being imported produces a record of a
-   **refused** run, rather than no record at all.
-9. **(R4, R10)** In a single run covering several Órganos where one succeeds, one fails, one is
-   already importing and one is unmarked mid-run, the record shows those four Órganos in four
-   distinguishable outcomes, and the run as a whole reports **partially succeeded**.
+8. **(R4)** Triggering an import of any kind while another import is in progress produces a
+   record of a **refused** run, rather than no record at all; no Órgano-level outcome is
+   recorded for it, because the run never began.
+9. **(R4, R10)** In a single run covering several Órganos where one succeeds, one fails and one
+   is unmarked mid-run, the record shows those three Órganos in three distinguishable outcomes,
+   and the run as a whole reports **partially succeeded**.
 10. **(R5)** While an initial import runs, its record reports that it is running, a measure of
    progress that increases as the run advances and never decreases, and the time it last
    advanced. *(Also satisfies the progress half of SPEC-0005's initial-import criterion.)*

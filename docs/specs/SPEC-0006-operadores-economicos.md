@@ -81,17 +81,26 @@ Contratos menores supply all six ([SPEC-0005](SPEC-0005-import-browse-contratos-
 Licitacións publish more and differently, and the licitacións spec is where any mismatch has
 to be resolved.
 
-### Decisions this spec leaves open
+### Decisions taken, and what is left open
 
-1. **Whether the catalogue is stored state or computed on read.** R2 says the catalogue is
-   derived; it does not say whether it is maintained as its own stored projection or assembled
-   from the contracts at query time. That choice decides whether R7's lifecycle happens
-   automatically or has to be driven, and whether R14's budget is reachable at all over
-   hundreds of thousands of operadores. It is architecturally significant and should be an ADR
-   before a feature settles it.
-2. **How reads are paged.** R11 requires jumping to a chosen page and an exact count, and R14
-   states the budget. This is the same tension SPEC-0005 records, at a comparable volume;
-   whichever ADR settles paging there settles it here, and the two must not diverge.
+**How reads are paged** is settled, and not by an ADR.
+[SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) closes it: paging stays positional,
+with an exact count and a jump to a chosen page, and its cost is measured before it is
+optimised. R11 and R14 here follow that, as this spec said they must. The reasoning does
+**not** transfer intact, though, and the difference is worth stating: SPEC-0005 bounds every
+selection to one Órgano in one publication year, whereas the operadores list of R8 is a
+directory over the whole catalogue with no such scope. This spec's list is therefore the deeper
+read of the two and the one where positional paging is likeliest to need attention first —
+which is what R14's measurements exist to find out.
+
+One decision remains open:
+
+- **Whether the catalogue is stored state or computed on read.** R2 says the catalogue is
+  derived; it does not say whether it is maintained as its own stored projection or assembled
+  from the contracts at query time. That choice decides whether R7's lifecycle happens
+  automatically or has to be driven, and whether R14's reads are viable at all over hundreds
+  of thousands of operadores. It is architecturally significant and should be an ADR before a
+  feature settles it.
 
 ## Requirements
 
@@ -195,8 +204,11 @@ to be resolved.
   totalling apply to the whole selection, not only to the page currently displayed.
 - **R11** — An operador's contract history and the operadores list of R8 are both
   **paginated**: a user sees one page at a time, is told which page they are on and how many
-  pages the current selection has, and can move to the next or previous page or jump to a
-  chosen one. Every entry in the selection is reachable this way, and the counts and totals
+  pages the current selection has, and can move to the **first**, previous, next or **last**
+  page, or jump to a chosen one — the same control
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R16 offers, because a user meets
+  both lists in the same session and neither should page differently from the other. Every
+  entry in the selection is reachable this way, and the counts and totals
   of R9 describe the whole selection rather than the page on screen. Changing a filter or a
   sort re-pages the selection from its first page, rather than leaving the user on a page
   number that no longer means what it did.
@@ -234,14 +246,17 @@ to be resolved.
   environment** and the **10 concurrent readers** of SPEC-0005 R23, and states its own dataset,
   because that requirement fixes a contract volume and says nothing about how many operadores
   those contracts name or how deep any one history runs: at least **300 000** operadores, of
-  which at least one has **10 000** or more contracts spanning **more than one Órgano**. Under
-  those conditions:
-  - the **operadores list** returns its first page and its count, and any page within the
-    first 100 of a selection, within **1 second at the 95th percentile**; a page beyond the
-    first 100 returns within **5 seconds**, matching SPEC-0005 R23's tiering rather than
-    diverging from it;
-  - an **operador's contract history** returns its first page, its count and its totals within
-    **1 second at the 95th percentile**, and the same tiering applies to it.
+  which at least one has **10 000** or more contracts spanning **more than one Órgano**. Like
+  SPEC-0005 R23, it fixes those conditions and deliberately fixes **no latency budget**: what
+  is measured and recorded under them is the **operadores list** — its first page, its count,
+  and a page deep into the selection — and an **operador's contract history**, its first page,
+  its count and its totals. A budget is set once those measurements exist.
+
+  Deferring it is a smaller bet here than in SPEC-0005 and should be read as such. That spec
+  can point to a bound — one Órgano, one year — that keeps its selections far below its stored
+  volume. This one cannot: the operadores list spans the whole catalogue, so its deep pages are
+  as deep as the catalogue is large. The measurements above are therefore the first place the
+  positional-paging choice will be put under real pressure.
 
   The operadores **list** carries no per-operador counts or totals — R8 describes it as the way
   to find an operador by name or identifier, and R9 puts the aggregates on the profile, where
@@ -315,9 +330,9 @@ to be resolved.
     merely the largest of the page previously displayed.
 21. **(R11)** Both the operadores list and an operador's history are paginated: each states
     how many entries the current selection contains and how many pages it spans, a user can
-    move to the next and previous page and jump to a chosen page, and paging through the
-    whole selection yields exactly that many entries with none repeated and none skipped.
-    Applying a filter or changing the sort returns the user to the first page.
+    move to the first, previous, next and last page and jump to a chosen page, and paging
+    through the whole selection yields exactly that many entries with none repeated and none
+    skipped. Applying a filter or changing the sort returns the user to the first page.
 22. **(R12)** No surface offers a way to delete or erase an operador, and no function removes
     an operador's name or fiscal identifier from the system.
 23. **(R13)** Every operador name, fiscal identifier and contract attribute displayed matches
@@ -325,7 +340,8 @@ to be resolved.
     enriched; no attribute is shown that no contract supplies.
 24. **(R14)** Under the reference environment and the dataset R14 states — at least 300 000
     operadores, one of them holding 10 000 or more contracts across more than one Órgano — the
-    operadores list returns its first page and its count, and an operador's history returns its
-    first page, count and totals, within 1 s at the 95th percentile; a page beyond the first
-    100 of either selection returns within 5 s.
+    read latency of the operadores list (its first page, its count, and a page deep into the
+    selection) and of an operador's history (its first page, count and totals) is **measured
+    and recorded**. The criterion is met by those measurements existing against those
+    conditions; it asserts no threshold, because R14 sets none until they do.
 25. **(R14)** The operadores list displays no per-operador contract count or amount total.
