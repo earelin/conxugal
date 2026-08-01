@@ -12,7 +12,7 @@ public class OrganoNotFoundException extends RuntimeException {
   private final UUID organoId;
 
   public OrganoNotFoundException(UUID organoId) {
-    super("No Órgano exists with id: " + organoId);
+    super("No Órgano exists with id: %s".formatted(organoId));
     this.organoId = organoId;
   }
 
