@@ -94,10 +94,6 @@ class AssignOrganoToTermoTest {
   }
 
   private static OrganoDeContratacion unclassified(UUID organoId) {
-    return placedIn(organoId, null);
-  }
-
-  private static OrganoDeContratacion placedIn(UUID organoId, UUID termoId) {
-    return new OrganoDeContratacion(organoId, "source-key", "Facenda", true, termoId);
+    return new OrganoDeContratacion(organoId, "source-key", "Facenda", true, null);
   }
 }
