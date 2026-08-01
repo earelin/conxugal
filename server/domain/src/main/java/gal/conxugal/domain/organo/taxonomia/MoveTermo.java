@@ -3,7 +3,6 @@ package gal.conxugal.domain.organo.taxonomia;
 import jakarta.inject.Singleton;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -24,7 +23,7 @@ public class MoveTermo {
     this.termoRepository = termoRepository;
   }
 
-  public void move(UUID termoId, @Nullable UUID newParentId) {
+  public void move(TermoId termoId, @Nullable TermoId newParentId) {
     Termo termo =
         termoRepository.findById(termoId).orElseThrow(() -> new TermoNotFoundException(termoId));
     if (newParentId != null) {
@@ -44,9 +43,9 @@ public class MoveTermo {
    * — two concurrent moves can jointly produce that, since the rules are not serialised — so the
    * walk refuses rather than circling it forever.
    */
-  private void requireNotSelfOrDescendant(UUID termoId, UUID targetParentId) {
-    Set<UUID> visited = new HashSet<>();
-    UUID ancestorId = targetParentId;
+  private void requireNotSelfOrDescendant(TermoId termoId, TermoId targetParentId) {
+    Set<TermoId> visited = new HashSet<>();
+    TermoId ancestorId = targetParentId;
     while (ancestorId != null) {
       if (termoId.equals(ancestorId) || !visited.add(ancestorId)) {
         throw new TermoCycleException(termoId, targetParentId);

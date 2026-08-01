@@ -1,11 +1,11 @@
 package gal.conxugal.domain.organo;
 
+import gal.conxugal.domain.organo.taxonomia.TermoId;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.Insert;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -25,17 +25,17 @@ public interface OrganoRepository {
 
   List<OrganoDeContratacion> findAllBySourceKeyIn(Collection<String> sourceKeys);
 
-  Optional<OrganoDeContratacion> findById(UUID id);
+  Optional<OrganoDeContratacion> findById(OrganoId id);
 
   @Insert
   OrganoDeContratacion insert(OrganoDeContratacion organo);
 
   /** Refreshes an existing row's name and active state in place. */
-  void update(@Id UUID id, String name, boolean active);
+  void update(@Id OrganoId id, String name, boolean active);
 
   /** Flips an existing row's active state, without touching name. */
-  void updateActive(@Id UUID id, boolean active);
+  void updateActive(@Id OrganoId id, boolean active);
 
   /** Sets (non-null) or clears (null) the Órgano's single taxonomy placement. */
-  void updateTermo(@Id UUID id, @Nullable UUID termoId);
+  void updateTermo(@Id OrganoId id, @Nullable TermoId termoId);
 }

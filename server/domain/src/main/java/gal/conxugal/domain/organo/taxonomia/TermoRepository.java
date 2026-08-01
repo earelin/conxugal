@@ -4,7 +4,6 @@ import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.Insert;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -19,25 +18,25 @@ public interface TermoRepository {
    */
   List<Termo> findAllOrderByName();
 
-  Optional<Termo> findById(UUID id);
+  Optional<Termo> findById(TermoId id);
 
   @Insert
   Termo insert(Termo termo);
 
   /** Renames an existing term in place. */
-  void updateName(@Id UUID id, String name);
+  void updateName(@Id TermoId id, String name);
 
   /**
    * Re-parents an existing term; a null {@code parentId} moves it to the root. Pointing a
    * term at itself is refused by the schema, leaving only multi-term cycles for a caller's
    * own acyclic check.
    */
-  void updateParentId(@Id UUID id, @Nullable UUID parentId);
+  void updateParentId(@Id TermoId id, @Nullable TermoId parentId);
 
-  void deleteById(UUID id);
+  void deleteById(TermoId id);
 
   /** True if any term names the given id as its parent — the delete rule's child check. */
-  boolean existsByParentId(UUID parentId);
+  boolean existsByParentId(TermoId parentId);
 
   /**
    * Every term whose parent is the given id. A null {@code parentId} is a legal argument
@@ -46,5 +45,5 @@ public interface TermoRepository {
    * matches when the argument is null; the {@code infrastructure} implementation must use
    * an explicit {@code parent_id IS NOT DISTINCT FROM :parentId} query instead.
    */
-  List<Termo> findByParentId(@Nullable UUID parentId);
+  List<Termo> findByParentId(@Nullable TermoId parentId);
 }

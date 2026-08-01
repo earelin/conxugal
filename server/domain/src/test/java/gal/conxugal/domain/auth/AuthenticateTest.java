@@ -11,6 +11,7 @@ import gal.conxugal.domain.time.Clock;
 import gal.conxugal.domain.user.PasswordEncoder;
 import gal.conxugal.domain.user.Role;
 import gal.conxugal.domain.user.User;
+import gal.conxugal.domain.user.UserId;
 import gal.conxugal.domain.user.UserRepository;
 import java.time.Instant;
 import java.util.Optional;
@@ -95,7 +96,8 @@ class AuthenticateTest {
   void fails_for_disabled_account_after_the_password_check_succeeds() {
     User user =
         new User(
-            UUID.randomUUID(), "ana@example.com", "stored-hash", Role.USER, false, CREATED_AT);
+            new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.USER, false,
+                CREATED_AT);
     when(userRepository.findByEmail("ana@example.com")).thenReturn(Optional.of(user));
     when(passwordEncoder.matches("correct-password", "stored-hash")).thenReturn(true);
 
@@ -117,6 +119,6 @@ class AuthenticateTest {
   }
 
   private static User enabledUser(String email, Role role) {
-    return new User(UUID.randomUUID(), email, "stored-hash", role, true, CREATED_AT);
+    return new User(new UserId(UUID.randomUUID()), email, "stored-hash", role, true, CREATED_AT);
   }
 }

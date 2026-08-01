@@ -2,6 +2,8 @@ package gal.conxugal.application.rest.admin.users;
 
 import gal.conxugal.domain.user.CreatedAccount;
 import gal.conxugal.domain.user.Role;
+import gal.conxugal.domain.user.UserId;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 import java.time.Instant;
 import java.util.UUID;
@@ -9,14 +11,15 @@ import java.util.UUID;
 /** The account just created, including its one-time initial password. */
 @Serdeable
 public record CreatedUserResponse(
-    UUID id, String email, Role role, boolean enabled, Instant createdAt,
+    @Nullable UUID id, String email, Role role, boolean enabled, Instant createdAt,
     String initialPassword) {
 
   static CreatedUserResponse of(CreatedAccount createdAccount) {
+    UserId id = createdAccount.user().id();
     return new CreatedUserResponse(
-        createdAccount.user().id(), createdAccount.user().email(), createdAccount.user().role(),
-        createdAccount.user().enabled(), createdAccount.user().createdAt(),
-        createdAccount.initialPassword().value());
+        id == null ? null : id.value(), createdAccount.user().email(),
+        createdAccount.user().role(), createdAccount.user().enabled(),
+        createdAccount.user().createdAt(), createdAccount.initialPassword().value());
   }
 
   @Override

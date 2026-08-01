@@ -32,7 +32,7 @@ class CreateTermoTest {
   @Test
   void creates_term_at_the_root() {
     when(termoRepository.findByParentId(null)).thenReturn(List.of());
-    Termo stored = new Termo(UUID.randomUUID(), "Deportes", null);
+    Termo stored = new Termo(new TermoId(UUID.randomUUID()), "Deportes", null);
     when(termoRepository.insert(new Termo("Deportes", null))).thenReturn(stored);
 
     Termo created = createTermo.create("Deportes", null);
@@ -42,11 +42,11 @@ class CreateTermoTest {
 
   @Test
   void creates_term_under_an_existing_parent() {
-    UUID parentId = UUID.randomUUID();
+    TermoId parentId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(parentId))
         .thenReturn(Optional.of(new Termo(parentId, "Deportes", null)));
     when(termoRepository.findByParentId(parentId)).thenReturn(List.of());
-    Termo stored = new Termo(UUID.randomUUID(), "Fútbol", parentId);
+    Termo stored = new Termo(new TermoId(UUID.randomUUID()), "Fútbol", parentId);
     when(termoRepository.insert(new Termo("Fútbol", parentId))).thenReturn(stored);
 
     Termo created = createTermo.create("Fútbol", parentId);
@@ -56,7 +56,7 @@ class CreateTermoTest {
 
   @Test
   void rejects_unknown_parent_and_writes_nothing() {
-    UUID unknownParentId = UUID.randomUUID();
+    TermoId unknownParentId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(unknownParentId)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> createTermo.create("Fútbol", unknownParentId))
@@ -66,11 +66,11 @@ class CreateTermoTest {
 
   @Test
   void rejects_name_already_used_by_sibling() {
-    UUID parentId = UUID.randomUUID();
+    TermoId parentId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(parentId))
         .thenReturn(Optional.of(new Termo(parentId, "Deportes", null)));
     when(termoRepository.findByParentId(parentId))
-        .thenReturn(List.of(new Termo(UUID.randomUUID(), "Fútbol", parentId)));
+        .thenReturn(List.of(new Termo(new TermoId(UUID.randomUUID()), "Fútbol", parentId)));
 
     assertThatThrownBy(() -> createTermo.create("Fútbol", parentId))
         .isInstanceOf(DuplicateSiblingNameException.class);
@@ -80,7 +80,7 @@ class CreateTermoTest {
   @Test
   void rejects_second_root_with_the_same_name() {
     when(termoRepository.findByParentId(null))
-        .thenReturn(List.of(new Termo(UUID.randomUUID(), "Deportes", null)));
+        .thenReturn(List.of(new Termo(new TermoId(UUID.randomUUID()), "Deportes", null)));
 
     assertThatThrownBy(() -> createTermo.create("Deportes", null))
         .isInstanceOf(DuplicateSiblingNameException.class);
@@ -90,7 +90,7 @@ class CreateTermoTest {
   @Test
   void rejects_name_differing_only_in_case() {
     when(termoRepository.findByParentId(null))
-        .thenReturn(List.of(new Termo(UUID.randomUUID(), "Deportes", null)));
+        .thenReturn(List.of(new Termo(new TermoId(UUID.randomUUID()), "Deportes", null)));
 
     assertThatThrownBy(() -> createTermo.create("DEPORTES", null))
         .isInstanceOf(DuplicateSiblingNameException.class);
@@ -99,11 +99,11 @@ class CreateTermoTest {
 
   @Test
   void accepts_the_same_name_under_another_parent() {
-    UUID parentId = UUID.randomUUID();
+    TermoId parentId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(parentId))
         .thenReturn(Optional.of(new Termo(parentId, "Cultura", null)));
     when(termoRepository.findByParentId(parentId)).thenReturn(List.of());
-    Termo stored = new Termo(UUID.randomUUID(), "Fútbol", parentId);
+    Termo stored = new Termo(new TermoId(UUID.randomUUID()), "Fútbol", parentId);
     when(termoRepository.insert(new Termo("Fútbol", parentId))).thenReturn(stored);
 
     Termo created = createTermo.create("Fútbol", parentId);
@@ -114,7 +114,7 @@ class CreateTermoTest {
   @Test
   void stores_the_name_stripped() {
     when(termoRepository.findByParentId(null)).thenReturn(List.of());
-    Termo stored = new Termo(UUID.randomUUID(), "Deportes", null);
+    Termo stored = new Termo(new TermoId(UUID.randomUUID()), "Deportes", null);
     when(termoRepository.insert(new Termo("Deportes", null))).thenReturn(stored);
 
     Termo created = createTermo.create("  Deportes  ", null);

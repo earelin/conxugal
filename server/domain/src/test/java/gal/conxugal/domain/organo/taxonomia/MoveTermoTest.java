@@ -30,10 +30,10 @@ class MoveTermoTest {
 
   @Test
   void moves_term_under_another_parent() {
-    UUID termoId = UUID.randomUUID();
-    UUID newParentId = UUID.randomUUID();
+    TermoId termoId = new TermoId(UUID.randomUUID());
+    TermoId newParentId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(termoId))
-        .thenReturn(Optional.of(new Termo(termoId, "Fútbol", UUID.randomUUID())));
+        .thenReturn(Optional.of(new Termo(termoId, "Fútbol", new TermoId(UUID.randomUUID()))));
     when(termoRepository.findById(newParentId))
         .thenReturn(Optional.of(new Termo(newParentId, "Cultura", null)));
     when(termoRepository.findByParentId(newParentId)).thenReturn(List.of());
@@ -45,11 +45,11 @@ class MoveTermoTest {
 
   @Test
   void moves_term_to_the_root() {
-    UUID termoId = UUID.randomUUID();
+    TermoId termoId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(termoId))
-        .thenReturn(Optional.of(new Termo(termoId, "Fútbol", UUID.randomUUID())));
+        .thenReturn(Optional.of(new Termo(termoId, "Fútbol", new TermoId(UUID.randomUUID()))));
     when(termoRepository.findByParentId(null))
-        .thenReturn(List.of(new Termo(UUID.randomUUID(), "Cultura", null)));
+        .thenReturn(List.of(new Termo(new TermoId(UUID.randomUUID()), "Cultura", null)));
 
     moveTermo.move(termoId, null);
 
@@ -58,7 +58,7 @@ class MoveTermoTest {
 
   @Test
   void rejects_move_onto_itself() {
-    UUID termoId = UUID.randomUUID();
+    TermoId termoId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(termoId))
         .thenReturn(Optional.of(new Termo(termoId, "Deportes", null)));
 
@@ -69,9 +69,9 @@ class MoveTermoTest {
 
   @Test
   void rejects_move_onto_its_own_grandchild() {
-    UUID termoId = UUID.randomUUID();
-    UUID childId = UUID.randomUUID();
-    UUID grandchildId = UUID.randomUUID();
+    TermoId termoId = new TermoId(UUID.randomUUID());
+    TermoId childId = new TermoId(UUID.randomUUID());
+    TermoId grandchildId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(termoId))
         .thenReturn(Optional.of(new Termo(termoId, "Deportes", null)));
     when(termoRepository.findById(childId))
@@ -86,9 +86,9 @@ class MoveTermoTest {
 
   @Test
   void rejects_move_when_the_stored_ancestry_already_contains_cycle() {
-    UUID termoId = UUID.randomUUID();
-    UUID firstId = UUID.randomUUID();
-    UUID secondId = UUID.randomUUID();
+    TermoId termoId = new TermoId(UUID.randomUUID());
+    TermoId firstId = new TermoId(UUID.randomUUID());
+    TermoId secondId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(termoId))
         .thenReturn(Optional.of(new Termo(termoId, "Deportes", null)));
     // Two concurrent moves can leave these two pointing at each other, since the feature
@@ -105,18 +105,18 @@ class MoveTermoTest {
 
   @Test
   void rejects_unknown_term_and_writes_nothing() {
-    UUID unknownId = UUID.randomUUID();
+    TermoId unknownId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(unknownId)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> moveTermo.move(unknownId, UUID.randomUUID()))
+    assertThatThrownBy(() -> moveTermo.move(unknownId, new TermoId(UUID.randomUUID())))
         .isInstanceOf(TermoNotFoundException.class);
     verify(termoRepository, never()).updateParentId(any(), any());
   }
 
   @Test
   void rejects_unknown_target_parent_and_writes_nothing() {
-    UUID termoId = UUID.randomUUID();
-    UUID unknownParentId = UUID.randomUUID();
+    TermoId termoId = new TermoId(UUID.randomUUID());
+    TermoId unknownParentId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(termoId))
         .thenReturn(Optional.of(new Termo(termoId, "Fútbol", null)));
     when(termoRepository.findById(unknownParentId)).thenReturn(Optional.empty());
@@ -131,14 +131,14 @@ class MoveTermoTest {
 
   @Test
   void rejects_name_already_used_at_the_destination() {
-    UUID termoId = UUID.randomUUID();
-    UUID newParentId = UUID.randomUUID();
+    TermoId termoId = new TermoId(UUID.randomUUID());
+    TermoId newParentId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(termoId))
-        .thenReturn(Optional.of(new Termo(termoId, "Fútbol", UUID.randomUUID())));
+        .thenReturn(Optional.of(new Termo(termoId, "Fútbol", new TermoId(UUID.randomUUID()))));
     when(termoRepository.findById(newParentId))
         .thenReturn(Optional.of(new Termo(newParentId, "Cultura", null)));
     when(termoRepository.findByParentId(newParentId))
-        .thenReturn(List.of(new Termo(UUID.randomUUID(), "fútbol", newParentId)));
+        .thenReturn(List.of(new Termo(new TermoId(UUID.randomUUID()), "fútbol", newParentId)));
 
     assertThatThrownBy(() -> moveTermo.move(termoId, newParentId))
         .isInstanceOf(DuplicateSiblingNameException.class);
@@ -147,11 +147,11 @@ class MoveTermoTest {
 
   @Test
   void rejects_move_to_the_root_colliding_with_existing_root() {
-    UUID termoId = UUID.randomUUID();
+    TermoId termoId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(termoId))
-        .thenReturn(Optional.of(new Termo(termoId, "Deportes", UUID.randomUUID())));
+        .thenReturn(Optional.of(new Termo(termoId, "Deportes", new TermoId(UUID.randomUUID()))));
     when(termoRepository.findByParentId(null))
-        .thenReturn(List.of(new Termo(UUID.randomUUID(), "Deportes", null)));
+        .thenReturn(List.of(new Termo(new TermoId(UUID.randomUUID()), "Deportes", null)));
 
     assertThatThrownBy(() -> moveTermo.move(termoId, null))
         .isInstanceOf(DuplicateSiblingNameException.class);

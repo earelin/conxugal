@@ -10,15 +10,15 @@ class TermoTest {
 
   @Test
   void constructs_root_term_with_null_parent() {
-    Termo root = new Termo(UUID.randomUUID(), "Deportes", null);
+    Termo root = new Termo(new TermoId(UUID.randomUUID()), "Deportes", null);
 
     assertThat(root.parentId()).isNull();
   }
 
   @Test
   void constructs_child_term_under_parent() {
-    UUID parentId = UUID.randomUUID();
-    Termo child = new Termo(UUID.randomUUID(), "Fútbol", parentId);
+    TermoId parentId = new TermoId(UUID.randomUUID());
+    Termo child = new Termo(new TermoId(UUID.randomUUID()), "Fútbol", parentId);
 
     assertThat(child.parentId()).isEqualTo(parentId);
   }
@@ -33,12 +33,12 @@ class TermoTest {
   @Test
   void rejects_null_name() {
     assertThatNullPointerException()
-        .isThrownBy(() -> new Termo(UUID.randomUUID(), null, null));
+        .isThrownBy(() -> new Termo(new TermoId(UUID.randomUUID()), null, null));
   }
 
   @Test
   void newly_created_term_has_no_id_and_the_given_parent() {
-    UUID parentId = UUID.randomUUID();
+    TermoId parentId = new TermoId(UUID.randomUUID());
     Termo term = new Termo("Fútbol", parentId);
 
     assertThat(term.id()).isNull();
@@ -47,10 +47,10 @@ class TermoTest {
 
   @Test
   void nesting_is_unbounded() {
-    Termo root = new Termo(UUID.randomUUID(), "Nivel 1", null);
-    Termo child = new Termo(UUID.randomUUID(), "Nivel 2", root.id());
-    Termo grandchild = new Termo(UUID.randomUUID(), "Nivel 3", child.id());
-    Termo greatGrandchild = new Termo(UUID.randomUUID(), "Nivel 4", grandchild.id());
+    Termo root = new Termo(new TermoId(UUID.randomUUID()), "Nivel 1", null);
+    Termo child = new Termo(new TermoId(UUID.randomUUID()), "Nivel 2", root.id());
+    Termo grandchild = new Termo(new TermoId(UUID.randomUUID()), "Nivel 3", child.id());
+    Termo greatGrandchild = new Termo(new TermoId(UUID.randomUUID()), "Nivel 4", grandchild.id());
 
     assertThat(greatGrandchild.parentId()).isEqualTo(grandchild.id());
   }

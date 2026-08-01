@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
 import gal.conxugal.domain.user.User;
+import gal.conxugal.domain.user.UserId;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -29,7 +30,8 @@ class CurrentUserControllerIntegrationTest extends AuthenticationTestSupport {
             .get("/api/me");
 
     response.then().statusCode(HttpStatus.OK.getCode());
-    assertThat(UUID.fromString(response.jsonPath().getString("id"))).isEqualTo(user.id());
+    assertThat(new UserId(UUID.fromString(response.jsonPath().getString("id"))))
+        .isEqualTo(user.id());
     assertThat(response.jsonPath().getString("email")).isEqualTo(user.email());
     assertThat(response.jsonPath().getString("role")).isEqualTo("USER");
     assertThat(response.jsonPath().getString("createdAt")).isNotNull();

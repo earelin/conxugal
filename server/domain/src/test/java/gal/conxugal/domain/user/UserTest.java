@@ -13,7 +13,7 @@ class UserTest {
 
   @Test
   void exposes_id_email_password_hash_and_role() {
-    UUID id = UUID.randomUUID();
+    UserId id = new UserId(UUID.randomUUID());
     User user = new User(id, "ana@example.com", "stored-hash", Role.ADMIN, true, CREATED_AT);
 
     assertThat(user.id()).isEqualTo(id);
@@ -25,7 +25,8 @@ class UserTest {
   @Test
   void exposes_enabled_and_created_at() {
     User user =
-        new User(UUID.randomUUID(), "ana@example.com", "stored-hash", Role.USER, false, CREATED_AT);
+        new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.USER, false,
+            CREATED_AT);
 
     assertThat(user.enabled()).isFalse();
     assertThat(user.createdAt()).isEqualTo(CREATED_AT);
@@ -34,7 +35,8 @@ class UserTest {
   @Test
   void has_no_last_login_at_when_constructed_without_one() {
     User user =
-        new User(UUID.randomUUID(), "ana@example.com", "stored-hash", Role.USER, true, CREATED_AT);
+        new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.USER, true,
+            CREATED_AT);
 
     assertThat(user.lastLoginAt()).isNull();
   }
@@ -44,7 +46,8 @@ class UserTest {
     Instant lastLoginAt = Instant.parse("2026-07-11T10:15:30Z");
     User user =
         new User(
-            UUID.randomUUID(), "ana@example.com", "stored-hash", Role.USER, true, CREATED_AT,
+            new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.USER, true,
+                CREATED_AT,
             lastLoginAt);
 
     assertThat(user.lastLoginAt()).isEqualTo(lastLoginAt);
@@ -61,14 +64,15 @@ class UserTest {
   void rejects_null_email() {
     assertThatNullPointerException()
         .isThrownBy(
-            () -> new User(UUID.randomUUID(), null, "stored-hash", Role.USER, true, CREATED_AT));
+            () -> new User(new UserId(UUID.randomUUID()), null, "stored-hash", Role.USER, true,
+                CREATED_AT));
   }
 
   @Test
   void rejects_null_password_hash() {
     assertThatNullPointerException()
         .isThrownBy(
-            () -> new User(UUID.randomUUID(), "ana@example.com", null, Role.USER, true,
+            () -> new User(new UserId(UUID.randomUUID()), "ana@example.com", null, Role.USER, true,
                 CREATED_AT));
   }
 
@@ -76,7 +80,8 @@ class UserTest {
   void rejects_null_role() {
     assertThatNullPointerException()
         .isThrownBy(
-            () -> new User(UUID.randomUUID(), "ana@example.com", "stored-hash", null, true,
+            () -> new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", null,
+                true,
                 CREATED_AT));
   }
 
@@ -84,14 +89,16 @@ class UserTest {
   void rejects_null_created_at() {
     assertThatNullPointerException()
         .isThrownBy(
-            () -> new User(UUID.randomUUID(), "ana@example.com", "stored-hash", Role.USER, true,
+            () -> new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash",
+                Role.USER, true,
                 null));
   }
 
   @Test
   void toString_redacts_password_hash() {
     User user =
-        new User(UUID.randomUUID(), "ana@example.com", "stored-hash", Role.ADMIN, true, CREATED_AT);
+        new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.ADMIN, true,
+            CREATED_AT);
 
     assertThat(user.toString())
         .contains("ana@example.com", "ADMIN")

@@ -1,6 +1,5 @@
 package gal.conxugal.domain.organo.taxonomia;
 
-import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -11,9 +10,9 @@ import org.jspecify.annotations.Nullable;
 public class DuplicateSiblingNameException extends RuntimeException {
 
   private final String name;
-  private final @Nullable UUID parentId;
+  @Nullable private final TermoId parentId;
 
-  public DuplicateSiblingNameException(String name, @Nullable UUID parentId) {
+  public DuplicateSiblingNameException(String name, @Nullable TermoId parentId) {
     super(parentId == null
         ? "A root term named %s already exists".formatted(name)
         : "A term named %s already exists under parent %s".formatted(name, parentId));
@@ -25,7 +24,7 @@ public class DuplicateSiblingNameException extends RuntimeException {
     return name;
   }
 
-  public @Nullable UUID getParentId() {
+  public @Nullable TermoId getParentId() {
     return parentId;
   }
 }

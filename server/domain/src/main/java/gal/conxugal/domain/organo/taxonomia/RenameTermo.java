@@ -1,7 +1,6 @@
 package gal.conxugal.domain.organo.taxonomia;
 
 import jakarta.inject.Singleton;
-import java.util.UUID;
 
 /**
  * Changes a term's name, leaving its place in the tree untouched. Refuses an unknown term and a
@@ -17,7 +16,7 @@ public class RenameTermo {
     this.termoRepository = termoRepository;
   }
 
-  public Termo rename(UUID termoId, String name) {
+  public Termo rename(TermoId termoId, String name) {
     Termo termo =
         termoRepository.findById(termoId).orElseThrow(() -> new TermoNotFoundException(termoId));
     String storedName = name.strip();
