@@ -15,7 +15,7 @@ import org.bouncycastle.crypto.params.Argon2Parameters;
  * tuning won't invalidate hashes already stored.
  */
 @Singleton
-public class Argon2idPasswordEncoder implements PasswordEncoder {
+public final class Argon2idPasswordEncoder implements PasswordEncoder {
 
   private static final int MEMORY_KB = 65536;
   private static final int ITERATIONS = 3;
