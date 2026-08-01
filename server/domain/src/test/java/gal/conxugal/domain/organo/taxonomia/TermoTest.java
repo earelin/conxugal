@@ -1,4 +1,4 @@
-package gal.conxugal.domain.organo;
+package gal.conxugal.domain.organo.taxonomia;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
