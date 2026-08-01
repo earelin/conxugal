@@ -95,7 +95,7 @@ features.
   (manual or scheduled) is already in progress does not start a second concurrent run.
   The guard is **system-wide, not per importer**: it is the same single-import guard the
   contratos menores spec states
-  ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R21), held once across both, so a
+  ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R22), held once across both, so a
   catalogue import and a contract import never run together. Both draw on the same public
   source, and being throttled or blocked by it would cost both alike.
 - **R13** — An import is resilient to source failure: if the source is unreachable or

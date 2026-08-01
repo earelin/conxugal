@@ -64,19 +64,31 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
 ### What a contract family must supply
 
 The catalogue is family-neutral, so it depends on every feeding family supplying the same
-facts about each contract. Stated here rather than left implicit, because a family that
+facts about the contracts it supplies, and about itself. Stated here rather than left
+implicit, because a family that
 cannot supply them cannot feed this catalogue, and that is worth discovering while writing
 that family's spec rather than while building it:
 
 - an **awardee name** and an **awardee fiscal identifier**, as published (R3, R4);
 - a single **publication date** per contract, comparable across families — R4's most-recent
-  rule, R10's year filter and R10's date sort all order contracts of different families
-  against one another;
+  rule, R10's year filter and R10's date sort all order contracts of different families against
+  one another. A family may publish dates it cannot interpret; R4 and R10 say what becomes of
+  those, so the fact required is the date **as published**, not a guarantee that every one of
+  them is interpretable;
 - an **amount**, on the VAT basis R9 fixes;
 - the **awarding Órgano**;
-- a **stable contract identity**, comparable across families, since R4 breaks ties on it;
-- an **explicit removal rule** — a family must say what it means for one of its contracts to
-  be withdrawn, because R7's lifecycle hooks onto it;
+- a **stable contract identity** that is **totally ordered**, and ordered consistently across
+  families — R4 breaks its tie by taking the **higher** identity, which needs more than the
+  stability [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R7 promises. Any total
+  order will do provided it is deterministic and agreed between families; the requirement is
+  that one is stated, not which;
+- an **explicit removal rule** that is **non-destructive and reversible** — a family must say
+  what it means for one of its contracts to be withdrawn, and withdrawal must hide the contract
+  rather than delete it, and be undoable. R7's lifecycle hooks onto it, and R7's promise that an
+  operador is hidden rather than erased — the load-bearing half of R12's privacy analysis — is
+  only true if **every** feeding family keeps this one. A family that can offer only a hard
+  delete cannot feed this catalogue, in the same way and for the same reason as one that cannot
+  supply an amount on R9's VAT basis;
 - a **family name**, since R9 presents the history one section per family and titles each
   section with it.
 
@@ -133,6 +145,15 @@ One decision remains open:
   matches `b12345678`, ` B12345678 ` and `B12345678` as one operador, and that operador must
   still be shown under exactly one of those published spellings rather than an invented
   canonical form. Neither name nor spelling variation ever produces a second operador.
+
+  A feeding family may hold contracts whose **publication date cannot be interpreted**
+  ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R27 stores them rather than
+  rejecting them), and "most recently published" cannot order those. They are therefore
+  **ranked last** for this rule, behind every contract that has an interpretable date, and the
+  higher-contract-identifier tie-break settles among them — so an operador all of whose
+  contracts are undated is still shown under exactly one deterministic spelling, and one
+  undated contract never displaces a dated one. This keeps R4 total: every operador has a
+  display name, whatever its contracts' dates look like.
 - **R5** — An identifier is **unusable** when it is absent, or empty once surrounding
   whitespace is ignored. Such a contract yields **no** operador — never an invented or
   placeholder one — while remaining stored, browsable and displaying its awardee's name as its
@@ -182,13 +203,21 @@ One decision remains open:
   by feeding it fragments of fiscal identifiers, which R12 relies on. Relaxing identifier
   lookup to a prefix or substring match would quietly remove that protection.
 
+  The list is ordered by **display name (R4) ascending**, compared ignoring letter case and
+  accents as name lookup is, with the **fiscal identifier** breaking ties so the order is total
+  and two runs over the same data agree. The ordering is **fixed**: the list exists to find an
+  operador, and R14 keeps per-operador figures off it, so there is nothing on it worth sorting
+  by. An order has to be stated because R11's paging is over an ordered selection — without one,
+  *last page* does not denote and exhaustive paging cannot be shown.
+
   Without the list, the primary question this capability exists to answer — *what has this
   supplier been awarded?* — could only be asked by first stumbling onto one of its contracts.
 
 ### Contract history
 
-- **R9** — Opening an operador shows its **contract history**: every contract awarded to it
-  **across all Órganos and all contract families**, presented **split by contract family**,
+- **R9** — Opening an operador shows its **contract history**: every contract **the system
+  holds** that was awarded to it, across all Órganos and all contract families, presented
+  **split by contract family**,
   one section per family, under the same rule
   [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R15 fixes for an Órgano's
   contracts — each family reachable independently, a family the operador holds no contracts in
@@ -197,10 +226,24 @@ One decision remains open:
   same session, and an operador's history should not be organised differently from the Órgano
   page they reached it from.
 
+  *"Every contract the system holds"* is deliberately narrower than *every contract awarded*,
+  and the difference is disclosed rather than left for a user to discover. Import is **opt-in
+  per Órgano**, so an award by an Órgano nobody marked is absent; and the source is itself
+  knowingly incomplete. The history therefore **states that it covers only imported Órganos**,
+  and a section **says it is still filling** while any Órgano contributing to it has an
+  unfinished initial import — the same obligation
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R18 places on an Órgano's own
+  section, and for the same reason: a user must not read a growing list as a complete one. It
+  matters more here, because this spec attaches a **total amount awarded** to that list, and a
+  total is acted on in a way a list of rows is not.
+
   Each section shows, per contract, the awarding Órgano and the same published attributes that
   family shows in its own list — including, where that family offers one, the route to the
   contract's publication at the official source, so a row here is as verifiable as a row there.
   A row does **not** repeat the family it belongs to: the section it sits in already names it.
+  It **does** state its awardee, even though every row on this page was awarded to the operador
+  the page is about, because R3 matches identifier spellings that R4 then declines to display —
+  so the row is the only place the published variance is visible, and R13 requires it to be.
 
   Each row's **awarding Órgano is followable to that Órgano's own page**, under the routes
   [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R14 fixes — the mirror of the
@@ -215,8 +258,20 @@ One decision remains open:
   question this capability exists to answer and it should not be answerable only by adding the
   sections up by hand. That combined figure is always the sum of the sections **as currently
   selected**, so one semantics governs the page: filter or re-scope a section and both that
-  section's figures and the combined figures move together. Unfiltered — the state a profile
-  opens in — the combined figure is therefore the operador's whole visible history.
+  section's figures and the combined figures move together.
+
+  Because sections scope independently (R10), the combined figure can span a 2023-only section
+  and an unfiltered one, and **it states the scoping it was computed under** rather than
+  presenting itself as everything. A total that silently mixed year scopes would fail exactly
+  the test that makes this spec label VAT bases.
+
+  A contract whose published **amount cannot be interpreted** is counted but cannot be summed
+  ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R27 stores such contracts rather
+  than rejecting them). Where any exist in a selection, **the total says how many contracts it
+  could not include**, so a count and a total that disagree are explained rather than merely
+  inconsistent. Dropping those contracts from the count instead would hide real awards, and
+  reporting a total that silently omits them is the same defect as one that silently mixes VAT
+  bases.
 
   Every family publishes its awarded amount **including VAT** — contratos menores at award,
   licitacións at resolución — so the combined total sums figures on **one basis** and is
@@ -230,14 +285,22 @@ One decision remains open:
   others as they were. Filtering, sorting, counting and totalling apply to the whole selection
   of that section, not only to the page currently displayed.
 
-  Unlike an Órgano's contracts, which are always scoped to a single publication year
-  ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R18), a year here is **optional**
-  and a section opens unfiltered. The bound that makes an unfiltered read acceptable there —
-  one Órgano, one year — does not apply to a history that is already bounded to one operador,
-  and an operador's whole record across the years is the view this capability exists to give.
+  A section offers **only the years it actually has contracts in**, so choosing a year is never
+  the reason a section is empty — the same rule
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R19 applies to an Órgano's years,
+  adopted here so a section is never rendered empty and R9's omission rule stays a statement
+  about families rather than about selections.
+
+  Unlike an Órgano's contracts, which are always scoped to a single publication year (R19
+  there), a year here is **optional** and a section opens unfiltered. The bound that makes an
+  unfiltered read acceptable there — one Órgano, one year — does not apply to a history that is
+  already bounded to one operador, and an operador's whole record across the years is the view
+  this capability exists to give. Contracts whose publication date cannot be interpreted belong
+  to no year and are therefore visible in the unfiltered section and in none of the year
+  filters, which is how they stay reachable without a separate affordance.
 - **R11** — Each **family section** of an operador's contract history, and the operadores list
   of R8, are **paginated**, under the same control
-  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R16 defines — first, previous,
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R17 defines — first, previous,
   next, last or a chosen page, over a selection whose exact size is stated — because a user
   meets all of these lists in the same session and none should page differently from the
   others. Every entry in a section's selection is reachable this way, and the counts and totals
@@ -258,35 +321,71 @@ One decision remains open:
   roughly one in seven of them a natural person. All three go beyond the source, all three are
   the capability's purpose, and all three are acknowledged here rather than denied.
 
-  The mitigations are that the application is **private, with no public exposure** and every
-  read behind authentication (R1); and that identifier lookup matches only whole identifiers
-  (R8), so the catalogue cannot be enumerated by feeding it fragments. Two things are recorded
-  as **not** mitigations, so nobody mistakes them for protection later: the Scope exclusions
-  limit what is added but do nothing about the aggregate, which is the risk named here; and
-  R7 is **not** an erasure route — no operador data is removed, by decision.
+**Authentication is the only real mitigation**, and it is recorded as such rather than
+  padded out. The application is **private, with no public exposure**, and every read sits
+  behind it (R1). That the application is not publicly exposed is a **deployment property no
+  requirement here can enforce** — named as a third external dependency alongside the two below,
+  not claimed as something this spec delivers.
 
-  Two dependencies this rests on, named because they are outside this spec: the strength of
+  Whole-identifier lookup (R8) is **not** a second mitigation of the same risk, and this spec
+  no longer presents it as one. It cannot be: R8's list and R11's guarantee that every entry is
+  reachable together let an authenticated user page the entire directory and open each entry,
+  where R13 displays the identifier in full. What whole-identifier matching does prevent is
+  narrower and worth keeping — **probing the identifier space**, confirming whether a given
+  identifier is held without already knowing it, and harvesting by feeding fragments — so it is
+  a speed bump against a specific technique, not a barrier around the data. Relaxing it to a
+  prefix match would remove that, and would still not be what stands between this catalogue and
+  an authenticated reader.
+
+  Two further things are recorded as **not** mitigations, so nobody mistakes them for protection
+  later: the Scope exclusions limit what is added but do nothing about the aggregate, which is
+  the risk named here; and R7 is **not** an erasure route — no operador data is removed, by
+  decision.
+
+  Three dependencies this rests on, named because they are outside this spec: the strength of
   the authentication mitigation is the strength of **account provisioning**, which SPEC-0002
-  puts out of its own scope and no spec yet owns; and the **export capability** SPEC-0001
-  promises and this spec defers must revisit this requirement when it lands, because bulk
-  export of a directory is a materially different risk from paging one.
+  puts out of its own scope and no spec yet owns; the **private deployment** named above, which
+  no requirement in any spec asserts and no criterion covers; and the **export capability**
+  SPEC-0001 promises and this spec defers must revisit this requirement when it lands, because
+  bulk export of a directory is a materially different risk from paging one.
 - **R13** — Every value displayed about an operador — its name, its fiscal identifier, and
   every contract attribute in its history — is exactly as the official source published it,
   with no correction, normalisation, inference or enrichment from any other source. The
   matching equivalence of R3 governs comparison only, never display.
+
+  A family's own caveats travel with its attributes into this history. Where a family shows an
+  attribute **marked unreliable** in its own list — as contratos menores must for the stated
+  duration ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R27, which the source
+  frequently publishes as a per-Órgano default) — it is marked the same way here. "As published"
+  is not a licence to drop the warning that made the published value safe to show.
 - **R14** — The catalogue is expected to hold **hundreds of thousands of operadores** over
   **millions of contracts**, and stays responsive at that volume. It inherits the **reference
-  environment** and the **10 concurrent readers** of SPEC-0005 R23, and states its own dataset,
+  environment** and the **10 concurrent readers** of SPEC-0005 R24, and states its own dataset,
   because that requirement fixes a contract volume and says nothing about how many operadores
-  those contracts name or how deep any one history runs: at least **300 000** operadores, of
-  which at least one has **10 000** or more contracts spanning **more than one Órgano**. Like
-  SPEC-0005 R23, it fixes those conditions and deliberately fixes **no latency budget**: what
-  is measured and recorded under them is the **operadores list** — its first page, its count,
-  and a page deep into the selection — and an **operador's contract history**: a family
-  section's first page, its count and its total, and the **combined figures across every
-  section**, which R9 makes a whole-profile number rather than a per-section one and which
-  therefore costs one aggregate per family plus their sum. A budget is set once those
-  measurements exist.
+  those contracts name or how deep any one history runs. Stated the way SPEC-0005 R24 states
+  its own — relative to what production holds, because that is the environment — the conditions
+  are: **the largest operador the catalogue holds**, which must itself hold contracts spanning
+  **more than one Órgano** and, once a second family exists, **more than one family**, since a
+  combined figure measured over a single section is not a measurement of a combined figure at
+  all.
+
+  Like SPEC-0005 R24, it fixes those conditions and deliberately fixes **no latency budget**.
+  What is measured and recorded under them is:
+
+  - the **operadores list** — its first page, its count, and its **last** page, which R11 makes
+    reachable in one click and which is the deepest read the catalogue offers;
+  - **name lookup** on that list — a partial, case- and accent-insensitive match, which is the
+    single most expensive read this spec defines and the one whose result most directly decides
+    the open stored-versus-computed question;
+  - an **operador's contract history** — a family section's first page, its count and its
+    total; that same section **sorted by amount descending**, on SPEC-0005 R24's reasoning that
+    an arbitrary sort over the largest selection is the read that actually breaks and a default
+    first page proves nothing about it; and the **combined figures across every section**, which
+    R9 makes a whole-profile number and which therefore costs one aggregate per family plus
+    their sum.
+
+  A budget is set once those measurements exist, **by revising this requirement**, as SPEC-0005
+  R24 does for its own.
 
   Deferring it is a bigger bet here than in SPEC-0005 and should be read as such. That spec
   can point to a bound — one Órgano, one year — that keeps its selections far below its stored
@@ -339,7 +438,8 @@ One decision remains open:
 12. **(R7)** Restoring that withdrawn contract makes the same operador reachable again, with
     its history intact — demonstrating that the withdrawal hid it rather than erased it.
 13. **(R7)** Withdrawing one of an operador's several contracts leaves the operador reachable
-    with the remaining contracts, and its count and total reflect the withdrawal.
+    with the remaining contracts; both its own family section's count and total and the
+    profile's combined figures reflect the withdrawal.
 14. **(R7)** When a correction changes a contract's published fiscal identifier, that
     contract's contribution moves to the operador the corrected identifier names — creating it
     if no contract named it before — and disappears from the previous operador's history,
@@ -348,48 +448,65 @@ One decision remains open:
     can find the same operador from the operadores list by a partial, case- and
     accent-insensitive fragment of its name, and by its fiscal identifier — including when the
     query is padded or differently cased from the published spelling.
-16. **(R8)** A fragment of a fiscal identifier that is not the whole identifier finds no
-    operador, so the catalogue cannot be walked by identifier fragments.
-17. **(R9)** Opening an operador presents its contracts **split by family, one section per
+16. **(R8)** Querying a fragment of a held fiscal identifier finds **no operador whose
+    identifier merely contains it** — the catalogue cannot be walked by identifier fragments —
+    even where that fragment is itself some other operador's whole identifier, which is found
+    and is the only thing found.
+17. **(R8)** The operadores list is ordered by display name ascending, ignoring case and
+    accents, with the fiscal identifier breaking ties; two runs over the same data produce the
+    same order, and no control changes it.
+18. **(R9)** Opening an operador presents its contracts **split by family, one section per
     family**, with every contract awarded to it across **more than one** Órgano appearing in
     the section of its family; each row shows the awarding Órgano and that family's published
     attributes, and no row repeats the family its section already names.
-18. **(R9)** A family the operador holds **no** contracts in shows **no section at all** rather
+19. **(R9)** A family the operador holds **no** contracts in shows **no section at all** rather
     than an empty one, and its absence causes no error in the sections that remain.
-19. **(R9)** Following the awarding Órgano on a history row opens that Órgano's own page, for
+20. **(R9)** Following the awarding Órgano on a history row opens that Órgano's own page, for
     every row of every section and whichever Órgano awarded it.
-20. **(R9)** For an operador holding contracts of **two different families**, each section
+21. **(R9)** For an operador holding contracts of **two different families**, each section
     reports its own count and total and the profile reports a **combined** count and total
     across both; the combined figures equal the sum of the sections as currently selected, and
     every figure — per section and combined — is labelled as including VAT, so none mixes VAT
     bases.
-21. **(R10)** Filtering **one family section** of an operador's history by a given year returns
+22. **(R9)** With one section filtered to a year and another unfiltered, the combined figures
+    state the scoping they were computed under rather than presenting themselves as the
+    operador's whole history.
+23. **(R9)** A selection containing a contract whose published amount cannot be interpreted
+    counts that contract and reports, alongside the total, how many contracts the total could
+    not include — so count and total never disagree without saying why.
+24. **(R9)** The history states that it covers only imported Órganos, and a section whose
+    contributing Órganos include one with an unfinished initial import says it is still
+    filling — distinguishably from one that is complete.
+25. **(R9, R13)** Each history row states its awardee as published for that contract, including
+    a spelling that differs from the one the profile displays under R4.
+26. **(R10)** Filtering **one family section** of an operador's history by a given year returns
     only that section's contracts dated in that year; that section's count and total reflect
     the filtered selection rather than its whole history, the other sections are unchanged, and
     the combined figures of R9 move with it. Clearing the filter restores all of them. A
-    section opens with no year filter applied.
-22. **(R10)** Sorting **one family section** by date returns its contracts in date order and
+    section opens with no year filter applied, offers exactly the years it has contracts in, and
+    shows any contract whose date cannot be interpreted while unfiltered and under no year.
+27. **(R10)** Sorting **one family section** by date returns its contracts in date order and
     sorting by amount returns them in amount order, in the chosen direction; the first page
     after sorting descending by amount contains the largest-amount contract of that section's
     **whole** filtered selection, not merely the largest of the page previously displayed, and
     the other sections' ordering is unaffected.
-23. **(R11)** Both the operadores list and **each family section** of an operador's history are
+28. **(R11)** Both the operadores list and **each family section** of an operador's history are
     paginated: each states how many entries its current selection contains and how many pages it
     spans, a user can move to the first, previous, next and last page and jump to a chosen page,
     and paging through the whole selection yields exactly that many entries with none repeated
-    and none skipped. Sections page **independently** — advancing one leaves the others on the
-    page they were on. Applying a filter or changing the sort returns the user to the first page
-    **of that section**.
-24. **(R12)** No surface offers a way to delete or erase an operador, and no function removes
+    and none skipped, under the ordering that selection states. Sections page
+    **independently** — advancing one leaves the others on the page they were on. Applying a
+    filter or changing the sort returns the user to the first page **of that section**.
+29. **(R12)** No surface offers a way to delete or erase an operador, and no function removes
     an operador's name or fiscal identifier from the system.
-25. **(R13)** Every operador name, fiscal identifier and contract attribute displayed matches
+30. **(R13)** Every operador name, fiscal identifier and contract attribute displayed matches
     what the official source published, with no value corrected, normalised, inferred or
     enriched; no attribute is shown that no contract supplies.
-26. **(R14)** Under the reference environment and the dataset R14 states — at least 300 000
+31. **(R14)** Under the reference environment and the dataset R14 states — at least 300 000
     operadores, one of them holding 10 000 or more contracts across more than one Órgano — the
     read latency of the operadores list (its first page, its count, and a page deep into the
     selection) and of an operador's history (a family section's first page, count and total,
     and the combined figures across every section) is **measured and recorded**. The criterion
     is met by those measurements existing against those conditions; it asserts no threshold,
     because R14 sets none until they do.
-27. **(R14)** The operadores list displays no per-operador contract count or amount total.
+32. **(R14)** The operadores list displays no per-operador contract count or amount total.

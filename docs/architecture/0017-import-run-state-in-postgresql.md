@@ -57,7 +57,8 @@ monitoring page read the same row.
 **Progress is written outside the transaction that writes contracts.** An import commits
 imported contracts in batches; after a batch commits, the run record is advanced in its own
 short transaction. Sharing one transaction would make progress invisible until the whole batch
-committed, which SPEC-0007 R5's *timely* fails on, and would make a recording failure roll back
+committed, which fails SPEC-0007 R5's requirement that progress advance often enough that a
+running import is never read as abandoned, and would make a recording failure roll back
 imported data, which SPEC-0007 R20 forbids outright — there, the import wins and the record is
 what is sacrificed. So a failed progress write is logged and abandoned; it never propagates into
 the import.
@@ -74,7 +75,7 @@ whose last advance is older than the configured bound reads as **abandoned** (SP
 nothing has to run on a schedule to make that true, and no background job can itself fail and
 leave the page lying. Reads apply that rule in one place so no query can forget it.
 
-**The single-import guard of SPEC-0005 R21 is a read of this same state**, and so is correct
+**The single-import guard of SPEC-0005 R22 is a read of this same state**, and so is correct
 across restarts: a trigger that finds any live run records a *refused* run (SPEC-0007 R4)
 instead of starting. An in-memory lock would have forgotten, after a restart, about the run
 still recorded as executing — and because R21's guard is system-wide, forgetting it would put a
@@ -104,9 +105,11 @@ decision own that, and this record only guarantees there is a durable thing to r
   in a batch costs that batch again in wall-clock time, and the cost scales with batch size —
   which now trades throughput against re-read cost rather than being a free tuning knob.
 - **Progress writes add write load to the same database the import is filling**, on the busiest
-  path in the system. SPEC-0007 R21 budgets 5 % for observation; batching the progress writes is
-  what keeps them inside it, and that is now a constraint on the implementation rather than an
-  optimisation.
+  path in the system. SPEC-0007 R21 budgets 5 % of the import's own processing time, excluding
+  time spent waiting on the source, for observation; batching the progress writes is what keeps
+  them inside it, and that is now a constraint on the implementation rather than an
+  optimisation. Batching is bounded from the other side by R5: batches coarser than R8's
+  abandonment bound would make a healthy run read as dead, so the two are chosen together.
 - **A derived abandoned state is not stored.** A run's row can say "in progress" indefinitely,
   and only the read applies the bound — so any reader bypassing that one place (an ad-hoc query,
   a future report, a migration) sees a stale answer. Writing the state would have made the row
