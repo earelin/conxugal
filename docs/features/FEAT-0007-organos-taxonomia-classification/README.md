@@ -202,17 +202,26 @@ The index needs `NULLS NOT DISTINCT` to cover the roots, whose `parent_id` is nu
   unclassified rather than orphaning them against a missing term.
 
 **How the placement is cleared on delete — decided here, not in a task.** The foreign key
-on `organo_contratacion.termo_id` is declared with **no `ON DELETE` action** (so
-PostgreSQL's default `NO ACTION`), and `DeleteTermo` clears the placements itself in the
-same transaction as the delete. The clearing is a domain rule with a use case that owns it
-and a port operation that expresses it, so putting it in the schema would state the same
-rule twice and let a future caller delete a term without going through `DeleteTermo`.
-Declining `ON DELETE SET NULL` costs nothing and buys a loud failure: with `NO ACTION`, a
-delete that skipped the clearing raises a constraint violation instead of silently
-unclassifying rows nobody meant to touch. `ON DELETE CASCADE` is forbidden outright — it
-would delete Órganos, which R16 prohibits. The migration in
-[TASK-0001](TASK-0001-termo-domain-model-and-placement.md) writes the foreign key
-this way; no later task revisits it.
+on `organo_contratacion.termo_id` carries **`ON DELETE SET NULL`**, so deleting a term
+returns the Órganos placed in it to the unclassified set as part of the same statement.
+`DeleteTermo` issues one delete and never names a placement. `ON DELETE CASCADE` is
+forbidden outright — it would delete Órganos, which R16 prohibits.
+
+This reverses an earlier decision to clear the placements in domain code over a
+`NO ACTION` key, on the grounds that the rule belonged in the use case and that a delete
+which skipped the clearing should fail loudly. In practice `DeleteTermo` is the only caller
+of the port's delete, so the "caller that skips the clearing" was hypothetical, and R16
+wants exactly the unclassifying the key now does. Against that, the two-write version had a
+real cost: it could half-succeed, so it needed `@Transactional`, a port operation
+(`clearPlacementsByTermo`) that existed only to serve it, and an integration test that
+provoked a failure between the two writes to prove the rollback. One statement removes all
+three. [TASK-0003](TASK-0003-taxonomia-management-use-cases.md) carries the migration that
+alters the key, since it owns `DeleteTermo`.
+
+The **parent** key on `termo.parent_id` keeps its `NO ACTION`, and that is not the same
+call: cascading there would delete a whole subtree, which R16 forbids outright, so the
+child-term refusal stays a domain check in `DeleteTermo` with the key behind it as a
+backstop.
 
 ### API surface ([ADR-0006](../../architecture/0006-reserved-api-url-prefix.md), [ADR-0010](../../architecture/0010-design-first-openapi-contract.md), [ADR-0016](../../architecture/0016-rest-resource-naming.md))
 Two reads, each `@Secured(IS_AUTHENTICATED)`, each a **flat list of one entity type**:
@@ -590,10 +599,11 @@ away later.
   siblings. They are **backstops, not the contract** — the domain check is what produces the
   civil refusal a caller sees, and a violation reaching the adapter is a raced write that
   surfaces as a 500. That is an accepted cost of the same trade, not an oversight.
-- **`DeleteTermo` is still one transaction.** Its delete and the placement clearing it
-  triggers carry `@Transactional` on the use-case method — the boundary the repo already
-  uses for `SetUserEnabled` and `CreateUser`. That is about **atomicity**, not concurrency,
-  and it survives the decision above: without it a failure between the two writes leaves
-  Órganos pointing at a term that is gone, which the foreign key would then refuse.
+- **`DeleteTermo` needs no transaction of its own.** Its delete and the placement clearing
+  it triggers are a single statement, since the placement key is `ON DELETE SET NULL` (see
+  *Placement and classification*) — there is no window between two writes to make atomic.
+  That is about **atomicity**, not concurrency, and it leaves the decision above untouched:
+  the delete is still a check-then-write against the child-term rule, and that window stays
+  accepted.
 - Concurrent *classification* of two different Órganos cannot interact at all — they are
   independent row updates.

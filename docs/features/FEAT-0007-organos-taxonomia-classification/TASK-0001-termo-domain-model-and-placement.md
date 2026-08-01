@@ -105,15 +105,17 @@ green twice, so this is a cohesion argument rather than the only workable order.
 - The foreign key on `organo_contratacion.termo_id` carries **no `ON DELETE`
   action** — not `SET NULL`, and never `CASCADE`. `DeleteTermo` clears the placements itself
   in the same transaction, and the bare foreign key is the backstop that turns a skipped
-  clearing into a loud constraint violation rather than a silent mass-unclassify. This is
-  settled in the feature's *Placement and classification* section; no later task revisits
-  it.
+  clearing into a loud constraint violation rather than a silent mass-unclassify.
+  **Superseded by [TASK-0003](TASK-0003-taxonomia-management-use-cases.md)**, which alters
+  this key to `ON DELETE SET NULL` and drops the domain-side clearing — see the feature's
+  *Placement and classification* for why the call was reversed. `CASCADE` remains forbidden.
 - **Almost no JDBC repository code here.** `JdbcTermoRepository`, and every placement
   operation Micronaut Data can derive, are
   [TASK-0002](TASK-0002-taxonomia-store-infrastructure.md). The single exception is
   `clearPlacementsByTermo`: matching and clearing the same column has no derived-method
   form, so without its `@Query` here `infrastructure` would not compile against the widened
-  port at all.
+  port at all. (Both the port method and that `@Query` are **removed by TASK-0003**, which
+  hands the clearing to the foreign key.)
 - Delete **`FakeOrganoRepository`** (`domain/src/test/.../organo/`) and stub
   `OrganoRepository` with Mockito in the tests that used it. The fake implements the port,
   so it stops compiling here, and its `update`/`updateActive` rebuild the record
@@ -136,8 +138,9 @@ green twice, so this is a cohesion argument rather than the only workable order.
   imported one starts in. (SPEC-0004 #18)
 - The port exposes every operation the later use cases need — find all, find by id, insert,
   rename, re-parent, delete, check for children, read a parent's children, set/clear an
-  Órgano's term, clear the placements pointing at a term, and read an Órgano by id — and
-  nothing they do not; no infrastructure type leaks into its signatures.
+  Órgano's term, clear the placements pointing at a term (dropped again by TASK-0003), and
+  read an Órgano by id — and nothing they do not; no infrastructure type leaks into its
+  signatures.
 - The collation exists after the migration and orders accented Galician names as a reader
   expects — `Á` beside `A`, not after `Z` — asserted with a direct `ORDER BY … COLLATE`
   query, since a missing or misdeclared collation fails far from where it is used.
@@ -152,7 +155,9 @@ green twice, so this is a cohesion argument rather than the only workable order.
 - Deleting a term is **refused by the database**, not merely configured to be: deleting one
   that still has a child term, and deleting one an Órgano is still placed in, each raise a
   foreign-key violation naming the constraint — the loud failure the missing `ON DELETE`
-  action is there to produce. A term nothing references still deletes.
+  action is there to produce. A term nothing references still deletes. (TASK-0003 keeps the
+  child-term half and replaces the placement half: deleting a term an Órgano sits in now
+  unclassifies that Órgano rather than being refused.)
 - A term cannot be its own parent, on insert or on re-parent; both are refused by the
   check constraint rather than left to a use case that has not been written yet.
 - The sibling-name index does what it claims, asserted directly against the database:

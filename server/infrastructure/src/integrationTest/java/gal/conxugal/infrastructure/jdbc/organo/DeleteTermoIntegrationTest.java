@@ -29,21 +29,17 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Proves {@link DeleteTermo} against a real Postgres on both counts the R16 rules make: the
- * Órganos placed in the deleted term are returned to unclassified and every one of them
- * survives, and a failure between the clearing and the delete rolls the clearing back.
+ * Proves the R16 reassignment end to end against a real Postgres: deleting a term through
+ * {@link DeleteTermo} returns the Órganos placed in it to the unclassified set, leaves every
+ * one of them in the catalogue, and touches no other term's placements. The clearing itself is
+ * the {@code ON DELETE SET NULL} foreign key's, so this is where that wiring is proven — the
+ * use case issues one delete and never names a placement.
  *
- * <p>The failing case is provoked with a {@code BEFORE DELETE} trigger rather than a stubbed
- * repository, so both statements are the adapter's own and the rollback is the database's. A
- * test double in place of {@code TermoRepository} would mean the delete never ran, leaving
- * "the term is still there" true for the wrong reason. The trigger is the lever available
- * because the container's role is a superuser, so revoking {@code DELETE} would not bite.
- *
- * <p>Both cases inject the DI-managed bean so the {@code @Transactional} advice applies, and
- * run it on their own thread so its transaction borrows a connection independent of the one
- * this test's JDBC work uses — Micronaut Data JDBC otherwise binds one shared connection to
- * the calling thread, which would let the assertions read that connection's ambient,
- * not-yet-committed state instead of what the use case actually committed.
+ * <p>Injects the DI-managed bean rather than constructing it, and runs it on its own thread so
+ * its write borrows a connection independent of the one this test's own JDBC work uses:
+ * {@code @MicronautTest} wraps each test in a transaction that is rolled back, which a
+ * same-thread call would join, hiding the committed result the assertions below read back
+ * through a raw connection.
  */
 @MicronautTest(startApplication = false)
 @Testcontainers(disabledWithoutDocker = true)
@@ -75,8 +71,6 @@ class DeleteTermoIntegrationTest implements TestPropertyProvider {
   void cleanUp() throws Exception {
     try (Connection connection = rawConnection();
         Statement statement = connection.createStatement()) {
-      statement.execute("DROP TRIGGER IF EXISTS termo_delete_fails ON termo");
-      statement.execute("DROP FUNCTION IF EXISTS fail_termo_delete()");
       statement.execute("TRUNCATE TABLE organo_contratacion, termo");
     }
   }
@@ -109,54 +103,6 @@ class DeleteTermoIntegrationTest implements TestPropertyProvider {
     assertThat(termos)
         .row(0)
             .value("id").isEqualTo(survivingTermoId);
-  }
-
-  @Test
-  void delete_failing_after_the_clearing_rolls_that_clearing_back() throws Exception {
-    UUID termoId = insertTermo("Deportes");
-    insertOrgano("axencia-x", "Axencia X", termoId);
-    insertOrgano("axencia-y", "Axencia Y", termoId);
-    failEveryTermoDelete();
-
-    Exception failure = runOnItsOwnThread(() -> deleteTermo.delete(termoId));
-
-    // Matching the trigger's own message: any RuntimeException would also satisfy the
-    // assertions below, including one raised before the clearing ever ran, which would
-    // leave this test green having proven nothing.
-    assertThat(failure).hasStackTraceContaining("termo delete refused");
-    Table organos = organoTable();
-    assertThat(organos).hasNumberOfRows(2);
-    assertThat(organos)
-        .row(0)
-            .value("name").isEqualTo("Axencia X")
-            .value("termo_id").isEqualTo(termoId)
-        .row(1)
-            .value("name").isEqualTo("Axencia Y")
-            .value("termo_id").isEqualTo(termoId);
-    Table termos = termoTable();
-    assertThat(termos).hasNumberOfRows(1);
-    assertThat(termos)
-        .row(0)
-            .value("id").isEqualTo(termoId);
-  }
-
-  // Makes the adapter's own DELETE fail once it reaches the database, which is the only point
-  // where the use case has already issued the placement-clearing UPDATE.
-  private static void failEveryTermoDelete() throws Exception {
-    try (Connection connection = rawConnection();
-        Statement statement = connection.createStatement()) {
-      statement.execute(
-          """
-          CREATE FUNCTION fail_termo_delete() RETURNS TRIGGER AS $$
-            BEGIN RAISE EXCEPTION 'termo delete refused'; END;
-          $$ LANGUAGE plpgsql
-          """);
-      statement.execute(
-          """
-          CREATE TRIGGER termo_delete_fails BEFORE DELETE ON termo
-            FOR EACH ROW EXECUTE FUNCTION fail_termo_delete()
-          """);
-    }
   }
 
   private static Table organoTable() {

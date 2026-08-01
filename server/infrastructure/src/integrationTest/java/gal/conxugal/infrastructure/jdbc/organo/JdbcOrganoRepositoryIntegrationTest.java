@@ -270,20 +270,6 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(organoRepository.findById(id).orElseThrow().termoId()).isNull();
   }
 
-  @Test
-  void clearPlacementsByTermo_clears_only_rows_placed_in_that_term() throws Exception {
-    UUID termoId = insertTermo("Deportes", null);
-    UUID otherTermoId = insertTermo("Cultura", null);
-    UUID placedId = insertOrgano("consorcio-x", "Consorcio X", true, termoId);
-    UUID placedElsewhereId = insertOrgano("axencia-y", "Axencia Y", true, otherTermoId);
-
-    organoRepository.clearPlacementsByTermo(termoId);
-
-    assertThat(organoRepository.findById(placedId).orElseThrow().termoId()).isNull();
-    assertThat(organoRepository.findById(placedElsewhereId).orElseThrow().termoId())
-        .isEqualTo(otherTermoId);
-  }
-
   // Neither helper below commits or rolls back: every test here only expects successful
   // inserts, and the injected DataSource's shared connection lets the repository calls
   // under test see these uncommitted writes within the same transaction. Contrast

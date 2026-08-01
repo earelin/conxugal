@@ -4,10 +4,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import gal.conxugal.domain.organo.OrganoRepository;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,14 +20,11 @@ class DeleteTermoTest {
   @Mock
   private TermoRepository termoRepository;
 
-  @Mock
-  private OrganoRepository organoRepository;
-
   private DeleteTermo deleteTermo;
 
   @BeforeEach
   void setUp() {
-    deleteTermo = new DeleteTermo(termoRepository, organoRepository);
+    deleteTermo = new DeleteTermo(termoRepository);
   }
 
   @Test
@@ -45,20 +40,6 @@ class DeleteTermoTest {
   }
 
   @Test
-  void returns_placed_organos_to_unclassified() {
-    UUID termoId = UUID.randomUUID();
-    when(termoRepository.findById(termoId))
-        .thenReturn(Optional.of(new Termo(termoId, "Deportes", null)));
-    when(termoRepository.existsByParentId(termoId)).thenReturn(false);
-
-    deleteTermo.delete(termoId);
-
-    // The port carries no delete at all, so no Órgano can be removed on this path — only
-    // the placement pointing at the vanishing term is cleared.
-    verify(organoRepository).clearPlacementsByTermo(termoId);
-  }
-
-  @Test
   void rejects_term_that_still_has_child_terms() {
     UUID termoId = UUID.randomUUID();
     when(termoRepository.findById(termoId))
@@ -68,7 +49,6 @@ class DeleteTermoTest {
     assertThatThrownBy(() -> deleteTermo.delete(termoId))
         .isInstanceOf(TermoHasChildrenException.class);
     verify(termoRepository, never()).deleteById(any(UUID.class));
-    verifyNoInteractions(organoRepository);
   }
 
   @Test
@@ -79,6 +59,5 @@ class DeleteTermoTest {
     assertThatThrownBy(() -> deleteTermo.delete(unknownId))
         .isInstanceOf(TermoNotFoundException.class);
     verify(termoRepository, never()).deleteById(any(UUID.class));
-    verifyNoInteractions(organoRepository);
   }
 }
