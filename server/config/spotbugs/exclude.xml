@@ -19,9 +19,16 @@
   <!-- The same false positive for the taxonomía, classification and catalogue-read use cases: the
        heuristic reads TermoRepository and OrganoRepository as mutable purely because they declare
        insert/deleteById, so every constructor-injected port trips it. They are stateless
-       collaborators, not leaked data. -->
+       collaborators, not leaked data. Named field by field so a genuinely leaked mutable stored
+       in one of these classes still reports. -->
   <Match>
-    <Class name="~gal\.conxugal\.domain\.organo\.(taxonomia\.)?((Create|Rename|Move|Delete)Termo|ListTermos|AssignOrganoToTermo|ClearOrganoTermo|ListOrganos)"/>
+    <Class name="~gal\.conxugal\.domain\.organo\.taxonomia\.((Create|Rename|Move|Delete)Termo|ListTermos)"/>
+    <Field name="termoRepository"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+  <Match>
+    <Class name="~gal\.conxugal\.domain\.organo\.(AssignOrganoToTermo|ClearOrganoTermo|ListOrganos)"/>
+    <Field name="~(organo|termo)Repository"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
 </FindBugsFilter>

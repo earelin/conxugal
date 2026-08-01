@@ -3,7 +3,6 @@ package gal.conxugal.domain.organo;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,9 +53,7 @@ class AssignOrganoToTermoTest {
     UUID organoId = UUID.randomUUID();
     UUID firstTermoId = UUID.randomUUID();
     UUID secondTermoId = UUID.randomUUID();
-    when(organoRepository.findById(organoId))
-        .thenReturn(Optional.of(unclassified(organoId)))
-        .thenReturn(Optional.of(placedIn(organoId, firstTermoId)));
+    when(organoRepository.findById(organoId)).thenReturn(Optional.of(unclassified(organoId)));
     when(termoRepository.findById(firstTermoId))
         .thenReturn(Optional.of(new Termo(firstTermoId, "Deportes", null)));
     when(termoRepository.findById(secondTermoId))
@@ -65,12 +62,13 @@ class AssignOrganoToTermoTest {
     assignOrganoToTermo.assign(organoId, firstTermoId);
     assignOrganoToTermo.assign(organoId, secondTermoId);
 
-    // Each assign overwrites the single termo_id column rather than adding a row, so the second
-    // leaves the Órgano in the second term only — there is no path by which it holds both.
+    // updateTermo sets the Órgano's single placement rather than adding one, so the second assign
+    // supersedes the first and no third write follows. That the placement is durably singular is
+    // proven against the database in JdbcOrganoRepositoryIntegrationTest.
     InOrder placements = Mockito.inOrder(organoRepository);
     placements.verify(organoRepository).updateTermo(organoId, firstTermoId);
     placements.verify(organoRepository).updateTermo(organoId, secondTermoId);
-    verify(organoRepository, times(2)).updateTermo(any(), any());
+    placements.verifyNoMoreInteractions();
   }
 
   @Test

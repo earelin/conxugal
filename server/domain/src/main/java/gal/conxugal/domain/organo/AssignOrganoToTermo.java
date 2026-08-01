@@ -10,8 +10,9 @@ import java.util.UUID;
  * an unknown term, each with its own type. Both checks precede the write, so a refusal leaves the
  * placement as it was.
  *
- * <p>The placement is a single column on the Órgano row, so setting it is what makes an Órgano
- * belong to exactly one term: there is no path by which it accumulates a second.
+ * <p>An Órgano holds a single placement, which {@code updateTermo} sets rather than adds to, so
+ * belonging to exactly one term falls out of the port's own contract: there is no path by which
+ * an Órgano accumulates a second.
  */
 @Singleton
 public class AssignOrganoToTermo {
