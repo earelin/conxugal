@@ -282,6 +282,19 @@ One decision remains outside this spec:
   makes every newly imported Órgano **unclassified**, so an Órgano can be marked, imported
   and yet absent from the tree. **Every Órgano whose contracts the system holds is
   reachable**, whether or not it is classified, marked, or still active.
+
+  There is a third route, and it is stated here with the other two so that no cross-Órgano
+  surface has to invent one: **wherever a contract row names its awarding Órgano, that Órgano
+  is followable to its own page** — as on an operador's contract history, which lists contracts
+  from many Órganos at once ([SPEC-0006](SPEC-0006-operadores-economicos.md) R9). An Órgano's
+  own list needs no such link and carries no Órgano column, since every row on it belongs to
+  the Órgano already open. The affordance is rendered by whichever surface draws the row, and
+  it never dead-ends: R14 makes every Órgano the system holds contracts for reachable.
+
+  This route and its mirror — following a row's **awardee** to its operador
+  ([SPEC-0006](SPEC-0006-operadores-economicos.md) R8, rendered on the row by R16) — are the
+  two crossings every contract list offers, so a user can move between an awarding body and a
+  supplier from either side without returning to a search.
 - **R15** — An Órgano's contracts are presented **split by contract family**, one section per
   family, of which this spec delivers *contratos menores* and the licitacións spec delivers
   the second. Each family is reachable independently, and a family for which the system holds
@@ -540,89 +553,92 @@ One decision remains outside this spec:
 20. **(R14)** An Órgano that is marked and imported but **unclassified** — placed in no
     taxonomy term — is still reachable and its contracts are still viewable; so is one that
     has since become inactive but retains contracts under R5.
-21. **(R15)** Opening an Órgano presents its contracts split by family, with *contratos
+21. **(R14)** On a contract list that names each row's awarding Órgano, following that Órgano
+    opens the Órgano's own page; an Órgano's own contratos menores list shows no Órgano column,
+    every row on it belonging to the Órgano already open.
+22. **(R15)** Opening an Órgano presents its contracts split by family, with *contratos
     menores* as one family among those the system knows about; a family for which the system
     holds no data is omitted from the presentation rather than shown as an empty section, and
     its absence causes no error in the families that remain.
-22. **(R16)** An Órgano's contratos menores list is paginated: it states how many contracts
+23. **(R16)** An Órgano's contratos menores list is paginated: it states how many contracts
     the current selection contains and how many pages it spans, a user can move to the first,
     previous, next and last page and jump to a chosen page, and paging through the whole
     selection yields exactly that many contracts with none repeated and none skipped. From the
     last page the control offers no further next, and from the first no further previous.
-23. **(R16)** Each contract row offers a way to reach that contract's publication at the
+24. **(R16)** Each contract row offers a way to reach that contract's publication at the
     official source, and a way to reach its awardee's operador where one exists.
-24. **(R17)** An Órgano with no stored contratos menores presents no contratos menores section
+25. **(R17)** An Órgano with no stored contratos menores presents no contratos menores section
     at all — equally so whether it is unmarked, or marked and imported having awarded none —
     while an Órgano holding at least one presents the section; and an Órgano whose initial
     import is still running presents it stating that what is shown is partial, distinguishably
     from one whose import has completed.
-25. **(R18)** An Órgano's contratos menores are always scoped to one publication year: opening
+26. **(R18)** An Órgano's contratos menores are always scoped to one publication year: opening
     the section selects the most recent year the Órgano has contracts in, the years offered are
     exactly those it has contracts in, no control clears the year to produce an all-years list,
     and the contracts shown for a chosen year are exactly those whose publication date falls in
     it. No CPV filter control is present.
-26. **(R18)** Sorting by publication date returns contracts in date order, and sorting by
+27. **(R18)** Sorting by publication date returns contracts in date order, and sorting by
     amount returns them in amount order, in the chosen direction; the first page after
     sorting descending by amount contains the largest-amount contract of the **whole**
     selected year, not merely the largest of the page previously displayed. Changing the
     year or the sort re-pages the selection from its first page rather than leaving the
     user on a page number that no longer means what it did.
-27. **(R19)** An administrator can trigger an import scoped to all marked Órganos and one
+28. **(R19)** An administrator can trigger an import scoped to all marked Órganos and one
     scoped to a single Órgano; each covered Órgano runs **initially** if its history was never
     loaded, **resumes** if its initial import is incomplete, and runs **incrementally**
     otherwise; and the reported outcome states succeeded, failed or partially succeeded, the
     Órganos covered and which of them failed, and contracts added and refreshed.
-28. **(R19, R22)** A manual run covering several Órganos where one fails reports **partially
+29. **(R19, R22)** A manual run covering several Órganos where one fails reports **partially
     succeeded** and names the failing Órgano — not a bare success and not a bare failure.
-29. **(R20)** With no human trigger, the scheduler runs and contracts published since the
+30. **(R20)** With no human trigger, the scheduler runs and contracts published since the
     previous run become browsable for every marked, active, initially-imported Órgano.
-30. **(R21)** While any import is in progress, a further trigger — of the same Órgano, of a
+31. **(R21)** While any import is in progress, a further trigger — of the same Órgano, of a
     different Órgano, of all marked Órganos, or of SPEC-0004's catalogue import — does not
     start a second import, and is recorded as a **refused** run rather than being queued or
     dropped without trace. Within a run covering several Órganos, no two are imported at the
     same time: each is finished before the next begins.
-31. **(R21)** While a long-running initial import of one Órgano is in progress — simulated if
+32. **(R21)** While a long-running initial import of one Órgano is in progress — simulated if
     necessary rather than waited out — the scheduler's incremental runs do not start, and once
     that import ends the next incremental run for each affected Órgano covers the whole period
     since its last successful import, so nothing published during the wait is missed.
-32. **(R22)** When the source is unreachable or returns an unusable response for one Órgano,
+33. **(R22)** When the source is unreachable or returns an unusable response for one Órgano,
     the import reports failure for it, contracts already stored are unchanged, contracts
     imported for Órganos processed earlier in the same run are retained, and the remaining
     marked Órganos are still imported.
-33. **(R23)** Under the reference environment, dataset and concurrency conditions R23 states,
+34. **(R23)** Under the reference environment, dataset and concurrency conditions R23 states,
     the read latency of an Órgano's contract list is **measured and recorded** at the busiest
     single year of the largest Órgano — its first page and its count, a page deep in that
     year's selection, and both of those sorted by amount descending. The criterion is met by
     the measurements existing and being recorded against those conditions; it asserts no
     threshold, because R23 sets none until they do.
-34. **(R24)** Across a period covering an initial import, a historical re-read and scheduled
+35. **(R24)** Across a period covering an initial import, a historical re-read and scheduled
     incremental runs, the system's request rate against the source stays within the
     configured budget, and no mode exceeds it.
-35. **(R25)** No contract list is reachable without authentication, and every awardee name
+36. **(R25)** No contract list is reachable without authentication, and every awardee name
     and fiscal identifier on a contract row matches what the official source publishes for
     that award.
-36. **(R26)** Every value displayed matches what the official source publishes for that
+37. **(R26)** Every value displayed matches what the official source publishes for that
     contract, with no value corrected, normalised, inferred, or enriched from elsewhere.
-37. **(R26)** A displayed duration is accompanied by an indication that the source frequently
+38. **(R26)** A displayed duration is accompanied by an indication that the source frequently
     publishes a per-Órgano default rather than a per-contract value.
-38. **(R26)** A contract whose published amount or publication date cannot be interpreted is
+39. **(R26)** A contract whose published amount or publication date cannot be interpreted is
     stored and displayed as published and is ordered last when sorting by the value it lacks,
     rather than being rejected at import; one whose date cannot be interpreted appears in no
     year's selection but is reachable through the undated selection of R18, so no stored
     contract is unreachable.
-39. **(R4)** An Órgano that is marked, unmarked, and marked again imports everything published
+40. **(R4)** An Órgano that is marked, unmarked, and marked again imports everything published
     while it was unmarked, without re-reading the history it had already stored.
-40. **(R8)** An Órgano that goes un-imported for longer than the incremental window — because
+41. **(R8)** An Órgano that goes un-imported for longer than the incremental window — because
     the scheduler was down, or because a long import elsewhere held R21's single-import guard —
     loses no publications when importing resumes: the next run covers the whole period since
     its last successful import.
-41. **(R4, R8)** An Órgano **unmarked while its initial import was still running** and later
+42. **(R4, R8)** An Órgano **unmarked while its initial import was still running** and later
     marked again is **resumed**, not treated as up to date: the import continues from what was
     already stored, adds no duplicates, and completes the Órgano's full published history.
     Contrast #39, where the same unmark-and-re-mark sequence on an Órgano whose history was
     **already complete** runs incrementally instead — the two differ only in whether the
     initial import had finished, which is the fact R8 makes the system track.
-42. **(R8)** Each of the four modes is distinguishable in what it retrieves: an initial import
+43. **(R8)** Each of the four modes is distinguishable in what it retrieves: an initial import
     reaches the Órgano's earliest publication, a resumed import continues an incomplete one
     without restarting it, an incremental import reads only the recent window, and a historical
     re-read covers the full history of an already-loaded Órgano. No trigger selects a
