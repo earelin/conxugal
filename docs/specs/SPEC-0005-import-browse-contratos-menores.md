@@ -1,5 +1,5 @@
 ---
-status: draft
+status: active
 ---
 
 # SPEC-0005. Import and browse Contratos Menores
@@ -140,9 +140,8 @@ Two decisions that earlier drafts deferred are **settled**:
 2. **A long-running, resumable import job holds its state in the database** — required by R9
    and R10, and recorded in
    [ADR-0017](../architecture/0017-import-run-state-in-postgresql.md), which also settles what
-   [SPEC-0007](SPEC-0007-monitor-import-runs.md) R5, R7 and R8 need. Settled **subject to that
-   ADR being accepted**: it is `proposed` today, so a feature building directly onto it should
-   confirm its status first.
+   [SPEC-0007](SPEC-0007-monitor-import-runs.md) R5, R7 and R8 need. That ADR is **accepted**,
+   so a feature may build directly onto it.
 
 One decision remains outside this spec:
 

@@ -87,9 +87,8 @@ Two decisions this spec previously left open are now **settled**:
   database, in the very record this spec reports, rather than in a second store the two would
   have to keep agreeing — which is what this spec asked for when it said R5, R7 and R8 must
   not be read as requiring two separate stores. That record also derives R8's *abandoned* from
-  R5's last-advanced time, so liveness needs no mechanism of its own. Settled **subject to
-  that ADR being accepted** — it is `proposed` today, so a feature building onto it should
-  confirm its status first.
+  R5's last-advanced time, so liveness needs no mechanism of its own. That ADR is
+  **accepted**, so a feature may build onto it.
 - **How the run list is paged.** R13 takes the whole control
   [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R17 defines, and no ADR governs it:
   that spec settled positional paging for the surfaces that actually strain it, and at this

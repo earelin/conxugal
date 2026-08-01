@@ -42,11 +42,10 @@ with Vite + Mantine (**[ADR-0004](../../architecture/0004-ui-stack-vite-mantine.
 feature-based layout of
 **[ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md)**.
 
-> **Two prerequisites this feature does not own.**
-> [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md) is `proposed`, and this
-> feature builds directly onto it (the run record, the resumption point, the guard) — it should
-> be accepted before the run-record task is picked up. And
-> [SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) is itself `draft`.
+> **The prerequisites this feature builds onto are settled.**
+> [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md) is `accepted`, so the
+> run record, the resumption point and the guard rest on a decision that is no longer up for
+> debate; and [SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) is `active`.
 
 ## Scope
 - **Domain (the mark):** one administrator-managed attribute on `OrganoDeContratacion` —

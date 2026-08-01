@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-07-31
 spec: SPEC-0005
 supersedes: null
@@ -9,7 +9,7 @@ superseded_by: null
 # 0017. Resumable import runs hold their state in PostgreSQL, in the record that reports them
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 An Órgano's initial import is not a request; it is a job measured in days.
