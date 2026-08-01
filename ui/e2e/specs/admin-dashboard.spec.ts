@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { degradedSystemStatus } from '../support/fixtures';
 import { resetMappings, stubJson } from '../support/wiremock';
 
 /** The two status cards are the only named regions on the page. */
@@ -59,21 +60,7 @@ test.describe('Administration dashboard', () => {
     await page.goto('/administracion');
     await expect(page.getByText('Servizo operativo')).toBeVisible();
 
-    await stubJson('GET', '/api/admin/system-status', {
-      status: 'DEGRADED',
-      datastore: { reachable: false },
-      checkedAt: '2026-07-31T12:50:00Z',
-      application: { version: '0.1.0-SNAPSHOT', environment: 'local' },
-      runtime: {
-        javaVersion: '25.0.1',
-        javaVendor: 'Eclipse Adoptium',
-        uptimeMillis: 273420000,
-        memoryUsedBytes: 536870912,
-        memoryMaxBytes: 1073741824,
-        osName: 'Linux',
-        osArch: 'amd64',
-      },
-    });
+    await stubJson('GET', '/api/admin/system-status', degradedSystemStatus);
 
     // Leave and come back the way a user would. A full reload would drop the
     // query cache and pass even if the dashboard happily served a stale

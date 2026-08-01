@@ -18,6 +18,28 @@ export const accounts = {
 /** The one-time password the create-user stub returns. */
 export const generatedPassword = 'Tg7#kLp2Qw9$mZxR';
 
+/**
+ * The status the default mapping serves, but with the datastore down — for the
+ * scenario that checks a degraded backend is not masked by a cached snapshot.
+ * Later `checkedAt` and `uptimeMillis` than the healthy one, as a real later
+ * poll would report.
+ */
+export const degradedSystemStatus = {
+  status: 'DEGRADED',
+  datastore: { reachable: false },
+  checkedAt: '2026-07-31T12:50:00Z',
+  application: { version: '0.1.0-SNAPSHOT', environment: 'local' },
+  runtime: {
+    javaVersion: '25.0.1',
+    javaVendor: 'Eclipse Adoptium',
+    uptimeMillis: 273420000,
+    memoryUsedBytes: 536870912,
+    memoryMaxBytes: 1073741824,
+    osName: 'Linux',
+    osArch: 'amd64',
+  },
+};
+
 /** A `USER` session, for the scenario that checks the admin area stays hidden. */
 export const nonAdminSession = {
   id: '7e91a3c5-2b68-4d17-9f83-1c4a5e6b8d20',
