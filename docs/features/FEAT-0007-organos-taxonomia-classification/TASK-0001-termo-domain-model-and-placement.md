@@ -48,9 +48,9 @@ green twice, so this is a cohesion argument rather than the only workable order.
   insert, rename, re-parent,
   delete, an `existsByParentId`-style child check the delete rule needs, a
   **children-of-parent read** the sibling-name rule needs (roots included, so a null parent
-  is a legal argument), and `lockTaxonomia` — the serialising lock the feature's *Edge cases*
-  require, declared in the domain's own terms so the advisory-lock mechanism stays in
-  `infrastructure` (ADR-0002).
+  is a legal argument). No lock operation: the rules are use-case checks and the taxonomy is
+  written to too rarely for contention to be a real condition (see the feature's
+  *Edge cases*).
 - Placement on the Órgano: a **nullable** `UUID termoId` on `OrganoDeContratacion`,
   and the `OrganoRepository` operations that write it — set the term, clear it, and clear
   every placement pointing at a given term (what `DeleteTermo` needs). Placement is exactly
@@ -89,11 +89,10 @@ green twice, so this is a cohesion argument rather than the only workable order.
   adapters derive that `ORDER BY` from the method name, so there is no hand-written query
   to attach an explicit `COLLATE` to — declared on the column, every derived read inherits
   it and the port's ordering contract holds without the adapter doing anything.
-- The same migration adds a **`CHECK (parent_id IS DISTINCT FROM id)`** on `termo`. The
-  feature's serialising lock exists to stop a *multi-row* cycle forming between two
-  concurrent re-parents; a term pointing at itself needs no second row, so no lock and no
-  read-then-write window is involved, and a foreign key is satisfied by a self-reference.
-  It is the one cycle the schema can reject outright, so it does.
+- The same migration adds a **`CHECK (parent_id IS DISTINCT FROM id)`** on `termo`. A
+  multi-row cycle is `MoveTermo`'s own check to make; a term pointing at itself needs no
+  second row and a foreign key is satisfied by a self-reference. It is the one cycle the
+  schema can reject outright, so it does.
 - The same migration adds a **unique index on `(parent_id, lower(name))` with
   `NULLS NOT DISTINCT`**, enforcing the feature's sibling-name rule in the one place a
   concurrent create cannot slip past. `NULLS NOT DISTINCT` is what extends it to the roots:
@@ -136,9 +135,9 @@ green twice, so this is a cohesion argument rather than the only workable order.
 - An Órgano built without a placement is unclassified, and that is the state a newly
   imported one starts in. (SPEC-0004 #18)
 - The port exposes every operation the later use cases need — find all, find by id, insert,
-  rename, re-parent, delete, check for children, read a parent's children, lock the
-  taxonomy, set/clear an Órgano's term, clear the placements pointing at a term, and read an
-  Órgano by id — and nothing they do not; no infrastructure type leaks into its signatures.
+  rename, re-parent, delete, check for children, read a parent's children, set/clear an
+  Órgano's term, clear the placements pointing at a term, and read an Órgano by id — and
+  nothing they do not; no infrastructure type leaks into its signatures.
 - The collation exists after the migration and orders accented Galician names as a reader
   expects — `Á` beside `A`, not after `Z` — asserted with a direct `ORDER BY … COLLATE`
   query, since a missing or misdeclared collation fails far from where it is used.

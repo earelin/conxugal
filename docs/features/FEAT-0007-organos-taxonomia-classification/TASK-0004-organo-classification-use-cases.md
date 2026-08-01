@@ -32,10 +32,10 @@ authenticated endpoints serve. Governed by
   that is **already** unclassified is **not** an error: it is idempotent and writes nothing,
   because the caller's intent is already satisfied and an admin double-clicking a row should
   not see a failure.
-- Assign and clear take **no taxonomy lock** — they write one Órgano row and cannot reshape
-  the tree. An assign racing a `DeleteTermo` is settled by the lock TASK-0003 holds and the
-  foreign key: the assign either commits first and is cleared by the delete, or fails
-  against the vanished term.
+- Assign and clear write one Órgano row and cannot reshape the tree, so they need no
+  coordination with the taxonomy's own writes. An assign racing a `DeleteTermo` is left to
+  the foreign key: the assign either commits before the delete and is cleared by it, or
+  fails against the vanished term — a raced 500, accepted for how rarely this is written to.
 - `ListOrganos` — every stored Órgano, each with its name, active state and its
   `termoId` or null. A straight `findAll()`: no filtering, no paging, no grouping.
 - `ListTermos` — every term, each with its name and its `parentId` or null.

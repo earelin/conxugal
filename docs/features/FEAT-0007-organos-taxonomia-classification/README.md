@@ -338,17 +338,19 @@ blocked-by-children delete are both 409 — so each rejection gets its own `type
 TASK-0004 must not do is declare a *second* unknown-**term** type; that one it reuses. Five
 types, five distinct statuses-plus-`type` pairs, no duplicates.
 
-**The database backstops must reach the same contract.** Two refusals can arrive as
-constraint violations rather than as a use case's own check — the unique index when two
-creates race, and the placement foreign key when an assign races a delete. Left alone,
-Micronaut Data raises a `DataAccessException` and the caller gets a **500**, which is
-exactly what the admin surface promises never to do. So the **JDBC adapter
-([TASK-0002](TASK-0002-taxonomia-store-infrastructure.md)) translates them**: a unique-index
-violation on `(parent_id, lower(name))` becomes the duplicate-sibling-name exception, and a
-foreign-key violation on `termo_id` becomes the term-not-found one. Translating in
-the adapter is what keeps the mapping honest under ADR-0002 — the exception types are the
-domain's, the SQLSTATE knowledge stays in `infrastructure`, and the controllers need no
-special case for "the same refusal, but raced".
+**Every one of them is raised by a use-case check, and none by a database error.** The
+adapter does not inspect SQLSTATEs and does not translate constraint violations into domain
+exceptions: `CreateTermo` reads the siblings and refuses a duplicate name, `MoveTermo` walks
+the ancestry and refuses a cycle, `DeleteTermo` asks for children and refuses, and every
+operation naming an unknown term finds that out with `findById`. The rule and the refusal
+sit in the same place, in `domain`, where a unit test can reach them without a database.
+
+The schema's unique index and foreign keys stay as **integrity backstops** — see *Concurrent
+edits to the tree* under *Edge cases* for what that does and does not buy. A constraint
+violation that reaches the adapter means two admins wrote in the same instant, and it
+surfaces as a 500 rather than as one of the five types above. That window is accepted
+against how rarely this taxonomy is written to; it is not a case any of these problem types
+is expected to cover.
 
 - **Every operation carries the rate-limit contract** of
   [ADR-0012](../../architecture/0012-rate-limit-http-contract.md): the three `RateLimit-*`
@@ -439,8 +441,8 @@ module.
 1. **[TASK-0001](TASK-0001-termo-domain-model-and-placement.md) — Term
    domain model + Órgano placement + schema migration** *(backend)*: the `Termo`
    aggregate (UUID, name, optional parent) and the `TermoRepository` port (find all,
-   find by id, insert, rename, re-parent, delete, child check, children-of-parent,
-   `lockTaxonomia`), the placement field on `OrganoDeContratacion` and the matching
+   find by id, insert, rename, re-parent, delete, child check, children-of-parent),
+   the placement field on `OrganoDeContratacion` and the matching
    `OrganoRepository` operations including the by-id read, **and the migration** adding the
    `termo` table (self-referencing parent), the nullable `termo_id` on the
    catalogue table and the sibling-name unique index. Under ADR-0008 the entity carries its
@@ -448,18 +450,17 @@ module.
    queries — model and schema move together or the task lands red.
    *(SPEC-0004 #5, #6, #8, #14, #15, #17, #18)*
 2. **[TASK-0002](TASK-0002-taxonomia-store-infrastructure.md) — Taxonomía store
-   infrastructure** *(backend)*: the JDBC `TermoRepository` (including
-   `lockTaxonomia`) and the translation of the two constraint violations into domain
-   exceptions, against the schema TASK-0001 created. Both repositories are bare derived
-   interfaces, so Micronaut Data generates most method bodies from the port — this task's
-   work is the two `@Query` operations that cannot derive, the translation layer, and
-   proving the rest against a real database. Every endpoint task depends on it: without the
-   adapter there is nothing for an HTTP integration test to run against.
+   infrastructure** *(backend)*: the JDBC `TermoRepository`, against the schema TASK-0001
+   created. Micronaut Data generates the bodies from the port's method names, so this task
+   is one `@Query` that cannot derive and proving the rest against a real database. It
+   carries no rule and no exception — every refusal is TASK-0003's use-case check. Every
+   endpoint task depends on it: without the adapter there is nothing for an HTTP
+   integration test to run against.
    *(SPEC-0004 #14, #16, #17)*
 3. **[TASK-0003](TASK-0003-taxonomia-management-use-cases.md) — Taxonomía management use
    cases** *(backend)*: `CreateTermo`, `RenameTermo`, `MoveTermo` (cycle guard), `DeleteTermo`
-   (reject with children; return directly-assigned Órganos to unclassified), the serialising
-   lock, the sibling-name rule, and **the rejection exceptions the whole feature shares**.
+   (reject with children; return directly-assigned Órganos to unclassified), the
+   sibling-name rule, and **the rejection exceptions the whole feature shares**.
    *(SPEC-0004 #14, #15, #16)*
 4. **[TASK-0004](TASK-0004-organo-classification-use-cases.md) — Órgano classification &
    catalogue reads** *(backend)*: `AssignOrganoToTermo` (single placement, replaces any
@@ -560,39 +561,33 @@ away later.
   `termoId` is rendered as unclassified rather than dropped or crashed on, and a
   refresh re-fetches both. No Órgano can disappear from view, because the catalogue read is
   the one that lists them and it never depends on the taxonomy read.
-- **Concurrent edits to the tree** — two admins moving/deleting overlapping terms must not
-  corrupt the tree or leave a placement pointing at a deleted term **in the database**. A
-  dangling id in a *client's* pair of responses is the transient case above, not a stored
-  one. Two guarantees, with different mechanisms:
-  - **No cycle, ever.** A transaction alone does not deliver this: at PostgreSQL's default
-    `READ COMMITTED`, two concurrent moves can each walk a tree that is still acyclic, each
-    pass the guard, and jointly create a cycle — and no foreign key can catch it, unlike
-    the delete cases the FKs do backstop. So **tree-shape mutations serialise**: `MoveTermo`
-    and `DeleteTermo` call a `lockTaxonomia()` port operation before reading and hold it
-    through the write. The port keeps the domain free of the mechanism
-    ([ADR-0002](../../architecture/0002-hexagonal-architecture.md)); the JDBC adapter
-    implements it as a transaction-scoped PostgreSQL advisory lock. These are rare,
-    admin-initiated
-    operations over a table of a few dozen rows, so serialising them outright costs nothing
-    measurable and is far easier to reason about than retrying serialisation failures.
-  - **No stored dangling placement.** `DeleteTermo`'s delete and the placement clearing it
-    triggers run in **one transaction**, and the non-cascading foreign key above is the
-    backstop if that clearing is ever skipped. `AssignOrganoToTermo` racing a `DeleteTermo`
-    is settled by the same lock plus the foreign key: the assign either commits before the
-    delete (and is cleared by it) or fails against the vanished term.
-  - **The transaction is part of the decision, not an implementation detail.** A
-    transaction-scoped advisory lock taken with no ambient transaction is acquired and
-    released inside its own statement: it serialises nothing, and it looks identical to a
-    working lock in every single-threaded test. So `MoveTermo` and `DeleteTermo` carry
-    `@Transactional` on the use-case method — the boundary the repo already uses for
-    `SetUserEnabled` and `CreateUser` — and the lock, the reads and the writes all sit
-    inside it. This is also what makes `DeleteTermo`'s delete-plus-clearing atomic. It is
-    proven the way `SetUserEnabledConcurrencyIntegrationTest` proves its equivalent:
-    driving the injected use case from concurrent threads against a real database. A
-    unit test against a test double cannot tell a held lock from a released one.
-  - **A `MoveTermo` racing a `DeleteTermo` of its target parent** is settled by the same
-    lock: whichever commits first, the second re-reads under the lock and either moves
-    under a term that still exists or fails to find it.
-  - Concurrent *classification* of two different Órganos does not serialise — they are
-    independent row updates that cannot interact, and taking the tree lock for them would
-    make the admin worklist needlessly sequential.
+- **Concurrent edits to the tree — the rules are the use cases', and they are not
+  serialised.** Every refusal in this feature is a **domain check**: `MoveTermo` walks the
+  ancestry and rejects a cycle, `DeleteTermo` asks `existsByParentId` and rejects a term with
+  children, and the create/rename/move paths read `findByParentId` and reject a duplicate
+  sibling name. The rules live in `domain`, where they can be unit-tested against a test
+  double, and nowhere else.
+
+  Each of those is a check-then-write, so in principle two admins acting in the same instant
+  could both pass and jointly create a cycle. **That window is accepted, deliberately.** The
+  taxonomy is an `ADMIN`-only surface over a table of a few dozen rows that is edited a
+  handful of times in its life; the writes are rare enough that the contention this guards
+  against is not a real condition. Serialising every tree mutation behind a lock — and
+  carrying the port operation, the adapter, and the two-connection test needed to prove the
+  lock is not a no-op — is machinery out of proportion to the risk it removes. If the
+  taxonomy ever becomes something many people edit at once, that is the point to reach for a
+  lock, against a real condition rather than an imagined one.
+
+  What is **not** left to chance is stored integrity, because the schema costs nothing to
+  keep: the non-cascading foreign keys still refuse to strand an Órgano against a deleted
+  term, and the `(parent_id, lower(name))` unique index still refuses two same-named
+  siblings. They are **backstops, not the contract** — the domain check is what produces the
+  civil refusal a caller sees, and a violation reaching the adapter is a raced write that
+  surfaces as a 500. That is an accepted cost of the same trade, not an oversight.
+- **`DeleteTermo` is still one transaction.** Its delete and the placement clearing it
+  triggers carry `@Transactional` on the use-case method — the boundary the repo already
+  uses for `SetUserEnabled` and `CreateUser`. That is about **atomicity**, not concurrency,
+  and it survives the decision above: without it a failure between the two writes leaves
+  Órganos pointing at a term that is gone, which the foreign key would then refuse.
+- Concurrent *classification* of two different Órganos cannot interact at all — they are
+  independent row updates.
