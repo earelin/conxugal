@@ -24,8 +24,10 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-// The name order both reads promise is the repository's, so a stub cannot prove it:
-// OrganosReadOrderIntegrationTest asserts it over HTTP against a real database instead.
+// Every stub below is deliberately handed to the controller out of name order, so what is
+// asserted is that it serves the list verbatim. The order itself is the repository's, under
+// the Galician collation Jdbc{Organo,Termo}RepositoryIntegrationTest asserts against a real
+// database — this suite mocks its domain collaborators and never reaches one.
 @MicronautTest
 class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
@@ -50,45 +52,45 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   @Test
   void user_reads_every_organo_with_its_name_state_and_placement(RequestSpecification spec) {
-    OrganoId sanidadeId = new OrganoId(UUID.randomUUID());
     OrganoId marId = new OrganoId(UUID.randomUUID());
+    OrganoId sanidadeId = new OrganoId(UUID.randomUUID());
     when(listOrganos.list()).thenReturn(
         List.of(
+            new OrganoDeContratacion(marId, "mar", "Consellería do Mar", false, null),
             new OrganoDeContratacion(sanidadeId, "sanidade", "Consellería de Sanidade", true,
-                SANIDADE),
-            new OrganoDeContratacion(marId, "mar", "Consellería do Mar", false, null)));
+                SANIDADE)));
 
     Response response = readAs(spec, TestUserFactory.normalUser(), "/api/organos");
 
     assertThat(response.jsonPath().getList("id", String.class))
-        .containsExactly(sanidadeId.toString(), marId.toString());
+        .containsExactly(marId.toString(), sanidadeId.toString());
     assertThat(response.jsonPath().getList("name", String.class))
-        .containsExactly("Consellería de Sanidade", "Consellería do Mar");
+        .containsExactly("Consellería do Mar", "Consellería de Sanidade");
     assertThat(response.jsonPath().getList("active", Boolean.class))
-        .containsExactly(true, false);
+        .containsExactly(false, true);
     assertThat(response.jsonPath().getList("termoId", String.class))
-        .containsExactly(SANIDADE.toString(), null);
+        .containsExactly(null, SANIDADE.toString());
     // getList spreads over the array and yields null for an absent key too, so the
     // unclassified case needs the object itself to tell "sent as null" from "not sent".
-    assertThat(response.jsonPath().getMap("[1]")).containsEntry("termoId", null);
+    assertThat(response.jsonPath().getMap("[0]")).containsEntry("termoId", null);
   }
 
   @Test
   void user_reads_every_term_with_its_parent_edge(RequestSpecification spec) {
     when(listTermos.list()).thenReturn(
         List.of(
-            new Termo(HOSPITAIS, "Hospitais", SANIDADE),
-            new Termo(SANIDADE, "Sanidade", null)));
+            new Termo(SANIDADE, "Sanidade", null),
+            new Termo(HOSPITAIS, "Hospitais", SANIDADE)));
 
     Response response = readAs(spec, TestUserFactory.normalUser(), "/api/organos/taxonomia");
 
     assertThat(response.jsonPath().getList("id", String.class))
-        .containsExactly(HOSPITAIS.toString(), SANIDADE.toString());
+        .containsExactly(SANIDADE.toString(), HOSPITAIS.toString());
     assertThat(response.jsonPath().getList("name", String.class))
-        .containsExactly("Hospitais", "Sanidade");
+        .containsExactly("Sanidade", "Hospitais");
     assertThat(response.jsonPath().getList("parentId", String.class))
-        .containsExactly(SANIDADE.toString(), null);
-    assertThat(response.jsonPath().getMap("[1]")).containsEntry("parentId", null);
+        .containsExactly(null, SANIDADE.toString());
+    assertThat(response.jsonPath().getMap("[0]")).containsEntry("parentId", null);
   }
 
   @Test
