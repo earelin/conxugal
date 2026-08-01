@@ -20,7 +20,7 @@
     "@mantine/charts": "^9.4.1",
     "@mantine/core": "^9.5.0",
     "@mantine/hooks": "^9.4.1",
-    "@tabler/icons-react": "^3.44.0",
+    "@tabler/icons-react": "^3.45.0",
     "@tanstack/react-query": "^5.101.3",
     "es-toolkit": "^1.50.0",
     "react": "^19.2.8",
