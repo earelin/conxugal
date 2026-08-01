@@ -1,7 +1,6 @@
 package gal.conxugal.domain.organo;
 
 import jakarta.inject.Singleton;
-import java.util.UUID;
 
 /**
  * Returns an Órgano to the unclassified set. Refuses an unknown Órgano with the same type
@@ -20,7 +19,7 @@ public class ClearOrganoTermo {
     this.organoRepository = organoRepository;
   }
 
-  public void clear(UUID organoId) {
+  public void clear(OrganoId organoId) {
     OrganoDeContratacion organo =
         organoRepository
             .findById(organoId)

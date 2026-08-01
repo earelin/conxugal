@@ -3,6 +3,7 @@ package gal.conxugal.application.rest.admin.users;
 import gal.conxugal.domain.user.CreateUser;
 import gal.conxugal.domain.user.ListUsers;
 import gal.conxugal.domain.user.SetUserEnabled;
+import gal.conxugal.domain.user.UserId;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
@@ -42,6 +43,6 @@ class UsersController {
 
   @Post("/{id}/enabled")
   UserResponse setEnabled(@PathVariable UUID id, @Valid @Body SetEnabledRequest request) {
-    return UserResponse.of(setUserEnabled.setEnabled(id, request.enabled()));
+    return UserResponse.of(setUserEnabled.setEnabled(new UserId(id), request.enabled()));
   }
 }

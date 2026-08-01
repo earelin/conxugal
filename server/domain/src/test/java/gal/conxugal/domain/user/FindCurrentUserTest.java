@@ -32,7 +32,7 @@ class FindCurrentUserTest {
   @Test
   void returns_the_account_found_by_email() {
     User ana =
-        new User(UUID.randomUUID(), "ana@example.com", "stored-hash", Role.ADMIN, true,
+        new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.ADMIN, true,
             CREATED_AT);
     when(userRepository.findByEmail("ana@example.com")).thenReturn(Optional.of(ana));
 

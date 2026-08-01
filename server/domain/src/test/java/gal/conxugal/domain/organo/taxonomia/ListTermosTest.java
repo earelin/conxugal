@@ -26,9 +26,9 @@ class ListTermosTest {
 
   @Test
   void returns_every_term_with_its_parent() {
-    UUID rootId = UUID.randomUUID();
+    TermoId rootId = new TermoId(UUID.randomUUID());
     Termo root = new Termo(rootId, "Deportes", null);
-    Termo child = new Termo(UUID.randomUUID(), "Fútbol", rootId);
+    Termo child = new Termo(new TermoId(UUID.randomUUID()), "Fútbol", rootId);
     when(termoRepository.findAllOrderByName()).thenReturn(List.of(root, child));
 
     List<Termo> result = listTermos.list();

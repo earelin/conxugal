@@ -44,7 +44,7 @@ class CreateUserTest {
     GeneratedPassword generatedPassword = new GeneratedPassword("Tg7#kLp2Qw9$mZxR");
     when(passwordGenerator.generate()).thenReturn(generatedPassword);
     when(passwordEncoder.encode("Tg7#kLp2Qw9$mZxR")).thenReturn("hashed-password");
-    UUID createdId = UUID.randomUUID();
+    UserId createdId = new UserId(UUID.randomUUID());
     when(userRepository.create(any(User.class))).thenAnswer(invocation -> {
       User submitted = invocation.getArgument(0);
       return new User(
@@ -66,7 +66,8 @@ class CreateUserTest {
   @Test
   void refuses_to_create_an_account_with_an_already_used_email() {
     User existing = new User(
-        UUID.randomUUID(), "ana@example.com", "stored-hash", Role.ADMIN, true, CREATED_AT);
+        new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.ADMIN, true,
+        CREATED_AT);
     when(userRepository.findByEmail("ana@example.com")).thenReturn(Optional.of(existing));
 
     assertThatThrownBy(() -> createUser.create("ana@example.com", Role.ADMIN))

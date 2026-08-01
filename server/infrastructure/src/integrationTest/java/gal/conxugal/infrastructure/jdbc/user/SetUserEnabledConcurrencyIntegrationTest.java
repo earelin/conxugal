@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gal.conxugal.domain.user.LastEnabledAdminException;
 import gal.conxugal.domain.user.SetUserEnabled;
+import gal.conxugal.domain.user.UserId;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -78,8 +79,8 @@ class SetUserEnabledConcurrencyIntegrationTest implements TestPropertyProvider {
   void sequentially_disabling_both_of_the_last_two_enabled_admins_refuses_the_second()
       throws Exception {
     disableSeededDefaultAdmin();
-    UUID firstAdminId = insertEnabledAdmin("admin-a@example.com");
-    UUID secondAdminId = insertEnabledAdmin("admin-b@example.com");
+    UserId firstAdminId = insertEnabledAdmin("admin-a@example.com");
+    UserId secondAdminId = insertEnabledAdmin("admin-b@example.com");
 
     setUserEnabled.setEnabled(firstAdminId, false);
 
@@ -91,8 +92,8 @@ class SetUserEnabledConcurrencyIntegrationTest implements TestPropertyProvider {
   void two_concurrent_disables_of_the_last_two_enabled_admins_cannot_both_succeed()
       throws Exception {
     disableSeededDefaultAdmin();
-    UUID firstAdminId = insertEnabledAdmin("admin-a@example.com");
-    UUID secondAdminId = insertEnabledAdmin("admin-b@example.com");
+    UserId firstAdminId = insertEnabledAdmin("admin-a@example.com");
+    UserId secondAdminId = insertEnabledAdmin("admin-b@example.com");
 
     CyclicBarrier barrier = new CyclicBarrier(2);
     List<Optional<Exception>> outcomes;
@@ -130,7 +131,8 @@ class SetUserEnabledConcurrencyIntegrationTest implements TestPropertyProvider {
   // Callable, so a failure needs to reach the assertions on the test thread as data, not as
   // an uncaught exception on a worker thread.
   @SuppressWarnings("PMD.AvoidCatchingGenericException")
-  private Callable<Optional<Exception>> disableAndCaptureFailure(UUID id, CyclicBarrier barrier) {
+  private Callable<Optional<Exception>> disableAndCaptureFailure(
+      UserId id, CyclicBarrier barrier) {
     return () -> {
       barrier.await();
       try {
@@ -157,7 +159,7 @@ class SetUserEnabledConcurrencyIntegrationTest implements TestPropertyProvider {
     }
   }
 
-  private UUID insertEnabledAdmin(String email) throws Exception {
+  private UserId insertEnabledAdmin(String email) throws Exception {
     String sql = "INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?) RETURNING id";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -168,7 +170,7 @@ class SetUserEnabledConcurrencyIntegrationTest implements TestPropertyProvider {
         if (!resultSet.next()) {
           throw new SQLException("INSERT ... RETURNING id produced no row");
         }
-        UUID id = (UUID) resultSet.getObject("id");
+        UserId id = new UserId((UUID) resultSet.getObject("id"));
         connection.commit();
         return id;
       }

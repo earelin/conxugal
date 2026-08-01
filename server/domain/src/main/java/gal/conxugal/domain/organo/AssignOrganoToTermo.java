@@ -1,9 +1,9 @@
 package gal.conxugal.domain.organo;
 
+import gal.conxugal.domain.organo.taxonomia.TermoId;
 import gal.conxugal.domain.organo.taxonomia.TermoNotFoundException;
 import gal.conxugal.domain.organo.taxonomia.TermoRepository;
 import jakarta.inject.Singleton;
-import java.util.UUID;
 
 /**
  * Files an Órgano under a term, replacing whatever term it was in. Refuses an unknown Órgano and
@@ -25,7 +25,7 @@ public class AssignOrganoToTermo {
     this.termoRepository = termoRepository;
   }
 
-  public void assign(UUID organoId, UUID termoId) {
+  public void assign(OrganoId organoId, TermoId termoId) {
     if (organoRepository.findById(organoId).isEmpty()) {
       throw new OrganoNotFoundException(organoId);
     }

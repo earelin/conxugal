@@ -4,7 +4,6 @@ import io.micronaut.data.annotation.GeneratedValue;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
 import java.util.Objects;
-import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -14,14 +13,15 @@ import org.jspecify.annotations.Nullable;
  * nested term, keeping the single-table mapping of ADR-0008.
  */
 @MappedEntity("termo")
-public record Termo(@Id @GeneratedValue @Nullable UUID id, String name, @Nullable UUID parentId) {
+public record Termo(
+    @Id @GeneratedValue @Nullable TermoId id, String name, @Nullable TermoId parentId) {
 
   public Termo {
     Objects.requireNonNull(name, "name must not be null");
   }
 
   /** A term not yet persisted: the database assigns its id on insert. */
-  public Termo(String name, @Nullable UUID parentId) {
+  public Termo(String name, @Nullable TermoId parentId) {
     this(null, name, parentId);
   }
 }

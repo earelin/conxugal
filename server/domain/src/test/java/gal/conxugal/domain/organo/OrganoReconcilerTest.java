@@ -181,6 +181,7 @@ class OrganoReconcilerTest {
   }
 
   private static OrganoDeContratacion organo(String sourceKey, String name, boolean active) {
-    return new OrganoDeContratacion(UUID.randomUUID(), sourceKey, name, active, null);
+    return new OrganoDeContratacion(
+        new OrganoId(UUID.randomUUID()), sourceKey, name, active, null);
   }
 }

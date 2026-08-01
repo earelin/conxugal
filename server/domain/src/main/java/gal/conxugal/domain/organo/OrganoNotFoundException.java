@@ -1,7 +1,5 @@
 package gal.conxugal.domain.organo;
 
-import java.util.UUID;
-
 /**
  * Thrown when a classification operation names an Órgano id that doesn't exist. Distinct from
  * the unknown-term type so an unknown Órgano and an unknown term map to their own problem types
@@ -9,14 +7,14 @@ import java.util.UUID;
  */
 public class OrganoNotFoundException extends RuntimeException {
 
-  private final UUID organoId;
+  private final OrganoId organoId;
 
-  public OrganoNotFoundException(UUID organoId) {
+  public OrganoNotFoundException(OrganoId organoId) {
     super("No Órgano exists with id: %s".formatted(organoId));
     this.organoId = organoId;
   }
 
-  public UUID getOrganoId() {
+  public OrganoId getOrganoId() {
     return organoId;
   }
 }

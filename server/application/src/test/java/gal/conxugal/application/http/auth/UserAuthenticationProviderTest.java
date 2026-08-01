@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import gal.conxugal.domain.auth.Authenticate;
 import gal.conxugal.domain.user.Role;
 import gal.conxugal.domain.user.User;
+import gal.conxugal.domain.user.UserId;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.security.authentication.AuthenticationResponse;
 import io.micronaut.security.authentication.UsernamePasswordCredentials;
@@ -36,7 +37,7 @@ class UserAuthenticationProviderTest {
   @Test
   void returns_success_with_user_role_for_valid_credentials() {
     User user =
-        new User(UUID.randomUUID(), "ana@example.com", "stored-hash", Role.USER, true,
+        new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.USER, true,
             CREATED_AT);
     when(authenticate.authenticate("ana@example.com", "correct-password"))
         .thenReturn(Optional.of(user));
@@ -53,7 +54,7 @@ class UserAuthenticationProviderTest {
   @Test
   void returns_success_with_admin_role_for_valid_credentials() {
     User user =
-        new User(UUID.randomUUID(), "root@example.com", "stored-hash", Role.ADMIN, true,
+        new User(new UserId(UUID.randomUUID()), "root@example.com", "stored-hash", Role.ADMIN, true,
             CREATED_AT);
     when(authenticate.authenticate("root@example.com", "correct-password"))
         .thenReturn(Optional.of(user));

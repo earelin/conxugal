@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.db.api.Assertions.assertThat;
 
 import gal.conxugal.domain.organo.taxonomia.DeleteTermo;
+import gal.conxugal.domain.organo.taxonomia.TermoId;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -77,8 +78,8 @@ class DeleteTermoIntegrationTest implements TestPropertyProvider {
 
   @Test
   void deleting_term_unclassifies_its_organos_and_deletes_none_of_them() throws Exception {
-    UUID deletedTermoId = insertTermo("Deportes");
-    UUID survivingTermoId = insertTermo("Cultura");
+    TermoId deletedTermoId = insertTermo("Deportes");
+    TermoId survivingTermoId = insertTermo("Cultura");
     insertOrgano("axencia-x", "Axencia X", deletedTermoId);
     insertOrgano("axencia-y", "Axencia Y", deletedTermoId);
     insertOrgano("axencia-z", "Axencia Z", survivingTermoId);
@@ -97,12 +98,12 @@ class DeleteTermoIntegrationTest implements TestPropertyProvider {
             .value("termo_id").isNull()
         .row(2)
             .value("name").isEqualTo("Axencia Z")
-            .value("termo_id").isEqualTo(survivingTermoId);
+            .value("termo_id").isEqualTo(survivingTermoId.value());
     Table termos = termoTable();
     assertThat(termos).hasNumberOfRows(1);
     assertThat(termos)
         .row(0)
-            .value("id").isEqualTo(survivingTermoId);
+            .value("id").isEqualTo(survivingTermoId.value());
   }
 
   private static Table organoTable() {
@@ -143,16 +144,17 @@ class DeleteTermoIntegrationTest implements TestPropertyProvider {
 
   // Raw, auto-committing connections rather than the injected DataSource: the use case runs on
   // another thread, so it only sees this setup once it is committed.
-  private static UUID insertTermo(String name) throws Exception {
+  private static TermoId insertTermo(String name) throws Exception {
     String sql = "INSERT INTO termo (id, name) VALUES (uuidv7(), ?) RETURNING id";
     try (Connection connection = rawConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, name);
-      return generatedId(statement);
+      return new TermoId(generatedId(statement));
     }
   }
 
-  private static void insertOrgano(String sourceKey, String name, UUID termoId) throws Exception {
+  private static void insertOrgano(String sourceKey, String name, TermoId termoId)
+      throws Exception {
     String sql =
         "INSERT INTO organo_contratacion (id, source_key, name, active, termo_id) "
             + "VALUES (uuidv7(), ?, ?, TRUE, ?) RETURNING id";
@@ -160,7 +162,7 @@ class DeleteTermoIntegrationTest implements TestPropertyProvider {
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, sourceKey);
       statement.setString(2, name);
-      statement.setObject(3, termoId);
+      statement.setObject(3, termoId.value());
       generatedId(statement);
     }
   }

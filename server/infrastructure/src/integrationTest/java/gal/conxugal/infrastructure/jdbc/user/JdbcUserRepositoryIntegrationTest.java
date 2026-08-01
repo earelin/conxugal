@@ -8,6 +8,7 @@ import static org.assertj.db.api.Assertions.assertThat;
 import gal.conxugal.domain.auth.Authenticate;
 import gal.conxugal.domain.user.Role;
 import gal.conxugal.domain.user.User;
+import gal.conxugal.domain.user.UserId;
 import gal.conxugal.domain.user.UserRepository;
 import gal.conxugal.infrastructure.crypto.Argon2idPasswordEncoder;
 import io.micronaut.core.annotation.NonNull;
@@ -100,7 +101,7 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
   void finds_all_accounts_enabled_and_disabled() throws Exception {
     insertUser("ana@example.com", "hashed-password", "ADMIN");
     insertUser("iago@example.com", "hashed-password", "USER");
-    UUID iagoId = userRepository.findByEmail("iago@example.com").orElseThrow().id();
+    UserId iagoId = userRepository.findByEmail("iago@example.com").orElseThrow().id();
     userRepository.updateEnabled(iagoId, false);
 
     List<User> users = userRepository.findAll();
@@ -116,7 +117,7 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
   @Test
   void finds_stored_user_by_id() throws Exception {
     insertUser("ana@example.com", "hashed-password", "ADMIN");
-    UUID id = userRepository.findByEmail("ana@example.com").orElseThrow().id();
+    UserId id = userRepository.findByEmail("ana@example.com").orElseThrow().id();
 
     Optional<User> result = userRepository.findById(id);
 
@@ -126,7 +127,7 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void returns_empty_for_an_unknown_id() {
-    Optional<User> result = userRepository.findById(UUID.randomUUID());
+    Optional<User> result = userRepository.findById(new UserId(UUID.randomUUID()));
 
     assertThat(result).isEmpty();
   }
@@ -195,7 +196,7 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
     Argon2idPasswordEncoder passwordEncoder = new Argon2idPasswordEncoder();
     String rawPassword = "correct horse battery staple";
     insertUser("ana@example.com", passwordEncoder.encode(rawPassword), "USER");
-    UUID id = userRepository.findByEmail("ana@example.com").orElseThrow().id();
+    UserId id = userRepository.findByEmail("ana@example.com").orElseThrow().id();
     Instant fixedInstant = Instant.parse("2026-07-20T00:00:00Z");
     Authenticate authenticate =
         new Authenticate(userRepository, passwordEncoder, () -> fixedInstant);

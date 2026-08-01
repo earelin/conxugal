@@ -1,7 +1,6 @@
 package gal.conxugal.domain.organo.taxonomia;
 
 import jakarta.inject.Singleton;
-import java.util.UUID;
 
 /**
  * Removes a term from the taxonomy. Refuses an unknown term and one that still has child terms;
@@ -23,7 +22,7 @@ public class DeleteTermo {
     this.termoRepository = termoRepository;
   }
 
-  public void delete(UUID termoId) {
+  public void delete(TermoId termoId) {
     if (termoRepository.findById(termoId).isEmpty()) {
       throw new TermoNotFoundException(termoId);
     }
