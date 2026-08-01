@@ -18,6 +18,9 @@ Run from `ui/`:
 - `npm test -- src/App.test.tsx` — run a single test file
 - `npm test -- -t "shows the Galician not-found"` — run tests matching a name pattern
 - `npm run test:watch` — Vitest in watch mode
+- `npm run api:up` / `npm run api:down` — start/stop the stubbed API (WireMock)
+- `npm run test:acceptance` — Playwright acceptance suite (`npx playwright install chromium` first)
+- `npm run test:acceptance -- acceptance/specs/admin-users.spec.ts` — run a single acceptance spec
 - `npm run lint` — ESLint
 - `npm run format` / `npm run format:check` — Prettier write/check
 
@@ -67,6 +70,18 @@ failures before committing changes to this module.
   setup in `src/test/setup.ts`). Tests render the real route tree via
   `createMemoryRouter` and assert against rendered text from `strings`, not
   hardcoded literals, so assertions stay in sync with `strings.ts` changes.
+  Vitest's `include` is scoped to `src/**` so it doesn't collect the Playwright
+  specs in `acceptance/`.
+- **Local API / acceptance tests** (ADR-0018): the app calls same-origin `/api`
+  paths, and Vite proxies them (dev *and* preview) to a WireMock container in
+  `docker-compose.yml`, so the admin area runs with no backend. Stub state lives
+  in `wiremock/mappings/`, shared by `npm run dev`, `npm run preview` and the
+  black-box Playwright suite in `acceptance/`. `acceptance/` sits outside the `src` module
+  graph — it drives the built app over HTTP and imports nothing from `src`
+  (hence its own `tsconfig.acceptance.json` and a `boundaries/ignore` entry). Specs
+  drive only accessible roles/labels and the Galician copy of `strings.ts`; they
+  must not assert on locale-formatted dates, which differ between browser
+  builds. They run serially — WireMock is one shared process.
 - **TypeScript 7 / 6 split**: `devDependencies.typescript` is aliased to
   `@typescript/typescript6` (Microsoft's compatibility shim) so anything that
   `require`s/`import`s the `typescript` module — `typescript-eslint`, whose

@@ -88,6 +88,33 @@ describe('MetricsSectionHeader', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows how long ago the last sample was as soon as a live stream drops, not zero', () => {
+    const lastArrivedAt = new Date('2026-07-18T09:30:00Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(lastArrivedAt);
+
+    const { rerender } = renderHeader('live', lastArrivedAt);
+
+    // The drop is noticed a few seconds after the last sample arrived.
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    rerender(
+      <MantineProvider theme={theme}>
+        <MetricsSectionHeader state="reconnecting" lastArrivedAt={lastArrivedAt} />
+      </MantineProvider>,
+    );
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+
+    expect(
+      screen.getByText(
+        `${t.lastKnownSampleAtPrefix} ${formatTime(lastArrivedAt)} · ${t.timeAgoPrefix} 5 ${t.timeAgoUnit}`,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('falls back to the awaiting-first-sample caption while reconnecting when no sample time is available', () => {
     renderHeader('reconnecting', null);
 

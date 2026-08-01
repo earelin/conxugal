@@ -1,0 +1,27 @@
+{
+  "mappings": [
+    {
+      "name": "Log out — the SPA follows this with a redirect to /login",
+      "request": {
+        "method": "POST",
+        "urlPath": "/logout"
+      },
+      "response": {
+        "status": 303,
+        "headers": { "Location": "/login" }
+      }
+    },
+    {
+      "name": "Login page — server-rendered in production, a placeholder here",
+      "request": {
+        "method": "GET",
+        "urlPath": "/login"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "text/html; charset=utf-8" },
+        "body": "<!doctype html><html lang=\"gl\"><head><meta charset=\"utf-8\"><title>Iniciar sesión · conxugal</title></head><body><h1>Inicia sesión</h1><p>O formulario real sérveo o backend. Reinicia a sesión con <code>docker compose restart wiremock</code>.</p></body></html>"
+      }
+    }
+  ]
+}

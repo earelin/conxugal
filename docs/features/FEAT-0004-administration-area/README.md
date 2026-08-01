@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0003
-adrs: [0002, 0003, 0004, 0006, 0010]
+adrs: [0002, 0003, 0004, 0006, 0010, 0018]
 status: draft
 ---
 
@@ -164,6 +164,10 @@ flowchart LR
 7. **User-administration UI** — user list (email, role, state, created date, last login
    date), create-user form (email + role only), the one-time generated-password reveal
    after creation, and the disable/enable action. *(SPEC-0003 #5–#7, #9, #10; SPEC-0002 #10)*
+8. **Frontend acceptance tests** ([TASK-0008](TASK-0008-frontend-acceptance-tests.md)) —
+   black-box Playwright coverage of the admin screens, driving the built SPA with the API
+   replaced by WireMock ([ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md));
+   the same stub also gives `npm run dev` a local API. *(SPEC-0003 #1, #2, #5, #6, #10, #12)*
 
 ## Edge cases
 - **Disabled account is indistinct at login** — a disabled account produces the same

@@ -1,0 +1,117 @@
+name: UI Acceptance Tests
+
+# Narrower than ui-ci.yml's blanket "ui/**" only by excluding prose: this job
+# boots a container and a browser, so a doc-only edit should not start it. An
+# allowlist of build inputs would be tighter, but it fails the wrong way —
+# a new input silently skips the suite, and a green pull request that never
+# ran it looks identical to one that passed.
+on:
+  pull_request:
+    branches: [trunk]
+    paths:
+      - "ui/**"
+      - "!ui/**/*.md"
+      - ".github/workflows/ui-acceptance.yml"
+  push:
+    branches: [trunk]
+    paths:
+      - "ui/**"
+      - "!ui/**/*.md"
+      - ".github/workflows/ui-acceptance.yml"
+
+concurrency:
+  group: ui-acceptance-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Named because the job id alone would publish a status check called
+  # "acceptance", which server-ci.yml already uses.
+  acceptance:
+    name: UI acceptance
+    runs-on: ubuntu-latest
+    # A normal run takes about a minute. The cap is for the stalls: an image
+    # pull (`up --wait` waits forever by default) or a browser download, which
+    # has hung for ten minutes before. Without it a stuck run holds the trunk
+    # concurrency group — where it is not cancellable — for GitHub's 6h default.
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ui/package.json
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - run: npm ci
+
+      # Keyed on the resolved Playwright version rather than package-lock.json:
+      # the version pins the browser build, so an unrelated dependency bump does
+      # not discard the cache.
+      - name: Resolve the Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      # Entries are immutable per key and only written when the primary key
+      # missed, so a truncated one — saved by the post step of a run cancelled
+      # mid-download — would otherwise be restored until the version changed.
+      # Bump the generation to abandon it; restore-keys makes a version bump
+      # download only what moved rather than the whole browser set.
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-v1-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          restore-keys: playwright-v1-${{ runner.os }}-
+
+      # playwright.config.ts declares only the chromium project. Left
+      # unconditional so the run recovers from a partial cache (the entry
+      # itself does not — see above); on a hit this only verifies. No
+      # --with-deps: ubuntu-latest already carries every
+      # browser library, and the sole packages it adds are CJK/Cyrillic fonts
+      # this Galician, text-assertion-only suite never renders — fonts whose
+      # mirror once stalled this step for ten minutes.
+      - name: Install Playwright browser
+        run: npx playwright install chromium
+
+      # The stub the built SPA is proxied to (preview.proxy in vite.config.ts).
+      # `api:up` already waits for the container's healthcheck; --quiet-pull
+      # keeps the per-layer download bars out of the log, where they are noise
+      # rather than feedback.
+      - name: Start the stubbed API
+        run: npm run api:up -- --quiet-pull
+
+      # Built here rather than from playwright's webServer command, which a
+      # reused server would skip — leaving the run to assert against a stale
+      # bundle. GitHub Actions exports CI=true, which playwright.config.ts reads
+      # for retries, forbidOnly and the reporters.
+      - run: npm run build
+
+      - name: Run acceptance tests
+        run: npx playwright test
+
+      # working-directory does not apply to a `uses:` step, so this path is
+      # relative to the repository root.
+      - name: Upload the Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: ui/playwright-report
+          retention-days: 7
+
+      - name: Dump the stub server logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop the stubbed API
+        if: always()
+        run: npm run api:down

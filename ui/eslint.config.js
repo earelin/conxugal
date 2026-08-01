@@ -22,7 +22,7 @@ const testFiles = ['**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}'];
 
 const typescriptResolver = {
   alwaysTryTypes: true,
-  project: ['tsconfig.app.json', 'tsconfig.node.json'],
+  project: ['tsconfig.app.json', 'tsconfig.node.json', 'tsconfig.acceptance.json'],
   noWarnOnMultipleProjects: true,
 };
 
@@ -69,7 +69,15 @@ export default tseslint.config(
         { pattern: 'src/main.tsx', category: 'app-entry' },
         { pattern: '**/*.test.{ts,tsx}', category: 'test' },
       ],
-      'boundaries/ignore': ['src/vite-env.d.ts', 'src/App.test.tsx', 'vite.config.ts', 'e2e/**'],
+      // acceptance/ drives the built app over HTTP and imports nothing from src, so it
+      // sits outside the module graph these rules describe.
+      'boundaries/ignore': [
+        'src/vite-env.d.ts',
+        'src/App.test.tsx',
+        'vite.config.ts',
+        'playwright.config.ts',
+        'acceptance/**',
+      ],
       // `import/resolver` is eslint-plugin-boundaries' resolver (it reads the
       // eslint-plugin-import key); `import-x/resolver-next` is import-x's own.
       // Both must stay — they are read by different plugins.
@@ -231,8 +239,14 @@ export default tseslint.config(
     },
   },
   {
-    files: ['e2e/**/*.{ts,tsx}'],
+    files: ['acceptance/**/*.{ts,tsx}'],
     extends: [playwright.configs['flat/recommended']],
+  },
+  {
+    files: ['vite.config.ts', 'playwright.config.ts', 'acceptance/**/*.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
   },
   {
     files: ['**/*.cjs'],
