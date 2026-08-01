@@ -103,6 +103,13 @@ flowchart LR
 ```
 
 ### Matching: exactly two things are ignored, and nothing else
+- **The mapping is unambiguous.** Every published contract names its awardee with a **NIF/CIF**,
+  and that identifier is what identifies the operador — never the name, never a similarity
+  score. So an operador's identity is settled by its first contract and never revised as more
+  arrive: no row written today is later discovered to be two operadores, or two rows one. That is
+  what makes the stored catalogue of
+  [ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md) safe to maintain
+  incrementally, and it is why no task here has a merge, a split or a confidence threshold in it.
 - Two awards name the same operador when their published fiscal identifiers are equal
   **ignoring surrounding whitespace and letter case** (R3). That reduction is the **match key**,
   and it is what the `operador` table is unique on — so "the same operador never splits in two"
@@ -121,6 +128,14 @@ flowchart LR
   a shared "unknown" row that would silently pool unrelated awards. Its `operador_id` stays null.
   Nothing beyond emptiness is validated: the source publishes irregular but genuine identifiers,
   and rejecting them would discard real awards.
+
+  **This branch is expected never to be taken.** Every contract the source publishes names its
+  awardee with a NIF/CIF, which is why the mapping is unambiguous in the first place; SPEC-0005
+  lists the fiscal identifier among what the source *does* publish, and SPEC-0006 R5 guards
+  against its absence anyway. The branch is kept rather than replaced by a `NOT NULL` constraint
+  because the constraint would turn one malformed publication into a failed batch in a job
+  measured in days, which SPEC-0005 R27 rules out on its own terms. It costs a nullable column
+  and a test.
 
 ### Display: one published spelling, chosen deterministically
 R4 shows an operador under the name **and** the identifier spelling taken from its **most

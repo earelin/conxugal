@@ -21,7 +21,18 @@ reason (R2). It then leaves exactly one decision open and says it is ADR-grade:
 > R7's lifecycle happens automatically or has to be driven, and whether R14's reads are viable
 > at all over hundreds of thousands of operadores.
 
-Four facts constrain the answer.
+Five facts constrain the answer.
+
+**Identity is unambiguous, and the source always supplies it.** Every contract published for an
+Órgano names its awardee together with a **NIF/CIF**, and that identifier — not the name, not a
+similarity score — is what identifies an operador (R3). So the catalogue never has to guess: two
+awards name the same operador exactly when their identifiers are equal under R3's whitespace-
+and case-insensitive comparison, and an operador's identity is settled the moment its first
+contract is stored and never revised as more arrive. This is what makes a **stored** projection
+cheap to keep correct: there is no merge of two rows later discovered to be one, no split of one
+later discovered to be two, and no confidence threshold to tune. A catalogue built on name
+similarity could not be stored this way — it would need every new contract to be able to
+retro-actively re-partition rows already written.
 
 **The volume is asymmetric.** R14 expects hundreds of thousands of operadores over millions of
 contracts, and the reads it names are not point lookups: the operadores list spans the whole
@@ -70,6 +81,21 @@ contract row is written pointing at it. This happens **inside the batch's transa
 contract and its link commit together and a crash cannot leave a stored contract whose operador
 was never created.
 
+**The link stays nullable even though the identifier is always published.** The two specs
+disagree here — SPEC-0005 lists the fiscal identifier among what the source *does* publish,
+while SPEC-0006 R5 defines what happens when one is absent — and this ADR sides with neither by
+making the empty case impossible. A `NOT NULL` foreign key would turn a single malformed
+publication into a failed batch in a job measured in days, and
+[SPEC-0005](../specs/SPEC-0005-import-browse-contratos-menores.md) R27 is explicit that a value
+the system cannot use is not a reason to reject the contract carrying it. The branch is
+therefore expected never to be taken in production and is kept anyway, at the cost of one
+nullable column.
+
+**The operador keeps a surrogate UUID** alongside its unique match key, as
+`OrganoDeContratacion` keeps one alongside its `sourceKey`. Keying rows directly on the
+identifier would save a lookup on the import's hot path, at the price of putting a published
+value in every foreign key — the thing that precedent exists to avoid.
+
 **R4's display fields are maintained on the row, not computed.** A stored contract carries the
 rank R4 defines — its interpreted publication date, undated ranking last, and its contract
 identifier as the tie-break — and the import advances the operador's display name and displayed
@@ -102,6 +128,10 @@ answer depends on measurements R14 has not taken:
 - R14's two hardest reads — the operadores list ordered by display name, and partial name lookup
   — become an index over one table of hundreds of thousands of rows, instead of a
   top-1-per-group over millions of contracts computed before the first row can be ordered.
+- Because identity is the published NIF/CIF rather than a similarity judgement, a row written
+  today is never wrong tomorrow about *which* operador it is. The projection can go stale only in
+  what it **displays** (below), never in how it **partitions** — which is the failure a stored
+  catalogue would otherwise be exposed to and a computed one would not.
 - R3's equivalence is enforced by a unique constraint, so the silent split the spec warns about
   ("matched naively the aggregation fails silently, and a quiet undercount is worse than an
   error") cannot arise from a use case forgetting to normalise.
