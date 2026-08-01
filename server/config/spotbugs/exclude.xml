@@ -16,11 +16,12 @@
     <Field name="organoReconciler"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
-  <!-- The same false positive for the taxonomía use cases: the heuristic reads TermoRepository
-       and OrganoRepository as mutable purely because they declare insert/deleteById, so every
-       constructor-injected port trips it. They are stateless collaborators, not leaked data. -->
+  <!-- The same false positive for the taxonomía, classification and catalogue-read use cases: the
+       heuristic reads TermoRepository and OrganoRepository as mutable purely because they declare
+       insert/deleteById, so every constructor-injected port trips it. They are stateless
+       collaborators, not leaked data. -->
   <Match>
-    <Class name="~gal\.conxugal\.domain\.organo\.taxonomia\.(Create|Rename|Move|Delete)Termo"/>
+    <Class name="~gal\.conxugal\.domain\.organo\.(taxonomia\.)?((Create|Rename|Move|Delete)Termo|ListTermos|AssignOrganoToTermo|ClearOrganoTermo|ListOrganos)"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
 </FindBugsFilter>
