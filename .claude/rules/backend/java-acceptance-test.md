@@ -40,10 +40,14 @@ docker compose --profile app up -d --wait
   on a real remote being up. Assert recorded requests against the stub server when the
   interaction is part of the contract.
 - **Pin all state.** It comes from what the `local` environment seeds (the
-  `demo@local` / `demo` user the journeys log in with). A scenario needing more must
-  seed it from a version-controlled dataset against the instance's database and clean
-  up afterwards — never through the application's own internals, and never depending
-  on rows another test left behind.
+  `demo@local` / `demo` user and the `root@local` / `secret` administrator the journeys
+  log in with). A scenario needing more must seed it from a version-controlled dataset
+  against the instance's database and clean up afterwards — never through the
+  application's own internals, and never depending on rows another test left behind.
+  `ApplicationDatabase` reaches that database over JDBC; it defaults to the local
+  compose stack, so a run against any other instance must pass `-Ddb.url`,
+  `-Ddb.username` and `-Ddb.password` for *that* instance's datastore alongside
+  `-Dapp.baseUrl`, or the run is refused.
 - **Assert with AssertJ, and `PlaywrightAssertions` for the rendered page.** UI copy
   is Galician — assert the Galician string.
 - **Name test methods in snake_case** telling the scenario — e.g.

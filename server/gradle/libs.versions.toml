@@ -17,6 +17,7 @@ pitestGradlePlugin = "1.19.0"
 pitestJunit5Plugin = "1.2.2"
 playwright = "1.61.0"
 pmd = "7.13.0"
+postgresql = "42.7.11"
 restAssured = "6.0.1"
 spotbugs = "4.10.2"
 spotbugsGradlePlugin = "6.5.8"
@@ -63,7 +64,7 @@ micronaut-views-thymeleaf = { module = "io.micronaut.views:micronaut-views-thyme
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter" }
 pitest-gradle-plugin = { module = "info.solidsoft.pitest:info.solidsoft.pitest.gradle.plugin", version.ref = "pitestGradlePlugin" }
 playwright = { module = "com.microsoft.playwright:playwright", version.ref = "playwright" }
-postgresql = { module = "org.postgresql:postgresql" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "restAssured" }
 slf4j-api = { module = "org.slf4j:slf4j-api" }
 snakeyaml = { module = "org.yaml:snakeyaml" }
