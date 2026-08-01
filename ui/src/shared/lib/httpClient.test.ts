@@ -1,5 +1,6 @@
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
 import { apiFetch, HttpError } from './httpClient';
 
 const BASE_URL = 'http://localhost:3000';

@@ -1,12 +1,13 @@
 import { Button, Group, Loader, Stack, Text, Title } from '@mantine/core';
 import { IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
+
 import { isHttpStatus } from '../../../shared/lib/httpError';
 import { strings } from '../../../shared/lib/strings';
 import { ErrorAlert } from '../../../shared/ui/ErrorAlert';
 import { CreateUserModal } from './CreateUserModal';
-import { UsersTable } from './UsersTable';
 import { useUsers } from './users';
+import { UsersTable } from './UsersTable';
 
 function UsersError({ error }: { error: unknown }) {
   const message = isHttpStatus(error, 403)

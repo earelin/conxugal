@@ -80,7 +80,10 @@ failures before committing changes to this module.
 - **Linting** (`eslint.config.js`): beyond `eslint-plugin-boundaries`, the `**/*.{ts,tsx}`
   block layers `@eslint-react/eslint-plugin` (`recommended-typescript`),
   `eslint-plugin-jsx-a11y` (`recommended`), `eslint-plugin-import-x`
-  (`recommended` + `typescript`) and `eslint-plugin-unused-imports`. Two seams worth
+  (`recommended` + `typescript`), `eslint-plugin-sonarjs` (`recommended`),
+  `eslint-plugin-no-unsanitized` (`recommended`) and `eslint-plugin-unused-imports`;
+  `eslint-plugin-react-you-might-not-need-an-effect` (`recommended`, all warnings)
+  rides alongside as its own block. Two seams worth
   knowing: `eslint-plugin-react-hooks` stays the authority on hook usage, so
   eslint-react's duplicate `rules-of-hooks`/`exhaustive-deps` are off; and the
   resolver is configured twice — `import/resolver` for boundaries (which reads the
@@ -88,6 +91,21 @@ failures before committing changes to this module.
   reporting moved from `@typescript-eslint/no-unused-vars` to
   `unused-imports/no-unused-vars`, still an error but with a `^_` opt-out prefix;
   unused *imports* are separately an auto-fixable error.
+  `eslint-plugin-perfectionist` is registered but only its four import/export
+  sorters are on — third-party imports first, then a blank line, then local ones,
+  with a source's `import type` kept next to its value import. Its sorters for
+  objects, JSX props, interfaces, modules and classes stay off: that ordering
+  carries meaning the alphabet does not.
+- **Lint blocks for tests and e2e**: test files (`**/*.test.{ts,tsx}` and
+  `src/test/**`) additionally get `@vitest/eslint-plugin` and
+  `eslint-plugin-testing-library` (`flat/react`). `testing-library/no-container`
+  and `no-node-access` are off there — this module asserts on Mantine's responsive
+  `visible-from-sm` classes and on `aria-hidden`/`inert` decorative wrappers, and
+  an element hidden from the accessibility tree has no Testing Library query to
+  reach it by. A separate `e2e/**` block carries `eslint-plugin-playwright`
+  (`flat/recommended`); that directory does not exist yet, since ADR-0007 puts
+  Playwright in the Java `server/acceptance` module. `tsconfig.node.json` already
+  includes `e2e` so the type-aware rules can parse those files when they arrive.
 - **Utilities**: use [`es-toolkit`](https://es-toolkit.dev) for common array/object/function
   helpers (`debounce`, `groupBy`, `chunk`, etc.) instead of hand-rolling them. Import from
   `es-toolkit` itself, never from `es-toolkit/compat` — that subpath only exists to match

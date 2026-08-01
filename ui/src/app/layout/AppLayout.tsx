@@ -9,6 +9,7 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { NavLink, Outlet } from 'react-router';
+
 import { useCurrentUser } from '../../shared/entities/currentUser';
 import { strings } from '../../shared/lib/strings';
 import { visibleNavSections } from '../nav';
