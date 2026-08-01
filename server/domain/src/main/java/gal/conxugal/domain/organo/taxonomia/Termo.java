@@ -1,4 +1,4 @@
-package gal.conxugal.domain.organo;
+package gal.conxugal.domain.organo.taxonomia;
 
 import io.micronaut.data.annotation.GeneratedValue;
 import io.micronaut.data.annotation.Id;

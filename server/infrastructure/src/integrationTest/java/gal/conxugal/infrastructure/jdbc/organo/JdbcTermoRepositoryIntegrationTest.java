@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.db.api.Assertions.assertThat;
 
-import gal.conxugal.domain.organo.Termo;
-import gal.conxugal.domain.organo.TermoRepository;
+import gal.conxugal.domain.organo.taxonomia.Termo;
+import gal.conxugal.domain.organo.taxonomia.TermoRepository;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
