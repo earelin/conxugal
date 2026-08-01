@@ -21,20 +21,22 @@ export async function resetMappings(): Promise<void> {
   await admin('/requests', { method: 'DELETE' });
 }
 
-interface StubMapping {
-  request: { method: string; urlPath: string };
-  response: { status: number; headers?: Record<string, string>; jsonBody: unknown };
-}
-
 /**
- * Adds a stub for this scenario. Later-added mappings win over the ones loaded
- * from disk, so this overrides a default without editing it.
+ * Serves `body` as JSON for this scenario. Later-added mappings win over the
+ * ones loaded from disk, so this overrides a default without editing it.
  */
-export async function stub(mapping: StubMapping): Promise<void> {
+export async function stubJson(method: string, urlPath: string, body: unknown): Promise<void> {
   await admin('/mappings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(mapping),
+    body: JSON.stringify({
+      request: { method, urlPath },
+      response: {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+        jsonBody: body,
+      },
+    }),
   });
 }
 

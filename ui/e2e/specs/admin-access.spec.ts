@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { nonAdminSession } from '../support/fixtures';
-import { resetMappings, stub } from '../support/wiremock';
+import { resetMappings, stubJson } from '../support/wiremock';
 
 function nav(page: Page) {
   return page.getByRole('navigation', { name: 'Navegación principal' });
@@ -37,14 +37,7 @@ test.describe('Administration area access', () => {
   });
 
   test('hides the administration area from a non-administrator', async ({ page }) => {
-    await stub({
-      request: { method: 'GET', urlPath: '/api/me' },
-      response: {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-        jsonBody: nonAdminSession,
-      },
-    });
+    await stubJson('GET', '/api/me', nonAdminSession);
 
     await page.goto('/');
     await waitForSession(page);

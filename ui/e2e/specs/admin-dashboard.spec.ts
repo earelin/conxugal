@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { resetMappings, stub } from '../support/wiremock';
+import { resetMappings, stubJson } from '../support/wiremock';
 
 /** The two status cards are the only named regions on the page. */
 function statusCard(page: Page, name: string) {
@@ -59,26 +59,19 @@ test.describe('Administration dashboard', () => {
     await page.goto('/administracion');
     await expect(page.getByText('Servizo operativo')).toBeVisible();
 
-    await stub({
-      request: { method: 'GET', urlPath: '/api/admin/system-status' },
-      response: {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-        jsonBody: {
-          status: 'DEGRADED',
-          datastore: { reachable: false },
-          checkedAt: '2026-07-31T12:50:00Z',
-          application: { version: '0.1.0-SNAPSHOT', environment: 'local' },
-          runtime: {
-            javaVersion: '25.0.1',
-            javaVendor: 'Eclipse Adoptium',
-            uptimeMillis: 273420000,
-            memoryUsedBytes: 536870912,
-            memoryMaxBytes: 1073741824,
-            osName: 'Linux',
-            osArch: 'amd64',
-          },
-        },
+    await stubJson('GET', '/api/admin/system-status', {
+      status: 'DEGRADED',
+      datastore: { reachable: false },
+      checkedAt: '2026-07-31T12:50:00Z',
+      application: { version: '0.1.0-SNAPSHOT', environment: 'local' },
+      runtime: {
+        javaVersion: '25.0.1',
+        javaVendor: 'Eclipse Adoptium',
+        uptimeMillis: 273420000,
+        memoryUsedBytes: 536870912,
+        memoryMaxBytes: 1073741824,
+        osName: 'Linux',
+        osArch: 'amd64',
       },
     });
 
