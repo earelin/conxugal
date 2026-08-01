@@ -66,7 +66,10 @@ de facer commit (CI vólveos comprobar ao facer push):
 
 - `scripts/docs-lint.sh` — formato Markdown, ligazóns internas e diagramas Mermaid de
   `docs/` e dos `*.md` da raíz.
-- `scripts/actions-lint.sh` — os fluxos de GitHub Actions de `.github/workflows/`.
+- `scripts/actions-lint.sh` — os fluxos de GitHub Actions de `.github/workflows/`: sintaxe
+  e semántica con `actionlint`, e auditoría de seguridade (referencias a accións sen fixar,
+  credenciais persistidas, permisos excesivos) con `zizmor`, que tamén revisa
+  `.github/dependabot.yml`.
 - `scripts/openapi-lint.sh` — o contrato REST de `docs/api/openapi.yaml`
   ([ADR-0010](docs/architecture/0010-design-first-openapi-contract.md)).
 
@@ -79,11 +82,13 @@ brew install lychee                                # ligazóns internas (https:/
 
 # actions-lint.sh
 brew install actionlint shellcheck                 # workflows + scripts `run:` embebidos
+brew install zizmor                                # auditoría de seguridade (https://docs.zizmor.sh)
 
 # openapi-lint.sh
 brew install vacuum                                # contrato OpenAPI (docs/api/openapi.yaml)
 ```
 
-Fóra de macOS, instala `lychee`, `actionlint`, `shellcheck` e `vacuum` co xestor de
-paquetes do teu sistema, dende as súas páxinas de publicación, ou con
+Fóra de macOS, instala `lychee`, `actionlint`, `shellcheck`, `zizmor` e `vacuum` co xestor
+de paquetes do teu sistema, dende as súas páxinas de publicación, con
+`uv tool install zizmor` no caso de `zizmor`, ou con
 `curl -fsSL https://quobix.com/scripts/install_vacuum.sh | sh` no caso de `vacuum`.

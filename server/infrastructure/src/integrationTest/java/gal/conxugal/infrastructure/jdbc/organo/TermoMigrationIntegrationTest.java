@@ -20,6 +20,7 @@ import java.util.UUID;
 import javax.sql.DataSource;
 import org.assertj.db.type.AssertDbConnection;
 import org.assertj.db.type.AssertDbConnectionFactory;
+import org.assertj.db.type.Table;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -111,12 +112,20 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
-  void delete_is_rejected_while_an_organo_is_placed_in_the_term() throws Exception {
+  void delete_unclassifies_the_organos_placed_in_the_term_without_deleting_them() throws Exception {
     UUID termoId = insertTermo("Deportes", null);
     insertOrgano("consorcio-x", "Consorcio X", termoId);
 
-    assertThatThrownBy(() -> deleteTermo(termoId))
-        .isInstanceOfSatisfying(SQLException.class, this::assertViolatesPlacementForeignKey);
+    deleteTermo(termoId);
+
+    // ON DELETE SET NULL, never CASCADE: R16 returns the Órgano to unclassified and keeps it.
+    AssertDbConnection assertDbConnection = AssertDbConnectionFactory.of(dataSource).create();
+    Table organos = assertDbConnection.table("organo_contratacion").build();
+    assertThat(organos).hasNumberOfRows(1);
+    assertThat(organos)
+        .row(0)
+            .value("source_key").isEqualTo("consorcio-x")
+            .value("termo_id").isNull();
   }
 
   @Test
@@ -199,13 +208,9 @@ class TermoMigrationIntegrationTest implements TestPropertyProvider {
     assertViolatesForeignKey(exception, "termo_parent_id_fkey");
   }
 
-  private void assertViolatesPlacementForeignKey(SQLException exception) {
-    assertViolatesForeignKey(exception, "organo_contratacion_termo_id_fkey");
-  }
-
   private void assertViolatesForeignKey(SQLException exception, String constraintName) {
-    // SQLSTATE 23503 is foreign_key_violation — the delete was refused rather than
-    // cascading, which is the whole point of leaving both keys without an ON DELETE action.
+    // SQLSTATE 23503 is foreign_key_violation — the delete was refused rather than cascading,
+    // which is the whole point of leaving the parent key without an ON DELETE action.
     assertThat(exception.getSQLState()).isEqualTo("23503");
     assertThat(exception.getMessage()).contains(constraintName);
   }
