@@ -57,6 +57,7 @@ testing {
                 implementation(libs.micronaut.http.client)
                 implementation(libs.micronaut.serde.jackson)
                 implementation(libs.wiremock.testcontainers)
+                implementation(libs.wiremock.standalone)
             }
 
             targets {

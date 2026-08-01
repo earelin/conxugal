@@ -1,8 +1,17 @@
 package gal.conxugal.infrastructure.http.contratosdegalicia;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.request;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.matching.RequestPatternBuilder.newRequestPattern;
+import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.http.RequestMethod;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import gal.conxugal.infrastructure.http.RetryAfterExceedsMaximumWaitException;
 import gal.conxugal.infrastructure.http.UserAgent;
 import io.micronaut.context.ApplicationContext;
@@ -11,17 +20,11 @@ import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
 import jakarta.inject.Inject;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -44,6 +47,7 @@ class ResilientClientIntegrationTest implements TestPropertyProvider {
 
   private static final String ORGANOS_PATH = "/organos";
   private static final String SEARCH_PATH = "/search";
+  private static final String RETRY_AFTER = "Retry-After";
   private static final Duration RATE_LIMIT_REFRESH_PERIOD = Duration.ofMillis(500);
   private static final Duration RETRY_AFTER_MAXIMUM_WAIT = Duration.ofSeconds(3);
   private static final long HONOURED_RETRY_AFTER_SECONDS = 2;
@@ -51,7 +55,7 @@ class ResilientClientIntegrationTest implements TestPropertyProvider {
   @Container
   static WireMockContainer wireMock = new WireMockContainer(WireMockContainer.OFFICIAL_IMAGE_NAME);
 
-  private final HttpClient adminClient = HttpClient.newHttpClient();
+  private WireMock source;
 
   @Inject ResilientTestClient client;
   @Inject ApplicationContext applicationContext;
@@ -80,23 +84,21 @@ class ResilientClientIntegrationTest implements TestPropertyProvider {
   }
 
   @BeforeEach
-  void resetStubs() throws Exception {
-    admin("/__admin/reset", HttpRequest.BodyPublishers.noBody());
-  }
-
-  @AfterAll
-  void closeAdminClient() {
-    adminClient.close();
+  void resetSource() {
+    source = new WireMock(wireMock.getHost(), wireMock.getPort());
+    source.resetMappings();
+    source.resetRequests();
+    source.resetScenarios();
   }
 
   @Test
-  void retries_transient_failures_and_returns_the_eventual_success() throws Exception {
-    stubStatusThenSuccess("transient", "GET", ORGANOS_PATH, 503, null);
+  void retries_transient_failures_and_returns_the_eventual_success() {
+    stubFailingOnceThenOk("transient", "GET", ORGANOS_PATH, 503, null);
 
     byte[] body = client.organos();
 
     assertThat(new String(body, StandardCharsets.UTF_8)).isEqualTo("ok");
-    assertThat(recordedRequestCount("GET", ORGANOS_PATH)).isEqualTo(2);
+    assertThat(requestsTo("GET", ORGANOS_PATH)).hasSize(2);
   }
 
   /**
@@ -105,37 +107,37 @@ class ResilientClientIntegrationTest implements TestPropertyProvider {
    * policy's refusal to retry a permanent status.
    */
   @Test
-  void does_not_retry_permanent_statuses() throws Exception {
+  void does_not_retry_permanent_statuses() {
     stubStatus("GET", ORGANOS_PATH, 403, null);
 
     assertThatThrownBy(() -> client.organos()).isInstanceOf(HttpClientResponseException.class);
 
-    assertThat(recordedRequestCount("GET", ORGANOS_PATH)).isEqualTo(1);
+    assertThat(requestsTo("GET", ORGANOS_PATH)).hasSize(1);
   }
 
   @Test
-  void does_not_retry_post_without_idempotent_declaration() throws Exception {
+  void does_not_retry_post_without_idempotent_declaration() {
     stubStatus("POST", SEARCH_PATH, 503, null);
 
     assertThatThrownBy(() -> client.search("obras"))
         .isInstanceOf(HttpClientResponseException.class);
 
-    assertThat(recordedRequestCount("POST", SEARCH_PATH)).isEqualTo(1);
+    assertThat(requestsTo("POST", SEARCH_PATH)).hasSize(1);
   }
 
   @Test
-  void retries_post_declared_idempotent() throws Exception {
-    stubStatusThenSuccess("idempotent-post", "POST", SEARCH_PATH, 503, null);
+  void retries_post_declared_idempotent() {
+    stubFailingOnceThenOk("idempotent-post", "POST", SEARCH_PATH, 503, null);
 
     byte[] body = client.searchDeclaredIdempotent("obras");
 
     assertThat(new String(body, StandardCharsets.UTF_8)).isEqualTo("ok");
-    assertThat(recordedRequestCount("POST", SEARCH_PATH)).isEqualTo(2);
+    assertThat(requestsTo("POST", SEARCH_PATH)).hasSize(2);
   }
 
   @Test
-  void waits_out_retry_after_within_the_configured_ceiling() throws Exception {
-    stubStatusThenSuccess(
+  void waits_out_retry_after_within_the_configured_ceiling() {
+    stubFailingOnceThenOk(
         "retry-after", "GET", ORGANOS_PATH, 503, String.valueOf(HONOURED_RETRY_AFTER_SECONDS));
 
     long startedAt = System.nanoTime();
@@ -146,14 +148,13 @@ class ResilientClientIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
-  void aborts_rather_than_waiting_out_retry_after_beyond_the_ceiling() throws Exception {
-    stubStatus(
-        "GET", ORGANOS_PATH, 503, String.valueOf(RETRY_AFTER_MAXIMUM_WAIT.toSeconds() + 1));
+  void aborts_rather_than_waiting_out_retry_after_beyond_the_ceiling() {
+    stubStatus("GET", ORGANOS_PATH, 503, String.valueOf(RETRY_AFTER_MAXIMUM_WAIT.toSeconds() + 1));
 
     assertThatThrownBy(() -> client.organos())
         .isInstanceOf(RetryAfterExceedsMaximumWaitException.class);
 
-    assertThat(recordedRequestCount("GET", ORGANOS_PATH)).isEqualTo(1);
+    assertThat(requestsTo("GET", ORGANOS_PATH)).hasSize(1);
   }
 
   /**
@@ -163,7 +164,7 @@ class ResilientClientIntegrationTest implements TestPropertyProvider {
    * property of the limiter rather than of how warm the JVM happened to be.
    */
   @Test
-  void paces_requests_no_faster_than_the_configured_rate() throws Exception {
+  void paces_requests_no_faster_than_the_configured_rate() {
     stubStatus("GET", ORGANOS_PATH, 200, null);
     client.organos();
 
@@ -176,89 +177,43 @@ class ResilientClientIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
-  void every_outgoing_request_carries_the_identifying_user_agent() throws Exception {
+  void every_outgoing_request_carries_the_identifying_user_agent() {
     stubStatus("GET", ORGANOS_PATH, 200, null);
 
     client.organos();
 
-    assertThat(requestJournal())
-        .contains(applicationContext.getRequiredProperty(UserAgent.PROPERTY, String.class));
+    assertThat(requestsTo("GET", ORGANOS_PATH))
+        .singleElement()
+        .extracting(recorded -> recorded.getHeader("User-Agent"))
+        .isEqualTo(applicationContext.getRequiredProperty(UserAgent.PROPERTY, String.class));
   }
 
-  private void stubStatus(String method, String path, int status, String retryAfter)
-      throws Exception {
-    registerMapping(
-        """
-        { "request": { "method": "%s", "url": "%s" },
-          "response": { "status": %d, "body": "ok"%s }
-        }
-        """
-            .formatted(method, path, status, retryAfterHeader(retryAfter)));
+  private void stubStatus(String method, String path, int status, String retryAfter) {
+    source.register(
+        request(method, urlEqualTo(path)).willReturn(response(status, retryAfter).withBody("ok")));
   }
 
-  private void stubStatusThenSuccess(
-      String scenario, String method, String path, int failingStatus, String retryAfter)
-      throws Exception {
-    registerMapping(
-        """
-        { "scenarioName": "%s",
-          "requiredScenarioState": "Started",
-          "newScenarioState": "failed-once",
-          "request": { "method": "%s", "url": "%s" },
-          "response": { "status": %d%s }
-        }
-        """
-            .formatted(scenario, method, path, failingStatus, retryAfterHeader(retryAfter)));
-    registerMapping(
-        """
-        { "scenarioName": "%s",
-          "requiredScenarioState": "failed-once",
-          "request": { "method": "%s", "url": "%s" },
-          "response": { "status": 200, "body": "ok" }
-        }
-        """
-            .formatted(scenario, method, path));
+  private void stubFailingOnceThenOk(
+      String scenario, String method, String path, int failingStatus, String retryAfter) {
+    source.register(
+        request(method, urlEqualTo(path))
+            .inScenario(scenario)
+            .whenScenarioStateIs(STARTED)
+            .willSetStateTo("failed-once")
+            .willReturn(response(failingStatus, retryAfter)));
+    source.register(
+        request(method, urlEqualTo(path))
+            .inScenario(scenario)
+            .whenScenarioStateIs("failed-once")
+            .willReturn(aResponse().withStatus(200).withBody("ok")));
   }
 
-  private static String retryAfterHeader(String retryAfter) {
-    return retryAfter == null ? "" : ", \"headers\": { \"Retry-After\": \"%s\" }".formatted(retryAfter);
+  private static ResponseDefinitionBuilder response(int status, String retryAfter) {
+    ResponseDefinitionBuilder response = aResponse().withStatus(status);
+    return retryAfter == null ? response : response.withHeader(RETRY_AFTER, retryAfter);
   }
 
-  private void registerMapping(String json) throws Exception {
-    HttpResponse<String> response = admin("/__admin/mappings", HttpRequest.BodyPublishers.ofString(json));
-    assertThat(response.statusCode()).isEqualTo(201);
-  }
-
-  private int recordedRequestCount(String method, String path) throws Exception {
-    HttpResponse<String> response =
-        admin(
-            "/__admin/requests/count",
-            HttpRequest.BodyPublishers.ofString(
-                "{ \"method\": \"%s\", \"url\": \"%s\" }".formatted(method, path)));
-    Matcher matcher = Pattern.compile("\"count\"\\s*:\\s*(\\d+)").matcher(response.body());
-    if (!matcher.find()) {
-      throw new IllegalStateException(
-          "Unexpected response from WireMock request count: %s".formatted(response.body()));
-    }
-    return Integer.parseInt(matcher.group(1));
-  }
-
-  private String requestJournal() throws Exception {
-    return adminClient
-        .send(
-            HttpRequest.newBuilder(URI.create("%s/__admin/requests".formatted(wireMock.getBaseUrl())))
-                .GET()
-                .build(),
-            HttpResponse.BodyHandlers.ofString())
-        .body();
-  }
-
-  private HttpResponse<String> admin(String path, HttpRequest.BodyPublisher body) throws Exception {
-    return adminClient.send(
-        HttpRequest.newBuilder(URI.create("%s%s".formatted(wireMock.getBaseUrl(), path)))
-            .POST(body)
-            .header("Content-Type", "application/json")
-            .build(),
-        HttpResponse.BodyHandlers.ofString());
+  private List<LoggedRequest> requestsTo(String method, String path) {
+    return source.find(newRequestPattern(RequestMethod.fromString(method), urlEqualTo(path)));
   }
 }
