@@ -4,6 +4,8 @@ updates:
     directory: "/ui"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
     groups:
       mantine:
         patterns:
@@ -24,6 +26,10 @@ updates:
       postcss:
         patterns:
           - "postcss*"
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
     commit-message:
       prefix: "build"
 
@@ -31,6 +37,8 @@ updates:
     directory: "/server"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
     groups:
       minor-and-patch:
         update-types:
@@ -43,5 +51,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
     commit-message:
       prefix: "build"

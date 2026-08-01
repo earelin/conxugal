@@ -2,7 +2,7 @@
 feat: FEAT-0007
 domain: backend
 adrs: [0002]
-status: todo
+status: done
 depends_on: [TASK-0001]
 ---
 
@@ -30,31 +30,36 @@ in `domain`, not in a controller.
   (roots being siblings of each other). It binds `CreateTermo`, `RenameTermo` and the
   `MoveTermo` that lands a term beside a new set of siblings. Length and blankness are
   rejected at the edge by the request record; the sibling comparison lives here, where the
-  repository read it needs is available, and TASK-0001's unique index is what makes it
-  race-proof — this check exists to produce a civil refusal, not to be the only guard.
+  repository read it needs is available. TASK-0001's unique index stays underneath it as an
+  integrity backstop, but this check is what produces the refusal a caller sees.
 - **This task owns the feature's four term-scoped rejection exceptions** — unknown term,
   cycle, term still has children, duplicate sibling name — as distinct domain types in
-  `domain.organo`, so [TASK-0006](TASK-0006-taxonomia-admin-endpoints.md) can map each to
-  its own status and problem type without inspecting messages.
+  `domain.organo.taxonomia`, so [TASK-0006](TASK-0006-taxonomia-admin-endpoints.md) can map
+  each to its own status and problem type without inspecting messages.
   [TASK-0004](TASK-0004-organo-classification-use-cases.md) reuses the unknown-**term** type
   rather than declaring a second one; it is listed here so two tasks picked up in parallel
   do not each invent one. The fifth type in the feature's failure contract,
   **unknown Órgano, is TASK-0004's** and lives in `domain.organo` — it is about an Órgano,
-  not the taxonomy.
-- **Tree-shape mutations serialise.** `MoveTermo` and `DeleteTermo` carry `@Transactional`
-  (`io.micronaut.transaction.annotation`) on the use-case method — the same boundary
-  `SetUserEnabled` and `CreateUser` already use — and call `lockTaxonomia` before their first
-  read, holding it through the write. **The annotation is not optional decoration**: the
-  lock is transaction-scoped, so without an ambient transaction it is released inside its
-  own statement and serialises nothing, while every single-threaded test still passes. For
-  `MoveTermo` this is what
-  makes the cycle guard sound at all — a check-then-write over a tree another admin is
-  reshaping is not a guard (see the feature's *Edge cases*). For `DeleteTermo` the same
-  transaction also covers the placement clearing, so a concurrent reader never sees an
-  Órgano pointing at a term that is already gone. `CreateTermo` and `RenameTermo` do not
-  reshape the tree and take no lock: the only thing they can race on is the sibling-name
-  rule, and the unique index settles that in the database rather than by making every
-  create wait.
+  not the taxonomy. Every one of them is raised by a check in this task; none comes from
+  translating a database error.
+- **`DeleteTermo` is one statement, so it needs no transaction.** This task carries the
+  migration that alters `organo_contratacion_termo_id_fkey` to `ON DELETE SET NULL`, so the
+  database returns the placed Órganos to unclassified as part of the delete itself. That
+  reverses the feature's earlier call to clear them in domain code over a `NO ACTION` key —
+  see *Placement and classification* for why — and with it go `@Transactional`, the
+  `OrganoRepository.clearPlacementsByTermo` port operation that existed only to serve it,
+  its `@Query` in `JdbcOrganoRepository`, and the test that provoked a failure between the
+  two writes. `CASCADE` stays forbidden: it would delete Órganos, which R16 prohibits.
+- **The child-term refusal stays in the use case.** The parent key on `termo.parent_id`
+  keeps its `NO ACTION` — cascading there would silently remove a whole subtree — so
+  `DeleteTermo` asks `existsByParentId` and refuses, with the key behind it as a backstop.
+- **No lock, and the check-then-write window is accepted.** Every rule here reads and then
+  writes, so two admins acting in the same instant could in principle both pass. The
+  taxonomy is an `ADMIN`-only table of a few dozen rows edited a handful of times in its
+  life; serialising every mutation to close that window costs more machinery than the risk
+  warrants (see the feature's *Edge cases*). The schema's unique index and foreign keys
+  remain as integrity backstops, and a violation reaching the adapter surfaces as a 500 —
+  accepted, not translated.
 
 ## Acceptance criteria
 - A term can be created at the root and under a parent, renamed, and moved to a different
@@ -76,15 +81,8 @@ in `domain`, not in a controller.
   under a different parent is accepted. (SPEC-0004 #14)
 - Each rejection surfaces as its own exception type, and unknown-term is a single type
   shared with [TASK-0004](TASK-0004-organo-classification-use-cases.md), not a second one.
-- `MoveTermo` and `DeleteTermo` take the taxonomy lock before their first read; `CreateTermo`
-  and `RenameTermo` do not. Provable against the test double by recording the call order —
-  a guard that reads before locking is the bug this exists to prevent, and it looks
-  identical to a correct one in a single-threaded test otherwise.
-- **The serialisation is proven for real**, not only by call order: an integration test
-  drives the injected `MoveTermo` from concurrent threads against a real database and shows
-  that two moves which would jointly create a cycle cannot both commit, following
-  `SetUserEnabledConcurrencyIntegrationTest`. This is the only criterion in the feature that
-  can fail when `@Transactional` is missing — every other test passes with the lock doing
-  nothing at all.
-- Unit-tested against a test double of `TermoRepository` / `OrganoRepository`; the
-  cycle guard is tested at depth, not only one level down.
+- Deleting a term through `DeleteTermo` unclassifies the Órganos placed in it, leaves every
+  one of them in the catalogue, and disturbs no other term's placements — proven against a
+  real database, since the clearing is the foreign key's rather than the use case's.
+- Unit-tested against a test double of `TermoRepository`; the cycle guard is tested at
+  depth, not only one level down, and terminates on an ancestry that already loops.

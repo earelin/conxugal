@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 #
-# actions-lint.sh — verify the GitHub Actions workflows under
-# .github/workflows/ with actionlint, which checks YAML syntax, GH Actions
-# semantics (job/step schema, expression syntax, action inputs) and embedded
-# `run:` shell scripts (via shellcheck, when installed).
+# actions-lint.sh — verify the GitHub Actions workflows under .github/workflows/
+# with two complementary tools:
+#
+#   actionlint — YAML syntax, GH Actions semantics (job/step schema, expression
+#     syntax, action inputs) and embedded `run:` shell scripts (via shellcheck,
+#     when installed).
+#   zizmor — supply-chain and privilege auditing: unpinned action references,
+#     persisted checkout credentials, over-broad GITHUB_TOKEN scopes, template
+#     injection. Also audits .github/dependabot.yml, which actionlint ignores.
 #
 # No-op (pass) if .github/workflows/ doesn't exist or has no workflow files.
 #
@@ -53,7 +58,29 @@ lint_workflows() {
   fi
 }
 
+# --- GitHub Actions security --------------------------------------------------
+audit_workflows() {
+  section "GitHub Actions security (zizmor)"
+
+  if ! have zizmor; then
+    printf '%sSKIP%s zizmor not found — install from https://docs.zizmor.sh/installation (brew install zizmor)\n' "$yellow" "$reset"
+    FAILED+=("actions-security (tool missing)")
+    return
+  fi
+
+  # zizmor discovers the workflows and dependabot.yml itself, and picks up
+  # GH_TOKEN when set to enable the audits that need to resolve action refs
+  # upstream (impostor-commit, stale-action-refs).
+  if zizmor .; then
+    printf '%sOK%s workflow security\n' "$green" "$reset"
+  else
+    printf '%sFAIL%s workflow security\n' "$red" "$reset"
+    FAILED+=("actions-security")
+  fi
+}
+
 lint_workflows
+audit_workflows
 
 section "Summary"
 if [[ ${#FAILED[@]} -eq 0 ]]; then

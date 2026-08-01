@@ -38,11 +38,4 @@ public interface OrganoRepository {
 
   /** Sets (non-null) or clears (null) the Órgano's single taxonomy placement. */
   void updateTermo(@Id UUID id, @Nullable UUID termoId);
-
-  /**
-   * Clears every Órgano's placement pointing at the given term. Matching and clearing the
-   * same column has no derived-method form, so the {@code infrastructure} implementation
-   * backs this with an explicit query — the SQL itself stays out of {@code domain}.
-   */
-  void clearPlacementsByTermo(UUID termoId);
 }

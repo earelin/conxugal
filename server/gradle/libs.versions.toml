@@ -17,6 +17,8 @@ pitestGradlePlugin = "1.19.0"
 pitestJunit5Plugin = "1.2.2"
 playwright = "1.61.0"
 pmd = "7.13.0"
+postgresql = "42.7.13"
+resilience4j = "2.4.0"
 restAssured = "6.0.1"
 spotbugs = "4.10.2"
 spotbugsGradlePlugin = "6.5.8"
@@ -63,7 +65,11 @@ micronaut-views-thymeleaf = { module = "io.micronaut.views:micronaut-views-thyme
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter" }
 pitest-gradle-plugin = { module = "info.solidsoft.pitest:info.solidsoft.pitest.gradle.plugin", version.ref = "pitestGradlePlugin" }
 playwright = { module = "com.microsoft.playwright:playwright", version.ref = "playwright" }
-postgresql = { module = "org.postgresql:postgresql" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+resilience4j-bom = { module = "io.github.resilience4j:resilience4j-bom", version.ref = "resilience4j" }
+resilience4j-circuitbreaker = { module = "io.github.resilience4j:resilience4j-circuitbreaker" }
+resilience4j-ratelimiter = { module = "io.github.resilience4j:resilience4j-ratelimiter" }
+resilience4j-retry = { module = "io.github.resilience4j:resilience4j-retry" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "restAssured" }
 slf4j-api = { module = "org.slf4j:slf4j-api" }
 snakeyaml = { module = "org.yaml:snakeyaml" }
@@ -71,6 +77,7 @@ spotbugs-gradle-plugin = { module = "com.github.spotbugs.snom:spotbugs-gradle-pl
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
 wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
+wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 wiremock-testcontainers = { module = "org.wiremock.integrations.testcontainers:wiremock-testcontainers-module", version.ref = "wiremockTestcontainers" }
 
 [plugins]

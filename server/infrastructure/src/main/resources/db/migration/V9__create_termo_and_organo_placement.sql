@@ -10,8 +10,8 @@ CREATE TABLE termo (
     -- No ON DELETE action: CASCADE would let one delete remove a whole subtree,
     -- defeating the rule that a delete is rejected while the term has children.
     parent_id UUID CONSTRAINT termo_parent_id_fkey REFERENCES termo (id),
-    -- The one cycle a serialising lock cannot catch: it needs no second row, so there is
-    -- no concurrent window for the use case's own check to miss.
+    -- The one cycle the schema can reject outright: it needs no second row, so no read
+    -- is involved. A multi-row cycle is MoveTermo's own check to make.
     CONSTRAINT termo_parent_not_self CHECK (parent_id IS DISTINCT FROM id)
 );
 
@@ -34,5 +34,5 @@ ALTER TABLE organo_contratacion
 
 -- Postgres does not auto-index foreign key columns; without this, clearing every
 -- placement for a deleted term and the FK's own referential check both scan the
--- whole catalogue while the taxonomy advisory lock is held.
+-- whole catalogue.
 CREATE INDEX organo_contratacion_termo_id_idx ON organo_contratacion (termo_id);

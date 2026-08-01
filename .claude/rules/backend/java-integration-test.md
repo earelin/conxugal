@@ -24,9 +24,16 @@ needs a Docker daemon; `application`'s only needs a JVM.
   context by implementing `TestPropertyProvider` — starting the container inside
   `getProperties()` if it isn't running yet, since that runs before the JUnit
   extension.
-- **Assert database state with AssertJ DB**, not by round-tripping through the code
-  under test: `AssertDbConnectionFactory.of(dataSource).create().table("...").build()`,
-  then `assertThat(table).row(0).value("column")...`. Everything else is AssertJ.
+- **Assert what a write left in the table with AssertJ DB, never by reading it back
+  through the repository under test.** A `findById` after an `insert`/`update`/`delete`
+  only shows two methods of the same adapter agreeing — it cannot see the rows the
+  statement should not have touched, so an unscoped `UPDATE`/`DELETE` still passes.
+  Build the table with `AssertDbConnectionFactory.of(dataSource).create().table("...")`,
+  `.columnsToOrder(new Table.Order[] {Table.Order.asc("name")})` (an array, not varargs)
+  so `row(n)` is stable, then assert `hasNumberOfRows(n)` and **every** row the test set
+  up, not just the one written to. Exception: when the read *is* the method under test
+  (`findById`, `findAllOrderByName`, ordering), assert its return value. Everything else
+  is AssertJ.
 - **Test controllers with the embedded server and mocked collaborators.** Under
   `@MicronautTest`, replace domain collaborators with `@MockBean(Type.class)` factory
   methods returning `mock(Type.class)`, so only the HTTP layer — routing,

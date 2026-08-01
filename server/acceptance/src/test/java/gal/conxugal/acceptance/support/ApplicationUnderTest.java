@@ -8,7 +8,8 @@ package gal.conxugal.acceptance.support;
  */
 public final class ApplicationUnderTest {
 
-  public static final String BASE_URI = System.getProperty("app.baseUrl", "http://localhost:8080");
+  public static final String DEFAULT_BASE_URI = "http://localhost:8080";
+  public static final String BASE_URI = System.getProperty("app.baseUrl", DEFAULT_BASE_URI);
 
   private ApplicationUnderTest() {
   }
