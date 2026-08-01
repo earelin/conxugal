@@ -77,6 +77,17 @@ failures before committing changes to this module.
   build` and CI type-checking go through `tsc7`; only the programmatic compiler
   API (e.g. ESLint's type-aware rules) should ever resolve the aliased TS 6
   package.
+- **Linting** (`eslint.config.js`): beyond `eslint-plugin-boundaries`, the `**/*.{ts,tsx}`
+  block layers `@eslint-react/eslint-plugin` (`recommended-typescript`),
+  `eslint-plugin-jsx-a11y` (`recommended`), `eslint-plugin-import-x`
+  (`recommended` + `typescript`) and `eslint-plugin-unused-imports`. Two seams worth
+  knowing: `eslint-plugin-react-hooks` stays the authority on hook usage, so
+  eslint-react's duplicate `rules-of-hooks`/`exhaustive-deps` are off; and the
+  resolver is configured twice — `import/resolver` for boundaries (which reads the
+  eslint-plugin-import key) and `import-x/resolver-next` for import-x. Unused-variable
+  reporting moved from `@typescript-eslint/no-unused-vars` to
+  `unused-imports/no-unused-vars`, still an error but with a `^_` opt-out prefix;
+  unused *imports* are separately an auto-fixable error.
 - **Utilities**: use [`es-toolkit`](https://es-toolkit.dev) for common array/object/function
   helpers (`debounce`, `groupBy`, `chunk`, etc.) instead of hand-rolling them. Import from
   `es-toolkit` itself, never from `es-toolkit/compat` — that subpath only exists to match
