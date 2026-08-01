@@ -6,7 +6,7 @@ supersedes: null
 superseded_by: null
 ---
 
-# 0017. Frontend acceptance tests: the SPA driven against a stubbed API
+# 0018. Frontend acceptance tests: the SPA driven against a stubbed API
 
 ## Status
 Accepted

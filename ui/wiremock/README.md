@@ -3,7 +3,7 @@
 Default stub state for the `/api` contract, served by the `wiremock` service in
 [`../docker-compose.yml`](../docker-compose.yml) and consumed by `npm run dev`,
 `npm run preview` and the acceptance suite in [`../e2e`](../e2e) alike
-(**[ADR-0017](../../docs/architecture/0017-frontend-acceptance-tests-against-a-stubbed-api.md)**).
+(**[ADR-0018](../../docs/architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md)**).
 
 Payloads mirror the examples in
 [`docs/api/openapi.yaml`](../../docs/api/openapi.yaml) — keep them in step when the

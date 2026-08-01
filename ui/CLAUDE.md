@@ -72,7 +72,7 @@ failures before committing changes to this module.
   hardcoded literals, so assertions stay in sync with `strings.ts` changes.
   Vitest's `include` is scoped to `src/**` so it doesn't collect the Playwright
   specs in `e2e/`.
-- **Local API / acceptance tests** (ADR-0017): the app calls same-origin `/api`
+- **Local API / acceptance tests** (ADR-0018): the app calls same-origin `/api`
   paths, and Vite proxies them (dev *and* preview) to a WireMock container in
   `docker-compose.yml`, so the admin area runs with no backend. Stub state lives
   in `wiremock/mappings/`, shared by `npm run dev`, `npm run preview` and the

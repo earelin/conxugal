@@ -31,7 +31,7 @@ because in production one server serves both the assets and the API (ADR-0003,
 ADR-0006). Locally that origin is a **WireMock** container
 ([`docker-compose.yml`](docker-compose.yml)) that Vite proxies to, so the whole app —
 the `ADMIN`-only administration area included — runs with no backend and no database
-([ADR-0017](../docs/architecture/0017-frontend-acceptance-tests-against-a-stubbed-api.md)).
+([ADR-0018](../docs/architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md)).
 
 Its stub state lives in [`wiremock/mappings/`](wiremock/README.md) and is shared by
 `npm run dev`, `npm run preview` and the acceptance suite. To develop against a real

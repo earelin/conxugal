@@ -1,13 +1,13 @@
 ---
 feat: FEAT-0004
-adrs: [0017]
+adrs: [0018]
 status: done
 depends_on: [TASK-0005, TASK-0006]
 ---
 
 # Frontend acceptance tests for the administration area
 
-Governed by [ADR-0017](../../architecture/0017-frontend-acceptance-tests-against-a-stubbed-api.md). Black-box Playwright coverage of the admin screens delivered by [TASK-0005](TASK-0005-admin-ui-shell-and-dashboard.md) and [TASK-0006](TASK-0006-user-administration-ui.md), driving the built SPA with the API replaced by WireMock — no server and no database.
+Governed by [ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md). Black-box Playwright coverage of the admin screens delivered by [TASK-0005](TASK-0005-admin-ui-shell-and-dashboard.md) and [TASK-0006](TASK-0006-user-administration-ui.md), driving the built SPA with the API replaced by WireMock — no server and no database.
 
 ## Scope
 - A WireMock service in `ui/docker-compose.yml` with versioned default mappings in `ui/wiremock/mappings/`, covering `GET /api/me`, `GET /api/admin/system-status`, `GET /api/admin/users`, `POST /api/admin/users`, `POST /api/admin/users/{id}/enabled` and the `GET /api/admin/metrics` SSE stream. Payloads derived from the examples in [`docs/api/openapi.yaml`](../../api/openapi.yaml).
@@ -19,7 +19,7 @@ Governed by [ADR-0017](../../architecture/0017-frontend-acceptance-tests-against
 **Out of scope:** a CI job for the suite (`ui-ci.yml` stays lint/test/build), error and edge-path scenarios beyond the ones above, and any assertion about server-side authorization — the real gate is the server's and is covered by the backend suite.
 
 ## Acceptance criteria
-- Running `docker compose up -d` and `npm run dev` from `ui/` renders the administration area end to end with no backend or database running. ([ADR-0017](../../architecture/0017-frontend-acceptance-tests-against-a-stubbed-api.md))
+- Running `docker compose up -d` and `npm run dev` from `ui/` renders the administration area end to end with no backend or database running. ([ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md))
 - Opening the dashboard as an administrator shows the overall service state, the datastore's reachability, and the note that status never includes credentials. ([SPEC-0003](../../specs/SPEC-0003-administration-area.md) #2, #4)
 - The user list shows every account — enabled and disabled — with its email, role, state, created date and last login, and an account that has never logged in renders *Nunca*. (SPEC-0003 #5, #10)
 - Creating an account through the form reveals the generated initial password once, sends `{email, role}` to the create endpoint, and adds the account to the list. (SPEC-0003 #6, #12)
