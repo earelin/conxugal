@@ -21,6 +21,11 @@ export default defineConfig({
   },
   preview: {
     port: 4173,
+    // playwright.config.ts waits on this exact port. Without strictPort Vite
+    // silently picks another when 4173 is taken, and the suite either times out
+    // waiting or — locally, where it may reuse a running server — drives
+    // whatever else happens to answer there.
+    strictPort: true,
     proxy,
   },
   test: {

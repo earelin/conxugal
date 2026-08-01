@@ -35,14 +35,19 @@ test.describe('Administration dashboard', () => {
       statusCard(page, 'Base de datos').getByText('Accesible', { exact: true }),
     ).toHaveCount(2);
 
-    // Coarse runtime info, and the promise that it never carries secrets.
-    await expect(page.getByText('Información do sistema')).toBeVisible();
-    await expect(page.getByText('0.1.0-SNAPSHOT')).toBeVisible();
-    await expect(page.getByText('25.0.1 (Eclipse Adoptium)')).toBeVisible();
-    await expect(page.getByText('512 / 1024 MB')).toBeVisible();
-    await expect(page.getByText('Linux (amd64)')).toBeVisible();
+    // Coarse runtime info, and the promise that it never carries secrets. Scoped
+    // to the card: the metrics panel renders memory in the same format, so a
+    // page-wide match could be satisfied by the wrong figure entirely.
+    const systemInfo = statusCard(page, 'Información do sistema');
+    await expect(systemInfo).toBeVisible();
+    await expect(systemInfo.getByText('0.1.0-SNAPSHOT')).toBeVisible();
+    await expect(systemInfo.getByText('25.0.1 (Eclipse Adoptium)')).toBeVisible();
+    await expect(systemInfo.getByText('512 / 1024 MB')).toBeVisible();
+    await expect(systemInfo.getByText('Linux (amd64)')).toBeVisible();
     await expect(
-      page.getByText('A información de estado nunca inclúe credenciais nin cadeas de conexión.'),
+      systemInfo.getByText(
+        'A información de estado nunca inclúe credenciais nin cadeas de conexión.',
+      ),
     ).toBeVisible();
   });
 
@@ -71,7 +76,7 @@ test.describe('Administration dashboard', () => {
   });
 });
 
-/** The two status cards are the only named regions on the page. */
+/** Each dashboard card is a group named after its own heading. */
 function statusCard(page: Page, name: string) {
-  return page.getByRole('region', { name, exact: true });
+  return page.getByRole('group', { name, exact: true });
 }

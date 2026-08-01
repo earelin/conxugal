@@ -40,6 +40,11 @@ toggled account keeps its identity.
 
 These are stub limitations, not app bugs — worth knowing before you chase one:
 
+- **Nothing asserts the last-admin guard.** `ana.pereira` is seeded as the only enabled
+  admin so the blocked disable control is reachable in dev, and the app returns a 409 if
+  it is forced. The acceptance suite covers happy paths only, so no spec proves the guard
+  holds — the server-side rule is covered by the backend suite.
+
 - **`users-enabled.json` repeats each account's email, role and dates.** The UI replaces
   a row wholesale with the toggle response, so a stub that disagreed with `users.json`
   would silently rewrite the row. **Change both files together.**

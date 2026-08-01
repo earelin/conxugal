@@ -5,7 +5,11 @@
  * rather than repeating literals, so a fixture change lands in one place.
  */
 export const accounts = {
-  /** The only enabled ADMIN, so the UI blocks disabling it. */
+  /**
+   * The only enabled ADMIN. That is the state in which the UI blocks the
+   * disable control — visible in dev, but no spec asserts it (see the known
+   * gaps in `wiremock/README.md`).
+   */
   admin: { email: 'ana.pereira@conxugal.gal' },
   /** Enabled USER — the account the disable/enable journey toggles. */
   enabledUser: { id: '5c2d1e08-9a44-4f3b-8d21-7b6e0c9a1f52', email: 'brais.otero@conxugal.gal' },
