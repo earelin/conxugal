@@ -16,7 +16,10 @@ server with its domain collaborators mocked.
 Only `application` and `infrastructure` have an `integrationTest` suite, and neither
 runs as part of `check`/`build` — run `./gradlew :application:integrationTest` or
 `:infrastructure:integrationTest` from `server/` explicitly. `infrastructure`'s suite
-needs a Docker daemon; `application`'s only needs a JVM.
+needs a Docker daemon; `application`'s only needs a JVM, with one exception — a class
+whose subject *is* what the database does (an endpoint's collation-dependent ordering,
+say) declares its own container under `@Testcontainers(disabledWithoutDocker = true)`,
+so a Docker-less run skips it and the rest of the suite still runs.
 
 - **Real dependencies run in Testcontainers**, never a shared or developer-local
   instance. Declare a `static` `@Container` under

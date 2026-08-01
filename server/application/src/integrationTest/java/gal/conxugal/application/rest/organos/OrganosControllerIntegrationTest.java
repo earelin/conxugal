@@ -68,6 +68,9 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
         .containsExactly(true, false);
     assertThat(response.jsonPath().getList("termoId", String.class))
         .containsExactly(SANIDADE.toString(), null);
+    // getList spreads over the array and yields null for an absent key too, so the
+    // unclassified case needs the object itself to tell "sent as null" from "not sent".
+    assertThat(response.jsonPath().getMap("[1]")).containsEntry("termoId", null);
   }
 
   @Test
@@ -85,6 +88,7 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
         .containsExactly("Hospitais", "Sanidade");
     assertThat(response.jsonPath().getList("parentId", String.class))
         .containsExactly(SANIDADE.toString(), null);
+    assertThat(response.jsonPath().getMap("[1]")).containsEntry("parentId", null);
   }
 
   @Test

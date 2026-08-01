@@ -812,8 +812,9 @@ components:
       type: object
       description: >-
         One Órgano de Contratación of the stored catalogue, with its taxonomía placement
-        (SPEC-0004 R8, R17).
-      required: [id, name, active]
+        (SPEC-0004 R8, R17). `termoId` is always present, null when unclassified — the
+        absence of a placement is a value callers filter on, not a missing field.
+      required: [id, name, active, termoId]
       example:
         id: "8d1b0f6e-2c5a-4c1e-9a3f-6b7c8d9e0f11"
         name: "Consellería de Sanidade"
@@ -850,8 +851,10 @@ components:
       description: >-
         One term of the Órganos taxonomía, carrying only the edge to its parent
         (SPEC-0004 R14). It never lists its children or the Órganos filed under it: each
-        edge is stated once, from the side that stores it.
-      required: [id, name]
+        edge is stated once, from the side that stores it. `parentId` is always present,
+        null for a root — the absence of a parent is a value callers group on, not a
+        missing field.
+      required: [id, name, parentId]
       example:
         id: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
         name: "Sanidade"
