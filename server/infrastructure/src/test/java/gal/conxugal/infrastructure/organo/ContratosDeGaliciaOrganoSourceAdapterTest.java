@@ -87,11 +87,24 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
   @Test
   void throws_when_the_source_responds_with_an_error_status() {
     when(portadaClient.portada())
-        .thenThrow(new HttpClientResponseException("Not Found", HttpResponse.notFound()));
+        .thenThrow(new HttpClientResponseException("Server Error", HttpResponse.serverError()));
 
     assertThatThrownBy(() -> adapter().fetchAll())
         .isInstanceOf(OrganoSourceUnavailableException.class)
         .hasCauseInstanceOf(HttpClientResponseException.class);
+  }
+
+  /**
+   * The one error status a declarative client returns rather than throws, and the likeliest way
+   * for the source to break: the portada moves and every run reports it as such.
+   */
+  @Test
+  void throws_naming_the_status_when_the_portada_is_not_found() {
+    when(portadaClient.portada()).thenReturn(HttpResponse.notFound());
+
+    assertThatThrownBy(() -> adapter().fetchAll())
+        .isInstanceOf(OrganoSourceUnavailableException.class)
+        .hasMessageContaining("NOT_FOUND");
   }
 
   @Test
@@ -106,7 +119,7 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
 
   @Test
   void throws_when_the_source_responds_with_an_empty_body() {
-    when(portadaClient.portada()).thenReturn(null);
+    when(portadaClient.portada()).thenReturn(HttpResponse.ok());
 
     assertThatThrownBy(() -> adapter().fetchAll())
         .isInstanceOf(OrganoSourceUnavailableException.class)
@@ -137,7 +150,8 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
   }
 
   private void stubPortadaWith(String html) {
-    when(portadaClient.portada()).thenReturn(html.getBytes(StandardCharsets.ISO_8859_1));
+    when(portadaClient.portada())
+        .thenReturn(HttpResponse.ok(html.getBytes(StandardCharsets.ISO_8859_1)));
   }
 
   private static String portadaHtml(String optionsHtml) {

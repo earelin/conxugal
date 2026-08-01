@@ -3,6 +3,8 @@ package gal.conxugal.infrastructure.organo;
 import gal.conxugal.domain.organo.OrganoSource;
 import gal.conxugal.domain.organo.OrganoSourceEntry;
 import gal.conxugal.domain.organo.OrganoSourceUnavailableException;
+import io.micronaut.http.HttpResponse;
+import io.micronaut.http.HttpStatus;
 import io.micronaut.http.client.exceptions.HttpClientException;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import jakarta.inject.Singleton;
@@ -69,7 +71,14 @@ public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
 
   private byte[] fetchPortada() {
     try {
-      byte[] body = portadaClient.portada();
+      HttpResponse<byte[]> response = portadaClient.portada();
+      // The one error status that arrives as a response rather than an exception: a declarative
+      // client reads 404 as an absent value, so judging it is the adapter's to do.
+      if (response.code() >= HttpStatus.BAD_REQUEST.getCode()) {
+        throw new OrganoSourceUnavailableException(
+            "Source responded with status %s".formatted(response.getStatus()));
+      }
+      byte[] body = response.body();
       if (body == null) {
         throw new OrganoSourceUnavailableException("Source returned an empty response body");
       }

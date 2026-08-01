@@ -43,6 +43,13 @@ class ContratosDeGaliciaOrganoSourceAdapterIntegrationTest implements TestProper
   private static final int MIN_EXPECTED_ORGANOS =
       ContratosDeGaliciaOrganoSourceAdapter.MIN_EXPECTED_ORGANOS;
   private static final String PORTADA_PATH = PortadaClient.PORTADA_PATH;
+
+  /**
+   * Pinned rather than inherited: the retry test counts the requests one fetch makes, so the
+   * production default moving must not quietly change what that count means.
+   */
+  private static final int RETRY_MAX_ATTEMPTS = 3;
+
   private static final String PLACEHOLDER =
       option("", "Seleccione o organismo que desexa consultar");
 
@@ -63,7 +70,9 @@ class ContratosDeGaliciaOrganoSourceAdapterIntegrationTest implements TestProper
         "micronaut.http.services.contratosdegalicia.connect-timeout", "5s",
         "micronaut.http.services.contratosdegalicia.read-timeout", "10s",
         "conxugal.contratosdegalicia.resilience.rate-limit-refresh-period", "10ms",
-        "conxugal.contratosdegalicia.resilience.retry-base-delay", "10ms");
+        "conxugal.contratosdegalicia.resilience.retry-base-delay", "10ms",
+        "conxugal.contratosdegalicia.resilience.retry-max-attempts",
+            String.valueOf(RETRY_MAX_ATTEMPTS));
   }
 
   @BeforeEach
@@ -112,6 +121,16 @@ class ContratosDeGaliciaOrganoSourceAdapterIntegrationTest implements TestProper
     assertThatThrownBy(organoSource::fetchAll)
         .isInstanceOf(OrganoSourceUnavailableException.class)
         .hasCauseInstanceOf(HttpClientResponseException.class);
+  }
+
+  /** A 404 is handed back as a response, not thrown, so only the adapter can fail the run on it. */
+  @Test
+  void throws_naming_the_status_when_the_stubbed_portada_is_not_found() {
+    stubPortada(aResponse().withStatus(404));
+
+    assertThatThrownBy(organoSource::fetchAll)
+        .isInstanceOf(OrganoSourceUnavailableException.class)
+        .hasMessageContaining("NOT_FOUND");
   }
 
   @Test
