@@ -1,6 +1,5 @@
 package gal.conxugal.infrastructure.jdbc.organo;
 
-import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.db.api.Assertions.assertThat;
@@ -102,14 +101,15 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
   void inserts_root_termo_with_database_generated_id() {
     Termo created = termoRepository.insert(new Termo("Deportes", null));
 
-    assertThat(created.id()).isNotNull();
+    TermoId createdId = created.id();
+    assertThat(createdId).isNotNull();
     Table termos = termoTable();
     assertThat(termos).hasNumberOfRows(1);
     // Matching the stored id against the returned one is what proves the latter is the id
     // the database assigned, rather than merely non-null.
     assertThat(termos)
         .row(0)
-            .value("id").isEqualTo(requireNonNull(created.id()).value())
+            .value("id").isEqualTo(createdId.value())
             .value("name").isEqualTo("Deportes")
             .value("parent_id").isNull();
   }
@@ -120,12 +120,16 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
     Termo child = termoRepository.insert(new Termo("Fútbol", parent.id()));
 
+    TermoId parentId = parent.id();
+    TermoId childId = child.id();
+    assertThat(parentId).isNotNull();
+    assertThat(childId).isNotNull();
     // The one insert the generated statement has to carry parent_id on.
     assertThat(termoTable())
         .row(1)
-            .value("id").isEqualTo(requireNonNull(child.id()).value())
+            .value("id").isEqualTo(childId.value())
             .value("name").isEqualTo("Fútbol")
-            .value("parent_id").isEqualTo(requireNonNull(parent.id()).value());
+            .value("parent_id").isEqualTo(parentId.value());
   }
 
   @Test
