@@ -12,6 +12,10 @@ import org.jspecify.annotations.Nullable;
  * Maps {@link UserId} onto its {@code uuid} column. Two interfaces because Micronaut Data reads
  * a database-generated id back through the core conversion service rather than through the
  * attribute converter, so an insert would otherwise fail to set the id it just generated.
+ *
+ * <p>It sits beside the id rather than beside the adapter because the type definition on
+ * {@link UserId} names this class, and that mapping is resolved while this module compiles —
+ * a converter living with the adapter would be found too late.
  */
 @Singleton
 public class UserIdConverter
