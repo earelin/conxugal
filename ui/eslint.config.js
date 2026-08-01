@@ -1,15 +1,24 @@
 import eslintReact from '@eslint-react/eslint-plugin';
 import js from '@eslint/js';
+import vitest from '@vitest/eslint-plugin';
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
 import boundaries from 'eslint-plugin-boundaries';
 import { importX } from 'eslint-plugin-import-x';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
+import noUnsanitized from 'eslint-plugin-no-unsanitized';
+import perfectionist from 'eslint-plugin-perfectionist';
+import playwright from 'eslint-plugin-playwright';
 import prettier from 'eslint-plugin-prettier/recommended';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import youMightNotNeedAnEffect from 'eslint-plugin-react-you-might-not-need-an-effect';
+import sonarjs from 'eslint-plugin-sonarjs';
+import testingLibrary from 'eslint-plugin-testing-library';
 import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+
+const testFiles = ['**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}'];
 
 const typescriptResolver = {
   alwaysTryTypes: true,
@@ -29,6 +38,8 @@ export default tseslint.config(
       importX.flatConfigs.typescript,
       jsxA11y.flatConfigs.recommended,
       eslintReact.configs['recommended-typescript'],
+      sonarjs.configs.recommended,
+      noUnsanitized.configs.recommended,
     ],
     languageOptions: {
       ecmaVersion: 2022,
@@ -43,6 +54,7 @@ export default tseslint.config(
       'react-refresh': reactRefresh,
       'unused-imports': unusedImports,
       boundaries,
+      perfectionist,
     },
     settings: {
       'boundaries/elements': [
@@ -57,7 +69,7 @@ export default tseslint.config(
         { pattern: 'src/main.tsx', category: 'app-entry' },
         { pattern: '**/*.test.{ts,tsx}', category: 'test' },
       ],
-      'boundaries/ignore': ['src/vite-env.d.ts', 'src/App.test.tsx', 'vite.config.ts'],
+      'boundaries/ignore': ['src/vite-env.d.ts', 'src/App.test.tsx', 'vite.config.ts', 'e2e/**'],
       // `import/resolver` is eslint-plugin-boundaries' resolver (it reads the
       // eslint-plugin-import key); `import-x/resolver-next` is import-x's own.
       // Both must stay — they are read by different plugins.
@@ -87,6 +99,37 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+      // Only the import/export half of perfectionist is on. Its sorters for
+      // objects, JSX props, interfaces, modules and classes reorder code whose
+      // existing order carries meaning (prop grouping, field lifecycle, related
+      // keys kept adjacent), so they trade readability for alphabetisation.
+      //
+      // The groups below keep a source's type and value imports together rather
+      // than hoisting every `import type` into a block of its own, and stop at
+      // "third-party vs. local" — which layer a local path belongs to is
+      // already enforced by boundaries, so splitting it finer here adds noise.
+      'perfectionist/sort-imports': [
+        'error',
+        {
+          type: 'natural',
+          groups: [
+            'side-effect-style',
+            ['builtin', 'external'],
+            ['internal', 'parent', 'sibling', 'index'],
+          ],
+          newlinesBetween: 1,
+        },
+      ],
+      'perfectionist/sort-named-imports': ['error', { type: 'natural' }],
+      'perfectionist/sort-exports': ['error', { type: 'natural' }],
+      'perfectionist/sort-named-exports': ['error', { type: 'natural' }],
+      // A React component returning either an element or its `ReactNode`
+      // fallback prop is idiomatic, not an inconsistent return type.
+      'sonarjs/function-return-type': 'off',
+      // Would wrap every component's props type in `Readonly<>`. React never
+      // mutates props, and TypeScript would not catch it if it did — the
+      // annotation buys no defect class this module can actually hit.
+      'sonarjs/prefer-read-only-props': 'off',
       'boundaries/no-unknown-files': 'error',
       'boundaries/no-unknown-dependencies': 'error',
       'boundaries/dependencies': [
@@ -154,6 +197,42 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  { ...youMightNotNeedAnEffect.configs.recommended, files: ['**/*.{ts,tsx}'] },
+  {
+    files: testFiles,
+    extends: [vitest.configs.recommended, testingLibrary.configs['flat/react']],
+    rules: {
+      // Both fire on the same pattern: asserting a class or attribute that has
+      // no accessible handle to query by — Mantine's responsive
+      // `visible-from-sm`/`hidden-from-sm` classes, and the `aria-hidden`
+      // + `inert` wrapper around a decorative sparkline. An element hidden
+      // from the accessibility tree is by definition unreachable through
+      // Testing Library's queries, so the container is the only way in.
+      'testing-library/no-container': 'off',
+      'testing-library/no-node-access': 'off',
+      // The four below are production-code rules that only misfire on test
+      // idioms: a stubbed API response carrying a fake password, exact
+      // assertions on values a float represents exactly (0.35, 0.05), the
+      // explicit `undefined` argument that is the point of the case under
+      // test, and a mutable static registry a fake reassigns to reset itself.
+      'sonarjs/no-floating-point-equality': 'off',
+      'sonarjs/no-hardcoded-passwords': 'off',
+      'sonarjs/no-undefined-argument': 'off',
+      'sonarjs/public-static-readonly': 'off',
+    },
+  },
+  {
+    files: ['src/test/setup.ts'],
+    rules: {
+      // Vitest globals are off, so Testing Library never sees an `afterEach` to
+      // hook its automatic cleanup onto — registering it by hand is required.
+      'testing-library/no-manual-cleanup': 'off',
+    },
+  },
+  {
+    files: ['e2e/**/*.{ts,tsx}'],
+    extends: [playwright.configs['flat/recommended']],
   },
   {
     files: ['**/*.cjs'],

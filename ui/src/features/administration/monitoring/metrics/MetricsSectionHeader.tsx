@@ -1,5 +1,6 @@
 import { Badge, Flex, Group, Indicator, Stack, Text, Title } from '@mantine/core';
 import { useEffect, useState } from 'react';
+
 import { strings } from '../../../../shared/lib/strings';
 import { formatTime } from './metricsFormat';
 import type { MetricsStreamState } from './metricsStream';

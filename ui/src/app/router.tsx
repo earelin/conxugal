@@ -1,4 +1,5 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
+
 import { AdminRoute, DashboardPage, UsersPage } from '../features/administration';
 import { AppLayout } from './layout/AppLayout';
 import { AboutPage } from './pages/AboutPage';

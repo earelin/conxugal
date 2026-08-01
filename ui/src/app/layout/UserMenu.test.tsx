@@ -4,11 +4,12 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { theme } from '../theme';
+
 import type { CurrentUser } from '../../shared/entities/currentUser';
 import { createQueryClient } from '../../shared/lib/queryClient';
 import { strings } from '../../shared/lib/strings';
 import { initialsOf } from '../../shared/ui/avatar';
+import { theme } from '../theme';
 import { UserMenu } from './UserMenu';
 
 const BASE_URL = 'http://localhost:3000';
