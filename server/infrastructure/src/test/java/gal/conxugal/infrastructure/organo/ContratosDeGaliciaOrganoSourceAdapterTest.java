@@ -2,16 +2,11 @@ package gal.conxugal.infrastructure.organo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.domain.organo.OrganoSourceEntry;
 import gal.conxugal.domain.organo.OrganoSourceUnavailableException;
-import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
-import io.micronaut.http.client.BlockingHttpClient;
-import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.exceptions.HttpClientException;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import java.nio.charset.StandardCharsets;
@@ -29,9 +24,7 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
   private static final String PLACEHOLDER =
       option("", "Seleccione o organismo que desexa consultar");
 
-  @Mock private HttpClient httpClient;
-  @Mock private BlockingHttpClient blockingHttpClient;
-  @Mock private HttpResponse<byte[]> response;
+  @Mock private PortadaClient portadaClient;
 
   @Test
   void parses_organos_from_the_organoa_select() {
@@ -41,9 +34,9 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
             + option(
                 "397", "Agrupación Europea de Cooperación Territorial Galicia-Norte de Portugal")
             + paddingOptions(MIN_EXPECTED_ORGANOS);
-    ContratosDeGaliciaOrganoSourceAdapter adapter = adapterReturning(portadaHtml(optionsHtml));
+    stubPortadaWith(portadaHtml(optionsHtml));
 
-    List<OrganoSourceEntry> entries = adapter.fetchAll();
+    List<OrganoSourceEntry> entries = adapter().fetchAll();
 
     assertThat(entries)
         .contains(
@@ -56,9 +49,9 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
   void uses_the_option_value_as_the_source_key() {
     String optionsHtml =
         PLACEHOLDER + option("512", "Consorcio Galego") + paddingOptions(MIN_EXPECTED_ORGANOS);
-    ContratosDeGaliciaOrganoSourceAdapter adapter = adapterReturning(portadaHtml(optionsHtml));
+    stubPortadaWith(portadaHtml(optionsHtml));
 
-    List<OrganoSourceEntry> entries = adapter.fetchAll();
+    List<OrganoSourceEntry> entries = adapter().fetchAll();
 
     assertThat(entries)
         .filteredOn(entry -> "Consorcio Galego".equals(entry.name()))
@@ -70,9 +63,9 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
   void skips_the_leading_placeholder_option() {
     String optionsHtml =
         PLACEHOLDER + option("48", "Academia Galega") + paddingOptions(MIN_EXPECTED_ORGANOS);
-    ContratosDeGaliciaOrganoSourceAdapter adapter = adapterReturning(portadaHtml(optionsHtml));
+    stubPortadaWith(portadaHtml(optionsHtml));
 
-    List<OrganoSourceEntry> entries = adapter.fetchAll();
+    List<OrganoSourceEntry> entries = adapter().fetchAll();
 
     assertThat(entries)
         .extracting(OrganoSourceEntry::name)
@@ -84,58 +77,47 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
     String accentedName = "Consello Galego de Relacións Laborais e Función Pública";
     String optionsHtml =
         PLACEHOLDER + option("512", accentedName) + paddingOptions(MIN_EXPECTED_ORGANOS);
-    ContratosDeGaliciaOrganoSourceAdapter adapter = adapterReturning(portadaHtml(optionsHtml));
+    stubPortadaWith(portadaHtml(optionsHtml));
 
-    List<OrganoSourceEntry> entries = adapter.fetchAll();
+    List<OrganoSourceEntry> entries = adapter().fetchAll();
 
     assertThat(entries).contains(new OrganoSourceEntry("512", accentedName));
   }
 
   @Test
   void throws_when_the_source_responds_with_an_error_status() {
-    when(httpClient.toBlocking()).thenReturn(blockingHttpClient);
-    when(blockingHttpClient.exchange(portadaRequest(), eq(byte[].class)))
+    when(portadaClient.portada())
         .thenThrow(new HttpClientResponseException("Not Found", HttpResponse.notFound()));
-    ContratosDeGaliciaOrganoSourceAdapter adapter =
-        new ContratosDeGaliciaOrganoSourceAdapter(httpClient);
 
-    assertThatThrownBy(adapter::fetchAll)
+    assertThatThrownBy(() -> adapter().fetchAll())
         .isInstanceOf(OrganoSourceUnavailableException.class)
         .hasCauseInstanceOf(HttpClientResponseException.class);
   }
 
   @Test
   void throws_when_the_source_is_unreachable() {
-    when(httpClient.toBlocking()).thenReturn(blockingHttpClient);
-    when(blockingHttpClient.exchange(portadaRequest(), eq(byte[].class)))
+    when(portadaClient.portada())
         .thenThrow(new HttpClientException("Connect Error: Connection refused"));
-    ContratosDeGaliciaOrganoSourceAdapter adapter =
-        new ContratosDeGaliciaOrganoSourceAdapter(httpClient);
 
-    assertThatThrownBy(adapter::fetchAll)
+    assertThatThrownBy(() -> adapter().fetchAll())
         .isInstanceOf(OrganoSourceUnavailableException.class)
         .hasCauseInstanceOf(HttpClientException.class);
   }
 
   @Test
   void throws_when_the_source_responds_with_an_empty_body() {
-    when(httpClient.toBlocking()).thenReturn(blockingHttpClient);
-    when(blockingHttpClient.exchange(portadaRequest(), eq(byte[].class))).thenReturn(response);
-    when(response.body()).thenReturn(null);
-    ContratosDeGaliciaOrganoSourceAdapter adapter =
-        new ContratosDeGaliciaOrganoSourceAdapter(httpClient);
+    when(portadaClient.portada()).thenReturn(null);
 
-    assertThatThrownBy(adapter::fetchAll)
+    assertThatThrownBy(() -> adapter().fetchAll())
         .isInstanceOf(OrganoSourceUnavailableException.class)
         .hasNoCause();
   }
 
   @Test
   void throws_when_the_organoa_select_is_not_on_the_page() {
-    ContratosDeGaliciaOrganoSourceAdapter adapter =
-        adapterReturning("<html><body><p>unexpected page</p></body></html>");
+    stubPortadaWith("<html><body><p>unexpected page</p></body></html>");
 
-    assertThatThrownBy(adapter::fetchAll)
+    assertThatThrownBy(() -> adapter().fetchAll())
         .isInstanceOf(OrganoSourceUnavailableException.class)
         .hasNoCause();
   }
@@ -143,24 +125,19 @@ class ContratosDeGaliciaOrganoSourceAdapterTest {
   @Test
   void throws_when_the_parsed_list_is_implausibly_small() {
     String optionsHtml = PLACEHOLDER + option("48", "Academia Galega");
-    ContratosDeGaliciaOrganoSourceAdapter adapter = adapterReturning(portadaHtml(optionsHtml));
+    stubPortadaWith(portadaHtml(optionsHtml));
 
-    assertThatThrownBy(adapter::fetchAll)
+    assertThatThrownBy(() -> adapter().fetchAll())
         .isInstanceOf(OrganoSourceUnavailableException.class)
         .hasNoCause();
   }
 
-  private ContratosDeGaliciaOrganoSourceAdapter adapterReturning(String html) {
-    when(httpClient.toBlocking()).thenReturn(blockingHttpClient);
-    when(blockingHttpClient.exchange(portadaRequest(), eq(byte[].class)))
-        .thenReturn(response);
-    when(response.body()).thenReturn(html.getBytes(StandardCharsets.ISO_8859_1));
-    return new ContratosDeGaliciaOrganoSourceAdapter(httpClient);
+  private ContratosDeGaliciaOrganoSourceAdapter adapter() {
+    return new ContratosDeGaliciaOrganoSourceAdapter(portadaClient);
   }
 
-  private static HttpRequest<?> portadaRequest() {
-    return argThat(
-        request -> ContratosDeGaliciaOrganoSourceAdapter.PORTADA_PATH.equals(request.getPath()));
+  private void stubPortadaWith(String html) {
+    when(portadaClient.portada()).thenReturn(html.getBytes(StandardCharsets.ISO_8859_1));
   }
 
   private static String portadaHtml(String optionsHtml) {

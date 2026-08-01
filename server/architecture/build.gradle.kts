@@ -12,6 +12,7 @@ dependencies {
     testImplementation(project(":infrastructure"))
 
     testImplementation(libs.micronaut.http.server.netty)
+    testImplementation(libs.micronaut.http.client)
     testImplementation(libs.archunit.junit5)
 }
 

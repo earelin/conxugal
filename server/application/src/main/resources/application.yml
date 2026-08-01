@@ -1,7 +1,4 @@
 conxugal:
-  contratosdegalicia:
-    base-url: https://www.contratosdegalicia.gal
-    read-timeout: 10s
   metrics:
     stream:
       sample-interval: 5s
@@ -24,6 +21,12 @@ micronaut:
       type: scheduled
       core-pool-size: 1
       virtual: true
+  http:
+    services:
+      contratosdegalicia:
+        url: https://www.contratosdegalicia.gal
+        connect-timeout: 5s
+        read-timeout: 10s
   router:
     static-resources:
       static-pages:

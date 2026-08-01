@@ -3,14 +3,8 @@ package gal.conxugal.infrastructure.organo;
 import gal.conxugal.domain.organo.OrganoSource;
 import gal.conxugal.domain.organo.OrganoSourceEntry;
 import gal.conxugal.domain.organo.OrganoSourceUnavailableException;
-import io.micronaut.http.HttpRequest;
-import io.micronaut.http.HttpResponse;
-import io.micronaut.http.client.BlockingHttpClient;
-import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.exceptions.HttpClientException;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -30,7 +24,6 @@ import org.jsoup.nodes.Element;
 @Singleton
 public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
 
-  static final String PORTADA_PATH = "/portada.jsp";
   private static final String SELECT_SELECTOR = "select#organoA";
 
   /**
@@ -40,12 +33,10 @@ public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
    */
   static final int MIN_EXPECTED_ORGANOS = 50;
 
-  private final BlockingHttpClient httpClient;
+  private final PortadaClient portadaClient;
 
-  @Inject
-  public ContratosDeGaliciaOrganoSourceAdapter(
-      @Named(ContratosDeGaliciaHttpClientFactory.CLIENT_NAME) HttpClient httpClient) {
-    this.httpClient = httpClient.toBlocking();
+  public ContratosDeGaliciaOrganoSourceAdapter(PortadaClient portadaClient) {
+    this.portadaClient = portadaClient;
   }
 
   @Override
@@ -70,7 +61,7 @@ public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
 
   private static Document parseHtml(byte[] body) {
     try (ByteArrayInputStream in = new ByteArrayInputStream(body)) {
-      return Jsoup.parse(in, StandardCharsets.ISO_8859_1.name(), PORTADA_PATH);
+      return Jsoup.parse(in, StandardCharsets.ISO_8859_1.name(), PortadaClient.PORTADA_PATH);
     } catch (IOException e) {
       throw new OrganoSourceUnavailableException("Source response could not be parsed", e);
     }
@@ -78,9 +69,7 @@ public class ContratosDeGaliciaOrganoSourceAdapter implements OrganoSource {
 
   private byte[] fetchPortada() {
     try {
-      HttpResponse<byte[]> response =
-          httpClient.exchange(HttpRequest.GET(PORTADA_PATH), byte[].class);
-      byte[] body = response.body();
+      byte[] body = portadaClient.portada();
       if (body == null) {
         throw new OrganoSourceUnavailableException("Source returned an empty response body");
       }
