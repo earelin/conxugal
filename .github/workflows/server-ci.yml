@@ -12,6 +12,15 @@ on:
       - "server/**"
       - ".github/workflows/server-ci.yml"
 
+# Pushes to trunk are left uncancellable: they are the runs that populate the
+# caches every pull request restores from.
+concurrency:
+  group: server-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,18 +36,22 @@ jobs:
           java-version: "25"
 
       # ./gradlew build now also runs the UI's npm build (server/application/build.gradle.kts).
+      # working-directory does not apply to a `uses:` step, so these paths are
+      # relative to the repository root.
       - uses: actions/setup-node@v7
         with:
           node-version-file: ui/package.json
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
 
       # Handles dependency/build caching and Gradle Wrapper checksum validation.
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Build and unit test
-        run: ./gradlew build
-
-      - name: Integration tests
-        run: ./gradlew integrationTest
+      # One invocation rather than two: integrationTest is deliberately kept out
+      # of `check`, so this adds it without running anything twice, and saves a
+      # second startup and configuration phase across the whole build.
+      - name: Build, unit and integration tests
+        run: ./gradlew build integrationTest
 
   acceptance:
     runs-on: ubuntu-latest
@@ -54,9 +67,13 @@ jobs:
           java-version: "25"
 
       # ./gradlew :application:dockerBuild also runs the UI's npm build (server/application/build.gradle.kts).
+      # working-directory does not apply to a `uses:` step, so these paths are
+      # relative to the repository root.
       - uses: actions/setup-node@v7
         with:
           node-version-file: ui/package.json
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
 
       # Handles dependency/build caching and Gradle Wrapper checksum validation.
       - uses: gradle/actions/setup-gradle@v6
@@ -73,7 +90,25 @@ jobs:
             --retry 30 --retry-connrefused --retry-delay 2 \
             http://localhost:8080/login > /dev/null
 
-      - name: Install Playwright browsers
+      # Keyed on the pinned Playwright version rather than a hash of the whole
+      # catalogue: the version pins the browser build, so an unrelated dependency
+      # bump does not strand another copy in the cache. Same key shape as
+      # ui-acceptance.yml, so the two share one entry once their versions match.
+      - name: Resolve the Playwright version
+        id: playwright
+        run: |
+          version=$(sed -n 's/^playwright = "\(.*\)"$/\1/p' gradle/libs.versions.toml)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the Playwright browser
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      # Left unconditional so a partially populated cache self-heals; on a hit
+      # this only verifies the download.
+      - name: Install Playwright browser
         run: ./gradlew :acceptance:installPlaywrightBrowsers
 
       - name: Run acceptance tests
