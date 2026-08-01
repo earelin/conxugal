@@ -2,7 +2,7 @@
 feat: FEAT-0007
 domain: backend
 adrs: [0002]
-status: todo
+status: done
 depends_on: [TASK-0001]
 ---
 
@@ -34,19 +34,25 @@ in `domain`, not in a controller.
   integrity backstop, but this check is what produces the refusal a caller sees.
 - **This task owns the feature's four term-scoped rejection exceptions** — unknown term,
   cycle, term still has children, duplicate sibling name — as distinct domain types in
-  `domain.organo`, so [TASK-0006](TASK-0006-taxonomia-admin-endpoints.md) can map each to
-  its own status and problem type without inspecting messages.
+  `domain.organo.taxonomia`, so [TASK-0006](TASK-0006-taxonomia-admin-endpoints.md) can map
+  each to its own status and problem type without inspecting messages.
   [TASK-0004](TASK-0004-organo-classification-use-cases.md) reuses the unknown-**term** type
   rather than declaring a second one; it is listed here so two tasks picked up in parallel
   do not each invent one. The fifth type in the feature's failure contract,
   **unknown Órgano, is TASK-0004's** and lives in `domain.organo` — it is about an Órgano,
   not the taxonomy. Every one of them is raised by a check in this task; none comes from
   translating a database error.
-- **`DeleteTermo` is atomic.** It carries `@Transactional`
-  (`io.micronaut.transaction.annotation`) on the use-case method — the same boundary
-  `SetUserEnabled` and `CreateUser` already use — so its delete and the placement clearing
-  it triggers either both land or neither does. Without it a failure between the two leaves
-  Órganos pointing at a term that is gone, which the foreign key then refuses.
+- **`DeleteTermo` is one statement, so it needs no transaction.** This task carries the
+  migration that alters `organo_contratacion_termo_id_fkey` to `ON DELETE SET NULL`, so the
+  database returns the placed Órganos to unclassified as part of the delete itself. That
+  reverses the feature's earlier call to clear them in domain code over a `NO ACTION` key —
+  see *Placement and classification* for why — and with it go `@Transactional`, the
+  `OrganoRepository.clearPlacementsByTermo` port operation that existed only to serve it,
+  its `@Query` in `JdbcOrganoRepository`, and the test that provoked a failure between the
+  two writes. `CASCADE` stays forbidden: it would delete Órganos, which R16 prohibits.
+- **The child-term refusal stays in the use case.** The parent key on `termo.parent_id`
+  keeps its `NO ACTION` — cascading there would silently remove a whole subtree — so
+  `DeleteTermo` asks `existsByParentId` and refuses, with the key behind it as a backstop.
 - **No lock, and the check-then-write window is accepted.** Every rule here reads and then
   writes, so two admins acting in the same instant could in principle both pass. The
   taxonomy is an `ADMIN`-only table of a few dozen rows edited a handful of times in its
@@ -75,8 +81,8 @@ in `domain`, not in a controller.
   under a different parent is accepted. (SPEC-0004 #14)
 - Each rejection surfaces as its own exception type, and unknown-term is a single type
   shared with [TASK-0004](TASK-0004-organo-classification-use-cases.md), not a second one.
-- `DeleteTermo`'s delete and its placement clearing are atomic: a failure partway through
-  leaves the term and every placement exactly as they were. Proven against a real database,
-  since a test double cannot show a rollback.
-- Unit-tested against a test double of `TermoRepository` / `OrganoRepository`; the
-  cycle guard is tested at depth, not only one level down.
+- Deleting a term through `DeleteTermo` unclassifies the Órganos placed in it, leaves every
+  one of them in the catalogue, and disturbs no other term's placements — proven against a
+  real database, since the clearing is the foreign key's rather than the use case's.
+- Unit-tested against a test double of `TermoRepository`; the cycle guard is tested at
+  depth, not only one level down, and terminates on an ancestry that already loops.

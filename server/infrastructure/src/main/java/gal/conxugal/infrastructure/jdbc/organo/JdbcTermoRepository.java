@@ -1,7 +1,7 @@
 package gal.conxugal.infrastructure.jdbc.organo;
 
-import gal.conxugal.domain.organo.Termo;
-import gal.conxugal.domain.organo.TermoRepository;
+import gal.conxugal.domain.organo.taxonomia.Termo;
+import gal.conxugal.domain.organo.taxonomia.TermoRepository;
 import io.micronaut.data.annotation.Query;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.model.query.builder.sql.Dialect;
