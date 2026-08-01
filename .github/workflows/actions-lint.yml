@@ -1,22 +1,32 @@
 name: Actions Lint
 
-# Mirrors the local pre-commit hook (.claude/settings.json): only runs when
-# staged/pushed changes touch .github/workflows/.
 on:
   pull_request:
     branches: [trunk]
     paths:
       - ".github/workflows/**"
+      - ".github/dependabot.yml"
+      - "scripts/actions-lint.sh"
   push:
     branches: [trunk]
     paths:
       - ".github/workflows/**"
+      - ".github/dependabot.yml"
+      - "scripts/actions-lint.sh"
+
+env:
+  ZIZMOR_VERSION: "1.28.0"
+
+permissions:
+  contents: read
 
 jobs:
   actions-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # shellcheck ships preinstalled on the ubuntu-latest runner image;
       # actionlint auto-detects it on PATH to lint embedded `run:` steps.
@@ -25,5 +35,15 @@ jobs:
           bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) latest "$RUNNER_TEMP"
           echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
 
+      # Pinned rather than tracking latest: zizmor ships new audits often, and an
+      # unrelated pull request should not turn red because one landed.
+      - name: Install zizmor
+        run: |
+          curl -fsSL "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/zizmor-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP" zizmor
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
       - name: Run actions-lint.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: scripts/actions-lint.sh

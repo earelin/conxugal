@@ -73,5 +73,6 @@ Run the relevant lint script and fix any failures before committing — CI
 (`.github/workflows/`) re-checks these on push, but catch failures locally first:
 
 - Staged changes under `docs/` (or root `*.md`/`CLAUDE.md` files): run `scripts/docs-lint.sh`.
-- Staged changes under `.github/workflows/`: run `scripts/actions-lint.sh`.
+- Staged changes under `.github/workflows/` or to `.github/dependabot.yml`: run
+  `scripts/actions-lint.sh`.
 - Staged changes to `docs/api/openapi.yaml`: run `scripts/openapi-lint.sh`.
