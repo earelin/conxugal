@@ -30,10 +30,10 @@ class ListUsersTest {
   @Test
   void returns_every_account_enabled_and_disabled() {
     User enabled =
-        new User(UUID.randomUUID(), "ana@example.com", "stored-hash", Role.ADMIN, true,
+        new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.ADMIN, true,
             CREATED_AT);
     User disabled =
-        new User(UUID.randomUUID(), "iago@example.com", "stored-hash", Role.USER, false,
+        new User(new UserId(UUID.randomUUID()), "iago@example.com", "stored-hash", Role.USER, false,
             CREATED_AT);
     when(userRepository.findAll()).thenReturn(List.of(enabled, disabled));
 

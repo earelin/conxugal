@@ -1,7 +1,5 @@
 package gal.conxugal.domain.organo.taxonomia;
 
-import java.util.UUID;
-
 /**
  * Thrown when an operation names a term id that doesn't exist — whether as the term being
  * changed or as the parent it is being placed under. Classification reuses this type rather
@@ -9,14 +7,14 @@ import java.util.UUID;
  */
 public class TermoNotFoundException extends RuntimeException {
 
-  private final UUID termoId;
+  private final TermoId termoId;
 
-  public TermoNotFoundException(UUID termoId) {
-    super("No term exists with id: " + termoId);
+  public TermoNotFoundException(TermoId termoId) {
+    super("No term exists with id: %s".formatted(termoId));
     this.termoId = termoId;
   }
 
-  public UUID getTermoId() {
+  public TermoId getTermoId() {
     return termoId;
   }
 }

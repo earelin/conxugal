@@ -5,7 +5,6 @@ import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
 import java.time.Instant;
 import java.util.Objects;
-import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -17,7 +16,7 @@ import org.jspecify.annotations.Nullable;
  */
 @MappedEntity("users")
 public record User(
-    @Id @GeneratedValue @Nullable UUID id,
+    @Id @GeneratedValue @Nullable UserId id,
     String email,
     String passwordHash,
     Role role,
@@ -33,7 +32,7 @@ public record User(
   }
 
   public User(
-      @Nullable UUID id, String email, String passwordHash, Role role, boolean enabled,
+      @Nullable UserId id, String email, String passwordHash, Role role, boolean enabled,
       Instant createdAt) {
     this(id, email, passwordHash, role, enabled, createdAt, null);
   }

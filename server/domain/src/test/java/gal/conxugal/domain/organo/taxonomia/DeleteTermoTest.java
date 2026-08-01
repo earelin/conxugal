@@ -29,7 +29,7 @@ class DeleteTermoTest {
 
   @Test
   void deletes_term_without_children() {
-    UUID termoId = UUID.randomUUID();
+    TermoId termoId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(termoId))
         .thenReturn(Optional.of(new Termo(termoId, "Deportes", null)));
     when(termoRepository.existsByParentId(termoId)).thenReturn(false);
@@ -41,23 +41,23 @@ class DeleteTermoTest {
 
   @Test
   void rejects_term_that_still_has_child_terms() {
-    UUID termoId = UUID.randomUUID();
+    TermoId termoId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(termoId))
         .thenReturn(Optional.of(new Termo(termoId, "Deportes", null)));
     when(termoRepository.existsByParentId(termoId)).thenReturn(true);
 
     assertThatThrownBy(() -> deleteTermo.delete(termoId))
         .isInstanceOf(TermoHasChildrenException.class);
-    verify(termoRepository, never()).deleteById(any(UUID.class));
+    verify(termoRepository, never()).deleteById(any(TermoId.class));
   }
 
   @Test
   void rejects_unknown_term_and_writes_nothing() {
-    UUID unknownId = UUID.randomUUID();
+    TermoId unknownId = new TermoId(UUID.randomUUID());
     when(termoRepository.findById(unknownId)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> deleteTermo.delete(unknownId))
         .isInstanceOf(TermoNotFoundException.class);
-    verify(termoRepository, never()).deleteById(any(UUID.class));
+    verify(termoRepository, never()).deleteById(any(TermoId.class));
   }
 }

@@ -91,7 +91,7 @@ class SetUserEnabledTest {
 
   @Test
   void throws_when_the_account_does_not_exist() {
-    UUID unknownId = UUID.randomUUID();
+    UserId unknownId = new UserId(UUID.randomUUID());
     when(userRepository.findById(unknownId)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> setUserEnabled.setEnabled(unknownId, false))
@@ -101,7 +101,7 @@ class SetUserEnabledTest {
 
   private static User user(Role role, boolean enabled) {
     return new User(
-        UUID.randomUUID(), "user-" + UUID.randomUUID() + "@example.com", "stored-hash", role,
-        enabled, CREATED_AT);
+        new UserId(UUID.randomUUID()), "user-" + UUID.randomUUID() + "@example.com", "stored-hash",
+        role, enabled, CREATED_AT);
   }
 }

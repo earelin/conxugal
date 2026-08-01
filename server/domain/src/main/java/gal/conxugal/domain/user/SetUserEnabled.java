@@ -2,7 +2,6 @@ package gal.conxugal.domain.user;
 
 import io.micronaut.transaction.annotation.Transactional;
 import jakarta.inject.Singleton;
-import java.util.UUID;
 
 /**
  * Enables or disables an account. Disabling refuses to drop the enabled {@code ADMIN}
@@ -25,7 +24,7 @@ public class SetUserEnabled {
   }
 
   @Transactional
-  public User setEnabled(UUID userId, boolean enabled) {
+  public User setEnabled(UserId userId, boolean enabled) {
     User user =
         userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
     if (!enabled && user.role() == Role.ADMIN && user.enabled()

@@ -2,7 +2,6 @@ package gal.conxugal.domain.organo.taxonomia;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -23,8 +22,8 @@ final class SiblingNames {
    * in, leaves the taxonomy unambiguous and is not a duplicate.
    */
   static void requireAvailable(
-      List<Termo> siblings, String name, @Nullable UUID excludedTermoId,
-      @Nullable UUID parentId) {
+      List<Termo> siblings, String name, @Nullable TermoId excludedTermoId,
+      @Nullable TermoId parentId) {
     boolean taken =
         siblings.stream()
             .filter(sibling -> !Objects.equals(sibling.id(), excludedTermoId))
