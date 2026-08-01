@@ -1,14 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { degradedSystemStatus } from '../support/fixtures';
+import { navLink } from '../support/locators';
 import { resetMappings, stubJson } from '../support/wiremock';
 
 /** The two status cards are the only named regions on the page. */
 function statusCard(page: Page, name: string) {
   return page.getByRole('region', { name, exact: true });
-}
-
-function navLink(page: Page, name: string) {
-  return page.getByRole('navigation', { name: 'Navegación principal' }).getByRole('link', { name });
 }
 
 test.beforeEach(async () => {

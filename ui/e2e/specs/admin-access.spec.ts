@@ -1,10 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { nonAdminSession } from '../support/fixtures';
+import { nav, navLink } from '../support/locators';
 import { resetMappings, stubJson } from '../support/wiremock';
-
-function nav(page: Page) {
-  return page.getByRole('navigation', { name: 'Navegación principal' });
-}
 
 /**
  * The account menu renders only once the session has loaded, so waiting on it
@@ -30,7 +27,7 @@ test.describe('Administration area access', () => {
 
     await expect(nav(page).getByText('Administración')).toBeVisible();
 
-    await nav(page).getByRole('link', { name: 'Usuarios' }).click();
+    await navLink(page, 'Usuarios').click();
 
     await expect(page).toHaveURL(/\/administracion\/usuarios$/);
     await expect(page.getByRole('heading', { name: 'Xestión de usuarios' })).toBeVisible();
@@ -42,7 +39,7 @@ test.describe('Administration area access', () => {
     await page.goto('/');
     await waitForSession(page);
 
-    await expect(nav(page).getByRole('link', { name: 'Inicio' })).toBeVisible();
+    await expect(navLink(page, 'Inicio')).toBeVisible();
     await expect(nav(page).getByText('Administración')).toHaveCount(0);
 
     // Reaching the route directly gets nothing either. This gate is cosmetic —
