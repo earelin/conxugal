@@ -59,8 +59,9 @@ export function AppLayout() {
       <AppShell.Navbar p="md">
         <nav aria-label="Navegación principal">
           <Stack gap="lg">
-            {sections.map((section, index) => (
-              <Stack gap={2} key={section.label ?? index}>
+            {sections.map((section) => (
+              // Only the ungrouped primary section has no label to key on.
+              <Stack gap={2} key={section.label ?? 'primary'}>
                 {section.label && (
                   <Text size="xs" fw={700} c="dimmed" tt="uppercase" px="xs">
                     {section.label}

@@ -13,19 +13,30 @@ export function MetricsSectionHeader({
   lastArrivedAt: Date | null;
 }) {
   const t = strings.admin.dashboard.metrics;
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
 
+  // While the stream is down the caption counts up from the last sample. The
+  // clock is held in state rather than read during render, which would make the
+  // component impure. It is synced once on the way in — the drop is noticed
+  // some seconds after the last sample, so without that the caption would read
+  // zero until the first tick — and the sync is deferred by a timeout so it is
+  // never a state update made synchronously from an effect.
   useEffect(() => {
     if (state !== 'reconnecting' || !lastArrivedAt) {
       return;
     }
-    const tick = () => {
-      setElapsedSeconds(Math.max(0, Math.round((Date.now() - lastArrivedAt.getTime()) / 1000)));
+    const sync = () => setNow(Date.now());
+    const immediate = setTimeout(sync, 0);
+    const id = setInterval(sync, 1000);
+    return () => {
+      clearTimeout(immediate);
+      clearInterval(id);
     };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
   }, [state, lastArrivedAt]);
+
+  const elapsedSeconds = lastArrivedAt
+    ? Math.max(0, Math.round((now - lastArrivedAt.getTime()) / 1000))
+    : 0;
 
   let badgeColor: string;
   let badgeLabel: string;
