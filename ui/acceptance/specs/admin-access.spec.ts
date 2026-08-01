@@ -3,15 +3,6 @@ import { nonAdminSession } from '../support/fixtures';
 import { nav, navLink } from '../support/locators';
 import { resetMappings, stubJson } from '../support/wiremock';
 
-/**
- * The account menu renders only once the session has loaded, so waiting on it
- * proves `/api/me` has resolved. Without it, an assertion that the admin
- * section is absent would pass simply by outrunning the request.
- */
-async function waitForSession(page: Page) {
-  await expect(page.getByRole('button', { name: 'Abrir o menú da conta' })).toBeVisible();
-}
-
 test.beforeEach(async () => {
   await resetMappings();
 });
@@ -48,3 +39,12 @@ test.describe('Administration area access', () => {
     await expect(page.getByRole('heading', { name: 'Páxina non atopada' })).toBeVisible();
   });
 });
+
+/**
+ * The account menu renders only once the session has loaded, so waiting on it
+ * proves `/api/me` has resolved. Without it, an assertion that the admin
+ * section is absent would pass simply by outrunning the request.
+ */
+async function waitForSession(page: Page) {
+  await expect(page.getByRole('button', { name: 'Abrir o menú da conta' })).toBeVisible();
+}
