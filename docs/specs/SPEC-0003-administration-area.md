@@ -1,5 +1,5 @@
 ---
-status: draft
+status: active
 ---
 
 # SPEC-0003. Administration area
