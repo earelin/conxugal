@@ -44,25 +44,44 @@ One constraint on *how* the library is used. Resilience4j publishes a Micronaut 
 (`resilience4j-micronaut`) with annotations and AOP interceptors, but its current release,
 2.4.0, still declares `io.micronaut.platform:micronaut-platform:4.1.6` — unchanged since
 2.3.0 — against this project's Micronaut **5.0.2**. The skew is the integration's state, not
-a lag a point release will close.
+a lag a point release will close. What that module offers, though, is not the policies —
+those are in the plain library — but the *ergonomics*: annotate a method, get the policy.
+Micronaut's own AOP gives us the same thing directly, and the framework applies around advice
+to a declarative `@Client` interface: introduction advice implements the method, and any
+around advice on it runs outside that implementation.
 
 ## Decision
-Route every outbound call to an external source through a **resilience decorator in
-`infrastructure` wrapping the Micronaut `BlockingHttpClient`**, built on **Resilience4j 2.4.0
-used as a plain library** — the annotation module is not adopted, for the version reason
-above. Only `resilience4j-retry`, `resilience4j-ratelimiter` and `resilience4j-circuitbreaker`
-are declared, via `resilience4j-bom` so catalogue entries stay version-free. Configuration
-lives in this project's own `@ConfigurationProperties` records, not the `resilience4j:` YAML
-namespace, so there is one place to look for a knob.
+Reach every external source through a **Micronaut declarative `@Client` interface carrying our
+own `@ResilientClient` around advice**, built on **Resilience4j 2.4.0 used as a plain library** —
+`resilience4j-micronaut` is not adopted, for the version reason above, and its annotation
+ergonomics are reproduced by one annotation and one `MethodInterceptor` we own. Only
+`resilience4j-retry`, `resilience4j-ratelimiter` and `resilience4j-circuitbreaker` are declared,
+via `resilience4j-bom` so catalogue entries stay version-free. The `resilience4j:` YAML namespace
+is not used; policy settings bind to this project's own `@ConfigurationProperties` record, and a
+`@Factory` turns that record into the `Retry`, `RateLimiter` and `CircuitBreaker` beans the
+interceptor holds.
 
-**The three policies nest in a fixed order**, composed with the per-module statics rather than
-the `Decorators` builder — that builder lives in the separate `resilience4j-all` artifact and
-applies policies inside-out, so it reads in reverse of what it produces:
+**An adapter declares an interface, not a request.** It writes the shape of the call — path,
+method, parameters, return type — and Micronaut generates the client at compile time. Nothing in
+an adapter builds a request, holds a client, or names an HTTP client type; the advice on the
+interface is what makes the call resilient, so getting the policy is the same act as declaring
+the call.
+
+**Configuration is split by who owns it.** Transport settings — base URL, connect and read
+timeouts — live under `micronaut.http.services.<id>`, which `@Client(id = "<id>")` binds
+natively. Policy settings live under this project's `conxugal.` namespace. Two places to look
+rather than one: the price of letting the framework build the client instead of hand-rolling a
+`@Factory` for it, and cheap next to the wiring that buys.
+
+**The three policies nest in a fixed order**, composed in the interceptor around the intercepted
+call with the per-module statics rather than the `Decorators` builder — that builder lives in the
+separate `resilience4j-all` artifact and applies policies inside-out, so it reads in reverse of
+what it produces:
 
 ```java
 Retry.decorateSupplier(retry,
     CircuitBreaker.decorateSupplier(breaker,
-        RateLimiter.decorateSupplier(limiter, exchange)));
+        RateLimiter.decorateSupplier(limiter, context::proceed)));
 ```
 
 The order is load-bearing. The **limiter is innermost** so every attempt reaching the network
@@ -78,36 +97,43 @@ symptom — any `slowCallDurationThreshold` below the permit wait holds the circ
 forever — and adds no signal, since genuine slowness already becomes a *failure* via the
 connect and read timeouts.
 
-**The decorator sits below parsing, above transport.** Each adapter parses and validates what
-it knows how to read, and the domain failure declared by its own port stays the only exception
-escaping it.
+**The advice sits below parsing, above transport.** It wraps the generated client method, so
+response binding happens inside it and an adapter's own parsing and validation happen outside.
+Each adapter interprets what it knows how to read, and the domain failure declared by its own
+port stays the only exception escaping it.
 
-**"Retryable" and "counts as a breaker failure" are independent.** A site defending itself
-typically answers `200` with a block page: pointless to retry, essential to open the circuit.
-So a call **carries the adapter's acceptability check and the decorator applies it** — a
-response judged unusable is recorded against the breaker and is *not* retried. The check
-travels inward rather than the breaker outward, so no adapter names a circuit breaker.
+**Response *content* is not the policy's business.** A site defending itself typically answers
+`200` with a block page — pointless to retry, and something a breaker would ideally see. It
+will not: the advice wraps the call, and whatever judges the body sits outside it, so a block
+page that parses is indistinguishable from a real answer. Recovering that signal means handing
+the interceptor a content predicate, which is precisely the coupling declarative clients remove.
+The breaker therefore watches transport outcomes and status codes only, and an adapter's
+"this response is unusable" judgement stays an ordinary domain failure. This is a deliberate
+narrowing of what the breaker can detect, taken because the alternative reintroduces a bespoke
+call signature to every adapter.
 
-**No Resilience4j type crosses the decorator boundary, and no transport type reaches the
-domain.** `RequestNotPermitted` and `CallNotPermittedException` are neither transport nor
-domain failures and would otherwise pass through every adapter's `catch (HttpClientException)`
-and surface from a port as raw library types. Translation happens in two hops, both inside
-`infrastructure`: the decorator converts Resilience4j outcomes to the transport exception type
-adapters already handle, and the adapter converts that to its port's domain failure as it does
-today. Both types are also excluded from retry — retrying a refused permit or an open circuit
-turns a deliberate fail-fast into a fail-slow.
+**No Resilience4j type crosses the advice boundary, and no transport type reaches the domain.**
+`RequestNotPermitted` and `CallNotPermittedException` are neither transport nor domain failures
+and would otherwise pass through every adapter's `catch (HttpClientException)` and surface from
+a port as raw library types. Translation happens in two hops, both inside `infrastructure`: the
+interceptor converts Resilience4j outcomes to the transport exception type adapters already
+handle, and the adapter converts that to its port's domain failure as it does today. Both types
+are also excluded from retry — retrying a refused permit or an open circuit turns a deliberate
+fail-fast into a fail-slow.
 
-**Adapters neither construct nor name an HTTP client.** Raw client construction moves to the
-shared `infrastructure` HTTP package; adapters receive only the decorated client. A rule in
-the `architecture` module — same idiom as [ADR-0006](0006-reserved-api-url-prefix.md)'s
-URL-prefix rule, scoped to main sources — makes a reach for the raw client a build failure,
-so bypassing the policy is unavailable rather than merely discouraged.
+**Adapters neither construct nor name an HTTP client.** With the client generated from an
+interface, no `infrastructure` class outside its own declaration mentions `HttpClient` or
+`BlockingHttpClient` at all. A rule in the `architecture` module — same idiom as
+[ADR-0006](0006-reserved-api-url-prefix.md)'s URL-prefix rule, scoped to main sources — makes
+naming either type a build failure, so hand-building an unpoliced client is unavailable rather
+than merely discouraged.
 
-**Retryability is declared by the adapter, not inferred from the HTTP method.**
-contratosdegalicia exposes searches over `POST` with the query in the body; those are pure
-retrieval, and a method-based rule would exclude exactly the fan-out that motivates this
-record. `GET` and `HEAD` are retryable by default; any other method only on an explicit
-declaration, so the policy can never silently double-submit a state-changing call.
+**Retryability is read from the method's own annotations, not inferred from a request object.**
+`@Get` and `@Head` are retryable by default; any other method only where the declaration says
+`@ResilientClient(idempotent = true)`, so the policy can never silently double-submit a
+state-changing call. This matters because contratosdegalicia exposes searches over `POST` with
+the query in the body: pure retrieval, and a method-based rule alone would exclude exactly the
+fan-out that motivates this record.
 
 **Retryable failures are an explicit, closed set** — connection failures, resets, read
 timeouts, and the transient statuses (`408`, `425`, `429`, `500`, `502`, `503`, `504`).
@@ -122,8 +148,12 @@ nothing. Absent the header, backoff is exponential **with jitter** — mandatory
 unjittered curve re-synchronises a fanned-out batch into a second burst.
 
 **Every request carries an identifying `User-Agent`** naming the project and a contact URL,
-set once in the decorator. An operator who can reach us can ask us to slow down; one who
-cannot can only block us.
+declared **on the advice annotation itself** as a `@Header` stereotype: a client that carries the
+policy carries the identification, with no declaration of its own and no way to have one without
+the other. Since an annotation value must be a constant or a placeholder, and the running version
+is neither until the process starts, the value is a placeholder and an `ApplicationContextConfigurer`
+publishes the property. An operator who can reach us can ask us to slow down; one who cannot can
+only block us.
 
 **Fan-out against a source is sequential by default.** `AtomicRateLimiter` does not queue
 indefinitely: it computes the wait a caller needs given reservations already in flight and
@@ -138,12 +168,13 @@ refills its whole allowance at each boundary, so `10` per `10s` is ten simultane
 then nine seconds of silence.
 
 **All of it is configurable per source**: refresh interval, maximum wait, concurrency bound,
-connect and read timeouts, retry attempts, backoff, the `Retry-After` clamp, and the breaker's
-failure-rate threshold and open-state duration. The connect timeout is unset today and
-inherits OS behaviour — now multiplied by the attempt count, and worst in the blackholed-IP
-case this record exists to prevent. Exact defaults belong to the implementing task, but this
-record fixes their ceiling: **at most one request in flight per source, and no faster than one
-request per second**. Exceeding either is a new decision.
+retry attempts, backoff, the `Retry-After` clamp, and the breaker's failure-rate threshold and
+open-state duration under `conxugal.`; connect and read timeouts under the source's
+`micronaut.http.services` entry. The connect timeout is unset today and inherits OS behaviour —
+which retry multiplies by the attempt count, and which is worst in the blackholed-IP case this
+record exists to prevent — so it becomes an explicit setting. Exact defaults belong to the
+implementing task, but this record fixes their ceiling: **at most one request in flight per
+source, and no faster than one request per second**. Exceeding either is a new decision.
 
 **No overall deadline is imposed on a single logical call.** Each wait is bounded but their sum
 is not — worst case `attempts × (maxWait + connectTimeout + readTimeout) + Σ backoff`.
@@ -162,29 +193,45 @@ decision the day ingestion leaves one JVM), robots.txt, and exporting Resilience
   makes.
 - Pacing cannot be outrun by retries — the nesting makes that structural rather than something
   each adapter must be careful about.
-- "Every adapter inherits the policy" is a property, not a hope: with the raw client
-  unreachable from adapter packages and a build rule saying so, bypassing it is not a mistake
-  someone can quietly make.
-- The breaker can see the failure that matters — a source blocking us behind a `200`
-  eventually opens the circuit instead of being absorbed as a content error.
+- "Every adapter inherits the policy" is a property, not a hope: with no client to hand-build
+  and a build rule saying so, bypassing it is not a mistake someone can quietly make.
+- **An adapter shrinks to the shape of its call.** Path, method, parameters and return type on
+  an interface; no request building, no client held, no transport error handling beyond the
+  translation its port already does. Adding the next source request is a method signature.
+- The resilience wiring is written **once**, not once per call site, and the composition order
+  that makes it correct lives in one interceptor instead of being restated wherever a request
+  is made.
 - Being identified and self-throttling makes us a client an operator can *manage* rather than
   one they can only block, which matters more than any particular rate value.
 - The domain never names a transport or resilience type, so tuning or replacing the library is
   invisible to it.
 
 ### Cons
+- **The breaker is blind to a source that blocks us behind a `200`.** The clearest signal a
+  defending site emits is the one this design cannot see, because content judgement sits outside
+  the advice. Such a run fails on the adapter's own validation, one run at a time, without the
+  circuit ever opening. Recovering it means either a content predicate threaded through the
+  interceptor or a second interceptor reading a marker exception — both re-adding the coupling
+  declarative clients removed, and neither worth it until a source actually does this to us.
 - A **third-party dependency outside the Micronaut platform BOM**, used in a way its own
   Micronaut documentation does not describe. The programmatic API is the library's stable core,
-  but we forgo the annotation ergonomics and inherit no upstream guidance for this combination.
+  but we forgo the annotation module and inherit no upstream guidance for this combination.
+- **We own an AOP interceptor**, which is framework-level code with framework-level failure
+  modes: advice silently not applied because an annotation went on the wrong element, or a
+  future non-blocking return type passing through unpoliced. Cheap to write, and not the kind of
+  thing whose breakage announces itself — it needs a test that asserts the advice is *on*.
+- **Configuration lives in two namespaces**, `micronaut.http.services` for transport and
+  `conxugal.` for policy, so no single block shows how a source is treated.
 - **The breaker is close to inert until more request kinds exist** — a single-request run never
   reaches a meaningful `minimumNumberOfCalls`, and open-state duration is meaningless across
   runs a day apart. Until then it is machinery that earns nothing.
 - **A sequential default buys politeness with wall-clock time** — hours, not minutes, at
   thousands of requests — and the budget is shared, so a run walking result pages and a run
   fetching details compete for it rather than each getting one.
-- **Rate, concurrency and maximum wait are coupled**, and a configuration violating the
-  inequality fails not at startup but as refused permits under load. Nothing validates the
-  three together; review is all that enforces it. Likewise nothing bounds a whole logical call.
+- **Rate, concurrency and maximum wait are coupled.** The configuration record rejects a
+  combination that violates the inequality when it binds, rather than letting it surface as
+  refused permits under load — but that check lives in each source's own record, so a second
+  source can omit it and inherit the original footgun. Nothing bounds a whole logical call.
 - Retry outermost records **several** breaker failures per logical failure — right for an
   outbound client, but the thresholds only make sense read that way.
 - **Errors are translated twice**, which is what isolates the domain but also puts a failure's
@@ -193,8 +240,6 @@ decision the day ingestion leaves one JVM), robots.txt, and exporting Resilience
   configuration record and factory. `@EachProperty`/`@EachBean` would go further but is
   unverified against records on this framework version and would displace the `@Named`
   qualifier pattern this project has already been bitten by.
-- **Adapters now carry a judgement with weight**: an acceptability check too strict opens the
-  circuit against a merely unusual response, too lax leaves the breaker as blind as before.
 - Initial rate, backoff and breaker settings are **educated guesses** — the source publishes no
-  limits — and the decorator invalidates the existing unit tests that stub
-  `HttpClient.toBlocking()` directly.
+  limits — and moving to a generated client invalidates the existing adapter unit tests, which
+  stub `HttpClient.toBlocking()` directly.
