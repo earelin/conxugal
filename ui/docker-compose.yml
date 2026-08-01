@@ -2,8 +2,10 @@ services:
   wiremock:
     image: wiremock/wiremock:3.13.2
     command: ['--global-response-templating', '--disable-banner']
+    # Loopback-only: the admin API at /__admin reprograms the stub without
+    # authentication, and this container also runs on developer workstations.
     ports:
-      - '8081:8080'
+      - '127.0.0.1:8081:8080'
     volumes:
       - ./wiremock/mappings:/home/wiremock/mappings:ro
     healthcheck:

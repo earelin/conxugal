@@ -1,45 +1,22 @@
 name: UI Acceptance Tests
 
-# Deliberately narrower than ui-ci.yml's blanket "ui/**": this job boots a
-# container and a browser, so a doc-only edit under ui/ should not start it.
+# Narrower than ui-ci.yml's blanket "ui/**" only by excluding prose: this job
+# boots a container and a browser, so a doc-only edit should not start it. An
+# allowlist of build inputs would be tighter, but it fails the wrong way —
+# a new input silently skips the suite, and a green pull request that never
+# ran it looks identical to one that passed.
 on:
   pull_request:
     branches: [trunk]
     paths:
-      # acceptance suite and its stubbed API
-      - "ui/e2e/**"
-      - "ui/wiremock/**"
-      - "ui/playwright.config.ts"
-      - "ui/docker-compose.yml"
-      # application sources
-      - "ui/src/**"
-      - "ui/public/**"
-      - "ui/index.html"
-      - "ui/vite.config.ts"
-      - "ui/tsconfig*.json"
-      - "ui/postcss.config.cjs"
-      # dependencies
-      - "ui/package.json"
-      - "ui/package-lock.json"
+      - "ui/**"
+      - "!ui/**/*.md"
       - ".github/workflows/ui-acceptance.yml"
   push:
     branches: [trunk]
     paths:
-      # acceptance suite and its stubbed API
-      - "ui/e2e/**"
-      - "ui/wiremock/**"
-      - "ui/playwright.config.ts"
-      - "ui/docker-compose.yml"
-      # application sources
-      - "ui/src/**"
-      - "ui/public/**"
-      - "ui/index.html"
-      - "ui/vite.config.ts"
-      - "ui/tsconfig*.json"
-      - "ui/postcss.config.cjs"
-      # dependencies
-      - "ui/package.json"
-      - "ui/package-lock.json"
+      - "ui/**"
+      - "!ui/**/*.md"
       - ".github/workflows/ui-acceptance.yml"
 
 concurrency:
@@ -50,8 +27,16 @@ permissions:
   contents: read
 
 jobs:
+  # Named because the job id alone would publish a status check called
+  # "acceptance", which server-ci.yml already uses.
   acceptance:
+    name: UI acceptance
     runs-on: ubuntu-latest
+    # A normal run takes about a minute. The cap is for the stalls: an image
+    # pull (`up --wait` waits forever by default) or a browser download, which
+    # has hung for ten minutes before. Without it a stuck run holds the trunk
+    # concurrency group — where it is not cancellable — for GitHub's 6h default.
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: ui
@@ -75,15 +60,22 @@ jobs:
         id: playwright
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
+      # Entries are immutable per key and only written when the primary key
+      # missed, so a truncated one — saved by the post step of a run cancelled
+      # mid-download — would otherwise be restored until the version changed.
+      # Bump the generation to abandon it; restore-keys makes a version bump
+      # download only what moved rather than the whole browser set.
       - name: Cache Playwright browsers
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          key: playwright-v1-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          restore-keys: playwright-v1-${{ runner.os }}-
 
       # playwright.config.ts declares only the chromium project. Left
-      # unconditional so a partially populated cache self-heals; on a hit this
-      # only verifies. No --with-deps: ubuntu-latest already carries every
+      # unconditional so the run recovers from a partial cache (the entry
+      # itself does not — see above); on a hit this only verifies. No
+      # --with-deps: ubuntu-latest already carries every
       # browser library, and the sole packages it adds are CJK/Cyrillic fonts
       # this Galician, text-assertion-only suite never renders — fonts whose
       # mirror once stalled this step for ten minutes.
