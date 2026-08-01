@@ -92,9 +92,9 @@ layout of
 
 **Out of scope (owned by later features):**
 - **The incremental mode and the scheduler** — R8's window floor, R21's recurring run, and with
-  them R9's *automatic* resumption — belong to the next feature, *FEAT-0010. Contratos menores
-  incremental refresh*. The consequence is stated rather than hidden: **until it lands, a
-  refused mark is not recovered by a scheduled run** (SPEC-0005 #33), an interrupted initial
+  them R9's *automatic* resumption — belong to the next feature, *Contratos menores incremental
+  refresh*, numbered when it is written. The consequence is stated rather than hidden: **until
+  it lands, a refused mark is not recovered by a scheduled run** (SPEC-0005 #33), an interrupted
   import resumes only when an administrator triggers it, and a loaded Órgano goes stale. That is
   the price of shipping the load before the refresh, and every mechanism the second feature needs
   — the mode rule, the per-Órgano state, the covered-through instant, the run record — is built
@@ -114,6 +114,11 @@ layout of
   by "SPEC-0007 will want it", and each is justified below by a requirement this feature meets.
 - **Operadores económicos** ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md)) — this
   feature only owes them the awardee name and fiscal identifier stored on every contract (R7).
+  The catalogue derived from those two values, and the contract's link to it, are
+  [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s. That feature adds a column to
+  `contrato_menor` and is the only thing that populates it, so it **must land before the first
+  large initial import** — on the same reasoning that creates the year index here rather than on
+  a table of millions.
 
 ## Design
 
@@ -188,7 +193,7 @@ matters here is **which facts belong to the Órgano and which to the run**, beca
 | --- | --- | --- |
 | Initial import never started / incomplete / complete | Órgano | R8's mode rule; protected from pruning by SPEC-0007 R18 |
 | Resumption **cursor** | Órgano | see below |
-| **Covered-through** instant | Órgano | FEAT-0010's window floor measures from it |
+| **Covered-through** instant | Órgano | the incremental feature's window floor measures from it |
 | Run identity, trigger, scope, times, state, counts | Run record | R20's outcome; SPEC-0007 reports the same rows |
 | Last-advanced time | Run record | the guard's liveness bound (ADR-0017) |
 
@@ -202,11 +207,11 @@ matters here is **which facts belong to the Órgano and which to the run**, beca
 - **The covered-through instant is not "the last successful import".** Under a newest-first walk
   (below) an initial import covers `[cursor, T₀]`, where `T₀` is when its **first** window was
   taken — and an initial import spanning several resumptions has several run starts. If
-  FEAT-0010's floor measured from the latest of them, everything published between the first
+  the incremental feature's floor measured from the latest of them, everything published between the first
   attempt and that resumption would fall outside every future window and be reachable only by
   R10, which no feature owns: R8's named "silent data-loss mechanism", reintroduced by an
   off-by-one in a timestamp. So the Órgano records `T₀` when the initial import first runs and
-  **carries it across resumptions**, and that is the instant FEAT-0010 measures from.
+  **carries it across resumptions**, and that is the instant the incremental feature measures from.
 
 ### One run record, read by the guard and by whoever triggered
 - A run is recorded **when it is triggered**, with its covered Órganos **enumerated then** —
@@ -239,7 +244,7 @@ run?" fails in two ways the flag did not:
    not monitoring polish that can wait for SPEC-0007; it is what makes the guard safe, so task 8
    builds it.
 2. **The check and the write must be one act.** Two triggers — the mark control and an admin
-   trigger today, the scheduler after FEAT-0010 — can both read *no live run* and both insert.
+   trigger today, the scheduler once the incremental feature lands — can both read *no live run* and both insert.
    The guard is the single thing standing between this system and a public source that
    [ADR-0014](../../architecture/0014-resilient-throttled-outbound-http-client.md) says owes us
    nothing, so it is serialised in the database by a **partial unique index admitting one live
@@ -262,13 +267,13 @@ stateDiagram-v2
     NeverStarted --> Incomplete: initial import starts
     Incomplete --> Incomplete: resumed (continues, never restarts)
     Incomplete --> Complete: history floor reached
-    Complete --> Complete: incremental (FEAT-0010)
+    Complete --> Complete: incremental (later feature)
 ```
 
 - **Never started** takes an *initial* import, **incomplete** takes a *resumed* one, **complete**
   takes an *incremental* one. Two states would collapse the first two, and a half-loaded Órgano
   would be treated as up to date — the defect R8 names explicitly.
-- FEAT-0010 implements the incremental branch and the window floor. This feature leaves the rule
+- The incremental feature implements that branch and the window floor. This feature leaves the rule
   with that branch unimplemented and its three states already tracked.
 
 ### Walking a history in windows, newest first
@@ -384,7 +389,7 @@ stateDiagram-v2
    mode only, #40 as-published half)*
 7. **Per-Órgano import state + the R8 mode rule** — a migration and repository for the
    three-state fact, the cursor and the covered-through instant, with the mode-selection function
-   that reads them; the incremental branch is named and left to FEAT-0010. *(SPEC-0005 #46 state
+   that reads them; the incremental branch is named and left to that feature. *(SPEC-0005 #46 state
    half, #47 initial/resumed half only — the other two modes are not built)*
 8. **Import run record, abandoned rule and system-wide guard** — migration and repository for the
    run and its per-Órgano coverage rows; the derived-abandoned read applied in one place; the
@@ -414,7 +419,7 @@ stateDiagram-v2
 **Criteria this feature deliberately leaves incomplete**, so no task is written against something
 it cannot prove: #5's *next scheduled run* clause, #14's *without an administrator intervening*
 clause, #29's *incrementally* clause, #33 and #44 whole, and #38's re-read and incremental modes
-all wait on FEAT-0010; #14's progress-visibility half and #32's *recorded as a refused run* half
+all wait on the incremental feature; #14's progress-visibility half and #32's *recorded as a refused run* half
 are SPEC-0007's; #1's re-read and remove/restore operations are the curation feature's; and the
 *displayed* halves of #9, #11, #16, #26, #40 and #42 are the browsing feature's.
 
@@ -429,7 +434,7 @@ are SPEC-0007's; #1's re-read and remove/restore operations are the curation fea
 - **Marked, unmarked while half-loaded, marked again** — resumed, never treated as up to date;
   it continues from the cursor, adds no duplicates and completes the full history. Contrast an
   Órgano whose initial import had **completed**: the same sequence takes the incremental mode,
-  which FEAT-0010 delivers (#44 with it). *(SPEC-0005 #46)*
+  which the incremental feature delivers (#44 with it). *(SPEC-0005 #46)*
 - **A run whose process dies** — its row still says *in progress*, and nothing sweeps it. The
   derived-abandoned read is what releases the guard after the configured bound; without it the
   first crash blocks every import in the system permanently. *(SPEC-0005 #32)*
@@ -462,9 +467,9 @@ are SPEC-0007's; #1's re-read and remove/restore operations are the curation fea
   the run carries on to the remaining Órganos. *(SPEC-0005 #36)*
 - **A trigger arriving while any import runs** — including SPEC-0004's catalogue import — is
   refused with the guard as its reason, and neither queued nor dropped silently. Until
-  FEAT-0010's scheduler exists, a refused **mark** is not automatically recovered: the
+  the incremental feature's scheduler exists, a refused **mark** is not automatically recovered: the
   administrator is told it was refused and can trigger it again. *(SPEC-0005 #32; #33 completes
-  with FEAT-0010)*
+  with that feature)*
 - **An explicitly named Órgano that is inactive or unmarked** — no import starts, and the reason
   reported is ineligibility, distinct from the guard refusal. *(SPEC-0005 #34)*
 - **An Órgano becoming inactive mid-run** — R5 requires the run to stop for it, and it cannot
