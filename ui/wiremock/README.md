@@ -2,7 +2,7 @@
 
 Default stub state for the `/api` contract, served by the `wiremock` service in
 [`../docker-compose.yml`](../docker-compose.yml) and consumed by `npm run dev`,
-`npm run preview` and the acceptance suite in [`../e2e`](../e2e) alike
+`npm run preview` and the acceptance suite in [`../acceptance`](../acceptance) alike
 (**[ADR-0018](../../docs/architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md)**).
 
 Payloads mirror the examples in
@@ -56,7 +56,7 @@ These are stub limitations, not app bugs — worth knowing before you chase one:
 
 Prefer programming a stub over editing these files when you only need it for one
 scenario — that is what the acceptance suite does, via
-[`../e2e/support/wiremock.ts`](../e2e/support/wiremock.ts):
+[`../acceptance/support/wiremock.ts`](../acceptance/support/wiremock.ts):
 
 ```bash
 curl -X POST http://localhost:8081/__admin/mappings \

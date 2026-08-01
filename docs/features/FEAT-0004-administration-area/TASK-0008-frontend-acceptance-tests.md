@@ -12,7 +12,7 @@ Governed by [ADR-0018](../../architecture/0018-frontend-acceptance-tests-against
 ## Scope
 - A WireMock service in `ui/docker-compose.yml` with versioned default mappings in `ui/wiremock/mappings/`, covering `GET /api/me`, `GET /api/admin/system-status`, `GET /api/admin/users`, `POST /api/admin/users`, `POST /api/admin/users/{id}/enabled` and the `GET /api/admin/metrics` SSE stream. Payloads derived from the examples in [`docs/api/openapi.yaml`](../../api/openapi.yaml).
 - Vite `server.proxy` and `preview.proxy` routing `/api`, `/login` and `/logout` to that service (`UI_API_TARGET`, default `http://localhost:8081`), so `npm run dev` and `npm run preview` render the administration area without a backend.
-- A Node `@playwright/test` suite in `ui/e2e` driving `vite preview`, with a `/__admin` helper to program per-scenario stubs and reset to the on-disk defaults between tests.
+- A Node `@playwright/test` suite in `ui/acceptance` driving `vite preview`, with a `/__admin` helper to program per-scenario stubs and reset to the on-disk defaults between tests.
 - High-value happy-path journeys only: dashboard status, user list, create-user with the one-time password reveal, disable/re-enable, and admin-nav gating.
 - Vitest is scoped to `src/**` so it no longer tries to collect the Playwright specs.
 

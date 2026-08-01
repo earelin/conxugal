@@ -39,19 +39,19 @@ export default tseslint.config(
         { pattern: 'src/main.tsx', category: 'app-entry' },
         { pattern: '**/*.test.{ts,tsx}', category: 'test' },
       ],
-      // e2e/ drives the built app over HTTP and imports nothing from src, so it
+      // acceptance/ drives the built app over HTTP and imports nothing from src, so it
       // sits outside the module graph these rules describe.
       'boundaries/ignore': [
         'src/vite-env.d.ts',
         'src/App.test.tsx',
         'vite.config.ts',
         'playwright.config.ts',
-        'e2e/**/*.ts',
+        'acceptance/**/*.ts',
       ],
       'import/resolver': {
         typescript: {
           alwaysTryTypes: true,
-          project: ['tsconfig.app.json', 'tsconfig.node.json', 'tsconfig.e2e.json'],
+          project: ['tsconfig.app.json', 'tsconfig.node.json', 'tsconfig.acceptance.json'],
           noWarnOnMultipleProjects: true,
         },
       },
@@ -129,7 +129,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['vite.config.ts', 'playwright.config.ts', 'e2e/**/*.ts'],
+    files: ['vite.config.ts', 'playwright.config.ts', 'acceptance/**/*.ts'],
     languageOptions: {
       globals: globals.node,
     },

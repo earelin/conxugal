@@ -57,7 +57,7 @@ flowchart LR
   — the *default* compose file, started with a plain `docker compose up -d` from `ui/` — and
   is consumed identically by `npm run dev`, `npm run preview`, and the acceptance suite. It
   is a development dependency first and a test dependency second; it is deliberately **not**
-  an e2e-only artifact.
+  an acceptance-only artifact.
 - **Vite proxies to it.** `server.proxy` and `preview.proxy` route `/api`, `/login` and
   `/logout` to `UI_API_TARGET` (default `http://localhost:8081`), preserving the
   same-origin assumption the app is written against. Pointing at a real backend instead
@@ -71,7 +71,7 @@ flowchart LR
   (a `USER` session, a 409 from the last-admin rule) posts a mapping before driving the UI
   and resets to the on-disk defaults afterwards, so every scenario is reproducible in
   isolation.
-- **The suite is Node `@playwright/test`**, living in `ui/e2e`, driving the **production
+- **The suite is Node `@playwright/test`**, living in `ui/acceptance`, driving the **production
   build** through `vite preview`. It is black box: it interacts only through the rendered
   page — accessible roles, labels and Galician copy from `ui/src/shared/lib/strings.ts` —
   and never reaches into stores, component internals or the query cache. Where a request is
@@ -79,7 +79,7 @@ flowchart LR
 - **This complements ADR-0007, it does not supersede it.** The two suites answer different
   questions and both are kept:
 
-  | | `server/acceptance` (ADR-0007) | `ui/e2e` (this ADR) |
+  | | `server/acceptance` (ADR-0007) | `ui/acceptance` (this ADR) |
   | --- | --- | --- |
   | Under test | packaged app + real PostgreSQL | built SPA alone |
   | API | real | WireMock |

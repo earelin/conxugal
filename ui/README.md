@@ -53,8 +53,8 @@ UI_API_TARGET=http://localhost:8080 npm run dev
 | `npm run format:check` | Check formatting without writing.              |
 | `npm test`             | Run the Vitest suite once.                     |
 | `npm run test:watch`   | Run Vitest in watch mode.                      |
-| `npm run test:e2e`     | Run the Playwright acceptance suite.           |
-| `npm run test:e2e:ui`  | Run the acceptance suite in Playwright's UI.   |
+| `npm run test:acceptance`     | Run the Playwright acceptance suite.           |
+| `npm run test:acceptance:ui`  | Run the acceptance suite in Playwright's UI.   |
 | `npm run api:up`       | Start the stubbed API (WireMock).              |
 | `npm run api:down`     | Stop it.                                       |
 
@@ -67,10 +67,10 @@ once:
 
 ```bash
 npx playwright install chromium
-npm run test:e2e
+npm run test:acceptance
 ```
 
-Specs live in [`e2e/specs`](e2e/specs) and are deliberately limited to high-value
+Specs live in [`acceptance/specs`](acceptance/specs) and are deliberately limited to high-value
 journeys — dashboard status, the user list, creating an account, disabling and
 re-enabling one, and admin-nav gating. They run serially: WireMock is a single shared
 process, so scenarios that program it would otherwise stomp on each other.
@@ -106,7 +106,7 @@ src/
       strings.ts          # Galician interface text (i18n seam)
   test/
     setup.ts              # jsdom/Mantine test setup
-e2e/                      # Playwright acceptance suite (outside the src module graph)
+acceptance/               # Playwright acceptance suite (outside the src module graph)
   specs/                  # one file per area of the UI
   support/                # WireMock admin client + fixture values
 wiremock/mappings/        # the stubbed API's default state

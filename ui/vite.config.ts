@@ -24,7 +24,7 @@ export default defineConfig({
     proxy,
   },
   test: {
-    // Scoped to src/ so Vitest doesn't collect the Playwright specs in e2e/,
+    // Scoped to src/ so Vitest doesn't collect the Playwright specs in acceptance/,
     // which its default `**/*.spec.ts` glob would otherwise match.
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     environment: 'jsdom',
