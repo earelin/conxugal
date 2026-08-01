@@ -1,6 +1,5 @@
 package gal.conxugal.application.http.auth;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
@@ -46,13 +45,11 @@ class BasicAuthDisabledTest extends AuthenticationTestSupport {
 
   @Test
   void unauthorized_response_does_not_challenge_for_http_basic_auth() {
-    try {
-      client.exchange(HttpRequest.GET("/api/data"));
-    } catch (HttpClientResponseException e) {
-      assertThat(e.getResponse().getHeaders().get(HttpHeaders.WWW_AUTHENTICATE)).isNull();
-      return;
-    }
-    throw new AssertionError("expected request to be rejected");
+    assertThatThrownBy(() -> client.exchange(HttpRequest.GET("/api/data")))
+        .isInstanceOf(HttpClientResponseException.class)
+        .extracting(exception -> ((HttpClientResponseException) exception).getResponse())
+        .extracting(response -> response.getHeaders().get(HttpHeaders.WWW_AUTHENTICATE))
+        .isNull();
   }
 
   private String basicAuthHeader(String email, String password) {
