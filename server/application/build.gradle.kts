@@ -67,6 +67,8 @@ testing {
                 implementation(libs.mockito.junit.jupiter)
                 implementation(libs.assertj.core)
                 implementation(libs.micronaut.test.rest.assured)
+                implementation(libs.testcontainers.junit.jupiter)
+                implementation(libs.testcontainers.postgresql)
             }
 
             targets {

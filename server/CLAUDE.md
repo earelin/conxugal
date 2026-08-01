@@ -30,7 +30,12 @@ Run from `server/` (Gradle wrapper; Java 25 toolchain is pinned in the root
   integration tests: full embedded-server HTTP round-trips (session auth, CSRF, idle
   timeout) against the real `@Controller`/security wiring rather than mocks. Also a
   JVM Test Suite (`application/src/integrationTest`), deliberately **not** added to
-  `check` — unlike `infrastructure`'s, it needs no Docker daemon, just a JVM.
+  `check`. It mocks its domain collaborators and needs only a JVM, with one exception:
+  a class whose subject *is* what the database does — an endpoint's collation-dependent
+  ordering, say — declares its own Testcontainers PostgreSQL under
+  `@Testcontainers(disabledWithoutDocker = true)` and re-enables the datasource
+  `application-test.yml` turns off, so a Docker-less run skips that class and the rest
+  of the suite still runs.
 - `./gradlew :architecture:test` — run the ArchUnit rules that enforce the hexagonal
   dependency direction, `domain`'s transport/persistence-code purity, and the `/api/`
   URL prefix (see below). Static bytecode analysis only, no Docker/running instance
