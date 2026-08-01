@@ -1,5 +1,5 @@
 ---
-status: draft
+status: active
 ---
 
 # SPEC-0004. Import and manage Órganos de Contratación
