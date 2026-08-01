@@ -16,9 +16,7 @@ class AdminSystemStatusTest {
 
   @Test
   void admin_reads_system_status_reporting_the_datastore_is_reachable() {
-    String adminSession =
-        ApplicationSession.logInOrFail(
-            ApplicationSession.ADMIN_EMAIL, ApplicationSession.ADMIN_PASSWORD);
+    String adminSession = ApplicationSession.logInAsAdmin();
 
     Response status = systemStatus(adminSession);
 

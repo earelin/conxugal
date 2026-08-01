@@ -25,9 +25,7 @@ class AdminUserAdministrationTest {
 
   @BeforeEach
   void logInAsAdministrator() {
-    adminSession =
-        ApplicationSession.logInOrFail(
-            ApplicationSession.ADMIN_EMAIL, ApplicationSession.ADMIN_PASSWORD);
+    adminSession = ApplicationSession.logInAsAdmin();
     newAccountEmail = "acceptance-%s@example.com".formatted(UUID.randomUUID());
   }
 

@@ -21,9 +21,7 @@ class AdminApiAccessControlTest {
 
   @Test
   void user_role_is_denied_the_administration_api() {
-    String userSession =
-        ApplicationSession.logInOrFail(
-            ApplicationSession.USER_EMAIL, ApplicationSession.USER_PASSWORD);
+    String userSession = ApplicationSession.logInAsUser();
 
     ApplicationSession.authenticatedAs(userSession)
     .when()

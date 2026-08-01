@@ -15,13 +15,23 @@ import java.util.Optional;
 public final class ApplicationSession {
 
   public static final String ADMIN_EMAIL = "root@local";
-  public static final String ADMIN_PASSWORD = "secret";
-  public static final String USER_EMAIL = "demo@local";
-  public static final String USER_PASSWORD = "demo";
 
+  private static final String ADMIN_PASSWORD = "secret";
+  private static final String USER_EMAIL = "demo@local";
+  private static final String USER_PASSWORD = "demo";
   private static final String SESSION_COOKIE_NAME = "SESSION";
 
   private ApplicationSession() {
+  }
+
+  /** A session for the administrator every environment's migrations seed. */
+  public static String logInAsAdmin() {
+    return logInOrFail(ADMIN_EMAIL, ADMIN_PASSWORD);
+  }
+
+  /** A session for the ordinary user the {@code local} environment seeds. */
+  public static String logInAsUser() {
+    return logInOrFail(USER_EMAIL, USER_PASSWORD);
   }
 
   /**
