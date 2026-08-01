@@ -6,7 +6,7 @@ public class UserNotFoundException extends RuntimeException {
   private final UserId userId;
 
   public UserNotFoundException(UserId userId) {
-    super("No account exists with id: " + userId);
+    super("No account exists with id: %s".formatted(userId));
     this.userId = userId;
   }
 

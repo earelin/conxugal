@@ -10,7 +10,7 @@ public class LastEnabledAdminException extends RuntimeException {
   private final UserId userId;
 
   public LastEnabledAdminException(UserId userId) {
-    super("Cannot disable the only remaining enabled ADMIN account: " + userId);
+    super("Cannot disable the only remaining enabled ADMIN account: %s".formatted(userId));
     this.userId = userId;
   }
 

@@ -10,7 +10,7 @@ public class TermoNotFoundException extends RuntimeException {
   private final TermoId termoId;
 
   public TermoNotFoundException(TermoId termoId) {
-    super("No term exists with id: " + termoId);
+    super("No term exists with id: %s".formatted(termoId));
     this.termoId = termoId;
   }
 
