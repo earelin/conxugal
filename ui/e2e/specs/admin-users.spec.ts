@@ -6,11 +6,16 @@ function rowFor(page: Page, email: string) {
   return page.getByRole('row').filter({ hasText: email });
 }
 
-// "Activada" is a substring of "Desactivada", and getByText matches on
-// substrings, so an enabled-state assertion must be exact or a disabled
-// account would satisfy it.
+// The enabled labels are substrings of the disabled ones — "Activada" of
+// "Desactivada", "Activar" of "Desactivar" — and both getByText and the `name`
+// option match on substrings, case-insensitively. Every assertion on this pair
+// must therefore be exact, or a disabled account would satisfy it.
 function enabledBadge(row: ReturnType<typeof rowFor>) {
   return row.getByText('Activada', { exact: true });
+}
+
+function toggleButton(row: ReturnType<typeof rowFor>, label: 'Activar' | 'Desactivar') {
+  return row.getByRole('button', { name: label, exact: true });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -38,7 +43,7 @@ test.describe('User administration', () => {
     // A disabled account stays listed and offers re-enabling.
     const disabled = rowFor(page, accounts.disabledUser.email);
     await expect(disabled.getByText('Desactivada')).toBeVisible();
-    await expect(disabled.getByRole('button', { name: 'Activar' })).toBeVisible();
+    await expect(toggleButton(disabled, 'Activar')).toBeVisible();
 
     // Never having logged in is rendered explicitly, not as an empty cell.
     await expect(rowFor(page, accounts.neverLoggedIn.email).getByText('Nunca')).toBeVisible();
@@ -94,15 +99,15 @@ test.describe('User administration', () => {
     const row = rowFor(page, accounts.enabledUser.email);
     await expect(enabledBadge(row)).toBeVisible();
 
-    await row.getByRole('button', { name: 'Desactivar' }).click();
+    await toggleButton(row, 'Desactivar').click();
 
     await expect(row.getByText('Desactivada')).toBeVisible();
-    await expect(row.getByRole('button', { name: 'Activar' })).toBeVisible();
+    await expect(toggleButton(row, 'Activar')).toBeVisible();
 
-    await row.getByRole('button', { name: 'Activar' }).click();
+    await toggleButton(row, 'Activar').click();
 
     await expect(enabledBadge(row)).toBeVisible();
-    await expect(row.getByRole('button', { name: 'Desactivar' })).toBeVisible();
+    await expect(toggleButton(row, 'Desactivar')).toBeVisible();
 
     const toggles = `/api/admin/users/${accounts.enabledUser.id}/enabled`;
     expect(await bodiesSentTo('POST', toggles)).toEqual([{ enabled: false }, { enabled: true }]);
