@@ -278,8 +278,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
   // under test see these uncommitted writes within the same transaction. Contrast
   // TermoMigrationIntegrationTest's insertTermo, which does commit/rollback because
   // several of its tests deliberately trigger a constraint violation.
-  private OrganoId insertOrgano(String sourceKey, String name, boolean active)
-      throws Exception {
+  private OrganoId insertOrgano(String sourceKey, String name, boolean active) throws Exception {
     return insertOrgano(sourceKey, name, active, null);
   }
 

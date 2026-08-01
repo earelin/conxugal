@@ -39,6 +39,20 @@ class ModuleBoundariesArchTest {
           .dependOnClassesThat()
           .resideInAPackage("gal.conxugal.infrastructure..");
 
+  /**
+   * {@code domain} exposes Micronaut Data as an api dependency, so persistence types now reach
+   * {@code application}'s compile classpath; before that they were kept out by absence alone.
+   * Driving-side code still has no business touching them — it goes through the ports.
+   */
+  @ArchTest
+  static final ArchRule APPLICATION_DOES_NOT_DEPEND_ON_PERSISTENCE =
+      noClasses()
+          .that()
+          .resideInAPackage("gal.conxugal.application..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAnyPackage("io.micronaut.data..", "java.sql..", "javax.sql..");
+
   @ArchTest
   static final ArchRule INFRASTRUCTURE_DOES_NOT_DEPEND_ON_APPLICATION =
       noClasses()

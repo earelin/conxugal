@@ -97,7 +97,7 @@ class AuthenticateTest {
     User user =
         new User(
             new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.USER, false,
-                CREATED_AT);
+            CREATED_AT);
     when(userRepository.findByEmail("ana@example.com")).thenReturn(Optional.of(user));
     when(passwordEncoder.matches("correct-password", "stored-hash")).thenReturn(true);
 

@@ -47,8 +47,7 @@ class UserTest {
     User user =
         new User(
             new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.USER, true,
-                CREATED_AT,
-            lastLoginAt);
+            CREATED_AT, lastLoginAt);
 
     assertThat(user.lastLoginAt()).isEqualTo(lastLoginAt);
   }
@@ -80,8 +79,8 @@ class UserTest {
   void rejects_null_role() {
     assertThatNullPointerException()
         .isThrownBy(
-            () -> new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", null,
-                true,
+            () -> new User(
+                new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", null, true,
                 CREATED_AT));
   }
 
@@ -89,8 +88,8 @@ class UserTest {
   void rejects_null_created_at() {
     assertThatNullPointerException()
         .isThrownBy(
-            () -> new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash",
-                Role.USER, true,
+            () -> new User(
+                new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.USER, true,
                 null));
   }
 

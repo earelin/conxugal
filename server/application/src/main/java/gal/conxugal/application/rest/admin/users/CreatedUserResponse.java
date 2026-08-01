@@ -1,9 +1,9 @@
 package gal.conxugal.application.rest.admin.users;
 
+import static java.util.Objects.requireNonNull;
+
 import gal.conxugal.domain.user.CreatedAccount;
 import gal.conxugal.domain.user.Role;
-import gal.conxugal.domain.user.UserId;
-import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 import java.time.Instant;
 import java.util.UUID;
@@ -11,15 +11,15 @@ import java.util.UUID;
 /** The account just created, including its one-time initial password. */
 @Serdeable
 public record CreatedUserResponse(
-    @Nullable UUID id, String email, Role role, boolean enabled, Instant createdAt,
+    UUID id, String email, Role role, boolean enabled, Instant createdAt,
     String initialPassword) {
 
   static CreatedUserResponse of(CreatedAccount createdAccount) {
-    UserId id = createdAccount.user().id();
     return new CreatedUserResponse(
-        id == null ? null : id.value(), createdAccount.user().email(),
-        createdAccount.user().role(), createdAccount.user().enabled(),
-        createdAccount.user().createdAt(), createdAccount.initialPassword().value());
+        requireNonNull(createdAccount.user().id(), "a persisted user must carry an id").value(),
+        createdAccount.user().email(), createdAccount.user().role(),
+        createdAccount.user().enabled(), createdAccount.user().createdAt(),
+        createdAccount.initialPassword().value());
   }
 
   @Override

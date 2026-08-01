@@ -67,7 +67,7 @@ class CreateUserTest {
   void refuses_to_create_an_account_with_an_already_used_email() {
     User existing = new User(
         new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.ADMIN, true,
-            CREATED_AT);
+        CREATED_AT);
     when(userRepository.findByEmail("ana@example.com")).thenReturn(Optional.of(existing));
 
     assertThatThrownBy(() -> createUser.create("ana@example.com", Role.ADMIN))

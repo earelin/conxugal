@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 public class DuplicateSiblingNameException extends RuntimeException {
 
   private final String name;
-  @Nullable private final TermoId parentId;
+  private final @Nullable TermoId parentId;
 
   public DuplicateSiblingNameException(String name, @Nullable TermoId parentId) {
     super(parentId == null
