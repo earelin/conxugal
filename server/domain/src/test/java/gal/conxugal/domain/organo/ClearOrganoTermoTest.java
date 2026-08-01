@@ -41,7 +41,7 @@ class ClearOrganoTermoTest {
   @Test
   void clearing_an_already_unclassified_organo_writes_nothing() {
     UUID organoId = UUID.randomUUID();
-    when(organoRepository.findById(organoId)).thenReturn(Optional.of(placedIn(organoId, null)));
+    when(organoRepository.findById(organoId)).thenReturn(Optional.of(unclassified(organoId)));
 
     clearOrganoTermo.clear(organoId);
 
@@ -56,6 +56,10 @@ class ClearOrganoTermoTest {
     assertThatThrownBy(() -> clearOrganoTermo.clear(unknownOrganoId))
         .isInstanceOf(OrganoNotFoundException.class);
     verify(organoRepository, never()).updateTermo(any(), any());
+  }
+
+  private static OrganoDeContratacion unclassified(UUID organoId) {
+    return placedIn(organoId, null);
   }
 
   private static OrganoDeContratacion placedIn(UUID organoId, UUID termoId) {
