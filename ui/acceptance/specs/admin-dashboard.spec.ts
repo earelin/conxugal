@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+
 import { degradedSystemStatus } from '../support/fixtures';
 import { navLink } from '../support/locators';
 import { resetMappings, stubJson } from '../support/wiremock';

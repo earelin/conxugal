@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '../../../shared/lib/httpClient';
+
 import type { Role } from '../../../shared/entities/currentUser';
+import { apiFetch } from '../../../shared/lib/httpClient';
 
 export interface UserAccount {
   id: string;

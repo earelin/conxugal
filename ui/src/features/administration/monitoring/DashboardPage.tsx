@@ -17,10 +17,11 @@ import {
   IconLock,
   IconRefresh,
 } from '@tabler/icons-react';
-import { lazy, Suspense, useId, type ReactNode } from 'react';
+import { lazy, type ReactNode, Suspense, useId } from 'react';
+
 import { HttpError } from '../../../shared/lib/httpClient';
 import { strings } from '../../../shared/lib/strings';
-import { useSystemStatus, type SystemStatus } from './systemStatus';
+import { type SystemStatus, useSystemStatus } from './systemStatus';
 
 // Code-split: @mantine/charts (and its recharts peer) are only needed once an
 // ADMIN opens this page, not for every visitor of the app's eager entry chunk.

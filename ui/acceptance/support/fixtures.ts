@@ -19,7 +19,12 @@ export const accounts = {
   disabledUser: { email: 'helena.mar@conxugal.gal' },
 } as const;
 
-/** The one-time password the create-user stub returns. */
+/**
+ * The one-time password the create-user stub returns. It authenticates nothing
+ * — it is the literal `users.json` serves, and the spec asserts the reveal
+ * shows exactly it, so both copies have to match.
+ */
+// eslint-disable-next-line sonarjs/no-hardcoded-passwords -- a stub's canned response, not a credential
 export const generatedPassword = 'Tg7#kLp2Qw9$mZxR';
 
 /**

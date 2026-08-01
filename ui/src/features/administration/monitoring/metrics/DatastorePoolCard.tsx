@@ -1,5 +1,6 @@
 import { Box, Card, Group, SimpleGrid, Stack, Text } from '@mantine/core';
 import { IconLock } from '@tabler/icons-react';
+
 import { strings } from '../../../../shared/lib/strings';
 import { Field } from './Field';
 import { formatPercent } from './metricsFormat';

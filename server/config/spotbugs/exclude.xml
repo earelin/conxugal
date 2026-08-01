@@ -31,4 +31,48 @@
     <Field name="~(organo|termo)Repository"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
+
+  <!-- Micronaut Serde's generated (de)serializers. The @Generated match above cannot reach them:
+       they carry javax.annotation.processing.Generated, which is SOURCE-retention and so absent
+       from the bytecode SpotBugs reads, unlike Micronaut's own CLASS-retention annotation. -->
+  <Match>
+    <Class name="~gal\.conxugal\..*\.Serde[A-Z].*(Deserializer|Serializer)(\$.*)?"/>
+  </Match>
+
+  <!-- fb-contrib detectors we do not adopt, project-wide. -->
+
+  <!-- Reports the mutual reference between a value object and its converter, which is inherent to
+       that pairing. Named so a genuine class-level tangle elsewhere still reports — :architecture's
+       ArchUnit rules only police the direction between modules, not within one. -->
+  <Match>
+    <Class name="~gal\.conxugal\..*IdConverter"/>
+    <Bug pattern="FCCD_FIND_CLASS_CIRCULAR_DEPENDENCY"/>
+  </Match>
+
+  <!-- Wants checked exceptions propagated rather than wrapped. Adapters deliberately soften them:
+       domain ports declare no checked exceptions, so an adapter translating one is the design, and
+       test helpers driving those adapters wrap the same way. -->
+  <Match>
+    <Bug pattern="EXS_EXCEPTION_SOFTENING_NO_CONSTRAINTS"/>
+  </Match>
+
+  <!-- Wants parameters widened to the most abstract collection type that compiles. We take the
+       type a caller actually passes and widen it when a second caller needs it, not before. -->
+  <Match>
+    <Bug pattern="OCP_OVERLY_CONCRETE_COLLECTION_PARAMETER"/>
+  </Match>
+
+  <!-- Wants every collection allocated at its final size. Sizing a collection is an optimisation
+       we make when a measurement asks for it, not by default. -->
+  <Match>
+    <Bug pattern="PSC_PRESIZE_COLLECTIONS"/>
+  </Match>
+
+  <!-- Test-only: each of these fires on a standard JUnit/AssertJ/Mockito idiom rather than on a
+       defect — constructing a value inside assertThatThrownBy, stubbing thenReturn(true), and
+       calling the method under test twice to compare the two results. -->
+  <Match>
+    <Class name="~.*Test(\$.*)?"/>
+    <Bug pattern="SEC_SIDE_EFFECT_CONSTRUCTOR,NAB_NEEDLESS_BOOLEAN_CONSTANT_CONVERSION,PRMC_POSSIBLY_REDUNDANT_METHOD_CALLS,SEO_SUBOPTIMAL_EXPRESSION_ORDER"/>
+  </Match>
 </FindBugsFilter>

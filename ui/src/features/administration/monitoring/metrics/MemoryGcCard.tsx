@@ -1,4 +1,5 @@
 import { Card, Group, Progress, SimpleGrid, Stack, Text } from '@mantine/core';
+
 import { strings } from '../../../../shared/lib/strings';
 import { Field } from './Field';
 import {

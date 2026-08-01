@@ -3,6 +3,7 @@ import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
 import { theme } from '../../../app/theme';
 import { createQueryClient } from '../../../shared/lib/queryClient';
 import { strings } from '../../../shared/lib/strings';

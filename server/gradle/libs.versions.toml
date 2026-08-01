@@ -6,6 +6,7 @@ bouncyCastle = "1.85"
 checkstyle = "13.7.0"
 errorprone = "2.50.0"
 errorproneGradlePlugin = "5.1.0"
+fbContrib = "7.7.4"
 findsecbugs = "1.14.0"
 flywayCore = "13.0.0"
 jacoco = "0.8.15"
@@ -33,6 +34,7 @@ assertj-db = { module = "org.assertj:assertj-db", version.ref = "assertjDb" }
 bouncycastle-provider = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncyCastle" }
 errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
 errorprone-gradle-plugin = { module = "net.ltgt.errorprone:net.ltgt.errorprone.gradle.plugin", version.ref = "errorproneGradlePlugin" }
+fb-contrib = { module = "com.mebigfatguy.fb-contrib:fb-contrib", version.ref = "fbContrib" }
 findsecbugs-plugin = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flywayCore" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flywayCore" }

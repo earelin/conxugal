@@ -1,11 +1,12 @@
 import { SimpleGrid, Stack } from '@mantine/core';
+
 import { DatastorePoolCard } from './DatastorePoolCard';
 import { HttpActivityCard } from './HttpActivityCard';
 import { MemoryGcCard } from './MemoryGcCard';
-import { HeapTile, HttpTile, SystemLoadTile, ThreadsTile } from './MetricTiles';
 import { MetricsFooterNotes } from './MetricsFooterNotes';
 import { MetricsSectionHeader } from './MetricsSectionHeader';
 import { useMetricsStream } from './metricsStream';
+import { HeapTile, HttpTile, SystemLoadTile, ThreadsTile } from './MetricTiles';
 
 export function MetricsPanel() {
   const { state, latest, history, lastArrivedAt } = useMetricsStream();

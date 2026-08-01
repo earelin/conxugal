@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+
 import { accounts, generatedPassword } from '../support/fixtures';
 import { bodiesSentTo, resetMappings } from '../support/wiremock';
 
