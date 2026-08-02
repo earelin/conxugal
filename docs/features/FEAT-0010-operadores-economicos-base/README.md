@@ -40,10 +40,12 @@ import use case
 > rows, and backfilling it from data that is only correct if re-derived, is a materially
 > different operation — the same argument FEAT-0009 makes for creating its year index up front.
 >
-> So this feature's tasks 1–3 — the rules, the aggregate and the `operador` table — are
-> prerequisites of FEAT-0009's domain and store tasks, and only task 4, the derivation itself,
-> waits on FEAT-0009's import. Nothing here references `contrato_menor`, so the two features
-> interleave without a cycle.
+> So **tasks 2 and 3** — the aggregate and the `operador` table — are the prerequisites of
+> FEAT-0009's domain and store tasks: the first supplies the type its association points at, the
+> second the table its foreign key points at. **Task 1 is not on that path.** Its three functions
+> are needed only when an award is actually resolved, which is task 4, and task 4 is also the
+> only one that waits on FEAT-0009's import. Nothing here references `contrato_menor`, so the two
+> features interleave without a cycle.
 
 ## Scope
 - **Domain (the operador):** an `OperadorEconomico` aggregate — a system-assigned `OperadorId`
@@ -151,7 +153,8 @@ flowchart LR
 ### Display: one published spelling, chosen deterministically
 R4 shows an operador under the name **and** the identifier spelling taken from its **most
 recently published** contract, ties broken by the **higher** contract identifier, with contracts
-whose publication date cannot be interpreted **ranked last**. So the rank is a triple:
+whose publication date cannot be interpreted **ranked last**. So the rank is a pair, compared in
+order, and what the winner supplies is the consequence rather than a third component:
 
 ```mermaid
 flowchart LR
@@ -213,15 +216,19 @@ records which it is* is proved here; its *no view distinguishes the two* half be
 features that build views.
 
 ## Sequencing (tasks, one small change each)
+The numbering is the order the pieces make sense in, not a chain: **1 and 2 have no
+dependencies**, and 2 is the one FEAT-0009 waits on, so it can be taken first.
+
 1. **Matching, emptiness and ranking rules** — `OperadorMatchKey` (R3's equivalence and R5's
    emptiness test) and the R4 rank comparison, as pure domain functions with no store and no
    framework. Unit-tested from both sides: identifiers differing only in padding or case reduce
    to one key; identifiers differing in internal spacing, punctuation or any character do not.
-   *(SPEC-0006 #3 matching half, #4, #9)*
-2. **`OperadorEconomico` domain model + repository port** — the aggregate (UUID identity, match
-   key, published display name, published identifier spelling, and the rank they were taken from)
-   and the `OperadorRepository` port: find by match key, insert, update the display fields.
-   *(SPEC-0006 #2, #10 stored-attribute half)*
+   Needed by task 4, not by tasks 2 or 3. *(SPEC-0006 #3 matching half, #4, #9)*
+2. **`OperadorEconomico` domain model + repository port** — the aggregate (`OperadorId` identity,
+   match key, published display name, published identifier spelling, and the rank they were taken
+   from) and the `OperadorRepository` port: find by match key, insert, update the display fields.
+   **The task that unblocks FEAT-0009**, whose contract aggregate declares an association to this
+   type. *(SPEC-0006 #2, #10 stored-attribute half)*
 3. **Operador store** — the migration creating `operador` with a **unique** match key, and the
    Micronaut Data JDBC implementation of the port. It touches `contrato_menor` **not at all**:
    the nullable `operador_id` foreign key and its index are created by FEAT-0009's store task,

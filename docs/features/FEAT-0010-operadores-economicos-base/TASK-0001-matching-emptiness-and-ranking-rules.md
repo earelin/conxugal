@@ -26,7 +26,7 @@ than an error".
   is **unusable**: it yields no match key at all. Nothing beyond emptiness is validated; the
   source publishes irregular but genuine identifiers, and rejecting them would discard real
   awards.
-- **The rank** — a comparable triple over a contract: its publication date (**null
+- **The rank** — a comparable pair over a contract: its publication date (**null
   ranks last**), then its source identifier (**higher wins**). This is what R4 means by
   *most recently published*, made total and deterministic rather than "some tie-break".
 - The match key is a **comparison value that is never displayed** (R13). Name it so that reaching

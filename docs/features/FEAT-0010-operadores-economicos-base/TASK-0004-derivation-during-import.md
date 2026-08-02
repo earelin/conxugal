@@ -3,7 +3,7 @@ feat: FEAT-0010
 domain: backend
 adrs: [0002, 0018]
 status: todo
-depends_on: [TASK-0003]
+depends_on: [TASK-0001, TASK-0003]
 ---
 
 # Derivation during the contratos menores import
