@@ -17,9 +17,6 @@ import org.junit.jupiter.api.Test;
  */
 class AdminRuntimeMetricsStreamTest {
 
-  private static final String METRICS_PATH = "/api/admin/metrics";
-  private static final String EVENT_STREAM = "text/event-stream";
-
   /**
    * The instance emits the first sample immediately and the rest on a cadence it alone chooses.
    * {@code PROMPTLY} is deliberately shorter than that cadence, so a first sample that waited
@@ -96,7 +93,7 @@ class AdminRuntimeMetricsStreamTest {
 
     subscribing(ApplicationSession.authenticatedAs(userSession))
     .when()
-        .get(METRICS_PATH)
+        .get(MetricsStream.PATH)
     .then()
         .statusCode(403);
   }
@@ -105,7 +102,7 @@ class AdminRuntimeMetricsStreamTest {
   void anonymous_caller_is_denied_the_metrics_stream() {
     subscribing(ApplicationSession.anonymous())
     .when()
-        .get(METRICS_PATH)
+        .get(MetricsStream.PATH)
     .then()
         .statusCode(401);
   }
@@ -117,7 +114,7 @@ class AdminRuntimeMetricsStreamTest {
   }
 
   private static RequestSpecification subscribing(RequestSpecification caller) {
-    return caller.accept(EVENT_STREAM);
+    return caller.accept(MetricsStream.MEDIA_TYPE);
   }
 
   private static Instant instantOf(JsonPath sample) {

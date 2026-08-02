@@ -33,9 +33,11 @@ import java.util.function.Predicate;
  */
 public final class MetricsStream implements Closeable {
 
+  /** Where the stream lives and what it speaks, for scenarios that call it without subscribing. */
+  public static final String PATH = "/api/admin/metrics";
+  public static final String MEDIA_TYPE = "text/event-stream";
+
   private static final Logger LOG = System.getLogger(MetricsStream.class.getName());
-  private static final String METRICS_PATH = "/api/admin/metrics";
-  private static final String EVENT_STREAM = "text/event-stream";
   private static final String DATA_FIELD = "data:";
 
   private final InputStream body;
@@ -50,8 +52,8 @@ public final class MetricsStream implements Closeable {
   /** Opens the stream as the holder of {@code sessionCookie}, the way an EventSource would. */
   public static MetricsStream openAs(String sessionCookie) {
     HttpRequest request =
-        HttpRequest.newBuilder(URI.create(ApplicationUnderTest.BASE_URI + METRICS_PATH))
-            .header("Accept", EVENT_STREAM)
+        HttpRequest.newBuilder(URI.create(ApplicationUnderTest.BASE_URI + PATH))
+            .header("Accept", MEDIA_TYPE)
             .header("Cookie", sessionCookie)
             .GET()
             .build();
