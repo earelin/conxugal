@@ -51,7 +51,7 @@ expected rather than discovered.
   FEAT-0007's classification endpoints define for the same id, reused rather than duplicated.
 - `GET /api/admin/organos` serves the catalogue **as an administrator sees it**: the same
   Órgano shape FEAT-0007's `GET /api/organos` will serve — id, name, active state, taxonomy
-  placement — **plus `importado`**, in the same name order. It is a second serialisation of an
+  placement — **plus `importable`**, in the same name order. It is a second serialisation of an
   Órgano, which breaks FEAT-0007's "exactly one endpoint serialises an Órgano" rule; the trade
   is the feature's, taken knowingly (feature *API surface*), and it must carry the placement
   as well as the mark so the admin section can swap one read for the other rather than issue

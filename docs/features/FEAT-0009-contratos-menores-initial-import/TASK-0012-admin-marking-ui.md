@@ -35,7 +35,7 @@ peer of without it. This task adds into that structure rather than inventing a c
   from the catalogue read, not from a new endpoint
   ([`organos-import-mark.svg`](design/organos-import-mark.svg)).
 - **The section reads `GET /api/admin/organos`** instead of `GET /api/organos`: it is the read
-  that carries `importado` and the import state, and swapping it keeps the section on one
+  that carries `importable` and the import state, and swapping it keeps the section on one
   request rather than two. The taxonomy read is unchanged.
 - **The control is a `Switch`** — the mark is a durable attribute of the Órgano, not a one-off
   action, and it maps 1:1 onto `PUT` and `DELETE /api/admin/organo/{id}/importable`. Being

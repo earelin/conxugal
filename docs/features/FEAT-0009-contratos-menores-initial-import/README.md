@@ -158,7 +158,7 @@ flowchart LR
   placement does, and for the same reason: SPEC-0004's reconciliation is **update-in-place**, so
   a column added here survives every catalogue re-import without that import knowing it exists
   (R5). No task changes `OrganoReconciler`'s write set; that is what proves criterion #6.
-- **Eligibility is `active && importado`** (R3), evaluated by the use case rather than by each
+- **Eligibility is `active && importable`** (R3), evaluated by the use case rather than by each
   trigger, so the manual trigger, the mark trigger and the future scheduler cannot disagree
   about it. An explicitly named Órgano that fails the test does not start a run and is told
   **why**, which is a different refusal from the guard being held (R20, #34).
@@ -322,7 +322,7 @@ stateDiagram-v2
 | `POST /api/admin/contratos-menores/import` | `ADMIN` | Import every marked, active Órgano (R20) |
 | `POST /api/admin/organo/{id}/contratos-menores/import` | `ADMIN` | Import one named Órgano (R20) |
 | `GET /api/admin/import-run/{id}` | `ADMIN` | The state and outcome of one run |
-| `GET /api/admin/organos` | `ADMIN` | The catalogue as an administrator sees it, with `importado` |
+| `GET /api/admin/organos` | `ADMIN` | The catalogue as an administrator sees it, with `importable` |
 
 - **Mark and unmark are two methods, not one flag with a body.** They are two use cases with
   genuinely different rules — marking requests an import and can be refused; unmarking stops one
@@ -428,7 +428,7 @@ also record, in that folder's README, what they draw but deliberately do not bui
   AC7).
 
 ## Sequencing (tasks, one small change each)
-1. **Import mark on the Órgano catalogue** — a migration adding `importado` (not null, default
+1. **Import mark on the Órgano catalogue** — a migration adding `importable` (not null, default
    false) to `organo_contratacion`, the field on the `OrganoDeContratacion` aggregate, and the
    `OrganoRepository` reads/writes for it, with `OrganoReconciler`'s write set deliberately
    untouched. *(SPEC-0005 #4 storage half, #6)*

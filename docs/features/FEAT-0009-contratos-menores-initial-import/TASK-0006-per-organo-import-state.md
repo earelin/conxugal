@@ -16,7 +16,7 @@ this state is durable and lives in PostgreSQL, and explicitly leaves the schema 
 [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md).
 It also widens one shipped contract — the admin catalogue read of
 [TASK-0002](TASK-0002-mark-administration-api.md), which is why it depends on that task and
-carries its OpenAPI, naming, security and rate-limit records too. It touches `importado`
+carries its OpenAPI, naming, security and rate-limit records too. It touches `importable`
 nowhere, so it does not depend on
 [TASK-0001](TASK-0001-import-mark-on-organo-catalogue.md).
 

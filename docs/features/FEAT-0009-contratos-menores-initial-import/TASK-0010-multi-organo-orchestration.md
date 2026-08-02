@@ -25,7 +25,7 @@ the trigger immediately.
     eligibility, claims the guard and writes the run row with its covered Órganos enumerated,
     then returns **the run identifier or a refusal**. Synchronous and short.
   - **execute** — takes that run identifier and performs the walks. Long.
-- **Eligibility is `active && importado`, evaluated here** and not by each trigger, so the
+- **Eligibility is `active && importable`, evaluated here** and not by each trigger, so the
   manual trigger, the mark trigger and the future scheduler cannot disagree about it. A named
   Órgano that fails the test yields the **not-eligible** refusal — a different refusal from the
   guard being held (R20, #34) — and starts no run.
@@ -42,8 +42,9 @@ the trigger immediately.
 - **The unmark stop (R5, #8):** eligibility is re-checked at the batch boundary TASK-0009's
   walk already has — **which means changing that walk's signature to take the check**, since
   TASK-0009 deliberately builds no extension point for a caller that did not yet exist. The
-  boundary is there; the way of hanging something off it is this task's to add. An Órgano unmarked mid-run stops **cleanly at that boundary**, keeping
-  everything stored and leaving the cursor where it is; its row is `STOPPED`, and its state
+  boundary is there; the way of hanging something off it is this task's to add. An Órgano
+  unmarked mid-run stops **cleanly at that boundary**, keeping everything stored and leaving
+  the cursor where it is; its row is `STOPPED`, and its state
   stays `INCOMPLETE`, which is what makes a later re-mark resume rather than restart.
 - **The run's verdict** is derived from the per-Órgano rows when the run ends, **over the failed
   rows, not the successful ones**: no row failed → `SUCCEEDED`; every row failed →
