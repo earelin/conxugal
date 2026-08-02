@@ -67,12 +67,6 @@ public final class MetricsStream implements Closeable {
     return stream;
   }
 
-  /** The next whole frame, comments included, or a failure when none arrives in time. */
-  public String nextFrame(Duration timeout) {
-    return nextFrameWithin(timeout)
-        .orElseThrow(() -> new NoSuchElementException("No frame within %s".formatted(timeout)));
-  }
-
   /**
    * The next whole frame, or empty when the stream stays silent for {@code timeout} — a silence
    * an instance that hung up cannot produce, so that case is a failure rather than an absence.
@@ -120,6 +114,11 @@ public final class MetricsStream implements Closeable {
   @Override
   public void close() throws IOException {
     body.close();
+  }
+
+  private String nextFrame(Duration timeout) {
+    return nextFrameWithin(timeout)
+        .orElseThrow(() -> new NoSuchElementException("No frame within %s".formatted(timeout)));
   }
 
   private String nextSample(Duration timeout) {
