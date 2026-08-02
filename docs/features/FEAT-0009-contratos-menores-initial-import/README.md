@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0005
-adrs: [0001, 0002, 0003, 0004, 0005, 0006, 0008, 0010, 0011, 0012, 0014, 0015, 0016, 0017]
+adrs: [0001, 0002, 0003, 0004, 0005, 0006, 0008, 0010, 0011, 0012, 0014, 0015, 0016, 0017, 0019]
 status: draft
 ---
 
@@ -117,11 +117,15 @@ layout of
   by "SPEC-0007 will want it", and each is justified below by a requirement this feature meets.
 - **Operadores económicos** ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md)) — this
   feature only owes them the awardee name and fiscal identifier stored on every contract (R7).
-  The catalogue derived from those two values, and the contract's link to it, are
-  [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s. That feature adds a column to
-  `contrato_menor` and is the only thing that populates it, so it **must land before the first
-  large initial import** — on the same reasoning that creates the year index here rather than on
-  a table of millions.
+  The catalogue derived from those two values, and the *populating* of the contract's link to it,
+  are [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s.
+
+  **That feature's base goes first, not after.** Its rules, aggregate and `operador` table are
+  prerequisites of tasks 3 and 4 here, so `contrato_menor` is **created carrying** a nullable
+  `operador_id` rather than having one added to a table of millions later — the same reasoning
+  that creates the year index up front. This feature declares that column and that field and
+  **never writes either**; FEAT-0010's derivation task, which does, is the one thing that still
+  lands after this feature's import.
 
 ## Design
 
@@ -163,8 +167,24 @@ flowchart LR
   about it. An explicitly named Órgano that fails the test does not start a run and is told
   **why**, which is a different refusal from the guard being held (R20, #34).
 
+### Identifiers are typed ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md))
+This feature threads three identifiers through one walk — a contract's, its Órgano's and the
+run's — which is the condition under which same-typed `UUID`s get passed to the wrong method and
+fail as a missing row rather than as a compile error. So its **new** aggregates take wrapper
+types: `ContratoMenorId` and `ImportRunId`, each a record around a `UUID` with an
+`AttributeConverter` onto an unchanged `uuid` column. The database still assigns the value and
+an aggregate is still built with a null id, so nothing about the shipped convention moves.
+
+Two consequences are deliberate. The **catalogue is not converted** — an Órgano is still
+referenced by a bare `UUID` here, because typing a shipped aggregate is the business of whichever
+feature next touches its identity, and this one has no reason to. And **wrappers stop at the REST
+boundary**: request and response records carry plain UUIDs, so `openapi.yaml` and every client are
+untouched. ADR-0019 also records the one risk this rests on — that Micronaut Data returns a
+`@GeneratedValue` key through a converter — which task 3 proves before anything is built on it.
+
 ### What a stored contract holds ([ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md))
-- The aggregate maps 1:1 to `contrato_menor`, keyed by a system-assigned UUID, with the
+- The aggregate maps 1:1 to `contrato_menor`, keyed by a system-assigned `ContratoMenorId`
+  over an unchanged `uuid` column, with the
   **source's own publication identifier unique** — so "no duplicates" (R12) holds at the store
   level and not only in use-case logic, exactly as `source_key` does for the catalogue. The
   awarding Órgano is referenced by its **UUID**, not its source key.
@@ -437,15 +457,18 @@ also record, in that folder's README, what they draw but deliberately do not bui
    carrying the mark, both authored in `openapi.yaml` first. Marking does not yet trigger
    anything — task 11 wires that once there is something to trigger. *(SPEC-0005 #1 mark half,
    #4)*
-3. **`ContratoMenor` domain model + repository port** — the aggregate (UUID identity, the
-   source's publication identifier, the awarding Órgano's UUID, every published value as
-   published, the nullable interpreted publication date and the numeric amount) plus the
-   `ContratoMenorRepository` port. *(SPEC-0005 #11 storage half, #40 storage half, #42 storage
-   half)*
+3. **`ContratoMenor` domain model + repository port** — the aggregate (a `ContratoMenorId`
+   identity, the source's publication identifier, the awarding Órgano's UUID, every published
+   value as published, the nullable interpreted publication date and the numeric amount) plus
+   the nullable operador reference, plus the `ContratoMenorRepository` port. It also introduces
+   ADR-0019's identifier wrapper and **proves the converter mechanism** the run record then
+   reuses. *Depends on FEAT-0010's operador domain model.* *(SPEC-0005 #11 storage half,
+   #40 storage half, #42 storage half)*
 4. **Contratos menores store** — the migration creating `contrato_menor` (unique publication
-   identifier, FK to the Órgano, the index the year-scoped read will need) and the Micronaut Data
-   JDBC implementation of the port, including the batch upsert that makes re-import idempotent.
-   *(SPEC-0005 #17 no-duplicates half)*
+   identifier, FK to the Órgano, the nullable `operador_id` FK this feature never writes, and
+   the index the year-scoped read will need) and the Micronaut Data JDBC implementation of the
+   port, including the batch upsert that makes re-import idempotent. *Depends on FEAT-0010's
+   operador store.* *(SPEC-0005 #17 no-duplicates half)*
 5. **`ContratoMenorSource` port + contratosdegalicia adapter** — the port answering one
    (Órgano, three-month window, page) slice, and its declarative `@ResilientClient` adapter on
    the shared `contratosdegalicia` id, against the API of
@@ -457,10 +480,10 @@ also record, in that folder's README, what they draw but deliberately do not bui
    three-state fact, the cursor and the covered-through instant, with the mode-selection function
    that reads them; the incremental branch is named and left to that feature. *(SPEC-0005 #46 state
    half, #47 initial/resumed half only — the other two modes are not built)*
-7. **Import run record, abandoned rule and system-wide guard** — migration and repository for the
-   run and its per-Órgano coverage rows; the derived-abandoned read applied in one place; the
-   advisory-lock claim admitting one live run; and the batch-size/abandonment-bound decision
-   recorded. *(SPEC-0005 #32 guard half)*
+7. **Import run record, abandoned rule and system-wide guard** — `ImportRunId`; migration and
+   repository for the run and its per-Órgano coverage rows; the derived-abandoned read applied
+   in one place; the advisory-lock claim admitting one live run; and the
+   batch-size/abandonment-bound decision recorded. *(SPEC-0005 #32 guard half)*
 8. **Adopt the guard in the catalogue import** — `ImportOrganos` off its `AtomicBoolean` onto the
    shared guard, recording a run row as it goes, with its unit and atomicity tests reshaped. Kept
    separate from task 7 on FEAT-0006's own build-then-adopt precedent. *(SPEC-0005 #32 spans both

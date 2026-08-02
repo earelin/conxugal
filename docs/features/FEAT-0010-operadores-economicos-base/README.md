@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0006
-adrs: [0001, 0002, 0008, 0018]
+adrs: [0001, 0002, 0008, 0018, 0019]
 status: draft
 ---
 
@@ -33,15 +33,21 @@ the matching and display rules are pure domain functions, and the derivation run
 import use case
 [FEAT-0009](../FEAT-0009-contratos-menores-initial-import/README.md) builds.
 
-> **This feature must land before the first large initial import runs.** It adds a column to
-> `contrato_menor` and it is the only thing that populates that column. Adding it to a table
-> holding a million rows, and then backfilling those rows from data that is only correct if
-> re-derived, is a materially different operation from creating it on an empty table — the same
-> argument FEAT-0009 makes for creating its year index up front. The dependency is on FEAT-0009's
-> store and import tasks, not on its whole delivery.
+> **Its base lands before the contratos menores store, not after it.** The link between the two
+> tables is a foreign key on the **contract** side, so the ordering that avoids an `ALTER`
+> entirely is: `operador` exists first, and FEAT-0009 then **creates** `contrato_menor` with a
+> nullable `operador_id` already on it. Adding that column later to a table holding a million
+> rows, and backfilling it from data that is only correct if re-derived, is a materially
+> different operation — the same argument FEAT-0009 makes for creating its year index up front.
+>
+> So this feature's tasks 1–3 — the rules, the aggregate and the `operador` table — are
+> prerequisites of FEAT-0009's domain and store tasks, and only task 4, the derivation itself,
+> waits on FEAT-0009's import. Nothing here references `contrato_menor`, so the two features
+> interleave without a cycle.
 
 ## Scope
-- **Domain (the operador):** an `OperadorEconomico` aggregate — a system-assigned UUID, the
+- **Domain (the operador):** an `OperadorEconomico` aggregate — a system-assigned `OperadorId`
+  ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)), the
   **match key** (the fiscal identifier under R3's equivalence), and the **published name and
   published identifier spelling** it is displayed under, together with the rank those two were
   taken from — plus an `OperadorRepository` port (find by match key, insert, update the display
@@ -200,10 +206,10 @@ features that build views.
    key, published display name, published identifier spelling, and the rank they were taken from)
    and the `OperadorRepository` port: find by match key, insert, update the display fields.
    *(SPEC-0006 #2, #10 stored-attribute half)*
-3. **Operador store** — the migration creating `operador` with a **unique** match key, adding the
-   nullable `operador_id` foreign key and its index to `contrato_menor`, and the Micronaut Data
-   JDBC implementation of the port. *Depends on FEAT-0009's contratos menores store; must land
-   before the first large initial import.* *(SPEC-0006 #3 one-operador half, #4)*
+3. **Operador store** — the migration creating `operador` with a **unique** match key, and the
+   Micronaut Data JDBC implementation of the port. It touches `contrato_menor` **not at all**:
+   the nullable `operador_id` foreign key and its index are created by FEAT-0009's store task,
+   which is why this one lands **before** it. *(SPEC-0006 #3 one-operador half, #4)*
 4. **Derivation during the contratos menores import** — resolve each stored contract to its
    operador inside the batch transaction: no operador for an unusable identifier, find-or-create
    otherwise, advance the display fields when the contract outranks the incumbent, and repoint the

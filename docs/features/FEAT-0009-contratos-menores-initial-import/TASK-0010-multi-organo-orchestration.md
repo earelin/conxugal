@@ -1,7 +1,7 @@
 ---
 feat: FEAT-0009
 domain: backend
-adrs: [0002, 0017]
+adrs: [0002, 0017, 0019]
 status: todo
 depends_on: [TASK-0007, TASK-0009]
 ---
@@ -23,8 +23,11 @@ the trigger immediately.
   days:
   - **claim** — takes the scope (every eligible Órgano, or one named Órgano), evaluates
     eligibility, claims the guard and writes the run row with its covered Órganos enumerated,
-    then returns **the run identifier or a refusal**. Synchronous and short.
-  - **execute** — takes that run identifier and performs the walks. Long.
+    then returns **the run identifier (`ImportRunId`) or a refusal**. Synchronous and short.
+  - **execute** — takes that `ImportRunId` and performs the walks. Long. Taking the typed
+    identifier rather than a bare `UUID` is what stops an Órgano's id being passed here
+    ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)) — the two travel
+    together through every method in this task.
 - **Eligibility is `active && importable`, evaluated here** and not by each trigger, so the
   manual trigger, the mark trigger and the future scheduler cannot disagree about it. A named
   Órgano that fails the test yields the **not-eligible** refusal — a different refusal from the

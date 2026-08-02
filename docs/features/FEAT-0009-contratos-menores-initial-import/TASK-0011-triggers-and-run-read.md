@@ -1,7 +1,7 @@
 ---
 feat: FEAT-0009
 domain: backend
-adrs: [0002, 0005, 0006, 0010, 0011, 0012, 0016, 0017]
+adrs: [0002, 0005, 0006, 0010, 0011, 0012, 0016, 0017, 0019]
 status: todo
 depends_on: [TASK-0002, TASK-0010]
 ---
@@ -71,6 +71,12 @@ rows**.
   `[SUCCESS, ALREADY_RUNNING]` only, reports failure as a 500 problem, and caps its counts at
   100 000 — a bound SERGAS alone breaks by an order of magnitude. The new schema takes the full
   verdict set and no such cap. `ImportOutcome` stays as it is for the catalogue import.
+- **Identifier wrappers stop at this boundary.** `ImportRunId` and the Órgano's id are domain
+  types; the request and response records here carry a **plain UUID**, and the controller wraps
+  the path variable on the way in and unwraps on the way out
+  ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)). Nothing in
+  `openapi.yaml` changes, and no wrapper is ever serialised — a `{"value": "…"}` in a response
+  body means one leaked.
 - All three operations are `@Secured("ADMIN")`; note the single-Órgano trigger hangs off
   `/api/admin/organo/{id}/…`, as the mark and FEAT-0007's classification writes do. Every
   operation declares ADR-0012's rate-limit headers and the shared 429, plus 400/401/403/500.
@@ -101,5 +107,8 @@ rows**.
 - `GET /api/admin/import-run/{id}` on an unknown identifier returns 404; a `USER` and an
   unauthenticated caller are denied on all three operations (403 / 401), asserted per operation.
   (SPEC-0005 #1)
+- Every identifier on the wire is a plain UUID string — the run id a trigger returns is the one
+  `GET /api/admin/import-run/{id}` accepts verbatim, with no wrapper object anywhere in a
+  request or response body.
 - The implementation conforms to `docs/api/openapi.yaml` (CI contract test), and every operation
   is integration-tested over HTTP against a running server with the source stubbed.

@@ -1,9 +1,9 @@
 ---
 feat: FEAT-0009
 domain: backend
-adrs: [0002, 0008, 0017]
+adrs: [0002, 0008, 0017, 0019]
 status: todo
-depends_on: []
+depends_on: [TASK-0003]
 ---
 
 # Import run record, the abandoned rule, and the system-wide guard
@@ -21,14 +21,24 @@ here is justified by "SPEC-0007 will want it";
 [SPEC-0007](../../specs/SPEC-0007-monitor-import-runs.md)'s features widen these same rows
 rather than opening a second store.
 
+**It depends on [TASK-0003](TASK-0003-contrato-menor-domain-model.md) for one reason only:**
+that task proves Micronaut Data can return a `@GeneratedValue` key through an
+`AttributeConverter`, which is the mechanism `ImportRunId` below also rests on
+([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)). Nothing else here needs a
+contrato menor.
+
 ## Scope
+- **`ImportRunId`, a record wrapping a `UUID`**, beside the run aggregate, with its
+  `AttributeConverter` — ADR-0019's pattern, for the identifier this feature threads through the
+  most hands: a claim returns it, a trigger answers with it, the run read is keyed by it and the
+  UI holds it. The column stays a plain `uuid`.
 - A migration (next free `V` number) creating two tables.
 
   `import_run` — one row per run, written **when the run is triggered**:
 
   | Column | Why it is here |
   | --- | --- |
-  | `id UUID PRIMARY KEY` | What a trigger returns and the run read is keyed by |
+  | `id UUID PRIMARY KEY` | What a trigger returns and the run read is keyed by — an `ImportRunId` in Java |
   | `importer TEXT NOT NULL` | `ORGANOS` or `CONTRATOS_MENORES` — the guard is system-wide across both (R22) |
   | `state TEXT NOT NULL` | `IN_PROGRESS` / `SUCCEEDED` / `PARTIALLY_SUCCEEDED` / `FAILED` — R20's verdict set. **No `ABANDONED` value**: that state is derived on read, never stored (ADR-0017) |
   | `started_at TIMESTAMPTZ NOT NULL` | R20's outcome |

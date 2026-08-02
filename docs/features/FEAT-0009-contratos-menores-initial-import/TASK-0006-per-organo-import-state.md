@@ -32,6 +32,12 @@ resume from and a multi-day walk to redo at one request per second.
   - `state TEXT NOT NULL` — `NEVER_STARTED` / `INCOMPLETE` / `COMPLETE`;
   - `cursor_date DATE` — the point a resumption continues from;
   - `covered_through TIMESTAMPTZ` — **T₀**, when the initial import's *first* window was taken.
+
+  Its identity **is** the Órgano's, so it introduces no identifier type of its own and keys on a
+  raw `UUID` — the catalogue is not converted by this feature
+  ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)), and inventing a
+  `ContratosMenoresImportStateId` distinct from the Órgano it belongs to would assert an identity
+  this row does not have.
 - **Its own table, not three more columns on `organo_contratacion`.** The catalogue row is
   update-in-place territory for reconciliation and is read by every catalogue read; this row is
   rewritten after every batch for days. Separating them keeps that churn off the row the mark
