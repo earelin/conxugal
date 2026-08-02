@@ -2,11 +2,12 @@ import { expect, type Page, test } from '@playwright/test';
 
 import {
   accounts,
+  elevatedErrorRateSample,
   metricsSamples,
   sampleWithSecrets,
   secretsNeverStreamed,
 } from '../support/fixtures';
-import { navLink } from '../support/locators';
+import { enabledBadge, navLink, rowFor, toggleButton } from '../support/locators';
 import {
   clearRequestJournal,
   requestCountFor,
@@ -110,6 +111,14 @@ test.describe('Administration real-time metrics', () => {
       ),
     ).toBeVisible();
 
+    // One sample from here on, so `1/250` holds for the whole heartbeat window
+    // rather than only until the next sample overtakes it.
+    await stubEventStream(METRICS, [metricsSamples[0]], {
+      spacingMillis: 400,
+      retryMillis: 30_000,
+      heartbeats: 10,
+    });
+
     await page.reload();
 
     // Back to the first sample and a history of one. Anything carried across the
@@ -152,10 +161,12 @@ test.describe('Administration real-time metrics', () => {
     await expect(metricCard(page, 'Peticións HTTP').getByText('sen novas mostras')).toBeVisible();
 
     // EventSource reconnects on its own and the history carries on from where it
-    // stopped — a reconnect resumes the view, only a reload clears it.
+    // stopped — a reconnect resumes the view, only a reload clears it. Any count
+    // past the three of the first connection says that; pinning it to exactly six
+    // would instead pin the moment it is read, since further replays keep going.
     await expect(streamState(page, 'EN DIRECTO')).toBeVisible();
     await expect(
-      metricCard(page, 'Memoria heap').getByText('355 / 1024 MB · 6/250 mostras'),
+      metricCard(page, 'Memoria heap').getByText(/355 \/ 1024 MB · [4-9]\/250 mostras/),
     ).toBeVisible();
   });
 
@@ -177,23 +188,45 @@ test.describe('Administration real-time metrics', () => {
     // echoed the sample instead of reading named fields from it.
     await expect(pool.getByText('En uso 2')).toBeVisible();
     await expect(pool.getByText('Inactivas 8')).toBeVisible();
+
+    // The proof. The two notes below render unconditionally and would survive a
+    // leak; they are asserted because the spec promises them, not as evidence.
+    for (const secret of Object.values(secretsNeverStreamed)) {
+      await expect(page.getByText(secret, { exact: false })).toHaveCount(0);
+    }
+
     await expect(pool.getByText('Só reconto: sen URL, usuario nin contrasinal.')).toBeVisible();
     await expect(
       page.getByText(
         'As métricas nunca inclúen credenciais, cadeas de conexión nin ningún outro valor secreto.',
       ),
     ).toBeVisible();
+  });
 
-    for (const secret of Object.values(secretsNeverStreamed)) {
-      await expect(page.getByText(secret, { exact: false })).toHaveCount(0);
-    }
+  test('flags an error rate that has climbed above the normal band', async ({ page }) => {
+    await stubEventStream(METRICS, [elevatedErrorRateSample], {
+      spacingMillis: 400,
+      retryMillis: 30_000,
+      heartbeats: 10,
+    });
+
+    await page.goto('/administracion');
+
+    // The percentage itself is Intl-formatted and so unassertable here; the badge
+    // is how the classification becomes observable, and only a sample past the
+    // threshold tells a working one from a label stuck on NORMAL.
+    const http = metricCard(page, 'Actividade HTTP');
+    await expect(http.getByText('400', { exact: true })).toBeVisible();
+    await expect(http.getByText('ELEVADA', { exact: true })).toBeVisible();
+    await expect(http.getByText('NORMAL', { exact: true })).toHaveCount(0);
   });
 
   test('stops streaming once the administrator leaves the dashboard', async ({ page }) => {
-    // One sample and a short retry make the connect-drop-reconnect cycle a
-    // fraction of a second, so a stream left open would rack up requests during
-    // the work below rather than sitting idle through it.
-    await stubEventStream(METRICS, [metricsSamples[0]], { spacingMillis: 120, retryMillis: 120 });
+    // One sample and a short retry put the whole connect-drop-reconnect cycle at
+    // roughly 90 ms, so the work below — measured at a few hundred — spans
+    // several of them. Slower than that and a stream left open could sit idle
+    // through the window, leaving the count of zero proving nothing.
+    await stubEventStream(METRICS, [metricsSamples[0]], { spacingMillis: 40, retryMillis: 40 });
 
     await page.goto('/administracion');
     await expect(page.getByRole('heading', { name: 'Métricas en tempo real' })).toBeVisible();
@@ -206,16 +239,21 @@ test.describe('Administration real-time metrics', () => {
     await clearRequestJournal();
 
     // Real work on another page, so the elapsed time is the app's own round
-    // trips rather than a sleep — many reconnect cycles' worth either way.
-    const row = page.getByRole('row').filter({ hasText: accounts.enabledUser.email });
+    // trips rather than a sleep.
+    const row = rowFor(page, accounts.enabledUser.email);
     for (let round = 0; round < 2; round++) {
-      await row.getByRole('button', { name: 'Desactivar', exact: true }).click();
+      await toggleButton(row, 'Desactivar').click();
       await expect(row.getByText('Desactivada')).toBeVisible();
-      await row.getByRole('button', { name: 'Activar', exact: true }).click();
-      await expect(row.getByText('Activada', { exact: true })).toBeVisible();
+      await toggleButton(row, 'Activar').click();
+      await expect(enabledBadge(row)).toBeVisible();
     }
 
     expect(await requestCountFor('GET', METRICS)).toBe(0);
+
+    // And the stub was still cycling throughout: going back proves the zero above
+    // was a closed stream, not a stream that had quietly stopped being served.
+    await navLink(page, 'Panel').click();
+    await expect.poll(() => requestCountFor('GET', METRICS)).toBeGreaterThan(1);
   });
 });
 

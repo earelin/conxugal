@@ -59,6 +59,10 @@ export async function stubJson(method: string, urlPath: string, body: unknown): 
  * them the body ends the instant the last sample lands and the panel spends only
  * a moment in its live state, too briefly to assert against. Pass `0` when the
  * drop itself is what a scenario is after.
+ *
+ * `samples` must hold at least one entry: the `retry:` field rides on the first
+ * one, so a sample-less stream would silently fall back to the browser's default
+ * reconnect delay.
  */
 export async function stubEventStream(
   urlPath: string,
@@ -75,11 +79,15 @@ export async function stubEventStream(
         (index === 0 ? `retry: ${retryMillis}\n\n` : '') + `data: ${JSON.stringify(sample)}\n\n`,
     )
     .concat(Array<string>(heartbeats).fill(''));
+  // Measured in bytes, which is what WireMock slices on — a string's `.length`
+  // counts UTF-16 units and would drift the moment a sample carries an accent.
   // Two bytes is the shortest possible comment (':' and its newline), so the
   // widest frame still needs room for one — and an empty heartbeat chunk is
-  // nothing but that comment.
-  const width = Math.max(...frames.map((frame) => frame.length)) + 2;
-  const padded = frames.map((frame) => `${frame}:${'.'.repeat(width - frame.length - 2)}\n`);
+  // nothing but that comment. The padding character is one byte, so a frame's
+  // shortfall in bytes is also its shortfall in dots.
+  const byteWidth = (frame: string) => Buffer.byteLength(frame);
+  const width = Math.max(...frames.map(byteWidth)) + 2;
+  const padded = frames.map((frame) => `${frame}:${'.'.repeat(width - byteWidth(frame) - 2)}\n`);
 
   await admin('/mappings', {
     method: 'POST',
@@ -105,28 +113,36 @@ export async function clearRequestJournal(): Promise<void> {
 }
 
 /**
+ * Asks the journal for the requests matching a method and path.
+ *
+ * The matching is WireMock's own, on `urlPath` — a path equality of our own would
+ * quietly stop matching the day a call grows a query string, which for a
+ * count-is-zero assertion means passing forever rather than failing.
+ */
+async function journal(
+  endpoint: '/requests/count' | '/requests/find',
+  method: string,
+  urlPath: string,
+) {
+  const response = await admin(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ method, urlPath }),
+  });
+  return response.json() as Promise<{ count?: number; requests?: { body: string }[] }>;
+}
+
+/**
  * How many times the SPA called an endpoint. Separate from `bodiesSentTo`, which
  * parses each body as JSON and so cannot count bodyless `GET`s.
  */
 export async function requestCountFor(method: string, urlPath: string): Promise<number> {
-  const response = await admin('/requests', { method: 'GET' });
-  const recorded = (await response.json()) as {
-    requests: { request: { method: string; url: string } }[];
-  };
-  return recorded.requests.filter(
-    (entry) => entry.request.method === method && entry.request.url === urlPath,
-  ).length;
+  return (await journal('/requests/count', method, urlPath)).count ?? 0;
 }
 
-/** The JSON bodies the SPA sent to an endpoint, oldest first. */
+/** The JSON bodies the SPA sent to an endpoint, oldest first — which is the order
+ * WireMock's own search returns, unlike the whole-journal listing. */
 export async function bodiesSentTo(method: string, urlPath: string): Promise<unknown[]> {
-  const response = await admin('/requests', { method: 'GET' });
-  const recorded = (await response.json()) as {
-    requests: { request: { method: string; url: string; body: string } }[];
-  };
-  return recorded.requests
-    .map((entry) => entry.request)
-    .filter((request) => request.method === method && request.url === urlPath)
-    .reverse()
-    .map((request) => JSON.parse(request.body) as unknown);
+  const found = await journal('/requests/find', method, urlPath);
+  return (found.requests ?? []).map((request) => JSON.parse(request.body) as unknown);
 }

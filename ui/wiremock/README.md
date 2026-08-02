@@ -32,6 +32,11 @@ a stub:
 | `session.json` | `POST /logout`, `GET /login` — both are proxied, so both need an answer |
 | `metrics.json` | `GET /api/admin/metrics` — a few canned SSE samples |
 
+`metrics.json`'s samples are repeated as `metricsSamples` in
+[`../acceptance/support/fixtures.ts`](../acceptance/support/fixtures.ts), which the metrics
+specs stream at their own pace and derive every expected figure from.
+**Change both files together** — the same rule as `users-enabled.json` below.
+
 `POST` stubs echo the submitted values with response templating (the container runs with
 `--global-response-templating`), so a created account shows the email you typed and a
 toggled account keeps its identity.

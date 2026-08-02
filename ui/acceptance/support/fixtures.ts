@@ -104,6 +104,17 @@ export const metricsSamples = [
 ];
 
 /**
+ * A sample whose error rate — 400 of 18 490, or 2.16 % — clears the 1 % boundary
+ * the panel calls elevated. The healthy samples above all sit in the default
+ * band, so without this one nothing distinguishes a working classification from
+ * a badge hardcoded to `NORMAL`.
+ */
+export const elevatedErrorRateSample = {
+  ...metricsSamples[2],
+  http: { requestCount: 18490, errorCount: 400 },
+};
+
+/**
  * The values a leaking backend might smuggle into a sample. The real endpoint
  * never emits them (SPEC-0003 R21, asserted by the backend suite); they are here
  * so the panel can be proven to render only the fields it knows, rather than
