@@ -73,12 +73,11 @@ class AdminRuntimeMetricsStreamTest {
 
     Instant beforeTheDrop;
     try (MetricsStream dropped = MetricsStream.openAs(adminSession)) {
-      beforeTheDrop = instantOf(MetricsStream.valuesOf(dropped.nextSampleFrame(PROMPTLY)));
+      beforeTheDrop = firstSampleInstantOf(dropped);
     }
 
     try (MetricsStream reconnected = MetricsStream.openAs(adminSession)) {
-      Instant afterTheDrop =
-          instantOf(MetricsStream.valuesOf(reconnected.nextSampleFrame(PROMPTLY)));
+      Instant afterTheDrop = firstSampleInstantOf(reconnected);
 
       assertThat(afterTheDrop).isAfter(beforeTheDrop);
       // Nothing missed is re-sent: the cadence is far longer than this wait, so any frame
@@ -119,5 +118,9 @@ class AdminRuntimeMetricsStreamTest {
 
   private static Instant instantOf(JsonPath sample) {
     return Instant.parse(sample.getString("timestamp"));
+  }
+
+  private static Instant firstSampleInstantOf(MetricsStream metrics) {
+    return instantOf(MetricsStream.valuesOf(metrics.nextSampleFrame(PROMPTLY)));
   }
 }
