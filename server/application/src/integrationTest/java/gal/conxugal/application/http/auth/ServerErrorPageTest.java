@@ -1,6 +1,6 @@
 package gal.conxugal.application.http.auth;
 
-import static gal.conxugal.application.http.error.support.ProblemAssertions.assertProblem;
+import static gal.conxugal.application.http.error.support.AssertProblem.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
@@ -50,10 +50,11 @@ class ServerErrorPageTest extends AuthenticationTestSupport {
         .when()
             .get("/api/test-support/boom");
 
-    assertProblem(response, HttpStatus.INTERNAL_SERVER_ERROR,
-        "urn:conxugal:problem-type:internal-server-error");
+    assertProblem(response)
+        .hasStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+        .hasType("urn:conxugal:problem-type:internal-server-error")
+        .hasInstance("/api/test-support/boom");
     String body = response.getBody().asString();
-    assertThat(body).contains("\"instance\":\"/api/test-support/boom\"");
     assertThat(body).doesNotContain("Algo foi mal");
     assertThat(body).doesNotContain("boom - sensitive detail");
   }

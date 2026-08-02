@@ -1,6 +1,6 @@
 package gal.conxugal.application.rest.admin.users;
 
-import static gal.conxugal.application.http.error.support.ProblemAssertions.assertProblem;
+import static gal.conxugal.application.http.error.support.AssertProblem.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -135,7 +135,9 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
         .when()
             .post("/api/admin/users");
 
-    assertProblem(response, HttpStatus.CONFLICT, "urn:conxugal:problem-type:duplicate-email");
+    assertProblem(response)
+        .hasStatus(HttpStatus.CONFLICT)
+        .hasType("urn:conxugal:problem-type:duplicate-email");
   }
 
   @Test

@@ -1,6 +1,6 @@
 package gal.conxugal.application.rest.admin.organos;
 
-import static gal.conxugal.application.http.error.support.ProblemAssertions.assertProblem;
+import static gal.conxugal.application.http.error.support.AssertProblem.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -80,7 +80,9 @@ class OrganoClassificationControllerIntegrationTest extends AuthenticationTestSu
         .when()
             .put(placementOf(SANIDADE));
 
-    assertProblem(response, HttpStatus.NOT_FOUND, "urn:conxugal:problem-type:organo-not-found");
+    assertProblem(response)
+        .hasStatus(HttpStatus.NOT_FOUND)
+        .hasType("urn:conxugal:problem-type:organo-not-found");
   }
 
   // An unknown Órgano and an unknown term share a status, so the type is the only thing
@@ -101,7 +103,9 @@ class OrganoClassificationControllerIntegrationTest extends AuthenticationTestSu
         .when()
             .put(placementOf(SANIDADE));
 
-    assertProblem(response, HttpStatus.NOT_FOUND, "urn:conxugal:problem-type:termo-not-found");
+    assertProblem(response)
+        .hasStatus(HttpStatus.NOT_FOUND)
+        .hasType("urn:conxugal:problem-type:termo-not-found");
   }
 
   @Test
@@ -149,7 +153,9 @@ class OrganoClassificationControllerIntegrationTest extends AuthenticationTestSu
         .when()
             .delete(placementOf(SANIDADE));
 
-    assertProblem(response, HttpStatus.NOT_FOUND, "urn:conxugal:problem-type:organo-not-found");
+    assertProblem(response)
+        .hasStatus(HttpStatus.NOT_FOUND)
+        .hasType("urn:conxugal:problem-type:organo-not-found");
   }
 
   @Test

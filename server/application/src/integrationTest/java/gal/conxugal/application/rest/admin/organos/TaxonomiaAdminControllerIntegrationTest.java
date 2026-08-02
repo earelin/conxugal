@@ -1,6 +1,6 @@
 package gal.conxugal.application.rest.admin.organos;
 
-import static gal.conxugal.application.http.error.support.ProblemAssertions.assertProblem;
+import static gal.conxugal.application.http.error.support.AssertProblem.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -113,6 +113,9 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
     assertThat(response.jsonPath().getString("parentId")).isEqualTo(SANIDADE.toString());
   }
 
+  // The one refusal whose whole envelope is asserted, so the detail is known to name the id
+  // the caller got wrong, and the instance is known to be absent — the contract leaves it to
+  // the generic failures, and the business-outcome problems are where that shows.
   @Test
   void create_under_unknown_parent_is_termo_not_found(RequestSpecification spec) {
     when(createTermo.create("Hospitais", SANIDADE))
@@ -129,7 +132,12 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .when()
             .post(TERMOS);
 
-    assertProblem(response, HttpStatus.NOT_FOUND, "urn:conxugal:problem-type:termo-not-found");
+    assertProblem(response)
+        .hasStatus(HttpStatus.NOT_FOUND)
+        .hasType("urn:conxugal:problem-type:termo-not-found")
+        .hasTitle("Term Not Found")
+        .hasDetail("No term exists with id: %s".formatted(SANIDADE))
+        .hasNoInstance();
   }
 
   @Test
@@ -148,8 +156,9 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .when()
             .post(TERMOS);
 
-    assertProblem(
-        response, HttpStatus.CONFLICT, "urn:conxugal:problem-type:duplicate-sibling-name");
+    assertProblem(response)
+        .hasStatus(HttpStatus.CONFLICT)
+        .hasType("urn:conxugal:problem-type:duplicate-sibling-name");
   }
 
   @Test
@@ -246,7 +255,9 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .when()
             .patch(termo(SANIDADE));
 
-    assertProblem(response, HttpStatus.NOT_FOUND, "urn:conxugal:problem-type:termo-not-found");
+    assertProblem(response)
+        .hasStatus(HttpStatus.NOT_FOUND)
+        .hasType("urn:conxugal:problem-type:termo-not-found");
   }
 
   @Test
@@ -265,8 +276,9 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .when()
             .patch(termo(HOSPITAIS));
 
-    assertProblem(
-        response, HttpStatus.CONFLICT, "urn:conxugal:problem-type:duplicate-sibling-name");
+    assertProblem(response)
+        .hasStatus(HttpStatus.CONFLICT)
+        .hasType("urn:conxugal:problem-type:duplicate-sibling-name");
   }
 
   @Test
@@ -305,7 +317,9 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .when()
             .put(parentOf(HOSPITAIS));
 
-    assertProblem(response, HttpStatus.NOT_FOUND, "urn:conxugal:problem-type:termo-not-found");
+    assertProblem(response)
+        .hasStatus(HttpStatus.NOT_FOUND)
+        .hasType("urn:conxugal:problem-type:termo-not-found");
   }
 
   @Test
@@ -339,7 +353,9 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .when()
             .put(parentOf(HOSPITAIS));
 
-    assertProblem(response, HttpStatus.NOT_FOUND, "urn:conxugal:problem-type:termo-not-found");
+    assertProblem(response)
+        .hasStatus(HttpStatus.NOT_FOUND)
+        .hasType("urn:conxugal:problem-type:termo-not-found");
   }
 
   @Test
@@ -357,7 +373,9 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .when()
             .put(parentOf(HOSPITAIS));
 
-    assertProblem(response, HttpStatus.NOT_FOUND, "urn:conxugal:problem-type:termo-not-found");
+    assertProblem(response)
+        .hasStatus(HttpStatus.NOT_FOUND)
+        .hasType("urn:conxugal:problem-type:termo-not-found");
   }
 
   @Test
@@ -376,7 +394,9 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .when()
             .put(parentOf(SANIDADE));
 
-    assertProblem(response, HttpStatus.CONFLICT, "urn:conxugal:problem-type:termo-cycle");
+    assertProblem(response)
+        .hasStatus(HttpStatus.CONFLICT)
+        .hasType("urn:conxugal:problem-type:termo-cycle");
   }
 
   // The move is the one operation whose contract declares two different 409 types, so the
@@ -397,8 +417,9 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .when()
             .put(parentOf(HOSPITAIS));
 
-    assertProblem(
-        response, HttpStatus.CONFLICT, "urn:conxugal:problem-type:duplicate-sibling-name");
+    assertProblem(response)
+        .hasStatus(HttpStatus.CONFLICT)
+        .hasType("urn:conxugal:problem-type:duplicate-sibling-name");
   }
 
   @Test
@@ -424,7 +445,9 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .when()
             .delete(termo(SANIDADE));
 
-    assertProblem(response, HttpStatus.NOT_FOUND, "urn:conxugal:problem-type:termo-not-found");
+    assertProblem(response)
+        .hasStatus(HttpStatus.NOT_FOUND)
+        .hasType("urn:conxugal:problem-type:termo-not-found");
   }
 
   // The two 409s are asserted side by side because sharing a status is the whole point: a
@@ -453,13 +476,17 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .when()
             .put(parentOf(SANIDADE));
 
-    assertProblem(
-        blockedDelete, HttpStatus.CONFLICT, "urn:conxugal:problem-type:termo-has-children");
-    assertProblem(cycle, HttpStatus.CONFLICT, "urn:conxugal:problem-type:termo-cycle");
-    // A client that falls back to the title rather than switching on the type still gets
-    // two different messages, so neither refusal reads as a bare "Conflict".
-    assertThat(blockedDelete.jsonPath().getString("title"))
-        .isNotEqualTo(cycle.jsonPath().getString("title"));
+    // The titles are named rather than merely asserted to differ: a client that falls back to
+    // the title instead of switching on the type gets two distinct messages, and neither
+    // refusal reads as a bare "Conflict".
+    assertProblem(blockedDelete)
+        .hasStatus(HttpStatus.CONFLICT)
+        .hasType("urn:conxugal:problem-type:termo-has-children")
+        .hasTitle("Term Has Children");
+    assertProblem(cycle)
+        .hasStatus(HttpStatus.CONFLICT)
+        .hasType("urn:conxugal:problem-type:termo-cycle")
+        .hasTitle("Term Cycle");
   }
 
   @Test

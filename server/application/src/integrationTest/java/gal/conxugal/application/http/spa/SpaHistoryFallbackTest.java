@@ -1,6 +1,6 @@
 package gal.conxugal.application.http.spa;
 
-import static gal.conxugal.application.http.error.support.ProblemAssertions.assertProblem;
+import static gal.conxugal.application.http.error.support.AssertProblem.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
@@ -120,10 +120,11 @@ class SpaHistoryFallbackTest extends AuthenticationTestSupport {
         .when()
             .get("/api/rota-que-non-existe");
 
-    assertProblem(response, HttpStatus.NOT_FOUND, "urn:conxugal:problem-type:not-found");
-    String body = response.getBody().asString();
-    assertThat(body).contains("\"instance\":\"/api/rota-que-non-existe\"");
-    assertThat(body).doesNotContain(SPA_SHELL_MARKER);
+    assertProblem(response)
+        .hasStatus(HttpStatus.NOT_FOUND)
+        .hasType("urn:conxugal:problem-type:not-found")
+        .hasInstance("/api/rota-que-non-existe");
+    assertThat(response.getBody().asString()).doesNotContain(SPA_SHELL_MARKER);
   }
 
   @Test
