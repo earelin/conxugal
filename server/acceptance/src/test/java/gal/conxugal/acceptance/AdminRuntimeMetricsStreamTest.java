@@ -26,7 +26,7 @@ class AdminRuntimeMetricsStreamTest {
    * for a tick fails rather than passes; the later ones are given several cadences of slack.
    */
   private static final Duration PROMPTLY = Duration.ofSeconds(3);
-  private static final Duration A_CADENCE_LATER = Duration.ofSeconds(20);
+  private static final Duration A_FEW_CADENCES = Duration.ofSeconds(20);
   private static final Duration LONG_ENOUGH_FOR_A_REPLAY = Duration.ofMillis(1500);
 
   private static final int REQUESTS_BETWEEN_SAMPLES = 3;
@@ -52,14 +52,18 @@ class AdminRuntimeMetricsStreamTest {
             .statusCode(200);
       }
 
-      String secondFrame = metrics.nextSampleFrame(A_CADENCE_LATER);
+      // The tick that follows those requests is the one that has to show them; a sample the
+      // instance had already assembled and queued cannot, so read past it rather than fail.
+      long requestsOnceCounted = first.getLong("http.requestCount") + REQUESTS_BETWEEN_SAMPLES;
+      String secondFrame =
+          metrics.nextSampleFrameMatching(
+              sample -> sample.getLong("http.requestCount") >= requestsOnceCounted,
+              A_FEW_CADENCES);
       JsonPath second = MetricsStream.valuesOf(secondFrame);
 
       assertThat(instantOf(second)).isAfter(instantOf(first));
       assertThat(second.getLong("jvm.uptimeMillis"))
           .isGreaterThan(first.getLong("jvm.uptimeMillis"));
-      assertThat(second.getLong("http.requestCount"))
-          .isGreaterThanOrEqualTo(first.getLong("http.requestCount") + REQUESTS_BETWEEN_SAMPLES);
 
       assertNoSecretIn(firstFrame);
       assertNoSecretIn(secondFrame);
@@ -79,7 +83,7 @@ class AdminRuntimeMetricsStreamTest {
       Instant afterTheDrop =
           instantOf(MetricsStream.valuesOf(reconnected.nextSampleFrame(PROMPTLY)));
 
-      assertThat(afterTheDrop).isAfterOrEqualTo(beforeTheDrop);
+      assertThat(afterTheDrop).isAfter(beforeTheDrop);
       // Nothing missed is re-sent: the cadence is far longer than this wait, so any frame
       // arriving now could only be a replay of what the dropped connection already saw.
       assertThat(reconnected.nextFrameWithin(LONG_ENOUGH_FOR_A_REPLAY)).isEmpty();

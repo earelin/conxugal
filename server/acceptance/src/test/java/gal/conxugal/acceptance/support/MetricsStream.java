@@ -15,11 +15,13 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 /**
  * An open {@code text/event-stream} connection to the running instance's metrics endpoint.
@@ -35,10 +37,11 @@ public final class MetricsStream implements Closeable {
   private static final String METRICS_PATH = "/api/admin/metrics";
   private static final String EVENT_STREAM = "text/event-stream";
   private static final String DATA_FIELD = "data:";
-  private static final String NO_MORE_FRAMES = "";
 
   private final InputStream body;
   private final BlockingQueue<String> frames = new LinkedBlockingQueue<>();
+
+  private volatile boolean ended;
 
   private MetricsStream(InputStream body) {
     this.body = body;
@@ -68,14 +71,16 @@ public final class MetricsStream implements Closeable {
         .orElseThrow(() -> new NoSuchElementException("No frame within %s".formatted(timeout)));
   }
 
-  /** The next whole frame, or empty when the stream stays silent for {@code timeout}. */
+  /**
+   * The next whole frame, or empty when the stream stays silent for {@code timeout} — a silence
+   * an instance that hung up cannot produce, so that case is a failure rather than an absence.
+   */
   public Optional<String> nextFrameWithin(Duration timeout) {
-    try {
-      return Optional.ofNullable(frames.poll(timeout.toMillis(), TimeUnit.MILLISECONDS));
-    } catch (InterruptedException interrupted) {
-      Thread.currentThread().interrupt();
-      throw new IllegalStateException("Interrupted while awaiting a frame", interrupted);
+    Optional<String> frame = poll(timeout);
+    if (frame.isEmpty() && ended) {
+      throw new IllegalStateException("The instance closed the stream");
     }
+    return frame;
   }
 
   /**
@@ -83,9 +88,24 @@ public final class MetricsStream implements Closeable {
    * themselves, skipping any heartbeat comment that arrives between two samples.
    */
   public String nextSampleFrame(Duration timeout) {
-    String frame = nextFrame(timeout);
-    while (dataOf(frame).isBlank()) {
-      frame = nextFrame(timeout);
+    return nextSampleFrameMatching(sample -> true, timeout);
+  }
+
+  /**
+   * The next sample satisfying {@code condition}. Samples the instance assembled before the
+   * scenario acted are already queued, so waiting for a state the scenario caused means
+   * reading past them rather than trusting whichever frame happens to come next.
+   */
+  public String nextSampleFrameMatching(Predicate<JsonPath> condition, Duration timeout) {
+    Instant deadline = Instant.now().plus(timeout);
+    String frame = nextSample(timeout);
+    while (!condition.test(valuesOf(frame))) {
+      Duration left = Duration.between(Instant.now(), deadline);
+      if (left.isNegative() || left.isZero()) {
+        throw new NoSuchElementException(
+            "No sample matched within %s; the last one read was %s".formatted(timeout, frame));
+      }
+      frame = nextSample(left);
     }
     return frame;
   }
@@ -98,6 +118,23 @@ public final class MetricsStream implements Closeable {
   @Override
   public void close() throws IOException {
     body.close();
+  }
+
+  private String nextSample(Duration timeout) {
+    String frame = nextFrame(timeout);
+    while (dataOf(frame).isBlank()) {
+      frame = nextFrame(timeout);
+    }
+    return frame;
+  }
+
+  private Optional<String> poll(Duration timeout) {
+    try {
+      return Optional.ofNullable(frames.poll(timeout.toMillis(), TimeUnit.MILLISECONDS));
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Interrupted while awaiting a frame", interrupted);
+    }
   }
 
   private static String dataOf(String frame) {
@@ -130,17 +167,19 @@ public final class MetricsStream implements Closeable {
         new BufferedReader(new InputStreamReader(body, StandardCharsets.UTF_8))) {
       String line = lines.readLine();
       while (line != null) {
-        if (line.isEmpty()) {
+        if (!line.isEmpty()) {
+          frame.append(line).append('\n');
+        } else if (!frame.isEmpty()) {
+          // A heartbeat carries no data line, so it reaches us as two blank lines in a row;
+          // the second closes nothing and must not surface as a frame of its own.
           frames.add(frame.toString());
           frame.setLength(0);
-        } else {
-          frame.append(line).append('\n');
         }
         line = lines.readLine();
       }
-    } catch (IOException ended) {
-      LOG.log(Level.DEBUG, "The metrics stream ended", ended);
+    } catch (IOException hungUp) {
+      LOG.log(Level.DEBUG, "The metrics stream ended", hungUp);
     }
-    frames.add(NO_MORE_FRAMES);
+    ended = true;
   }
 }
