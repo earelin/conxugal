@@ -40,7 +40,7 @@ rather than added to a table of millions later.
   | Field | Type | Notes |
   | --- | --- | --- |
   | `id` | `ContratoMenorId` | System-assigned identity, `null` only until the database assigns it |
-  | `publicationId` | `long` | The source's own `id`. **The stable identity across imports** (R11) and what the uniqueness of R12 is enforced on |
+  | `sourceId` | `long` | The source's own `id`. **The stable identity across imports** (R11) and what the uniqueness of R12 is enforced on |
   | `organoId` | `UUID` | The awarding Órgano's **UUID**, never its source key |
   | `publicationDate` | `LocalDate`, nullable | Interpreted at the adapter from the source's `DD-MM-YYYY` text. **One field, not a pair** — the published text is not retained |
   | `objeto` | `String`, nullable | As published, including the source's own 60-character truncation |
@@ -83,14 +83,14 @@ rather than added to a table of millions later.
 > #39 and #40 follow; SPEC-0006 #5, #25 and R13 now describe rows showing the operador's
 > spelling. This task implements the amended rule, not a divergence from it.
 
-- **Only identity is required**: the publication identifier and the awarding Órgano. Every other
+- **Only identity is required**: the source identifier and the awarding Órgano. Every other
   field — the publication date included, since it can fail to parse — is nullable, and null means
   *the source published nothing there*: a `NOT NULL` on any of them would reject a real award
   over a field the source left blank. This is the same rule #42 states for the amount and the
   date, applied to the whole row, and it is what
-  [TASK-0004](TASK-0004-contratos-menores-store.md)'s columns mirror. A field absent **systematically** is a different matter — that is the adapter judging
-  the response unusable ([TASK-0005](TASK-0005-source-port-and-adapter.md)), not a row stored
-  half-empty.
+  [TASK-0004](TASK-0004-contratos-menores-store.md)'s columns mirror. A field absent
+  **systematically** is a different matter — that is the adapter judging the response unusable
+  ([TASK-0005](TASK-0005-source-port-and-adapter.md)), not a row stored half-empty.
 
 - **No published value is altered on the way in.** No trimming, no case folding, no rounding, no
   inferring — R27 forbids it. (The awardee's padding now survives on the `operador` row rather
@@ -116,10 +116,10 @@ rather than added to a table of millions later.
 - **The awarding Órgano is referenced by a raw `UUID`, not an `OrganoId`.** ADR-0019 converts a
   shipped aggregate only when a feature has reason to touch its identity, and typing the
   catalogue is not this feature's work — so the reference stays untyped until it is, and the
-  asymmetry is deliberate rather than an oversight. `publicationId` stays a `long`: it is the
+  asymmetry is deliberate rather than an oversight. `sourceId` stays a `long`: it is the
   source's natural key, not an identity this system assigns.
 - **No column addresses the publication at the source.** R16's per-row link is
-  `licitacion?N={publicationId}` — derivable from a field the row already carries.
+  `licitacion?N={sourceId}` — derivable from a field the row already carries.
 - `ContratoMenorRepository` port in `domain`:
   - a **batch upsert** taking the contracts of one page and reporting **how many were added
     and how many refreshed** — the counts R20's outcome states, which a fire-and-forget upsert
@@ -136,7 +136,7 @@ rather than added to a table of millions later.
   feature's.
 
 ## Acceptance criteria
-- The aggregate carries a `ContratoMenorId` identity distinct from `publicationId`, so the
+- The aggregate carries a `ContratoMenorId` identity distinct from `sourceId`, so the
   source's identifier is what matches a contract across imports while identity is the system's
   own — and no method taking a `ContratoMenorId` can be handed another aggregate's identifier,
   which is a compile error rather than a missing row.

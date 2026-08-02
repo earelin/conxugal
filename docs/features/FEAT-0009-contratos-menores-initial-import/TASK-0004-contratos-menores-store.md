@@ -11,7 +11,8 @@ depends_on: [TASK-0003]
 The schema and driven adapter behind [TASK-0003](TASK-0003-contrato-menor-domain-model.md)'s
 port. **Prerequisite outside this feature:**
 [FEAT-0010 TASK-0003](../FEAT-0010-operadores-economicos-base/TASK-0003-operador-store.md)
-creates the `operador` table this one's foreign key points at. Governed by [ADR-0002](../../architecture/0002-hexagonal-architecture.md) and
+creates the `operador` table this one's foreign key points at. Governed by
+[ADR-0002](../../architecture/0002-hexagonal-architecture.md) and
 [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md);
 JDBC and SQL stay entirely in `infrastructure`.
 
@@ -21,21 +22,21 @@ JDBC and SQL stay entirely in `infrastructure`.
     an `AttributeConverter` maps onto it
     ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)), so nothing in the
     schema knows about the wrapper;
-  - `publication_id BIGINT NOT NULL UNIQUE` — R12's "no duplicates" enforced **at the store**,
+  - `source_id BIGINT NOT NULL UNIQUE` — R12's "no duplicates" enforced **at the store**,
     so it holds even if use-case logic slips, exactly as `source_key` does for the catalogue;
   - `organo_id UUID NOT NULL REFERENCES organo_contratacion(id)`;
   - `publication_date DATE` — nullable, and the **only** date column: the source's `DD-MM-YYYY`
     text is interpreted at the adapter and not stored (TASK-0003 records what that costs against
     R27);
   - `objeto TEXT`, `amount NUMERIC`, `duration TEXT` — **nullable**, mirroring the aggregate's
-    rule that only identity is required (TASK-0003): a `NOT NULL` here would reject a real award over a field the
-    source left blank, which is what #42 forbids for the amount and the date and what R7's
-    *store what is published* forbids for the rest;
+    rule that only identity is required (TASK-0003): a `NOT NULL` here would reject a real award
+    over a field the source left blank, which is what #42 forbids for the amount and the date and
+    what R7's *store what is published* forbids for the rest;
   - `operador_id UUID REFERENCES operador(id)` — **nullable**, plus an index on it. This single
     column **is** the awardee: the schema is normalised, so the name and fiscal identifier live
     once on `operador` and no contract row repeats them. It is what TASK-0003's
-    `@Relation(MANY_TO_ONE)` maps. Created
-    here, with the table, rather than added later: this column is the reason
+    `@Relation(MANY_TO_ONE)` maps. Created here, with the table, rather than added later: it is
+    the reason
     [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s base lands first, since
     `ALTER`-ing it onto a table of millions and backfilling from re-derived data is a different
     operation entirely. Nothing in this feature ever writes it —
@@ -46,7 +47,7 @@ JDBC and SQL stay entirely in `infrastructure`.
     a table of millions is a different operation from creating it now.
 - The Micronaut Data JDBC implementation of `ContratoMenorRepository`.
 - **The batch upsert**: one statement per batch,
-  `INSERT … ON CONFLICT (publication_id) DO UPDATE SET …` over every source-derived column,
+  `INSERT … ON CONFLICT (source_id) DO UPDATE SET …` over every source-derived column,
   never delete-and-reinsert, so a re-imported contract keeps its UUID and its row. It must
   **distinguish inserted rows from updated ones** in what it returns (PostgreSQL exposes this
   as `xmax = 0` on the returned row); without that the added/refreshed counts R20 reports
@@ -58,10 +59,10 @@ JDBC and SQL stay entirely in `infrastructure`.
 - A contract inserted with a null id comes back carrying the generated `ContratoMenorId`, and
   reading it back yields the same value — the converter round-trips through
   `@GeneratedValue`, which is the mechanism TASK-0003 establishes and everything here relies on.
-- Upserting a batch containing a publication identifier already stored updates that row **in
+- Upserting a batch containing a source identifier already stored updates that row **in
   place** — same `id`, refreshed attributes — never inserting a second.
   ([SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) #17)
-- A **direct insert bypassing the upsert** with an existing `publication_id` fails at the
+- A **direct insert bypassing the upsert** with an existing `source_id` fails at the
   unique constraint: the no-duplicates rule holds at the store even when use-case logic slips,
   which is the reason the constraint exists rather than only the upsert. (SPEC-0005 #17)
 - Upserting the same batch twice leaves the stored set and every attribute unchanged, and

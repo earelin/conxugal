@@ -68,7 +68,7 @@ layout of
   VAT and stated duration — plus a **foreign-key association to its operador económico**, which
   is where the awardee's name and fiscal identifier live, once, rather than on every contract
   row; plus the source's own
-  publication identifier as its stable identity and whatever addresses that publication at the
+  source identifier as its stable identity and whatever addresses that publication at the
   source (R7, R16, R27), and a `ContratoMenorRepository` port.
 - **Domain (source port):** a `ContratoMenorSource` port that answers one **(Órgano, date
   window)** slice at a time, because that is the only shape the source offers (SPEC-0005,
@@ -189,7 +189,7 @@ untouched. ADR-0019 also records the one risk this rests on — that Micronaut D
 ### What a stored contract holds ([ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md))
 - The aggregate maps 1:1 to `contrato_menor`, keyed by a system-assigned `ContratoMenorId`
   over an unchanged `uuid` column, with the
-  **source's own publication identifier unique** — so "no duplicates" (R12) holds at the store
+  **source's own source identifier unique** — so "no duplicates" (R12) holds at the store
   level and not only in use-case logic, exactly as `source_key` does for the catalogue. The
   awarding Órgano is referenced by its **UUID**, not its source key.
 - **Every published value the contract keeps is stored as published** (R27) — object and duration,
@@ -215,7 +215,7 @@ untouched. ADR-0019 also records the one risk this rests on — that Micronaut D
   column is both what was published and what R19 sorts on. It is VAT-inclusive, as R7 requires
   it to be labelled.
 - **The route to the publication at the source is derived, not stored.** It is
-  `licitacion?N={id}` — a constant and the publication identifier the row already carries — so
+  `licitacion?N={id}` — a constant and the source identifier the row already carries — so
   R16's per-row link costs no column. That is a measured fact about this source, not a general
   one: a family whose publications are not addressable from their identifier would have to
   capture the address at import, because it could not be retro-fitted onto millions of rows.
@@ -469,7 +469,7 @@ also record, in that folder's README, what they draw but deliberately do not bui
    anything — task 11 wires that once there is something to trigger. *(SPEC-0005 #1 mark half,
    #4)*
 3. **`ContratoMenor` domain model + repository port** — the aggregate (a `ContratoMenorId`
-   identity, the source's publication identifier, the awarding Órgano's UUID, every published
+   identity, the source's source identifier, the awarding Órgano's UUID, every published
    value as published, the nullable publication date and the numeric amount) plus
    the nullable operador reference, plus the `ContratoMenorRepository` port. It also introduces
    ADR-0019's identifier wrapper and **proves the converter mechanism** the run record then
@@ -561,12 +561,12 @@ are SPEC-0007's; #1's re-read and remove/restore operations are the curation fea
   The configured history floor stops the walk, and the Órgano is left **incomplete** rather than
   marked complete, so it is resumed rather than quietly treated as loaded. *(SPEC-0005 #12, #46)*
 - **The same publication seen twice** — across a resumption overlap, a paging boundary or a
-  straight re-run — upserts to the same row; the unique publication identifier makes a duplicate
+  straight re-run — upserts to the same row; the unique source identifier makes a duplicate
   impossible even if the use-case logic slipped. *(SPEC-0005 #17)*
 - **A publication absent from a later import** — retained unchanged. An import never deletes;
   absence is not evidence of withdrawal, and the explicit removal that *is* (R13) is a later
   feature's. *(SPEC-0005 #17)*
-- **An attribute changed at the source** — matched by publication identifier and refreshed in
+- **An attribute changed at the source** — matched by source identifier and refreshed in
   place; identity and the row survive. *(SPEC-0005 #16 storage half)*
 - **An uninterpretable amount or publication date** — the contract is stored with that column
   null and is never rejected. For the **date**, what the source published is not retained, which

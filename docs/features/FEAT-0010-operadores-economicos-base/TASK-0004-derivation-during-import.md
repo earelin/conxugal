@@ -40,7 +40,7 @@ one lands **after** there is an import to derive from.
 - **Resolution happens on every upsert, not only on insert.** That is what makes a correction
   changing a contract's published identifier repoint its foreign key, creating the operador the
   corrected identifier names if no contract named it before.
-- **Idempotent on both tables**: the contract upserts by publication identifier, the operador by
+- **Idempotent on both tables**: the contract upserts by source identifier, the operador by
   match key, and the rank comparison is a strict win — so replaying a batch after a crash
   produces no duplicate operador and no display flapping.
 - Two contracts of the same batch naming a new operador: the first creates it, the second finds
@@ -63,7 +63,7 @@ one lands **after** there is an import to derive from.
   and displaces nothing. (SPEC-0006 #6 storage half, #7)
 - An undated contract never displaces a dated one however late it arrives, and an operador all of
   whose contracts are undated still has exactly one display spelling, chosen by the higher
-  publication identifier. (SPEC-0006 #7)
+  source identifier. (SPEC-0006 #7)
 - A contract published with an absent or whitespace-only identifier is stored with a **null**
   `operadorEconomico` association and creates no operador row at all — and therefore records no
   awardee, which is the branch the source is not expected to take. (SPEC-0006 #8, no-operador

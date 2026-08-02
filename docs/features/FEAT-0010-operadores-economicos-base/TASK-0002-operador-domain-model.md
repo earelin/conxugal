@@ -32,7 +32,7 @@ typed identifier).
   | `matchKey` | `String` | TASK-0001's reduction. **Never displayed** (R13); the store is unique on it |
   | `displayName` | `String` | The awardee name **as published** by the winning contract |
   | `displayFiscalId` | `String` | The fiscal identifier **as published** by that same contract — padding and casing intact |
-  | `rank` | the rank triple | Which contract those two came from: its publication date (nullable) and its publication identifier |
+  | `rank` | the rank triple | Which contract those two came from: its publication date (nullable) and its source identifier |
 
 - **Storing the rank is what makes R4 deterministic across runs** (#7). Without it, *is this
   contract newer than whatever won last time?* has no answer once the winning contract is out of

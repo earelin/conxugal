@@ -31,7 +31,7 @@ exists first.
     whichever use case remembered to reduce the identifier first;
   - `display_name TEXT NOT NULL`, `display_fiscal_id TEXT NOT NULL` — published spellings;
   - the rank the display fields were taken from: `rank_publication_date DATE` (nullable, and
-    null ranks **last**) and `rank_publication_id BIGINT NOT NULL`.
+    null ranks **last**) and `rank_source_id BIGINT NOT NULL`.
 - **No column classifies an operador** — nothing records whether the awardee is a natural person
   or a legal entity, deliberately and although the published identifier makes it inferable (R6).
 - The Micronaut Data JDBC implementation of `OperadorRepository`: find by match key, insert, and

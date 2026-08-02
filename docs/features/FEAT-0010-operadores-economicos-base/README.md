@@ -190,7 +190,7 @@ flowchart LR
   match key, find or create the operador, advance its display fields if this contract outranks
   the incumbent, and write the contract with the reference. Contract and link commit together,
   so a crash cannot leave a stored contract whose operador was never created — and re-running the
-  batch is idempotent on both tables, because the contract upserts by publication identifier and
+  batch is idempotent on both tables, because the contract upserts by source identifier and
   the operador by match key.
 - **A correction that changes a contract's published identifier repoints its foreign key**, and
   creates the operador the corrected identifier names if no contract named it before. That falls
@@ -256,7 +256,7 @@ SPEC-0005 R13's withdrawal.
   spelling, chosen by the higher contract identifier among them. *(SPEC-0006 #7)*
 - **An undated contract stored after a dated one** — never displaces it, because undated ranks
   last however late it arrives. *(SPEC-0006 #7)*
-- **The same batch replayed after a crash** — the contract upserts by publication identifier and
+- **The same batch replayed after a crash** — the contract upserts by source identifier and
   the operador by match key, and the rank comparison is idempotent, so no duplicate operador and
   no display flapping. *(SPEC-0006 #2)*
 - **A correction changing a contract's published identifier** — the reference moves to the

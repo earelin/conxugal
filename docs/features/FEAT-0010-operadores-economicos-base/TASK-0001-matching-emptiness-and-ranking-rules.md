@@ -27,7 +27,7 @@ than an error".
   source publishes irregular but genuine identifiers, and rejecting them would discard real
   awards.
 - **The rank** — a comparable triple over a contract: its publication date (**null
-  ranks last**), then its publication identifier (**higher wins**). This is what R4 means by
+  ranks last**), then its source identifier (**higher wins**). This is what R4 means by
   *most recently published*, made total and deterministic rather than "some tie-break".
 - The match key is a **comparison value that is never displayed** (R13). Name it so that reaching
   for it where a published spelling belongs reads as wrong.
@@ -45,6 +45,6 @@ than an error".
   irregular but non-empty one — a foreign VAT number, a malformed NIF — is **usable** and
   reduces like any other. (SPEC-0006 #9)
 - The rank orders a dated contract above an undated one however late the undated one arrives,
-  and breaks a date tie by the higher publication identifier; comparing a contract with itself
+  and breaks a date tie by the higher source identifier; comparing a contract with itself
   is not a win, so re-running a comparison never flips a decision. (SPEC-0006 #7)
 - Unit-tested on values alone — no database, no HTTP, no Micronaut context.
