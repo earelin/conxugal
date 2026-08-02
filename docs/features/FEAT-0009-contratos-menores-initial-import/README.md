@@ -210,10 +210,15 @@ untouched. ADR-0019 also records the one risk this rests on — that Micronaut D
   such a contract shows no date at all. What is kept is the half that matters more — the contract
   is **stored rather than rejected**, and a null date is precisely what R19's *undated* selection
   reads, so no stored contract becomes unreachable (#42).
-- **The amount is likewise a single column.** The source publishes it as a JSON **number**, not
-  as text, so no published spelling is lost by storing it numerically: one nullable numeric
-  column is both what was published and what R19 sorts on. It is VAT-inclusive, as R7 requires
-  it to be labelled.
+- **The amount is likewise a single column, held as a `Money`.** The source publishes it as a
+  JSON **number**, not as text, so no published spelling is lost by storing it numerically: one
+  nullable `NUMERIC` column is both what was published and what R19 sorts on. In the domain it is
+  a `Money` — a record wrapping a `BigDecimal`, mapped by an `AttributeConverter` exactly as
+  [ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)'s identifiers are — so an
+  amount cannot be added to a count or a year by accident, and the totals SPEC-0006 R9 and the
+  browsing feature will sum are sums of a type that knows it is money. **No currency is stored**:
+  every published figure is in euros, the source states no currency, and the system holds no
+  second one to distinguish it from. It is VAT-inclusive, as R7 requires it to be labelled.
 - **The route to the publication at the source is derived, not stored.** It is
   `licitacion?N={id}` — a constant and the source identifier the row already carries — so
   R16's per-row link costs no column. That is a measured fact about this source, not a general
@@ -469,8 +474,8 @@ also record, in that folder's README, what they draw but deliberately do not bui
    anything — task 11 wires that once there is something to trigger. *(SPEC-0005 #1 mark half,
    #4)*
 3. **`ContratoMenor` domain model + repository port** — the aggregate (a `ContratoMenorId`
-   identity, the source's source identifier, the awarding Órgano's UUID, every published
-   value as published, the nullable publication date and the numeric amount) plus
+   identity, the source identifier, the awarding Órgano's UUID, every published
+   value as published, the nullable publication date and the `Money` amount) plus
    the nullable operador reference, plus the `ContratoMenorRepository` port. It also introduces
    ADR-0019's identifier wrapper and **proves the converter mechanism** the run record then
    reuses. *Depends on FEAT-0010's operador domain model.* *(SPEC-0005 #11 storage half,

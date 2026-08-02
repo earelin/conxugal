@@ -28,7 +28,9 @@ JDBC and SQL stay entirely in `infrastructure`.
   - `publication_date DATE` — nullable, and the **only** date column: the source's `DD-MM-YYYY`
     text is interpreted at the adapter and not stored (TASK-0003 records what that costs against
     R27);
-  - `objeto TEXT`, `amount NUMERIC`, `duration TEXT` — **nullable**, mirroring the aggregate's
+  - `objeto TEXT`, `amount NUMERIC`, `duration TEXT` — **nullable**. `amount` stays a plain
+    `NUMERIC`; `Money` is a Java type an `AttributeConverter` maps onto it, so the schema knows
+    nothing about the wrapper and no currency column exists. The three mirror the aggregate's
     rule that only identity is required (TASK-0003): a `NOT NULL` here would reject a real award
     over a field the source left blank, which is what #42 forbids for the amount and the date and
     what R7's *store what is published* forbids for the rest;
@@ -73,9 +75,10 @@ JDBC and SQL stay entirely in `infrastructure`.
 - A contract stored by an earlier batch and absent from a later one is still present and
   unchanged afterwards — nothing in this adapter deletes. (SPEC-0005 #17)
 - Published text round-trips unchanged through the store — the object at its published length,
-  the duration as published — and an interpreted date round-trips as the same `LocalDate`, with a
-  null date and null amount where the source gave nothing interpretable. (SPEC-0005 #40 storage
-  half, less the date and the awardee, #42 stored-not-rejected half)
+  the duration as published — an interpreted date round-trips as the same `LocalDate`, and a
+  `Money` round-trips at its published scale without rounding, with a null date and null amount
+  where the source gave nothing interpretable. (SPEC-0005 #40 storage half, less the date and the
+  awardee, #42 stored-not-rejected half)
 - The contract table holds **no awardee column**: reading a contract's awardee means joining
   `operador`, and a contract with a null `operador_id` is stored and readable like any other.
   (SPEC-0006 #8, no-operador half)

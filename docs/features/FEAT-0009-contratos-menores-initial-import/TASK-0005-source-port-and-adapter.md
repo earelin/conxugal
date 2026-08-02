@@ -35,9 +35,10 @@ feature configuring no new rate. Build this task after it, or the sharing is asp
   the awardee name and fiscal identifier**, which the contract no longer stores but
   [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s derivation needs from the
   source row to match and to fill the operador's display fields:
-  publication id, publication date text, object, amount, duration, awardee name, awardee fiscal
+  source id, publication date text, object, amount, duration, awardee name, awardee fiscal
   identifier. No trimming, no case folding, no date parsing — interpretation happens above the
-  port (R27).
+  port (R27). The amount arrives as a JSON number and is carried as a `Money` (TASK-0003), at
+  the scale the source published and with no rounding.
 - The adapter **declares a client interface** carrying `@ResilientClient` and
   `@Client(id = "contratosdegalicia")` — **the same id the Órganos adapter binds** — so both go
   through the one set of policies `ContratosDeGaliciaResilienceFactory` publishes per source.
@@ -63,7 +64,8 @@ feature configuring no new rate. Build this task after it, or the sharing is asp
 ## Acceptance criteria
 - Given a stubbed source, the adapter returns one window-page's rows with every published value
   intact — padded fiscal identifier and awardee name, the object at its published length, the
-  date as `DD-MM-YYYY` text, the amount as a number — and accented text decoded from **UTF-8**
+  date as `DD-MM-YYYY` text, the amount as a `Money` at its published scale — and accented text
+  decoded from **UTF-8**
   without mojibake.
   ([SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) #40 as-published half)
 - `recordsTotal` is surfaced alongside the rows on every response, including one whose window

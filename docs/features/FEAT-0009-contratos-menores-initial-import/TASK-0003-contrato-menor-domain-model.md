@@ -44,7 +44,7 @@ rather than added to a table of millions later.
   | `organoId` | `UUID` | The awarding Órgano's **UUID**, never its source key |
   | `publicationDate` | `LocalDate`, nullable | Interpreted at the adapter from the source's `DD-MM-YYYY` text. **One field, not a pair** — the published text is not retained |
   | `objeto` | `String`, nullable | As published, including the source's own 60-character truncation |
-  | `amount` | `BigDecimal`, nullable | Published as a JSON **number**, VAT-inclusive |
+  | `amount` | `Money`, nullable | Published as a JSON **number**, VAT-inclusive — see below |
   | `duration` | `String`, nullable | As published, free text |
   | `operadorEconomico` | `OperadorEconomico`, nullable | **A foreign-key association** to the operador catalogue, not a copy of its data |
 
@@ -104,9 +104,25 @@ rather than added to a table of millions later.
   and that contract shows no date rather than the text the source published. What survives is the
   half that matters: the contract is **stored, never rejected** (#42), and a null date is exactly
   what R19's *undated* selection reads, so no contract becomes unreachable.
-- The amount needs no such consideration: the source publishes it as a JSON **number**, so there
-  is no published spelling to lose and one nullable numeric column is both what was published and
-  what R19 sorts on.
+- **The amount is a `Money`, not a `BigDecimal`.** A record wrapping a `BigDecimal`, declared in
+  the domain beside the other shared value types, with an `AttributeConverter` onto the
+  unchanged `NUMERIC` column — the same mechanism
+  [ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md) uses for identifiers. It
+  exists so that a contract's amount cannot be added to a count, a page number or a year by
+  accident, and so that the one place amounts are summed — SPEC-0006 R9's per-family totals, and
+  the browsing feature's — sums a type that knows it is money.
+  - **No currency column.** Every figure this source publishes is in euros and the source states
+    no currency; recording one per row would be storing a fact nobody published, and the system
+    holds no second currency to distinguish it from. `Money` documents that it is euros; if a
+    second currency ever arrives it becomes a field, and that is a change to make when it does.
+  - **No rounding and no rescaling on the way in.** The published figure is kept exactly as the
+    source gave it, R27's rule unchanged; `Money` fixes how amounts are *compared and added*
+    (exact decimal arithmetic, never binary floating point), not what is stored.
+  - It is **VAT-inclusive**, which R7 requires to be *labelled* wherever it or a total derived
+    from it is shown — a display obligation, and so the browsing feature's, not a second field
+    here.
+  - The amount needs no as-published pair, unlike the date: the source publishes it as a JSON
+    **number**, so there is no published spelling to lose.
 - **The association is declared here and never resolved here.**
   [FEAT-0010 TASK-0004](../FEAT-0010-operadores-economicos-base/TASK-0004-derivation-during-import.md)
   is the only thing that ever fills it, and until it lands every contract stores a null — which
@@ -150,6 +166,10 @@ rather than added to a table of millions later.
   the object comes back at its published length and the duration as published.
   (SPEC-0005 #40 storage half, **except the publication date**, stored interpreted, **and the
   awardee**, which the operador row now holds)
+- `Money` holds the published figure exactly — a value with more or fewer decimals than two
+  round-trips unchanged, and no construction path rounds or rescales it. Two amounts add
+  exactly, with no binary floating-point drift, and `Money` cannot be added to or compared with a
+  plain number. (SPEC-0005 #40 storage half)
 - A publication date that cannot be interpreted yields a contract with a **null**
   `publicationDate`; the same for an absent amount, and for any other value the source left
   blank. Nothing is rejected. (SPEC-0005 #42, stored-not-rejected half; its *displayed as
