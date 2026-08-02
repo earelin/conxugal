@@ -1295,13 +1295,15 @@ components:
         name:
           type: string
           maxLength: 255
-          pattern: "\\S"
-          example: "Sanidade"
+          pattern: "^\\s*\\S[\\s\\S]*$"
+          example: "Sanidade e Benestar"
           description: >-
-            Non-blank once stripped of surrounding whitespace, and stored stripped. The
-            pattern is unanchored and so requires only that some non-whitespace character is
-            present: surrounding whitespace is accepted here and does not survive, unlike the
-            stored `Termo.name`, which forbids it outright. Must not collide
+            Non-blank once stripped of surrounding whitespace, and stored stripped. Whitespace
+            *within* a name is ordinary — most terms are several words — and leading or
+            trailing whitespace is accepted here and does not survive, unlike the stored
+            `Termo.name`, which forbids surrounding whitespace outright because it never has
+            any. The pattern therefore rejects only an all-whitespace name, and is written so
+            it means that whether a validator anchors it or not. Must not collide
             case-insensitively with a sibling's name.
         parentId:
           type: [string, "null"]
@@ -1319,13 +1321,13 @@ components:
         name:
           type: string
           maxLength: 255
-          pattern: "\\S"
+          pattern: "^\\s*\\S[\\s\\S]*$"
           example: "Sanidade e Benestar"
           description: >-
             The replacement name: non-blank once stripped of surrounding whitespace, stored
             stripped, and free among the names of the term's existing siblings, compared
-            case-insensitively. As on the create, the unanchored pattern requires only a
-            non-whitespace character to be present, so padding is accepted and stripped.
+            case-insensitively. As on the create, whitespace within the name is ordinary and
+            only an all-whitespace name is rejected.
 
     MoveTermoRequest:
       type: object

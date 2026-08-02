@@ -183,13 +183,15 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .statusCode(HttpStatus.BAD_REQUEST.getCode());
   }
 
-  // Surrounding whitespace is the use case's to strip, so the edge must let it through
-  // rather than reject it — the contract says the same, and carries no no-whitespace
-  // pattern on the request name for exactly this reason.
+  // A multi-word name padded with whitespace, because the two are easy to conflate and only
+  // one of them is the use case's to remove: the spaces *between* words are part of the name
+  // — most terms are several words — while the surrounding ones are stripped. The edge must
+  // reject neither, which is what the request schema's pattern is written to allow.
   @Test
-  void create_with_padded_name_is_accepted_and_left_to_the_use_case(RequestSpecification spec) {
-    when(createTermo.create("  Sanidade  ", null))
-        .thenReturn(new Termo(SANIDADE, "Sanidade", null));
+  void create_with_padded_multi_word_name_keeps_the_spaces_between_words(
+      RequestSpecification spec) {
+    when(createTermo.create("  Sanidade e Benestar  ", null))
+        .thenReturn(new Termo(SANIDADE, "Sanidade e Benestar", null));
     String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
     Response response =
@@ -197,13 +199,13 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
             .header(HttpHeaders.COOKIE, sessionCookie)
             .body(
                 """
-                {"name":"  Sanidade  ","parentId":null}\
+                {"name":"  Sanidade e Benestar  ","parentId":null}\
                 """)
         .when()
             .post(TERMOS);
 
     response.then().statusCode(HttpStatus.CREATED.getCode());
-    assertThat(response.jsonPath().getString("name")).isEqualTo("Sanidade");
+    assertThat(response.jsonPath().getString("name")).isEqualTo("Sanidade e Benestar");
   }
 
   @Test
