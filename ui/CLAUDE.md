@@ -18,6 +18,9 @@ Run from `ui/`:
 - `npm test -- src/App.test.tsx` — run a single test file
 - `npm test -- -t "shows the Galician not-found"` — run tests matching a name pattern
 - `npm run test:watch` — Vitest in watch mode
+- `npm run api:up` / `npm run api:down` — start/stop the stubbed API (WireMock)
+- `npm run test:acceptance` — Playwright acceptance suite (`npx playwright install chromium` first)
+- `npm run test:acceptance -- acceptance/specs/admin-users.spec.ts` — run a single acceptance spec
 - `npm run lint` — ESLint
 - `npm run format` / `npm run format:check` — Prettier write/check
 
@@ -67,6 +70,18 @@ failures before committing changes to this module.
   setup in `src/test/setup.ts`). Tests render the real route tree via
   `createMemoryRouter` and assert against rendered text from `strings`, not
   hardcoded literals, so assertions stay in sync with `strings.ts` changes.
+  Vitest's `include` is scoped to `src/**` so it doesn't collect the Playwright
+  specs in `acceptance/`.
+- **Local API / acceptance tests** (ADR-0018): the app calls same-origin `/api`
+  paths, and Vite proxies them (dev *and* preview) to a WireMock container in
+  `docker-compose.yml`, so the admin area runs with no backend. Stub state lives
+  in `wiremock/mappings/`, shared by `npm run dev`, `npm run preview` and the
+  black-box Playwright suite in `acceptance/`. `acceptance/` sits outside the `src` module
+  graph — it drives the built app over HTTP and imports nothing from `src`
+  (hence its own `tsconfig.acceptance.json` and a `boundaries/ignore` entry). Specs
+  drive only accessible roles/labels and the Galician copy of `strings.ts`; they
+  must not assert on locale-formatted dates, which differ between browser
+  builds. They run serially — WireMock is one shared process.
 - **TypeScript 7 / 6 split**: `devDependencies.typescript` is aliased to
   `@typescript/typescript6` (Microsoft's compatibility shim) so anything that
   `require`s/`import`s the `typescript` module — `typescript-eslint`, whose
@@ -77,6 +92,35 @@ failures before committing changes to this module.
   build` and CI type-checking go through `tsc7`; only the programmatic compiler
   API (e.g. ESLint's type-aware rules) should ever resolve the aliased TS 6
   package.
+- **Linting** (`eslint.config.js`): beyond `eslint-plugin-boundaries`, the `**/*.{ts,tsx}`
+  block layers `@eslint-react/eslint-plugin` (`recommended-typescript`),
+  `eslint-plugin-jsx-a11y` (`recommended`), `eslint-plugin-import-x`
+  (`recommended` + `typescript`), `eslint-plugin-sonarjs` (`recommended`),
+  `eslint-plugin-no-unsanitized` (`recommended`) and `eslint-plugin-unused-imports`;
+  `eslint-plugin-react-you-might-not-need-an-effect` (`recommended`, all warnings)
+  rides alongside as its own block. Two seams worth
+  knowing: `eslint-plugin-react-hooks` stays the authority on hook usage, so
+  eslint-react's duplicate `rules-of-hooks`/`exhaustive-deps` are off; and the
+  resolver is configured twice — `import/resolver` for boundaries (which reads the
+  eslint-plugin-import key) and `import-x/resolver-next` for import-x. Unused-variable
+  reporting moved from `@typescript-eslint/no-unused-vars` to
+  `unused-imports/no-unused-vars`, still an error but with a `^_` opt-out prefix;
+  unused *imports* are separately an auto-fixable error.
+  `eslint-plugin-perfectionist` is registered but only its four import/export
+  sorters are on — third-party imports first, then a blank line, then local ones,
+  with a source's `import type` kept next to its value import. Its sorters for
+  objects, JSX props, interfaces, modules and classes stay off: that ordering
+  carries meaning the alphabet does not.
+- **Lint blocks for tests and e2e**: test files (`**/*.test.{ts,tsx}` and
+  `src/test/**`) additionally get `@vitest/eslint-plugin` and
+  `eslint-plugin-testing-library` (`flat/react`). `testing-library/no-container`
+  and `no-node-access` are off there — this module asserts on Mantine's responsive
+  `visible-from-sm` classes and on `aria-hidden`/`inert` decorative wrappers, and
+  an element hidden from the accessibility tree has no Testing Library query to
+  reach it by. A separate `e2e/**` block carries `eslint-plugin-playwright`
+  (`flat/recommended`); that directory does not exist yet, since ADR-0007 puts
+  Playwright in the Java `server/acceptance` module. `tsconfig.node.json` already
+  includes `e2e` so the type-aware rules can parse those files when they arrive.
 - **Utilities**: use [`es-toolkit`](https://es-toolkit.dev) for common array/object/function
   helpers (`debounce`, `groupBy`, `chunk`, etc.) instead of hand-rolling them. Import from
   `es-toolkit` itself, never from `es-toolkit/compat` — that subpath only exists to match

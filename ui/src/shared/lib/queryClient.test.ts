@@ -1,5 +1,6 @@
 import { MutationObserver, type QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { HttpError } from './httpClient';
 import { createQueryClient, queryClient as productionQueryClient } from './queryClient';
 

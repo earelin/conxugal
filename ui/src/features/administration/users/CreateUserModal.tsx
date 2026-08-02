@@ -1,3 +1,4 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ActionIcon,
   Alert,
@@ -11,10 +12,10 @@ import {
   Tooltip,
 } from '@mantine/core';
 import { IconAlertTriangle, IconCheck, IconCopy } from '@tabler/icons-react';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+
 import { ROLES } from '../../../shared/entities/currentUser';
 import { isHttpStatus } from '../../../shared/lib/httpError';
 import { strings } from '../../../shared/lib/strings';

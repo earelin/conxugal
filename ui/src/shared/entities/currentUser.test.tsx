@@ -3,6 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import nock from 'nock';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { HttpError } from '../lib/httpClient';
 import { createQueryClient } from '../lib/queryClient';
 import { useLogout } from './currentUser';
@@ -113,8 +114,7 @@ describe('useLogout', () => {
 
     expect(result.current.error).toBeInstanceOf(HttpError);
     expect((result.current.error as HttpError).status).toBe(401);
-    expect(replace).toHaveBeenCalledOnce();
-    expect(replace).toHaveBeenCalledWith('/login');
+    expect(replace).toHaveBeenCalledExactlyOnceWith('/login');
   });
 
   it('does not navigate and surfaces the failure when the request itself fails', async () => {

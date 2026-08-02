@@ -175,8 +175,9 @@ flowchart LR
    an identifying `User-Agent`, and `Retry-After` support, per ADR-0014. Adds the
    capability without touching any adapter. *(SPEC-0004 #13)*
 8. **Adopt the resilient client in the source adapter** — move the Órganos adapter onto
-   that client, count an unusable response against the breaker, and add the ArchUnit rule
-   that makes bypassing the policy a build failure. *(SPEC-0004 #3, #13)*
+   that client and add the ArchUnit rule that makes bypassing the policy a build failure.
+   An unusable response stays the adapter's own domain failure: per ADR-0014 content
+   judgement sits outside the advice, so it never reaches the breaker. *(SPEC-0004 #3, #13)*
 
 ## Edge cases
 - **Source unreachable or unusable** — the whole run fails before any write; the stored

@@ -1,5 +1,6 @@
 import { Group, Stack, Text } from '@mantine/core';
 import { IconHistory, IconLock } from '@tabler/icons-react';
+
 import { strings } from '../../../../shared/lib/strings';
 import { METRICS_HISTORY_LIMIT } from './metricsStream';
 

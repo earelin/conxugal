@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/api/admin/metrics"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache"
+    },
+    "chunkedDribbleDelay": {
+      "numberOfChunks": 30,
+      "totalDuration": 30000
+    },
+    "body": "data: {\"timestamp\":\"2026-07-31T12:45:00Z\",\"jvm\":{\"heapUsedBytes\":387973120,\"heapMaxBytes\":1073741824,\"nonHeapUsedBytes\":134217728,\"threadCount\":48,\"uptimeMillis\":273120000,\"gcCollectionCount\":112,\"gcCollectionTimeMillis\":1840},\"system\":{\"cpuLoad\":0.21},\"http\":{\"requestCount\":18432,\"errorCount\":37},\"datastorePool\":{\"active\":3,\"idle\":7,\"max\":10}}\n\ndata: {\"timestamp\":\"2026-07-31T12:45:05Z\",\"jvm\":{\"heapUsedBytes\":401604608,\"heapMaxBytes\":1073741824,\"nonHeapUsedBytes\":134479872,\"threadCount\":50,\"uptimeMillis\":273125000,\"gcCollectionCount\":112,\"gcCollectionTimeMillis\":1840},\"system\":{\"cpuLoad\":0.24},\"http\":{\"requestCount\":18461,\"errorCount\":37},\"datastorePool\":{\"active\":4,\"idle\":6,\"max\":10}}\n\ndata: {\"timestamp\":\"2026-07-31T12:45:10Z\",\"jvm\":{\"heapUsedBytes\":372244480,\"heapMaxBytes\":1073741824,\"nonHeapUsedBytes\":134479872,\"threadCount\":47,\"uptimeMillis\":273130000,\"gcCollectionCount\":113,\"gcCollectionTimeMillis\":1902},\"system\":{\"cpuLoad\":0.18},\"http\":{\"requestCount\":18490,\"errorCount\":38},\"datastorePool\":{\"active\":2,\"idle\":8,\"max\":10}}\n\n"
+  }
+}

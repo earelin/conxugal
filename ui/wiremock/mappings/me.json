@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/api/me"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "email": "ana.pereira@conxugal.gal",
+      "role": "ADMIN",
+      "createdAt": "2025-02-03T09:30:00Z",
+      "lastLoginAt": "2026-07-10T08:12:00Z"
+    }
+  }
+}

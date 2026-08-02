@@ -1,4 +1,5 @@
-import { IconLayoutDashboard, IconUsers, type Icon } from '@tabler/icons-react';
+import { type Icon, IconLayoutDashboard, IconUsers } from '@tabler/icons-react';
+
 import type { Role } from '../shared/entities/currentUser';
 import { strings } from '../shared/lib/strings';
 
