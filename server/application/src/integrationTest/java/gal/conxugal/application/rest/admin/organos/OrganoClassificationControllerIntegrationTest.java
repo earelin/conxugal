@@ -1,5 +1,6 @@
 package gal.conxugal.application.rest.admin.organos;
 
+import static gal.conxugal.application.http.error.support.ProblemAssertions.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -203,13 +204,5 @@ class OrganoClassificationControllerIntegrationTest extends AuthenticationTestSu
 
   private static String placementOf(OrganoId organoId) {
     return "/api/admin/organo/" + organoId + "/termo";
-  }
-
-  private static void assertProblem(Response response, HttpStatus status, String problemType) {
-    response.then()
-        .statusCode(status.getCode())
-        .contentType("application/problem+json");
-    assertThat(response.jsonPath().getString("type")).isEqualTo(problemType);
-    assertThat(response.jsonPath().getInt("status")).isEqualTo(status.getCode());
   }
 }

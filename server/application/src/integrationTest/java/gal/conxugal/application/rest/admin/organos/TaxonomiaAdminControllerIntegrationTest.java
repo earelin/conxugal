@@ -1,5 +1,6 @@
 package gal.conxugal.application.rest.admin.organos;
 
+import static gal.conxugal.application.http.error.support.ProblemAssertions.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -575,13 +576,5 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
 
   private static String parentOf(TermoId termoId) {
     return termo(termoId) + "/parent";
-  }
-
-  private static void assertProblem(Response response, HttpStatus status, String problemType) {
-    response.then()
-        .statusCode(status.getCode())
-        .contentType("application/problem+json");
-    assertThat(response.jsonPath().getString("type")).isEqualTo(problemType);
-    assertThat(response.jsonPath().getInt("status")).isEqualTo(status.getCode());
   }
 }
