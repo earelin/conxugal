@@ -19,7 +19,7 @@ import java.util.UUID;
 @JsonInclude(JsonInclude.Include.ALWAYS)
 public record TermoResponse(UUID id, String name, @Nullable UUID parentId) {
 
-  static TermoResponse of(Termo termo) {
+  public static TermoResponse of(Termo termo) {
     return new TermoResponse(
         requireNonNull(termo.id(), "a stored term must carry an id").value(), termo.name(),
         idOf(termo.parentId()));

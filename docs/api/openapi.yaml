@@ -17,7 +17,8 @@ info:
     it. It currently covers the planned endpoints of FEAT-0004 (user administration,
     system status, and the current-user lookup), FEAT-0005 (real-time metrics),
     FEAT-0006 (the Órganos de Contratación catalogue import trigger), and FEAT-0007 (the
-    Órganos catalogue and taxonomía reads).
+    Órganos catalogue and taxonomía reads, and the administration of the taxonomía and of
+    each Órgano's placement in it).
 
 servers:
   - url: /
@@ -298,6 +299,394 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /api/admin/organos/taxonomia/termos:
+    post:
+      tags: [organos]
+      operationId: createTermo
+      summary: Create a taxonomía term
+      description: >-
+        Add a term to the taxonomía, at the root when `parentId` is null and under an
+        existing term otherwise (SPEC-0004 R14). The name is stored stripped of surrounding
+        whitespace and must not collide, case-insensitively, with a name already used by one
+        of the siblings the new term joins — roots being siblings of each other.
+      requestBody:
+        required: true
+        description: The name for the new term, and the term it sits under.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTermoRequest"
+      responses:
+        "201":
+          description: >-
+            The term was created. The body carries its system-assigned `id`, so a client can
+            select and expand the new term without re-reading `GET /api/organos/taxonomia`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Termo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            The named parent term does not exist; nothing is created. Carries the problem
+            type `urn:conxugal:problem-type:termo-not-found`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: >-
+            A sibling already carries that name, case-insensitively; nothing is created
+            (SPEC-0004 R14). Carries the problem type
+            `urn:conxugal:problem-type:duplicate-sibling-name`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/admin/organos/taxonomia/termo/{id}:
+    parameters:
+      - $ref: "#/components/parameters/TermoId"
+    patch:
+      tags: [organos]
+      operationId: renameTermo
+      summary: Rename a taxonomía term
+      description: >-
+        Change a term's name, leaving its place in the tree untouched (SPEC-0004 R14). The
+        new name is stored stripped and is subject to the same sibling-name rule as a create.
+      requestBody:
+        required: true
+        description: The term's new name.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenameTermoRequest"
+      responses:
+        "200":
+          description: The term's new state.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Termo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            No term exists with that id; nothing is renamed. Carries the problem type
+            `urn:conxugal:problem-type:termo-not-found`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: >-
+            A sibling already carries that name, case-insensitively; nothing is renamed
+            (SPEC-0004 R14). Carries the problem type
+            `urn:conxugal:problem-type:duplicate-sibling-name`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      tags: [organos]
+      operationId: deleteTermo
+      summary: Delete a taxonomía term
+      description: >-
+        Remove a term from the taxonomía (SPEC-0004 R16). Refused while the term still has
+        child terms — the administrator moves or removes them first. The Órganos filed
+        directly in a deleted term return to the unclassified set, arriving in
+        `GET /api/organos` with a null `termoId`; no Órgano is ever deleted.
+      responses:
+        "204":
+          description: The term was deleted, and any Órganos filed in it are now unclassified.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            No term exists with that id; nothing is deleted. Carries the problem type
+            `urn:conxugal:problem-type:termo-not-found`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: >-
+            The term still has child terms; the term and its children are unchanged
+            (SPEC-0004 R16). Carries the problem type
+            `urn:conxugal:problem-type:termo-has-children` — distinct from the cycle refusal
+            of `PUT .../parent`, which is also a 409.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/admin/organos/taxonomia/termo/{id}/parent:
+    parameters:
+      - $ref: "#/components/parameters/TermoId"
+    put:
+      tags: [organos]
+      operationId: moveTermo
+      summary: Move a taxonomía term to a new parent
+      description: >-
+        Re-parent a term, or move it out to the root with an explicit null `parentId`
+        (SPEC-0004 R14, R15). Refused when the target is the term itself or one of its own
+        descendants, which would detach that branch into a cycle, and when the term would
+        land beside a sibling of the same name. A refused move writes nothing.
+      requestBody:
+        required: true
+        description: The term to move under, or null to move it to the root.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoveTermoRequest"
+      responses:
+        "204":
+          description: The term was moved.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            Either the term being moved or the target parent does not exist; nothing is
+            moved. Carries the problem type `urn:conxugal:problem-type:termo-not-found`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: >-
+            The move is refused and the taxonomía is unchanged. Carries one of two problem
+            types, which a client must tell apart to explain the refusal:
+            `urn:conxugal:problem-type:termo-cycle` when the target is the term itself or
+            one of its descendants (SPEC-0004 R15), and
+            `urn:conxugal:problem-type:duplicate-sibling-name` when a sibling under the
+            target already carries that name (SPEC-0004 R14).
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/admin/organo/{id}/termo:
+    parameters:
+      - $ref: "#/components/parameters/OrganoId"
+    put:
+      tags: [organos]
+      operationId: assignOrganoTermo
+      summary: File an Órgano under a taxonomía term
+      description: >-
+        Place an Órgano in a term, **replacing** whatever term it was in — a placement is
+        singular, never additive, so an Órgano is never in two terms at once (SPEC-0004 R17).
+        This changes the Órgano rather than the taxonomía, which is why it hangs off the
+        Órgano's own path rather than a taxonomía one.
+      requestBody:
+        required: true
+        description: The term to file the Órgano under.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignTermoRequest"
+      responses:
+        "204":
+          description: >-
+            The Órgano is now filed under that term, and under no other. The new placement
+            is visible in the next `GET /api/organos` as the Órgano's `termoId`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            Nothing is written. Carries one of two problem types, so a client can say which
+            of the two ids was wrong: `urn:conxugal:problem-type:organo-not-found` when no
+            Órgano exists with that id, and `urn:conxugal:problem-type:termo-not-found` when
+            the named term does not exist.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      tags: [organos]
+      operationId: clearOrganoTermo
+      summary: Return an Órgano to the unclassified set
+      description: >-
+        Remove an Órgano's placement, so it is filed under no term (SPEC-0004 R17, R18).
+        Idempotent: clearing an Órgano that is already unclassified succeeds and writes
+        nothing. There is no unclassified collection to move it into — an Órgano whose
+        `termoId` is null *is* unclassified.
+      responses:
+        "204":
+          description: >-
+            The Órgano is filed under no term. Its `termoId` is null in the next
+            `GET /api/organos`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            No Órgano exists with that id; nothing is written. Carries the problem type
+            `urn:conxugal:problem-type:organo-not-found`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /api/organos:
     get:
       tags: [organos]
@@ -431,6 +820,22 @@ components:
       in: path
       required: true
       description: The account's UUID identity.
+      schema:
+        type: string
+        format: uuid
+    TermoId:
+      name: id
+      in: path
+      required: true
+      description: The taxonomía term's UUID identity.
+      schema:
+        type: string
+        format: uuid
+    OrganoId:
+      name: id
+      in: path
+      required: true
+      description: The Órgano de Contratación's UUID identity.
       schema:
         type: string
         format: uuid
@@ -876,6 +1281,81 @@ components:
           description: >-
             The term this one sits under. Null marks a root; the taxonomía is many-rooted
             and of any depth (SPEC-0004 R14).
+
+    CreateTermoRequest:
+      type: object
+      description: >-
+        The name for a new term and the term it sits under (SPEC-0004 R14). A null
+        `parentId` places the term at the root, and so does omitting it.
+      required: [name]
+      example:
+        name: "Sanidade"
+        parentId: null
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          pattern: "^\\S(.*\\S)?$"
+          example: "Sanidade"
+          description: >-
+            Non-blank once stripped of surrounding whitespace, and stored stripped. Must not
+            collide case-insensitively with a sibling's name.
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          example: "4f2a6b8c-1d3e-4a5b-8c7d-9e0f1a2b3c44"
+          description: The term to create this one under. Null creates it at the root.
+
+    RenameTermoRequest:
+      type: object
+      description: A term's new name (SPEC-0004 R14).
+      required: [name]
+      example:
+        name: "Sanidade e Benestar"
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          pattern: "^\\S(.*\\S)?$"
+          example: "Sanidade e Benestar"
+          description: >-
+            The replacement name: non-blank once stripped of surrounding whitespace, stored
+            stripped, and free among the names of the term's existing siblings, compared
+            case-insensitively.
+
+    MoveTermoRequest:
+      type: object
+      description: >-
+        The term to move a term under (SPEC-0004 R14, R15). `parentId` is required because a
+        null is a value here, not an omission: it is how a term is moved out to the root,
+        and a body that left the field out would state nothing.
+      required: [parentId]
+      example:
+        parentId: null
+      properties:
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          example: "4f2a6b8c-1d3e-4a5b-8c7d-9e0f1a2b3c44"
+          description: >-
+            The term to move under. Null moves it to the root. May be neither the term
+            itself nor one of its descendants.
+
+    AssignTermoRequest:
+      type: object
+      description: >-
+        The term to file an Órgano under (SPEC-0004 R17). A placement is singular, so this
+        replaces any current one. To leave an Órgano in no term, delete the placement rather
+        than assigning a null here.
+      required: [termoId]
+      example:
+        termoId: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
+      properties:
+        termoId:
+          type: string
+          format: uuid
+          example: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
+          description: An existing term of the taxonomía, from `GET /api/organos/taxonomia`.
 
     ImportOutcome:
       type: object
