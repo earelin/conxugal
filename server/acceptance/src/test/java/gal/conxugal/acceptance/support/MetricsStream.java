@@ -97,7 +97,7 @@ public final class MetricsStream implements Closeable {
     String frame = nextSample(timeout);
     while (!condition.test(valuesOf(frame))) {
       Duration left = Duration.between(Instant.now(), deadline);
-      if (left.isNegative() || left.isZero()) {
+      if (!left.isPositive()) {
         throw new NoSuchElementException(
             "No sample matched within %s; the last one read was %s".formatted(timeout, frame));
       }
