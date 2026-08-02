@@ -42,36 +42,77 @@ rather than added to a table of millions later.
   | `id` | `ContratoMenorId` | System-assigned identity, `null` only until the database assigns it |
   | `publicationId` | `long` | The source's own `id`. **The stable identity across imports** (R11) and what the uniqueness of R12 is enforced on |
   | `organoId` | `UUID` | The awarding Órgano's **UUID**, never its source key |
-  | `publicationDate` | `String` | As published — `DD-MM-YYYY` text, kept verbatim |
-  | `interpretedPublicationDate` | `LocalDate`, nullable | R27's reading-for-ordering; null when the text cannot be interpreted |
+  | `publicationDate` | `LocalDate`, nullable | Interpreted at the adapter from the source's `DD-MM-YYYY` text. **One field, not a pair** — the published text is not retained |
   | `objeto` | `String`, nullable | As published, including the source's own 60-character truncation |
   | `amount` | `BigDecimal`, nullable | Published as a JSON **number**, VAT-inclusive |
   | `duration` | `String`, nullable | As published, free text |
-  | `awardeeName` | `String`, nullable | As published, **space padding and casing intact** |
-  | `awardeeFiscalId` | `String`, nullable | As published, space-padded to fixed width |
-  | `operadorId` | `OperadorId`, nullable | The awardee's operador. **Nullable by requirement** — SPEC-0006 R5 stores an award with an unusable identifier under *no* operador rather than an invented one |
+  | `operadorEconomico` | `OperadorEconomico`, nullable | **A foreign-key association** to the operador catalogue, not a copy of its data |
 
-- **Only identity is required**: the publication identifier, the awarding Órgano and the
-  published date text. Every other field is nullable and null means *the source published
-  nothing there* — R7 obliges us to store what is published, not to invent what is not, and a
-  `NOT NULL` on any of them would reject a real award over a field the source left blank. This
-  is the same rule #42 states for the amount and the date, applied to the whole row rather than
-  to two fields, and it is what [TASK-0004](TASK-0004-contratos-menores-store.md)'s columns
-  mirror. A field absent **systematically** is a different matter — that is the adapter judging
+- **The awardee is a relationship, not columns on this row.** The property is
+  `@Relation(Relation.Kind.MANY_TO_ONE)` mapped by `@MappedProperty("operador_id")`, so
+  `contrato_menor` holds one foreign key and the awardee's name and fiscal identifier live
+  **once**, on the `operador` row that
+  [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md) owns. **The schema is
+  normalised**: no awardee value is duplicated per contract, and the millions of contracts one
+  large Órgano publishes carry a UUID each instead of two padded strings each.
+- It is **nullable by requirement**: SPEC-0006 R5 stores an award whose identifier is unusable
+  under *no* operador rather than an invented one, and
+  [ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md) keeps the link
+  nullable for exactly that branch.
+
+> **Three spec obligations do not survive this, and they are named rather than discovered.**
+> Normalising the awardee onto the operador means a contract no longer stores what **it**
+> published, only which operador that resolved to.
+>
+> - **SPEC-0005 R7** requires each stored contrato menor to carry *its awardee's name and fiscal
+>   identifier*; it now carries a reference instead.
+> - **SPEC-0006 #5** requires each contract row to display the identifier *exactly as published
+>   for that contract*, padding and casing included. Every row of an operador's history will now
+>   show the one spelling the operador row holds — the variance that criterion exists to expose
+>   is no longer stored anywhere, and cannot be recovered without re-importing.
+> - **SPEC-0005 #40** (*every value displayed matches what the source published*) holds for the
+>   contract's own values and no longer for its awardee.
+>
+> A fourth consequence has no spec to break because no feature owns it yet: with per-contract
+> spellings gone, an operador's display name can no longer be **re-derived** from stored data if
+> its winning contract is later withdrawn — the stored rank becomes the only memory of where the
+> spelling came from. SPEC-0006 R7's lifecycle feature inherits that.
+>
+> **The specs have been amended to match**: SPEC-0005 R7 now holds the awardee on the operador
+> and names what that costs, R27 lists the awardee as one of its two exceptions, and #11, #21,
+> #39 and #40 follow; SPEC-0006 #5, #25 and R13 now describe rows showing the operador's
+> spelling. This task implements the amended rule, not a divergence from it.
+
+- **Only identity is required**: the publication identifier and the awarding Órgano. Every other
+  field — the publication date included, since it can fail to parse — is nullable, and null means
+  *the source published nothing there*: a `NOT NULL` on any of them would reject a real award
+  over a field the source left blank. This is the same rule #42 states for the amount and the
+  date, applied to the whole row, and it is what
+  [TASK-0004](TASK-0004-contratos-menores-store.md)'s columns mirror. A field absent **systematically** is a different matter — that is the adapter judging
   the response unusable ([TASK-0005](TASK-0005-source-port-and-adapter.md)), not a row stored
   half-empty.
 
-- **Nothing is normalised on the way in.** No trimming, no case folding, no rounding, no
-  inferring — R27 forbids it, and [SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md)
-  R3's match rule exists precisely because this padding survives.
-- **Two columns for the date, one for the amount**, and the asymmetry is the point: the date
-  arrives as text so the interpretation must not displace the publication, while the amount
-  arrives as a number so there is no published spelling for a second column to preserve.
-- **The operador reference is carried but never written here.** This task declares the field;
+- **No published value is altered on the way in.** No trimming, no case folding, no rounding, no
+  inferring — R27 forbids it. (The awardee's padding now survives on the `operador` row rather
+  than on the contract, which is what the note above records.)
+- **The publication date is stored interpreted, and only interpreted.** It arrives as
+  `DD-MM-YYYY` text, is parsed at the adapter, and one nullable `LocalDate` holds the result;
+  the published string is not kept.
+
+  **R27 now names this as one of its two exceptions** — the interpretation replaces the published
+  string rather than accompanying it — so a date that cannot be interpreted leaves the field null
+  and that contract shows no date rather than the text the source published. What survives is the
+  half that matters: the contract is **stored, never rejected** (#42), and a null date is exactly
+  what R19's *undated* selection reads, so no contract becomes unreachable.
+- The amount needs no such consideration: the source publishes it as a JSON **number**, so there
+  is no published spelling to lose and one nullable numeric column is both what was published and
+  what R19 sorts on.
+- **The association is declared here and never resolved here.**
   [FEAT-0010 TASK-0004](../FEAT-0010-operadores-economicos-base/TASK-0004-derivation-during-import.md)
-  is the only thing that ever resolves it, and until it lands every contract stores a null. The
-  field exists from birth so the column can, which is the whole reason FEAT-0010's base goes
-  first.
+  is the only thing that ever fills it, and until it lands every contract stores a null — which
+  means **no awardee is stored at all in the meantime**, since the contract keeps none of its
+  own. That is a consequence of normalising, and it is the reason FEAT-0010's derivation should
+  not lag far behind the first import.
 - **The awarding Órgano is referenced by a raw `UUID`, not an `OrganoId`.** ADR-0019 converts a
   shipped aggregate only when a feature has reason to touch its identity, and typing the
   catalogue is not this feature's work — so the reference stays untyped until it is, and the
@@ -87,9 +128,9 @@ rather than added to a table of millions later.
   - **no delete of any kind.** R12 makes absence meaningless, and R13's explicit removal
     belongs to the later curation feature. A port with no delete is what stops one being
     written by accident.
-- An uninterpretable date leaves `interpretedPublicationDate` null and an absent or
-  uninterpretable amount leaves `amount` null; neither is a reason to reject the contract, and
-  the aggregate's invariants must permit both.
+- An uninterpretable date leaves `publicationDate` null and an absent or uninterpretable amount
+  leaves `amount` null; neither is a reason to reject the contract, and the aggregate's
+  invariants must permit both.
 - **What the aggregate stores is the *storage* half of R7 and R11's identity** — the display
   obligations on every one of these values, and the VAT-inclusive labelling, are the browsing
   feature's.
@@ -101,13 +142,18 @@ rather than added to a table of millions later.
   which is a compile error rather than a missing row.
   ([SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) #11 storage half, #16
   storage half)
-- Constructing a contract from published values preserves them byte-for-byte — a space-padded
-  fiscal identifier and awardee name come back padded, the object comes back at its published
-  length, and the publication date comes back as its published text. (SPEC-0005 #40 storage
-  half)
-- A publication date that cannot be interpreted yields a contract with a null interpreted date
-  and its published text intact; the same for an absent amount, and for any other value the
-  source left blank. Nothing is rejected. (SPEC-0005 #42 storage half)
+- The awardee is reachable as **one association** — `contrato.operadorEconomico()` yields the
+  operador row, and the aggregate holds no awardee name or fiscal identifier of its own. A
+  contract whose award has no usable identifier yields **null** there and is still a valid
+  aggregate. ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #8, no-operador half)
+- Constructing a contract from published values preserves the **text** values byte-for-byte —
+  the object comes back at its published length and the duration as published.
+  (SPEC-0005 #40 storage half, **except the publication date**, stored interpreted, **and the
+  awardee**, which the operador row now holds)
+- A publication date that cannot be interpreted yields a contract with a **null**
+  `publicationDate`; the same for an absent amount, and for any other value the source left
+  blank. Nothing is rejected. (SPEC-0005 #42, stored-not-rejected half; its *displayed as
+  published* half no longer holds for the date)
 - The port exposes batch upsert with added/refreshed counts and a per-Órgano count, and
   exposes **no** operation that deletes a stored contract. (SPEC-0005 #17)
 - Unit-tested without a database or HTTP server.

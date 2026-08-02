@@ -53,6 +53,6 @@ exists first.
   establishes and ADR-0019 rests on.
 - The display-and-rank update writes all four values or none; a row never carries a spelling from
   one contract and a rank from another. (SPEC-0006 #7)
-- An operador whose winning contract has no interpreted date stores a null rank date and is still
+- An operador whose winning contract has no publication date stores a null rank date and is still
   found, updated and compared correctly. (SPEC-0006 #7)
 - Integration-tested against PostgreSQL (Testcontainers), including the unique-constraint case.

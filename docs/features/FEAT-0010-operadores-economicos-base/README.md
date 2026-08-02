@@ -55,15 +55,18 @@ import use case
 - **Domain (the rules):** the R3 equivalence, the R5 emptiness test, and the R4 ranking, as pure
   functions with no store and no framework, unit-tested against the over-merge and under-merge
   cases SPEC-0006 states as separate criteria.
-- **Domain (the link):** an optional operador reference on `ContratoMenor` — optional because R5
+- **Domain (the link):** `ContratoMenor.operadorEconomico`, a **foreign-key association** to this
+  aggregate. The schema is normalised, so this row is where a contract's awardee name and fiscal
+  identifier live — the contract keeps none of its own. The association is optional because R5
   requires an award with an unusable identifier to be stored with **no** operador rather than an
-  invented one.
+  invented one, which is also the case in which **no awardee is recorded anywhere**; see the
+  design note below.
 - **Domain (derivation):** resolving each stored contract to its operador as part of the import
   batch, creating the operador when no contract has named it before, and advancing its display
   fields when the contract outranks the incumbent.
-- **Infrastructure:** a migration creating `operador` with a **unique** match key, adding the
-  nullable `operador_id` foreign key to `contrato_menor`, and the Micronaut Data JDBC
-  implementation of the port.
+- **Infrastructure:** a migration creating `operador` with a **unique** match key, and the
+  Micronaut Data JDBC implementation of the port. The nullable `operador_id` foreign key is
+  **created with `contrato_menor` by FEAT-0009**, not added here — see the ordering note above.
 
 **Out of scope (owned by later features):**
 - **Every read surface of SPEC-0006** — R8's operadores list, name and whole-identifier lookup
@@ -96,11 +99,11 @@ flowchart LR
         rules["match key (R3) · emptiness (R5) · rank (R4)"]
         operador["OperadorEconomico"]
         operadorRepo["OperadorRepository (port)"]
-        contrato["ContratoMenor + operadorId"]
+        contrato["ContratoMenor.operadorEconomico"]
     end
     subgraph infrastructure["infrastructure (driven)"]
         jdbc["JdbcOperadorRepository"]
-        migration["operador table · contrato_menor.operador_id"]
+        migration["operador table"]
     end
     importUseCase --> derive
     derive --> rules
@@ -130,8 +133,10 @@ flowchart LR
   spelling, which is why the row carries both and why they are named so that reaching for the
   wrong one reads as wrong.
 - An identifier that is **absent, or empty once trimmed**, is *unusable* (R5): the contract is
-  stored, keeps its published awardee name, and gets **no operador** — never a placeholder, never
-  a shared "unknown" row that would silently pool unrelated awards. Its `operador_id` stays null.
+  stored and gets **no operador** — never a placeholder, never a shared "unknown" row that would
+  silently pool unrelated awards. Its `operador_id` stays null, and because the schema is
+  normalised that contract records **no awardee name either**, which the R5 branch did not cost
+  when the contract carried its own.
   Nothing beyond emptiness is validated: the source publishes irregular but genuine identifiers,
   and rejecting them would discard real awards.
 
@@ -150,7 +155,7 @@ whose publication date cannot be interpreted **ranked last**. So the rank is a t
 
 ```mermaid
 flowchart LR
-    a["interpreted publication date<br/>(null ranks last)"] --> b["contract identifier<br/>(higher wins)"] --> c["winner supplies name<br/>+ identifier spelling"]
+    a["publication date<br/>(null ranks last)"] --> b["contract identifier<br/>(higher wins)"] --> c["winner supplies name<br/>+ identifier spelling"]
 ```
 
 - The operador row stores the winning **name**, the winning **identifier spelling**, and the
@@ -169,7 +174,18 @@ flowchart LR
 
 ### The link, and where it is written
 - `contrato_menor.operador_id` is a **nullable** foreign key — null exactly when R5 says the
-  award yields no operador.
+  award yields no operador — and in the domain it is a `@Relation(MANY_TO_ONE)` association, not
+  a loose id.
+- **Because the schema is normalised, this row is the only record of an awardee.** A contract
+  stores no published name or identifier of its own, so two things follow and neither is
+  discovered late. An award whose identifier is unusable has a null key and therefore **no
+  awardee recorded at all** — SPEC-0006 R5's branch, which SPEC-0005 lists as one the source
+  never takes, now costs the published name rather than only the operador. And an operador's
+  display spelling **cannot be re-derived** from stored contracts if its winning contract is
+  later withdrawn: the stored rank is the only memory of where it came from, which is the open
+  half [ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md) names, now
+  sharper. Both specs carry this model: SPEC-0005 R7 and R27 hold the awardee here and name what
+  it costs, and SPEC-0006 R13, #5 and #25 describe rows under one spelling.
 - The import resolves it **inside the batch's transaction**: reduce the published identifier to a
   match key, find or create the operador, advance its display fields if this contract outranks
   the incumbent, and write the contract with the reference. Contract and link commit together,
@@ -225,14 +241,15 @@ SPEC-0005 R13's withdrawal.
 
 ## Edge cases
 - **The same identifier under three spellings** — ` B12345678 `, `b12345678`, `B12345678` — is
-  one operador, displayed under whichever its highest-ranked contract published, with every
-  contract keeping its own published spelling on its own row. *(SPEC-0006 #3, #7)*
+  one operador, displayed under whichever its highest-ranked contract published. Under the
+  normalised schema that spelling is the **only** one stored: no contract keeps the variant it
+  published, which is what the amended SPEC-0006 #5 now describes. *(SPEC-0006 #3, #5, #7)*
 - **Identifiers differing by one character, or by internal spacing or punctuation** — two
   operadores. The match key ignores surrounding whitespace and case and nothing else.
   *(SPEC-0006 #4)*
-- **An absent or whitespace-only identifier** — the contract is stored with its published awardee
-  name and no operador; no placeholder row is created, and unrelated awards are never pooled under
-  one. *(SPEC-0006 #8)*
+- **An absent or whitespace-only identifier** — the contract is stored with no operador and, in
+  consequence, no awardee at all; no placeholder row is created, and unrelated awards are never
+  pooled under one. *(SPEC-0006 #8)*
 - **An irregular but non-empty identifier** — a foreign VAT number, a malformed NIF — is attached
   to an operador like any other. Only emptiness disqualifies. *(SPEC-0006 #9)*
 - **An operador all of whose contracts are undated** — still displayed under exactly one

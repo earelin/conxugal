@@ -353,6 +353,15 @@ One decision remains open:
   with no correction, normalisation, inference or enrichment from any other source. The
   matching equivalence of R3 governs comparison only, never display.
 
+  **"As published" means published somewhere, not published on that row.** The awardee's name and
+  identifier are stored **once**, on the operador
+  ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R7), under the single spelling R4
+  selects; a history row therefore shows that spelling rather than the one its own contract
+  carried. Every spelling shown is still one the source published for that awardee — none is
+  invented, canonicalised or merged from several — but the variance between them is not retained,
+  and a feature may not present a spelling the system does not hold. The same narrowing applies to
+  a contract's publication date, which SPEC-0005 R27 stores interpreted.
+
   A family's own caveats travel with its attributes into this history. Where a family shows an
   attribute **marked unreliable** in its own list — as contratos menores must for the stated
   duration ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R27, which the source
@@ -413,9 +422,11 @@ One decision remains open:
    surrounding whitespace or letter case — including internal spacing, punctuation, or a
    differing character — yield **two** operadores, not one. Over-merging is as much a failure
    as under-merging, and nothing else about an identifier is ignored.
-5. **(R3, R13)** Each contract row in an operador's history displays the fiscal identifier
-   exactly as published for that contract, including padding and casing the system ignored
-   when matching.
+5. **(R3, R13)** Each contract row in an operador's history displays the fiscal identifier the
+   operador is shown under — the spelling R4 selects, published by its highest-ranked contract —
+   and the same identifier appears on every row. Per-contract spelling variance is not stored
+   ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R7), so no row shows a spelling
+   the system does not hold.
 6. **(R4)** Two contracts awarded to the same identifier under different published names
    yield one operador shown under the name from the more recently published of them; neither
    name creates a second operador.
@@ -477,8 +488,9 @@ One decision remains open:
 24. **(R9)** The history states that it covers only imported Órganos, and a section whose
     contributing Órganos include one with an unfinished initial import says it is still
     filling — distinguishably from one that is complete.
-25. **(R9, R13)** Each history row states its awardee as published for that contract, including
-    a spelling that differs from the one the profile displays under R4.
+25. **(R9, R13)** Each history row states its awardee under the one spelling R4 selects for the
+    operador, matching the profile above it. A row never shows a spelling that differs from it,
+    because no other spelling is stored.
 26. **(R10)** Filtering **one family section** of an operador's history by a given year returns
     only that section's contracts dated in that year; that section's count and total reflect
     the filtered selection rather than its whole history, the other sections are unchanged, and

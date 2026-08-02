@@ -31,7 +31,10 @@ feature configuring no new rate. Build this task after it, or the sharing is asp
   `sourceKey`, a from/to date window and a zero-based offset, it returns the rows of that page
   **and the source's `recordsTotal`** — the Órgano's whole contratos menores count, independent
   of the window. The walk is the use case's; the port neither iterates nor remembers.
-- Each returned row is a source-entry value carrying the published fields verbatim:
+- Each returned row is a source-entry value carrying the published fields verbatim — **including
+  the awardee name and fiscal identifier**, which the contract no longer stores but
+  [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s derivation needs from the
+  source row to match and to fill the operador's display fields:
   publication id, publication date text, object, amount, duration, awardee name, awardee fiscal
   identifier. No trimming, no case folding, no date parsing — interpretation happens above the
   port (R27).

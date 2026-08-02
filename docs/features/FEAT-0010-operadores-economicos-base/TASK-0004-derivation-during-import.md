@@ -11,7 +11,9 @@ depends_on: [TASK-0003]
 The step that turns an awardee into an operador: resolve every stored contract to one inside the
 import's own batch transaction. This is where
 [ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md)'s stored projection is
-actually maintained, and it is the only thing that ever populates `contrato_menor.operador_id`.
+actually maintained, and it is the only thing that ever fills in a contract's `operadorEconomico`
+association — which, under the normalised schema, is the only thing that makes a contract's
+awardee knowable at all.
 
 **Prerequisite outside this feature:**
 [FEAT-0009 TASK-0009](../FEAT-0009-contratos-menores-initial-import/TASK-0009-single-organo-initial-import.md)
@@ -20,14 +22,21 @@ land **before** the contratos menores store so the foreign key is created rather
 one lands **after** there is an import to derive from.
 
 ## Scope
-- Inside the batch's transaction, for each contract being upserted: reduce its published fiscal
-  identifier to a match key, find or create the operador, advance the operador's display fields
-  and rank if this contract outranks the incumbent, and write the contract carrying the
-  reference. **Contract and link commit together**, so a crash cannot leave a stored contract
-  whose operador was never created.
-- **An unusable identifier yields no operador** (R5): the contract is stored with its published
-  awardee name and a null `operador_id`. Never a placeholder, and never a shared *unknown* row
-  that would pool unrelated awards under one identity.
+- Inside the batch's transaction, for each contract being upserted: reduce **the fiscal
+  identifier on the source row** to a match key, find or create the operador, advance the
+  operador's display fields and rank if this contract outranks the incumbent, and write the
+  contract with its `operadorEconomico` association pointing there. **Contract and link commit
+  together**, so a crash cannot leave a stored contract whose operador was never created.
+- **The published awardee comes from the source row, not from the stored contract.** The schema
+  is normalised: `contrato_menor` keeps no awardee name or identifier, so the values this task
+  matches on and copies into the operador's display fields are only in hand **while the batch is
+  being imported**. A derivation that tried to run over already-stored contracts would find
+  nothing to derive from — which is why this step lives inside the import and cannot be a
+  backfill.
+- **An unusable identifier yields no operador** (R5): the contract is stored with a **null**
+  `operadorEconomico`. Never a placeholder, and never a shared *unknown* row that would pool
+  unrelated awards under one identity — which under the normalised schema means such a contract
+  records **no awardee at all**, the cost the feature README states.
 - **Resolution happens on every upsert, not only on insert.** That is what makes a correction
   changing a contract's published identifier repoint its foreign key, creating the operador the
   corrected identifier names if no contract named it before.
@@ -44,9 +53,9 @@ one lands **after** there is an import to derive from.
 
 ## Acceptance criteria
 - Importing two contracts whose identifiers differ only in padding or case yields **one**
-  operador, referenced by both contracts; each contract keeps its own published spelling on its
-  own row.
-  ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #3, #5 storage half)
+  operador, referenced by both contracts, displayed under the spelling its highest-ranked
+  contract published — the same spelling on both rows, since neither contract keeps one of its
+  own. ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #3, #5)
 - Importing two contracts whose identifiers differ in internal spacing, punctuation or a
   character yields **two** operadores. (SPEC-0006 #4)
 - Two contracts under the same identifier with different published names yield one operador
@@ -55,17 +64,18 @@ one lands **after** there is an import to derive from.
 - An undated contract never displaces a dated one however late it arrives, and an operador all of
   whose contracts are undated still has exactly one display spelling, chosen by the higher
   publication identifier. (SPEC-0006 #7)
-- A contract published with an absent or whitespace-only identifier is stored with a null
-  `operador_id`, keeps its published awardee name, and creates no operador row at all.
-  (SPEC-0006 #8, no-operador half)
+- A contract published with an absent or whitespace-only identifier is stored with a **null**
+  `operadorEconomico` association and creates no operador row at all — and therefore records no
+  awardee, which is the branch the source is not expected to take. (SPEC-0006 #8, no-operador
+  half)
 - A contract with an irregular but non-empty identifier is attached to an operador rather than
   skipped. (SPEC-0006 #9)
 - Re-importing the same contracts changes nothing: no operador added, no display field moved.
   (SPEC-0006 #2)
-- Re-importing a contract whose published identifier changed repoints `operador_id` to the
-  operador the corrected identifier names, creating it if new. The previous operador is left
-  stored with one fewer contract — making it unreachable is R7's, and is not asserted here.
-  (SPEC-0006 #14, moves-and-creates half)
+- Re-importing a contract whose published identifier changed repoints its `operadorEconomico`
+  association to the operador the corrected identifier names, creating it if new. The previous
+  operador is left stored with one fewer contract — making it unreachable is R7's, and is not
+  asserted here. (SPEC-0006 #14, moves-and-creates half)
 - A crash simulated mid-batch leaves no stored contract whose operador is missing: either both
   are there or neither is.
 - Unit-tested with the ports stubbed (Mockito) for the rules and the branches; the

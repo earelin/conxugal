@@ -24,20 +24,24 @@ JDBC and SQL stay entirely in `infrastructure`.
   - `publication_id BIGINT NOT NULL UNIQUE` — R12's "no duplicates" enforced **at the store**,
     so it holds even if use-case logic slips, exactly as `source_key` does for the catalogue;
   - `organo_id UUID NOT NULL REFERENCES organo_contratacion(id)`;
-  - `publication_date TEXT NOT NULL`, `publication_date_interpreted DATE` (nullable);
-  - `objeto TEXT`, `amount NUMERIC`, `duration TEXT`, `awardee_name TEXT`,
-    `awardee_fiscal_id TEXT` — **nullable**, mirroring the aggregate's rule that only identity
-    is required (TASK-0003): a `NOT NULL` here would reject a real award over a field the
+  - `publication_date DATE` — nullable, and the **only** date column: the source's `DD-MM-YYYY`
+    text is interpreted at the adapter and not stored (TASK-0003 records what that costs against
+    R27);
+  - `objeto TEXT`, `amount NUMERIC`, `duration TEXT` — **nullable**, mirroring the aggregate's
+    rule that only identity is required (TASK-0003): a `NOT NULL` here would reject a real award over a field the
     source left blank, which is what #42 forbids for the amount and the date and what R7's
     *store what is published* forbids for the rest;
-  - `operador_id UUID REFERENCES operador(id)` — **nullable**, plus an index on it. Created
+  - `operador_id UUID REFERENCES operador(id)` — **nullable**, plus an index on it. This single
+    column **is** the awardee: the schema is normalised, so the name and fiscal identifier live
+    once on `operador` and no contract row repeats them. It is what TASK-0003's
+    `@Relation(MANY_TO_ONE)` maps. Created
     here, with the table, rather than added later: this column is the reason
     [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s base lands first, since
     `ALTER`-ing it onto a table of millions and backfilling from re-derived data is a different
     operation entirely. Nothing in this feature ever writes it —
     [FEAT-0010 TASK-0004](../FEAT-0010-operadores-economicos-base/TASK-0004-derivation-during-import.md)
     is the only thing that does, and SPEC-0006 R5 is why it stays nullable;
-  - an index on `(organo_id, publication_date_interpreted)` — what the browsing feature's
+  - an index on `(organo_id, publication_date)` — what the browsing feature's
     mandatory year scoping reads on. It is created **here, empty**, because adding it later to
     a table of millions is a different operation from creating it now.
 - The Micronaut Data JDBC implementation of `ContratoMenorRepository`.
@@ -67,9 +71,13 @@ JDBC and SQL stay entirely in `infrastructure`.
   slip. (SPEC-0005 #29, counts half)
 - A contract stored by an earlier batch and absent from a later one is still present and
   unchanged afterwards — nothing in this adapter deletes. (SPEC-0005 #17)
-- Published values round-trip unchanged through the store: padded fiscal identifier and awardee
-  name, published date text, and a null interpreted date and null amount where the source gave
-  nothing interpretable. (SPEC-0005 #40 storage half, #42 storage half)
+- Published text round-trips unchanged through the store — the object at its published length,
+  the duration as published — and an interpreted date round-trips as the same `LocalDate`, with a
+  null date and null amount where the source gave nothing interpretable. (SPEC-0005 #40 storage
+  half, less the date and the awardee, #42 stored-not-rejected half)
+- The contract table holds **no awardee column**: reading a contract's awardee means joining
+  `operador`, and a contract with a null `operador_id` is stored and readable like any other.
+  (SPEC-0006 #8, no-operador half)
 - `countByOrganoId` returns the stored count for one Órgano and is unaffected by another
   Órgano's contracts.
 - Integration-tested against PostgreSQL (Testcontainers), including the unique-constraint and

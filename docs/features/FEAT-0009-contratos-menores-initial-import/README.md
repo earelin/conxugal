@@ -65,7 +65,9 @@ layout of
   it (R5).
 - **Domain (the contract):** a `ContratoMenor` aggregate carrying the attributes the source
   publishes **as published** — the awarding Órgano, publication date, object, amount including
-  VAT, stated duration, awardee name and awardee fiscal identifier — plus the source's own
+  VAT and stated duration — plus a **foreign-key association to its operador económico**, which
+  is where the awardee's name and fiscal identifier live, once, rather than on every contract
+  row; plus the source's own
   publication identifier as its stable identity and whatever addresses that publication at the
   source (R7, R16, R27), and a `ContratoMenorRepository` port.
 - **Domain (source port):** a `ContratoMenorSource` port that answers one **(Órgano, date
@@ -116,9 +118,11 @@ layout of
   and says explicitly that the **schema is not decided there** — so no column here is justified
   by "SPEC-0007 will want it", and each is justified below by a requirement this feature meets.
 - **Operadores económicos** ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md)) — this
-  feature only owes them the awardee name and fiscal identifier stored on every contract (R7).
-  The catalogue derived from those two values, and the *populating* of the contract's link to it,
-  are [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s.
+  feature owes them the awardee **as the source publishes it**, surfaced by its adapter, and the
+  foreign key on every contract. Since the schema is normalised, the awardee's name and fiscal
+  identifier are stored **only** on the operador row, so the catalogue and the *populating* of
+  that key — both [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s — are what
+  make a contract's awardee knowable at all.
 
   **That feature's base goes first, not after.** Its rules, aggregate and `operador` table are
   prerequisites of tasks 3 and 4 here, so `contrato_menor` is **created carrying** a nullable
@@ -188,27 +192,34 @@ untouched. ADR-0019 also records the one risk this rests on — that Micronaut D
   **source's own publication identifier unique** — so "no duplicates" (R12) holds at the store
   level and not only in use-case logic, exactly as `source_key` does for the catalogue. The
   awarding Órgano is referenced by its **UUID**, not its source key.
-- **Every published value is stored as published** (R27) — object, duration, awardee name,
-  awardee fiscal identifier, publication date — with the source's padding and casing intact. The
-  fiscal identifier really is space-padded to fixed width, which is the variance R27 refuses to
-  correct and [SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) R3 matches through.
-- **The publication date also gets an interpreted column**, nullable. It arrives as text
-  (`DD-MM-YYYY`), and R27 permits reading it as a date for *ordering, filtering and counting
-  only* while forbidding the interpretation being stored in place of the publication; two columns
-  is what keeps both true. A date that cannot be interpreted leaves the column null — the
-  contract is stored anyway (#42), and the browsing feature is what gives it R19's *undated*
-  selection.
-- **The amount needs no such pair.** The source publishes it as a JSON **number**, not as text,
-  so there is no published spelling for an interpreted column to diverge from and no
-  uninterpretable-text case to preserve: one nullable numeric column is both what was published
-  and what R19 sorts on. It is VAT-inclusive, as R7 requires it to be labelled.
+- **Every published value the contract keeps is stored as published** (R27) — object and duration,
+  with the source's padding and casing intact.
+- **The awardee is a foreign key, and the schema is normalised.** The published name and fiscal
+  identifier are held **once**, on the `operador` row, and no contract repeats them: a large
+  Órgano's million contracts carry a UUID each rather than two padded strings each. What that
+  costs is stated rather than hidden — a contract no longer records the spelling **it** published
+  — and **the specs say so**: R7 holds the awardee on the operador, R27 lists it as one of two
+  exceptions, and [SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #5 now describes
+  rows showing the operador's spelling. The padding R27 refuses to correct survives on the
+  operador row that R3 matches through; the per-contract variance is not stored anywhere.
+- **The publication date is stored as a date, and only as a date** — one nullable column, parsed
+  at the adapter from the source's `DD-MM-YYYY` text, with that text not retained.
+
+  **R27 names this as its second exception**: the interpretation replaces the published string
+  rather than accompanying it, so a date that cannot be interpreted leaves the column null and
+  such a contract shows no date at all. What is kept is the half that matters more — the contract
+  is **stored rather than rejected**, and a null date is precisely what R19's *undated* selection
+  reads, so no stored contract becomes unreachable (#42).
+- **The amount is likewise a single column.** The source publishes it as a JSON **number**, not
+  as text, so no published spelling is lost by storing it numerically: one nullable numeric
+  column is both what was published and what R19 sorts on. It is VAT-inclusive, as R7 requires
+  it to be labelled.
 - **The route to the publication at the source is derived, not stored.** It is
   `licitacion?N={id}` — a constant and the publication identifier the row already carries — so
   R16's per-row link costs no column. That is a measured fact about this source, not a general
   one: a family whose publications are not addressable from their identifier would have to
   capture the address at import, because it could not be retro-fitted onto millions of rows.
-- The interpreted publication date is what the browsing feature's mandatory year scoping will
-  index on; this feature creates the index it will need, on the same reasoning — adding one to a
+- The publication date is what the browsing feature's mandatory year scoping will index on; this feature creates the index it will need, on the same reasoning — adding one to a
   table of millions later is a different operation from creating it empty.
 
 ### State has two homes, and the split is decided by retention
@@ -459,7 +470,7 @@ also record, in that folder's README, what they draw but deliberately do not bui
    #4)*
 3. **`ContratoMenor` domain model + repository port** — the aggregate (a `ContratoMenorId`
    identity, the source's publication identifier, the awarding Órgano's UUID, every published
-   value as published, the nullable interpreted publication date and the numeric amount) plus
+   value as published, the nullable publication date and the numeric amount) plus
    the nullable operador reference, plus the `ContratoMenorRepository` port. It also introduces
    ADR-0019's identifier wrapper and **proves the converter mechanism** the run record then
    reuses. *Depends on FEAT-0010's operador domain model.* *(SPEC-0005 #11 storage half,
@@ -557,10 +568,10 @@ are SPEC-0007's; #1's re-read and remove/restore operations are the curation fea
   feature's. *(SPEC-0005 #17)*
 - **An attribute changed at the source** — matched by publication identifier and refreshed in
   place; identity and the row survive. *(SPEC-0005 #16 storage half)*
-- **An uninterpretable amount or publication date** — stored and kept as published, with the
-  interpreted column left null; the contract is never rejected. It is unreachable until the
-  browsing feature ships R19's undated selection, which is why that feature owns the second half
-  of criterion #42. *(SPEC-0005 #42)*
+- **An uninterpretable amount or publication date** — the contract is stored with that column
+  null and is never rejected. For the **date**, what the source published is not retained, which
+  is the R27 departure recorded above; the row is still reachable, through R19's undated
+  selection, once the browsing feature ships it. *(SPEC-0005 #42, stored-not-rejected half)*
 - **Source unreachable or unusable during a long run** — that Órgano's import fails and is
   recorded as failed; contracts already stored for it and for earlier Órganos are intact, and
   the run carries on to the remaining Órganos. *(SPEC-0005 #36)*
