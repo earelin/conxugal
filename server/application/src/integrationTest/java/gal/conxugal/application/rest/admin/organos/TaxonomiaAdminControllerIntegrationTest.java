@@ -338,11 +338,15 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .statusCode(HttpStatus.NO_CONTENT.getCode());
   }
 
-  // The contract accepts an omitted parentId as the same request as an explicit null, since
-  // Micronaut cannot tell them apart on a nullable component. Asserted so the equivalence is
-  // proven rather than an accident of deserialization nobody checked.
+  // The contract requires parentId, so this body is not one a caller should send and a
+  // generated client will not produce it. Micronaut cannot tell an absent field from an
+  // explicit null on a nullable component, so it arrives as a move to the root rather than as
+  // a 400 — recorded here as a known position rather than left as an accident of
+  // deserialization nobody had looked at. The refusal below is the stub reporting which
+  // arguments it was called with, not the endpoint objecting to the body.
   @Test
-  void omitted_parent_moves_the_term_to_the_root_too(RequestSpecification spec) {
+  void omitted_parent_reaches_the_use_case_as_null_though_the_contract_requires_it(
+      RequestSpecification spec) {
     doThrow(new TermoNotFoundException(HOSPITAIS)).when(moveTermo).move(HOSPITAIS, null);
     String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
