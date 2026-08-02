@@ -13,7 +13,7 @@ import {
   useTree,
 } from '@mantine/core';
 import { IconChevronDown, IconChevronRight, IconInbox } from '@tabler/icons-react';
-import { useMemo } from 'react';
+import { type KeyboardEvent, useMemo } from 'react';
 
 import { strings } from '../../shared/lib/strings';
 import type { Organo } from './organos';
@@ -55,7 +55,9 @@ function TermoRow({ payload, count }: { payload: RenderTreeNodePayload; count: n
           {node.label}
         </Text>
       </Group>
-      <Group gap="xs" wrap="nowrap">
+      {/* Never shrink: a long term name wraps to two lines at a narrow viewport
+          and would otherwise squeeze the count away to an empty pill. */}
+      <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
         <Badge variant="light" color="gray" size="sm">
           {count}
         </Badge>
@@ -80,18 +82,38 @@ export function TaxonomiaTreeCard({
 }: TaxonomiaTreeCardProps) {
   const data = useMemo(() => toTreeData(roots), [roots]);
   const counts = useMemo(() => collectCounts(roots, new Map()), [roots]);
+  // A fresh array literal here would bust useTree's own memo on every render of
+  // the page and re-render every node.
+  const selectedState = useMemo(
+    () => (selectedTermoId === null ? [] : [selectedTermoId]),
+    [selectedTermoId],
+  );
 
   const tree = useTree({
+    selectedState,
     initialExpandedState: getTreeExpandedState(data, '*'),
-    selectedState: selectedTermoId === null ? [] : [selectedTermoId],
-    // Clicking the already-selected term yields an empty array; the section
-    // always has something selected, so that is a no-op rather than a deselect.
     onSelectedStateChange: (state) => {
       if (state.length > 0) {
         onSelect(state[0]);
       }
     },
   });
+
+  // Mantine wires selection to click alone: its own key handler covers the
+  // arrows and Space (which expands), and there is no Enter branch at all, so
+  // without this a keyboard or screen-reader user can walk the taxonomía but
+  // never open a term. The handler sits on the tree root because the key event
+  // bubbles from the focused `treeitem`, which carries the node's value.
+  function selectFocusedNodeOnEnter(event: KeyboardEvent<HTMLUListElement>) {
+    if (event.key !== 'Enter') {
+      return;
+    }
+    const { value } = (event.target as HTMLElement).dataset;
+    if (value !== undefined) {
+      event.preventDefault();
+      onSelect(value);
+    }
+  }
 
   return (
     <Card withBorder radius="md" padding="md">
@@ -112,7 +134,11 @@ export function TaxonomiaTreeCard({
           tree={tree}
           levelOffset="md"
           selectOnClick
+          // One term at a time: range selection would emit multi-value states
+          // this section has no meaning for.
+          allowRangeSelection={false}
           aria-label={strings.admin.organos.treeTitle}
+          onKeyDown={selectFocusedNodeOnEnter}
           renderNode={(payload) => (
             <TermoRow payload={payload} count={counts.get(payload.node.value) ?? 0} />
           )}
@@ -124,6 +150,9 @@ export function TaxonomiaTreeCard({
         component="button"
         type="button"
         active={selectedTermoId === null}
+        // The tree items carry aria-selected; this row is the other half of the
+        // same single-selection group, so its state has to reach the a11y tree too.
+        aria-current={selectedTermoId === null}
         onClick={() => onSelect(null)}
         leftSection={<IconInbox size={16} />}
         label={strings.admin.organos.unclassified}

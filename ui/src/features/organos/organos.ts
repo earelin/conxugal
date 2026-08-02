@@ -38,6 +38,8 @@ export interface OrganosTaxonomia {
   /** The joined view; null unless *both* reads are currently succeeding. */
   view: TaxonomiaView | null;
   isPending: boolean;
+  /** Whether either read is in flight, including a retry of a failed one. */
+  isFetching: boolean;
   isError: boolean;
   error: unknown;
   refetch: () => void;
@@ -73,6 +75,7 @@ export function useOrganosTaxonomia(): OrganosTaxonomia {
   return {
     view,
     isPending: organos.isPending || taxonomia.isPending,
+    isFetching: organos.isFetching || taxonomia.isFetching,
     isError,
     error: organos.error ?? taxonomia.error,
     refetch: () => {

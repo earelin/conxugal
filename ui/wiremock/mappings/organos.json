@@ -74,12 +74,17 @@
           {
             "id": "9f4b7c21-8d35-4e69-b012-5a7c3e9f6d84",
             "name": "Axencias e entidades instrumentais",
-            "parentId": "8a6b1d03-2e74-4c39-a518-7d3f0b6e4c82"
+            "parentId": "e5a2c718-3f60-4b81-9d47-2c8e6a0f5b93"
           },
           {
             "id": "c3e8a05f-1b74-4d92-8a36-0f5d7c2b9e41",
             "name": "Concellos",
             "parentId": null
+          },
+          {
+            "id": "e5a2c718-3f60-4b81-9d47-2c8e6a0f5b93",
+            "name": "Consellería de Educación, Ciencia, Universidades e FP",
+            "parentId": "8a6b1d03-2e74-4c39-a518-7d3f0b6e4c82"
           },
           {
             "id": "5e1a8b34-2c96-4f07-a5d8-1b4e7f0c3a29",

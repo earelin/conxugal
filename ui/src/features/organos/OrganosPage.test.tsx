@@ -91,6 +91,45 @@ describe('OrganosPage', () => {
     expect(nock.pendingMocks()).toEqual([]);
   });
 
+  it('selects a term with the keyboard alone, since Mantine wires selection to click only', async () => {
+    const user = userEvent.setup();
+    mockCatalogue([sergas, vivenda]);
+    mockTaxonomia([consellerias, sanidade]);
+    renderOrganosPage();
+
+    await screen.findByText(vivenda.name);
+    const [firstTerm] = screen.getAllByRole('treeitem');
+    firstTerm.focus();
+
+    await user.keyboard('{ArrowDown}{Enter}');
+
+    expect(await screen.findByText(sergas.name)).toBeInTheDocument();
+    expect(screen.queryByText(vivenda.name)).not.toBeInTheDocument();
+  });
+
+  it('marks whichever of the tree and the worklist is open, so the two never both look unselected', async () => {
+    const user = userEvent.setup();
+    mockCatalogue([sergas, vivenda]);
+    mockTaxonomia([consellerias, sanidade]);
+    renderOrganosPage();
+
+    const worklist = await screen.findByRole('button', {
+      name: new RegExp(strings.admin.organos.unclassified),
+    });
+    expect(worklist).toHaveAttribute('aria-current', 'true');
+
+    await user.click(screen.getByText(sanidade.name));
+
+    expect(worklist).not.toHaveAttribute('aria-current', 'true');
+    // Scoped to the tree — the term name is also in the breadcrumb and the pane
+    // title once open — and to the innermost node, since an ancestor treeitem's
+    // accessible name swallows its descendants' labels.
+    const treeRow = within(screen.getByRole('tree'))
+      .getByText(sanidade.name)
+      .closest('[role="treeitem"]');
+    expect(treeRow).toHaveAttribute('aria-selected', 'true');
+  });
+
   it('shows each Organo of the selected term with its active state, keeping inactive ones visible', async () => {
     const user = userEvent.setup();
     mockCatalogue([sergas, cunqueiro]);
