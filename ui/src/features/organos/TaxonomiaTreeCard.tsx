@@ -1,0 +1,138 @@
+import {
+  Badge,
+  Box,
+  Card,
+  Divider,
+  getTreeExpandedState,
+  Group,
+  NavLink,
+  type RenderTreeNodePayload,
+  Text,
+  Tree,
+  type TreeNodeData,
+  useTree,
+} from '@mantine/core';
+import { IconChevronDown, IconChevronRight, IconInbox } from '@tabler/icons-react';
+import { useMemo } from 'react';
+
+import { strings } from '../../shared/lib/strings';
+import type { Organo } from './organos';
+import type { TermoNode } from './taxonomiaTree';
+
+function toTreeData(nodes: TermoNode[]): TreeNodeData[] {
+  return nodes.map((node) => ({
+    value: node.id,
+    label: node.name,
+    children: node.children.length > 0 ? toTreeData(node.children) : undefined,
+  }));
+}
+
+function collectCounts(nodes: TermoNode[], counts: Map<string, number>): Map<string, number> {
+  for (const node of nodes) {
+    counts.set(node.id, node.organos.length);
+    collectCounts(node.children, counts);
+  }
+  return counts;
+}
+
+function ExpandMarker({ hasChildren, expanded }: { hasChildren: boolean; expanded: boolean }) {
+  // A fixed-width marker even for leaves, so labels line up at each level.
+  if (!hasChildren) {
+    return <Box w={14} />;
+  }
+  const Chevron = expanded ? IconChevronDown : IconChevronRight;
+  return <Chevron size={14} color="var(--mantine-color-gray-6)" aria-hidden />;
+}
+
+function TermoRow({ payload, count }: { payload: RenderTreeNodePayload; count: number }) {
+  const { node, selected, expanded, hasChildren, elementProps } = payload;
+
+  return (
+    <Group {...elementProps} gap="xs" justify="space-between" wrap="nowrap" py={4}>
+      <Group gap={6} wrap="nowrap">
+        <ExpandMarker hasChildren={hasChildren} expanded={expanded} />
+        <Text size="sm" fw={selected ? 600 : 500} c={selected ? 'indigo.8' : undefined}>
+          {node.label}
+        </Text>
+      </Group>
+      <Group gap="xs" wrap="nowrap">
+        <Badge variant="light" color="gray" size="sm">
+          {count}
+        </Badge>
+        {/* Term action slot: rename, move and delete land here. */}
+      </Group>
+    </Group>
+  );
+}
+
+interface TaxonomiaTreeCardProps {
+  roots: TermoNode[];
+  unclassified: Organo[];
+  selectedTermoId: string | null;
+  onSelect: (termoId: string | null) => void;
+}
+
+export function TaxonomiaTreeCard({
+  roots,
+  unclassified,
+  selectedTermoId,
+  onSelect,
+}: TaxonomiaTreeCardProps) {
+  const data = useMemo(() => toTreeData(roots), [roots]);
+  const counts = useMemo(() => collectCounts(roots, new Map()), [roots]);
+
+  const tree = useTree({
+    initialExpandedState: getTreeExpandedState(data, '*'),
+    selectedState: selectedTermoId === null ? [] : [selectedTermoId],
+    // Clicking the already-selected term yields an empty array; the section
+    // always has something selected, so that is a no-op rather than a deselect.
+    onSelectedStateChange: (state) => {
+      if (state.length > 0) {
+        onSelect(state[0]);
+      }
+    },
+  });
+
+  return (
+    <Card withBorder radius="md" padding="md">
+      <Group justify="space-between" mb="xs">
+        <Text fw={600}>{strings.admin.organos.treeTitle}</Text>
+        {/* Taxonomía action slot: the create-term control lands here. */}
+        <Group gap="xs" />
+      </Group>
+      <Divider mb="xs" />
+
+      {roots.length === 0 ? (
+        <Text c="dimmed" size="sm" mb="xs">
+          {strings.admin.organos.treeEmpty}
+        </Text>
+      ) : (
+        <Tree
+          data={data}
+          tree={tree}
+          levelOffset="md"
+          selectOnClick
+          aria-label={strings.admin.organos.treeTitle}
+          renderNode={(payload) => (
+            <TermoRow payload={payload} count={counts.get(payload.node.value) ?? 0} />
+          )}
+        />
+      )}
+
+      <Divider my="xs" />
+      <NavLink
+        component="button"
+        type="button"
+        active={selectedTermoId === null}
+        onClick={() => onSelect(null)}
+        leftSection={<IconInbox size={16} />}
+        label={strings.admin.organos.unclassified}
+        rightSection={
+          <Badge variant="light" color="orange" size="sm">
+            {unclassified.length}
+          </Badge>
+        }
+      />
+    </Card>
+  );
+}

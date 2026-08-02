@@ -1,0 +1,1 @@
+export { OrganosPage } from './OrganosPage';

@@ -2,7 +2,7 @@
 feat: FEAT-0007
 domain: frontend
 adrs: [0003, 0004, 0015]
-status: todo
+status: done
 depends_on: [TASK-0005]
 ---
 
@@ -26,18 +26,19 @@ layout, tree rows and Órgano table, minus every action button.
   gates the existing pages.
 - **The slice lives at `ui/src/features/organos/`**, per ADR-0015: it owns its components,
   its API calls and its local state, exposes one `index.ts` barrel, and imports nothing from
-  `routes/admin/`. The existing tree is *not* migrated and `eslint-plugin-boundaries` is
-  *not* wired here — see the feature's *UI* section for why, and for what stays unowned.
-- **Promote three files, and no others** (the feature's *UI* section argues each):
-  - `ErrorAlert` → `shared/ui/`, gaining the **retry** affordance the failed-fetch rule
-    below depends on;
-  - `httpClient.ts` (`apiFetch`, `HttpError`) and `httpError.ts` → `shared/lib/`, with
-    `api/queryClient.ts` repointed at the new path. This one is load-bearing: the single
-    `QueryClient` keys its retry policy *and* its 401→`/login` redirect on
-    `error instanceof HttpError`, so a slice with its own error type would retry blindly and
-    lose the session-expiry redirect. Exactly one `HttpError` class may exist.
+  another feature.
 
-  Update every existing importer. Nothing else moves — the rest of `ui/src` stays as it is.
+  > **Superseded on landing.** This task was written expecting to find `ui/src/api/`,
+  > `ui/src/commons/` and `ui/src/routes/admin/`, and to promote three files itself. By the
+  > time it was picked up the ADR-0015 migration had already landed: `ui/src` is
+  > `app/ → features/ → shared/entities → shared/ui + shared/lib` throughout,
+  > `eslint-plugin-boundaries` **is** wired in `ui/eslint.config.js`, and `ErrorAlert`,
+  > `httpClient.ts` and `httpError.ts` already sit in `shared/`. What survived of the
+  > promotion bullet is the **retry affordance** `ErrorAlert` still lacked. The rule the
+  > bullet existed to protect is unchanged and still holds: the single `QueryClient` keys
+  > its retry policy *and* its 401→`/login` redirect on `error instanceof HttpError`, so
+  > exactly one `HttpError` class may exist — which is why `ProblemError` below **extends**
+  > it rather than standing beside it.
 - Add **`ProblemError`** to `shared/lib/`: `type`, `status` and `detail` parsed from an
   `application/problem+json` body, falling back to today's `HttpError` behaviour when the
   body is not one. `apiFetch` currently discards the body entirely, so without this the
@@ -48,9 +49,16 @@ layout, tree rows and Órgano table, minus every action button.
   single hook that refetches and re-runs the builder. The three later tasks all call it;
   leaving it to whichever landed first would mean it was designed as a side effect of a
   mutation flow.
-- **Strings are split, and this task decides the split**: the nav label goes in
-  `ui/src/strings.ts`, because `nav.ts` reads `strings.nav.*`; all section copy lives in the
-  slice.
+- **Strings, and this task decides where they go**: all of it goes in
+  `ui/src/shared/lib/strings.ts` — the nav label under `strings.nav.*`, which `nav.ts`
+  reads, and the section copy under `strings.admin.organos.*` beside the two existing admin
+  pages.
+
+  > **Superseded on landing.** The split this bullet described assumed a top-level
+  > `ui/src/strings.ts` and no shared core. The ADR-0015 migration made
+  > `shared/lib/strings.ts` the module's single i18n seam — `ui/CLAUDE.md` requires new copy
+  > there and tests assert against `strings.*` rather than literals — so a slice-local
+  > catalogue would fork that seam for one section and buy nothing.
 - Fetch both reads — `GET /api/organos` and `GET /api/organos/taxonomia` — and **build the tree
   in the browser**: a pure function taking the two arrays and returning the rooted tree plus
   the unclassified list, by grouping terms on `parentId` (null → root) and Órganos on
@@ -104,10 +112,11 @@ layout, tree rows and Órgano table, minus every action button.
   no second request. (SPEC-0004 #8, #18)
 - The section is not reachable by a `USER`; this gating is cosmetic — `/api/admin/**`
   remains the real gate. (SPEC-0004 #1)
-- No file under `features/organos/` imports from `routes/admin/` — the rule ADR-0015 makes
-  absolute. It **does** import the promoted files from `shared/`, which is the point of
-  promoting them, and exactly one `HttpError` class exists in the app afterwards, still the
-  one `api/queryClient.ts` compares against.
+- No file under `features/organos/` imports from another feature — the rule ADR-0015 makes
+  absolute, and `eslint-plugin-boundaries` now fails the build on it. It **does** import from
+  `shared/`, which is the point of the promotions, and exactly one `HttpError` class exists in
+  the app afterwards, still the one `shared/lib/queryClient.ts` compares against — with
+  `ProblemError` extending it so a `problem+json` refusal stays subject to both policies.
 - `ProblemError` surfaces `type` from a `problem+json` refusal and degrades to plain
   `HttpError` behaviour on a body that is not one — proven against both shapes, since
   TASK-0008 and TASK-0009 are unimplementable without the first and would crash on the
