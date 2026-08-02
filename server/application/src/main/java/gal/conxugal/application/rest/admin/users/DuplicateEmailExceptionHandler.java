@@ -3,12 +3,13 @@ package gal.conxugal.application.rest.admin.users;
 import gal.conxugal.domain.user.DuplicateEmailException;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
+import io.micronaut.http.HttpStatus;
 import io.micronaut.http.server.exceptions.ExceptionHandler;
+import io.micronaut.problem.HttpStatusType;
 import io.micronaut.problem.ThrowableProblemHandler;
 import jakarta.inject.Singleton;
 import java.net.URI;
 import org.zalando.problem.Problem;
-import org.zalando.problem.Status;
 
 @Singleton
 class DuplicateEmailExceptionHandler
@@ -29,7 +30,7 @@ class DuplicateEmailExceptionHandler
         Problem.builder()
             .withType(TYPE)
             .withTitle("Conflict")
-            .withStatus(Status.CONFLICT)
+            .withStatus(new HttpStatusType(HttpStatus.CONFLICT))
             .withDetail("An account with email " + exception.getEmail() + " already exists.")
             .build());
   }

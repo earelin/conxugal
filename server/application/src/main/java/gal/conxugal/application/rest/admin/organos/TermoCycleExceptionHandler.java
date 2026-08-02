@@ -29,10 +29,10 @@ class TermoCycleExceptionHandler
         request,
         Problem.builder()
             .withType(TYPE)
-            .withTitle("Conflict")
+            .withTitle("Term Cycle")
             .withStatus(new HttpStatusType(HttpStatus.CONFLICT))
-            .withDetail("Cannot move term " + exception.getTermoId()
-                + " under itself or one of its descendants: " + exception.getTargetParentId())
+            .withDetail("Cannot move term %s under itself or one of its descendants: %s"
+                .formatted(exception.getTermoId(), exception.getTargetParentId()))
             .build());
   }
 }

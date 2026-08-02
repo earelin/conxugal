@@ -29,9 +29,9 @@ class TermoNotFoundExceptionHandler
         request,
         Problem.builder()
             .withType(TYPE)
-            .withTitle("Not Found")
+            .withTitle("Term Not Found")
             .withStatus(new HttpStatusType(HttpStatus.NOT_FOUND))
-            .withDetail("No term exists with id: " + exception.getTermoId())
+            .withDetail("No term exists with id: %s".formatted(exception.getTermoId()))
             .build());
   }
 }

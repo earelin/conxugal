@@ -29,9 +29,9 @@ class OrganoNotFoundExceptionHandler
         request,
         Problem.builder()
             .withType(TYPE)
-            .withTitle("Not Found")
+            .withTitle("Órgano Not Found")
             .withStatus(new HttpStatusType(HttpStatus.NOT_FOUND))
-            .withDetail("No Órgano exists with id: " + exception.getOrganoId())
+            .withDetail("No Órgano exists with id: %s".formatted(exception.getOrganoId()))
             .build());
   }
 }

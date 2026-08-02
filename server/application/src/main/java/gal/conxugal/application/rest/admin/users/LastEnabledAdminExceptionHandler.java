@@ -3,12 +3,13 @@ package gal.conxugal.application.rest.admin.users;
 import gal.conxugal.domain.user.LastEnabledAdminException;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
+import io.micronaut.http.HttpStatus;
 import io.micronaut.http.server.exceptions.ExceptionHandler;
+import io.micronaut.problem.HttpStatusType;
 import io.micronaut.problem.ThrowableProblemHandler;
 import jakarta.inject.Singleton;
 import java.net.URI;
 import org.zalando.problem.Problem;
-import org.zalando.problem.Status;
 
 @Singleton
 class LastEnabledAdminExceptionHandler
@@ -29,7 +30,7 @@ class LastEnabledAdminExceptionHandler
         Problem.builder()
             .withType(TYPE)
             .withTitle("Conflict")
-            .withStatus(Status.CONFLICT)
+            .withStatus(new HttpStatusType(HttpStatus.CONFLICT))
             .withDetail(
                 "Cannot disable the only remaining enabled ADMIN account: "
                     + exception.getUserId())

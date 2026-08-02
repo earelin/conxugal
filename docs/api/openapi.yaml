@@ -1295,11 +1295,14 @@ components:
         name:
           type: string
           maxLength: 255
-          pattern: "^\\S(.*\\S)?$"
+          pattern: "\\S"
           example: "Sanidade"
           description: >-
-            Non-blank once stripped of surrounding whitespace, and stored stripped. Must not
-            collide case-insensitively with a sibling's name.
+            Non-blank once stripped of surrounding whitespace, and stored stripped. The
+            pattern is unanchored and so requires only that some non-whitespace character is
+            present: surrounding whitespace is accepted here and does not survive, unlike the
+            stored `Termo.name`, which forbids it outright. Must not collide
+            case-insensitively with a sibling's name.
         parentId:
           type: [string, "null"]
           format: uuid
@@ -1316,20 +1319,21 @@ components:
         name:
           type: string
           maxLength: 255
-          pattern: "^\\S(.*\\S)?$"
+          pattern: "\\S"
           example: "Sanidade e Benestar"
           description: >-
             The replacement name: non-blank once stripped of surrounding whitespace, stored
             stripped, and free among the names of the term's existing siblings, compared
-            case-insensitively.
+            case-insensitively. As on the create, the unanchored pattern requires only a
+            non-whitespace character to be present, so padding is accepted and stripped.
 
     MoveTermoRequest:
       type: object
       description: >-
-        The term to move a term under (SPEC-0004 R14, R15). `parentId` is required because a
-        null is a value here, not an omission: it is how a term is moved out to the root,
-        and a body that left the field out would state nothing.
-      required: [parentId]
+        The term to move a term under (SPEC-0004 R14, R15). A null `parentId` moves the term
+        to the root, and so does omitting it — the two are accepted as the same request. What
+        a null must never be taken for is a *rejection*: moving a term out to the root has no
+        other way to say where it lands, so the field carries no non-null constraint.
       example:
         parentId: null
       properties:

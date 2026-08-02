@@ -1,8 +1,6 @@
 package gal.conxugal.application.rest.admin.organos;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -185,6 +183,29 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .statusCode(HttpStatus.BAD_REQUEST.getCode());
   }
 
+  // Surrounding whitespace is the use case's to strip, so the edge must let it through
+  // rather than reject it — the contract says the same, and carries no no-whitespace
+  // pattern on the request name for exactly this reason.
+  @Test
+  void create_with_padded_name_is_accepted_and_left_to_the_use_case(RequestSpecification spec) {
+    when(createTermo.create("  Sanidade  ", null))
+        .thenReturn(new Termo(SANIDADE, "Sanidade", null));
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+            .body(
+                """
+                {"name":"  Sanidade  ","parentId":null}\
+                """)
+        .when()
+            .post(TERMOS);
+
+    response.then().statusCode(HttpStatus.CREATED.getCode());
+    assertThat(response.jsonPath().getString("name")).isEqualTo("Sanidade");
+  }
+
   @Test
   void admin_renames_term_and_gets_its_new_state(RequestSpecification spec) {
     when(renameTermo.rename(SANIDADE, "Sanidade e Benestar"))
@@ -261,14 +282,31 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .statusCode(HttpStatus.NO_CONTENT.getCode());
   }
 
-  // Booby-trapping every non-null parent is what makes this test about the null rather than
-  // about the 204: a controller that dropped the null, or turned an absent field into some
-  // other id, would hit the trap and fail. Moving a term out to the root is unexpressible
-  // otherwise, which is why the field carries no @NotNull.
+  // Stubbing the exact call the controller must make — HOSPITAIS with a null parent — and
+  // asserting the refusal that stub produces is what makes this about the null rather than
+  // about the 204: a controller that dropped the null, passed some other id, or skipped
+  // MoveTermo altogether would miss the stub and answer 204 instead of 404. Moving a term
+  // out to the root is unexpressible otherwise, which is why the field carries no @NotNull.
+  @Test
+  void explicit_null_parent_reaches_the_use_case_as_move_to_the_root(RequestSpecification spec) {
+    doThrow(new TermoNotFoundException(HOSPITAIS)).when(moveTermo).move(HOSPITAIS, null);
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+            .body(
+                """
+                {"parentId":null}\
+                """)
+        .when()
+            .put(parentOf(HOSPITAIS));
+
+    assertProblem(response, HttpStatus.NOT_FOUND, "urn:conxugal:problem-type:termo-not-found");
+  }
+
   @Test
   void admin_moves_term_to_the_root_with_an_explicit_null_parent(RequestSpecification spec) {
-    doThrow(new AssertionError("an explicit null parentId must reach MoveTermo as null"))
-        .when(moveTermo).move(any(), notNull());
     String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
     given(spec)
@@ -281,6 +319,24 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .put(parentOf(HOSPITAIS))
     .then()
         .statusCode(HttpStatus.NO_CONTENT.getCode());
+  }
+
+  // The contract accepts an omitted parentId as the same request as an explicit null, since
+  // Micronaut cannot tell them apart on a nullable component. Asserted so the equivalence is
+  // proven rather than an accident of deserialization nobody checked.
+  @Test
+  void omitted_parent_moves_the_term_to_the_root_too(RequestSpecification spec) {
+    doThrow(new TermoNotFoundException(HOSPITAIS)).when(moveTermo).move(HOSPITAIS, null);
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+            .body("{}")
+        .when()
+            .put(parentOf(HOSPITAIS));
+
+    assertProblem(response, HttpStatus.NOT_FOUND, "urn:conxugal:problem-type:termo-not-found");
   }
 
   @Test
@@ -318,6 +374,28 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
             .put(parentOf(SANIDADE));
 
     assertProblem(response, HttpStatus.CONFLICT, "urn:conxugal:problem-type:termo-cycle");
+  }
+
+  // The move is the one operation whose contract declares two different 409 types, so the
+  // second one needs proving at the wire as much as the cycle does.
+  @Test
+  void move_colliding_with_sibling_name_is_duplicate_sibling_name(RequestSpecification spec) {
+    doThrow(new DuplicateSiblingNameException("Hospitais", SANIDADE))
+        .when(moveTermo).move(HOSPITAIS, SANIDADE);
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+            .body(
+                """
+                {"parentId":"%s"}\
+                """.formatted(SANIDADE))
+        .when()
+            .put(parentOf(HOSPITAIS));
+
+    assertProblem(
+        response, HttpStatus.CONFLICT, "urn:conxugal:problem-type:duplicate-sibling-name");
   }
 
   @Test
@@ -375,6 +453,10 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
     assertProblem(
         blockedDelete, HttpStatus.CONFLICT, "urn:conxugal:problem-type:termo-has-children");
     assertProblem(cycle, HttpStatus.CONFLICT, "urn:conxugal:problem-type:termo-cycle");
+    // A client that falls back to the title rather than switching on the type still gets
+    // two different messages, so neither refusal reads as a bare "Conflict".
+    assertThat(blockedDelete.jsonPath().getString("title"))
+        .isNotEqualTo(cycle.jsonPath().getString("title"));
   }
 
   @Test

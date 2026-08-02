@@ -2,12 +2,13 @@ package gal.conxugal.application.rest.admin.organos;
 
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
+import io.micronaut.http.HttpStatus;
 import io.micronaut.http.server.exceptions.ExceptionHandler;
+import io.micronaut.problem.HttpStatusType;
 import io.micronaut.problem.ThrowableProblemHandler;
 import jakarta.inject.Singleton;
 import java.net.URI;
 import org.zalando.problem.Problem;
-import org.zalando.problem.Status;
 
 @Singleton
 class ImportFailedExceptionHandler
@@ -28,7 +29,7 @@ class ImportFailedExceptionHandler
         Problem.builder()
             .withType(TYPE)
             .withTitle("Import Failed")
-            .withStatus(Status.INTERNAL_SERVER_ERROR)
+            .withStatus(new HttpStatusType(HttpStatus.INTERNAL_SERVER_ERROR))
             .withDetail(
                 "The Órganos import failed: the source was unreachable or returned an "
                     + "unusable response.")

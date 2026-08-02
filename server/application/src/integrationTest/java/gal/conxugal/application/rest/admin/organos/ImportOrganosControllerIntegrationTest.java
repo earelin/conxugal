@@ -54,13 +54,21 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
     when(importOrganos.run()).thenReturn(ImportOutcome.failure());
     String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
-    given(spec)
-        .header(HttpHeaders.COOKIE, sessionCookie)
-    .when()
-        .post("/api/admin/organos/import")
-    .then()
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+        .when()
+            .post("/api/admin/organos/import");
+
+    response.then()
         .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.getCode())
         .contentType("application/problem+json");
+    assertThat(response.jsonPath().getString("type"))
+        .isEqualTo("urn:conxugal:problem-type:organo-import-failed");
+    // The Error schema declares status as an integer. Asserting it as one is what catches a
+    // handler built on the zalando Status enum, which Micronaut Serde writes by name.
+    assertThat(response.jsonPath().getInt("status"))
+        .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.getCode());
   }
 
   @Test

@@ -29,10 +29,10 @@ class TermoHasChildrenExceptionHandler
         request,
         Problem.builder()
             .withType(TYPE)
-            .withTitle("Conflict")
+            .withTitle("Term Has Children")
             .withStatus(new HttpStatusType(HttpStatus.CONFLICT))
-            .withDetail("Cannot delete term " + exception.getTermoId()
-                + " while it has child terms")
+            .withDetail("Cannot delete term %s while it has child terms"
+                .formatted(exception.getTermoId()))
             .build());
   }
 }

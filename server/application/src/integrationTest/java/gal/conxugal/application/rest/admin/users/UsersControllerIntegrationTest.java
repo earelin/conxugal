@@ -137,6 +137,11 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
     response.then()
         .statusCode(HttpStatus.CONFLICT.getCode())
         .contentType("application/problem+json");
+    assertThat(response.jsonPath().getString("type"))
+        .isEqualTo("urn:conxugal:problem-type:duplicate-email");
+    // The Error schema declares status as an integer. Asserting it as one is what catches a
+    // handler built on the zalando Status enum, which Micronaut Serde writes by name.
+    assertThat(response.jsonPath().getInt("status")).isEqualTo(HttpStatus.CONFLICT.getCode());
   }
 
   @Test

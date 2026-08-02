@@ -32,15 +32,21 @@ class DuplicateSiblingNameExceptionHandler
         request,
         Problem.builder()
             .withType(TYPE)
-            .withTitle("Conflict")
+            .withTitle("Duplicate Sibling Name")
             .withStatus(new HttpStatusType(HttpStatus.CONFLICT))
             .withDetail(detailOf(exception.getName(), exception.getParentId()))
             .build());
   }
 
+  /**
+   * Deliberately re-derived rather than taken from the exception's own message: that message
+   * is for logs and may be reworded freely, while this one is published in the problem body
+   * and is part of the API. They read alike today, and neither is obliged to follow the
+   * other. The same holds for every handler in this package.
+   */
   private static String detailOf(String name, @Nullable TermoId parentId) {
     return parentId == null
-        ? "A root term named " + name + " already exists"
-        : "A term named " + name + " already exists under parent " + parentId;
+        ? "A root term named %s already exists".formatted(name)
+        : "A term named %s already exists under parent %s".formatted(name, parentId);
   }
 }
