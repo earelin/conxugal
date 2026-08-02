@@ -26,5 +26,5 @@ Governed by [ADR-0018](../../architecture/0018-frontend-acceptance-tests-against
 - When the stream ends, the panel keeps the last sample on screen captioned as stale, reports itself reconnecting, and resumes on its own with the history intact. ([ADR-0009](../../architecture/0009-sse-admin-realtime-metrics.md))
 - Leaving the dashboard closes the stream: no further connection is opened once the panel is gone. (ADR-0009)
 - Journeys are driven only through the rendered page — accessible roles, labels and the Galician copy of `strings.ts` — never through application internals, and each scenario is reproducible in isolation.
-- No assertion depends on a value formatted by `Intl`; separators differ between browser builds, the same reason this suite never asserts on a formatted date.
+- No assertion depends on a locale-formatted date, whose rendering differs between browser builds.
 - `npm run lint`, `npm run test`, `npm run build` and `npm run test:acceptance` stay green.

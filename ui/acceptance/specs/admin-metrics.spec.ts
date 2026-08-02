@@ -69,6 +69,7 @@ test.describe('Administration real-time metrics', () => {
     await expect(memory.getByText('355 / 1024 MB · 35 %')).toBeVisible();
     await expect(memory.getByText('128 MB', { exact: true })).toBeVisible();
     await expect(memory.getByText('113', { exact: true })).toBeVisible();
+    await expect(memory.getByText('1,90 s', { exact: true })).toBeVisible();
     await expect(memory.getByText('3 d 03 h 52 m', { exact: true })).toBeVisible();
 
     const pool = metricCard(page, 'Conexións co almacén de datos');
@@ -79,10 +80,7 @@ test.describe('Administration real-time metrics', () => {
     const http = metricCard(page, 'Actividade HTTP');
     await expect(http.getByText('18 490', { exact: true })).toBeVisible();
     await expect(http.getByText('38', { exact: true })).toBeVisible();
-    // The error-rate percentage and the GC seconds are the panel's only figures
-    // built with Intl, whose separators differ between browser builds — the same
-    // reason this suite never asserts on a formatted date. The badge below is
-    // the observable proof the rate was computed and classified.
+    await expect(http.getByText('0,21 %', { exact: true })).toBeVisible();
     await expect(http.getByText('NORMAL', { exact: true })).toBeVisible();
   });
 
@@ -212,11 +210,11 @@ test.describe('Administration real-time metrics', () => {
 
     await page.goto('/administracion');
 
-    // The percentage itself is Intl-formatted and so unassertable here; the badge
-    // is how the classification becomes observable, and only a sample past the
-    // threshold tells a working one from a label stuck on NORMAL.
+    // Only a sample past the threshold tells a working classification from a
+    // badge stuck on NORMAL.
     const http = metricCard(page, 'Actividade HTTP');
     await expect(http.getByText('400', { exact: true })).toBeVisible();
+    await expect(http.getByText('2,16 %', { exact: true })).toBeVisible();
     await expect(http.getByText('ELEVADA', { exact: true })).toBeVisible();
     await expect(http.getByText('NORMAL', { exact: true })).toHaveCount(0);
   });
