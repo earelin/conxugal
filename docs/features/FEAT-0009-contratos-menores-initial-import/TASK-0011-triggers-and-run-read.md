@@ -50,11 +50,12 @@ rows**.
   The `409` documents **which** types it can carry: a client that can only read the status
   cannot tell *wait* from *mark the Órgano*, which is exactly the distinction #34 requires and
   the UI renders differently.
-- **`PUT /api/admin/organo/{id}/importado` changes shape, and not to a `409`.** The mark is
+- **`PUT /api/admin/organo/{id}/importable` changes shape, and not to a `409`.** The mark is
   written whether or not an import starts, so the response becomes `200` with a body carrying
   the run identifier when one started, or the refusal reason when none did. A `409` here would
   tell the client the mark did not apply — the opposite of SPEC-0005 #33's first clause, where
-  a mark landing while an import runs is *refused rather than queued*, the mark itself standing. The mark triggers a **single-Órgano** import, never a sweep.
+  a mark landing while an import runs is *refused rather than queued*, the mark itself
+  standing. The mark triggers a **single-Órgano** import, never a sweep.
   `DELETE` is unchanged at `204`; it stops a run for that Órgano through TASK-0010's
   batch-boundary check, not synchronously.
 - **`GET /api/admin/import-run/{id}`** returns the run's verdict — in progress, succeeded,

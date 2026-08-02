@@ -81,6 +81,24 @@ instead of starting. An in-memory lock would have forgotten, after a restart, ab
 still recorded as executing — and because R21's guard is system-wide, forgetting it would put a
 second run against the source, which is the outcome that requirement exists to prevent.
 
+**PostgreSQL is what serialises that guard, not application code.** Reading *is there a live
+run?* and inserting the new one must be **one act**: two triggers — a mark, an administrator, a
+scheduler — can both read *no live run* and both insert, and the guard is the only thing
+standing between this system and a public source that
+[ADR-0014](0014-resilient-throttled-outbound-http-client.md) says owes us nothing. So a claim
+runs in a single transaction that first takes a **transaction-scoped advisory lock**
+(`pg_advisory_xact_lock`) on one key shared by every importer, then applies the liveness rule
+above, then inserts; the lock releases on commit. A second claimant blocks on the lock and,
+when it proceeds, sees the first one's committed row.
+
+A **partial unique index** admitting one live run row was considered and does not work here: an
+index predicate cannot reference `now()`, so a run past the abandonment bound keeps satisfying
+it, and inserting past such a row would mean **writing** it to an abandoned state — which is
+exactly what the paragraph above declines to do, and what the corresponding consequence below
+accepts we do not do. The lock buys the same serialisation without that write. What it costs is
+that the guarantee lives in the claim path rather than in the schema: **a run row is inserted in
+exactly one place**, and a second insertion path would silently bypass the guard.
+
 Not decided here: the schema, how retention is enforced (SPEC-0007 R17), and how live progress
 reaches the browser — [ADR-0009](0009-sse-admin-realtime-metrics.md) and SPEC-0007's own open
 decision own that, and this record only guarantees there is a durable thing to read.
@@ -99,6 +117,9 @@ decision own that, and this record only guarantees there is a durable thing to r
   own failure makes the monitoring page untrustworthy.
 - The concurrency guard survives restarts for free, because it reads durable state rather than
   process memory.
+- Serialising the claim needs no new infrastructure: the advisory lock is held by the database
+  already storing the runs, so there is no lock service to run, and a claimant that dies mid-claim
+  releases it when its transaction ends rather than leaving a lock nobody owns.
 
 ### Cons
 - **Resumption re-reads an overlap**, paced at ADR-0014's one request per second. A crash late
@@ -114,6 +135,11 @@ decision own that, and this record only guarantees there is a durable thing to r
   and only the read applies the bound — so any reader bypassing that one place (an ad-hoc query,
   a future report, a migration) sees a stale answer. Writing the state would have made the row
   self-describing.
+- **The guard is enforced by a lock, not by a constraint.** The database serialises the claim,
+  but nothing in the schema forbids a second live run row — so a future code path that inserts
+  one without taking the advisory lock defeats R22 silently, and no `INSERT` will fail to warn
+  it. This is the price of not writing the abandoned state, and it makes "runs are claimed in
+  one place" a property to test rather than one the schema guarantees.
 - **"When it reached abandoned" is computed, not observed** — last advance plus the bound — so
   it is an inference where every other terminal timestamp in SPEC-0007 R3 is a fact.
 - **Recording is best-effort by construction.** Because a progress write may fail without

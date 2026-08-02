@@ -129,7 +129,7 @@ layout of
 ```mermaid
 flowchart LR
     subgraph application["application (driving)"]
-        markApi["PUT/DELETE /api/admin/organo/&#123;id&#125;/importado"]
+        markApi["PUT/DELETE /api/admin/organo/&#123;id&#125;/importable"]
         importApi["POST .../contratos-menores/import"]
         runApi["GET /api/admin/import-run/&#123;id&#125;"]
         organosUi["admin Órganos section: mark control"]
@@ -255,15 +255,10 @@ run?" fails in two ways the flag did not:
    trigger today, the scheduler once the incremental feature lands — can both read *no live run* and both insert.
    The guard is the single thing standing between this system and a public source that
    [ADR-0014](../../architecture/0014-resilient-throttled-outbound-http-client.md) says owes us
-   nothing, so it is serialised **in the database, by a transaction-scoped advisory lock the
-   claim takes before it looks**, not by application-level checking.
-
-   A partial unique index admitting one live run row was the first design and does not work
-   here: an index predicate cannot reference `now()`, so a stale row keeps satisfying it, and
-   inserting past one would mean **writing** the abandoned state that
-   [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md) accepts is never
-   stored. The lock gives the same serialisation without that write, at the price of moving the
-   guarantee from the schema into the single code path that claims.
+   nothing, so it is serialised **in the database, by the transaction-scoped advisory lock the
+   claim takes before it looks** — the mechanism
+   [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md) decides, and the reason
+   it is not a partial unique index — never by application-level checking.
 
 **This changes shipped behaviour, deliberately.** `ImportOrganos` must now *write* a live run row
 — a guard cannot see an import that records nothing — which makes the catalogue import's
@@ -322,8 +317,8 @@ stateDiagram-v2
 
 | Method & path | Role | Purpose |
 | --- | --- | --- |
-| `PUT /api/admin/organo/{id}/importado` | `ADMIN` | Mark, and request an import (R4) |
-| `DELETE /api/admin/organo/{id}/importado` | `ADMIN` | Unmark; stops a run in progress for it (R5) |
+| `PUT /api/admin/organo/{id}/importable` | `ADMIN` | Mark, and request an import (R4) |
+| `DELETE /api/admin/organo/{id}/importable` | `ADMIN` | Unmark; stops a run in progress for it (R5) |
 | `POST /api/admin/contratos-menores/import` | `ADMIN` | Import every marked, active Órgano (R20) |
 | `POST /api/admin/organo/{id}/contratos-menores/import` | `ADMIN` | Import one named Órgano (R20) |
 | `GET /api/admin/import-run/{id}` | `ADMIN` | The state and outcome of one run |
@@ -438,7 +433,7 @@ also record, in that folder's README, what they draw but deliberately do not bui
    `OrganoRepository` reads/writes for it, with `OrganoReconciler`'s write set deliberately
    untouched. *(SPEC-0005 #4 storage half, #6)*
 2. **Mark administration API** — `MarkOrganoForImport` / `UnmarkOrganoForImport` use cases,
-   `PUT`/`DELETE /api/admin/organo/{id}/importado`, and an `ADMIN`-only `GET /api/admin/organos`
+   `PUT`/`DELETE /api/admin/organo/{id}/importable`, and an `ADMIN`-only `GET /api/admin/organos`
    carrying the mark, both authored in `openapi.yaml` first. Marking does not yet trigger
    anything — task 11 wires that once there is something to trigger. *(SPEC-0005 #1 mark half,
    #4)*

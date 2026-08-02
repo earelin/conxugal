@@ -69,7 +69,9 @@ rather than opening a second store.
   mid-run blocks every import in the system forever, since SPEC-0007 R19 leaves no
   administrative function to clear a row.
 - **The guard is one act, serialised by a PostgreSQL transaction-scoped advisory lock**
-  (`pg_advisory_xact_lock` on a fixed key shared by both importers). A claim is a single
+  (`pg_advisory_xact_lock` on a fixed key shared by both importers) — the mechanism
+  [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md) decides; this task
+  builds it. A claim is a single
   transaction: take the lock, look for a run that is `IN_PROGRESS` **and advanced within the
   bound**, refuse if there is one, otherwise insert the new run row. The lock releases on
   commit. Two triggers — the mark control and an admin trigger today, the scheduler once the
@@ -92,14 +94,11 @@ rather than opening a second store.
       end
   ```
 
-- **Why not a partial unique index admitting one `IN_PROGRESS` row.** It was the first design,
-  and it cannot express this rule: an index predicate cannot reference `now()`, so a stale row
-  keeps satisfying it and the only way to insert past it is to *write* the stale run to an
-  abandoned state — which is precisely what ADR-0017 rules out when it accepts that the derived
-  state is not stored. The advisory lock buys the same serialisation without that write. What
-  it costs is stated rather than hidden: the guarantee moves from the schema to the code, so a
-  future claimer that forgets the lock is not stopped by the database. The claim is therefore
-  the **single** place a run row is inserted, and that is what the test below pins.
+- **No partial unique index admitting one `IN_PROGRESS` row.** ADR-0017 records why — an index
+  predicate cannot reference `now()`, so a stale row keeps satisfying it and inserting past one
+  would mean *writing* the abandoned state that same record declines to store. What the lock
+  costs is that the guarantee lives in the claim rather than in the schema, so the claim must be
+  the **single** place a run row is inserted; the test below is what pins that.
 - **Batch size and the abandonment bound are one decision, taken here**, because batches
   coarser than the bound make a healthy run read as dead and batches finer than necessary spend
   write load on the busiest path in the system (ADR-0017):

@@ -23,6 +23,7 @@ addresses the collection, singular when it addresses one element**
 | one element, by id | singular | `GET /api/organo/{id}` |
 | one element's sub-resource | singular | `PUT /api/admin/organo/{id}/termo` |
 | a singleton — no collection exists | singular | `GET /api/me` |
+| an **action**, not a thing — last segment only | verb | `POST /api/admin/organos/import` |
 
 Applying it:
 
@@ -30,6 +31,12 @@ Applying it:
 - **A sub-resource follows the same rule for its own noun** — `.../{id}/termo`
   places the element in one term; a sub-collection is plural in turn, which is why the
   taxonomy's terms are `/api/organos/taxonomia/termos`.
+- **A verb is allowed as the last segment, and only there**, when the request asks for
+  something to *happen* rather than reading or writing state. The test is whether a noun
+  would be a lie: `enabled` is a flag a user has and `importable` is a property an Órgano
+  has, so both stay nouns even though writing them has effects; an import run addresses no
+  such state, so `.../import` is a verb. Keep them rare — a path full of verbs is RPC
+  wearing HTTP's clothes.
 - **Multi-word nouns are kebab-case**: `system-status`.
 - **Use the noun the domain already uses.** `organo`/`organos` because the aggregate is
   `OrganoDeContratacion`; `termo`/`termos` because it is `Termo`.

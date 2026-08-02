@@ -38,7 +38,7 @@ peer of without it. This task adds into that structure rather than inventing a c
   that carries `importado` and the import state, and swapping it keeps the section on one
   request rather than two. The taxonomy read is unchanged.
 - **The control is a `Switch`** — the mark is a durable attribute of the Órgano, not a one-off
-  action, and it maps 1:1 onto `PUT` and `DELETE /api/admin/organo/{id}/importado`. Being
+  action, and it maps 1:1 onto `PUT` and `DELETE /api/admin/organo/{id}/importable`. Being
   icon-only it carries an `aria-label`. Turning it on opens a confirmation naming what the mark
   costs — days of walking, every other import refused meanwhile
   ([`mark-organo.svg`](design/mark-organo.svg)). R4 does not require that dialog; it is a design

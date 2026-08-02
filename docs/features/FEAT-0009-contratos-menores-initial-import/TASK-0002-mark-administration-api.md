@@ -36,8 +36,8 @@ expected rather than discovered.
 
   | Operation | Path | Success |
   | --- | --- | --- |
-  | Mark an Órgano for import | `PUT /api/admin/organo/{id}/importado` | 204 |
-  | Unmark it | `DELETE /api/admin/organo/{id}/importado` | 204 |
+  | Mark an Órgano for import | `PUT /api/admin/organo/{id}/importable` | 204 |
+  | Unmark it | `DELETE /api/admin/organo/{id}/importable` | 204 |
   | The administrator's catalogue read | `GET /api/admin/organos` | 200 |
 
 - `MarkOrganoForImport` and `UnmarkOrganoForImport` use cases in `domain`, over
