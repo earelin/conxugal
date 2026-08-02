@@ -53,9 +53,10 @@ layout of
 > [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md) is `accepted`, so the
 > run record and the guard rest on a decision that is no longer up for debate; and
 > [SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) is `active`.
-> One prerequisite is **not** settled and this feature does not settle it either: the source's
-> query surface for contratos menores is unknown, which is why task 1 confirms it before any
-> task commits to an identity, a constraint or a window size.
+> **The source contract is confirmed**, not assumed: the page's tables are DataTables in
+> `serverSide` mode over a public JSON API, measured against the live site and recorded in
+> [`design/source-contract.md`](design/source-contract.md). Every window size, page size, field
+> shape and limit cited below comes from that measurement.
 
 ## Scope
 - **Domain (the mark):** one administrator-managed attribute on `OrganoDeContratacion` —
@@ -165,20 +166,25 @@ flowchart LR
   **source's own publication identifier unique** — so "no duplicates" (R12) holds at the store
   level and not only in use-case logic, exactly as `source_key` does for the catalogue. The
   awarding Órgano is referenced by its **UUID**, not its source key.
-- **Every published value is stored as published** (R27) — object, amount, duration, awardee
-  name, awardee fiscal identifier, publication date — as text, with padding and casing intact.
-- Alongside them the row carries **interpreted** columns: the publication date as a date and the
-  amount as a number, **nullable**. R27 permits reading a published value as a number or a date
-  for *ordering, filtering and counting only*, and forbids storing the interpretation in place of
-  the publication; two columns is what keeps both true. A value that cannot be interpreted leaves
-  its interpreted column null — the contract is stored anyway (#42), and the browsing feature is
-  what gives a null date its *undated* selection (R19) and a null amount its last place in an
-  amount sort.
-- **Whatever addresses the publication at the source is captured at import time**, because it is
-  visible only to the adapter and only then. R16 requires every row to offer a way to reach its
-  original, and if the publication identifier alone does not construct that address, a browsing
-  feature cannot retro-fit it onto millions of rows without re-importing them. Task 1 confirms
-  what addressing takes; tasks 4 and 5 store it.
+- **Every published value is stored as published** (R27) — object, duration, awardee name,
+  awardee fiscal identifier, publication date — with the source's padding and casing intact. The
+  fiscal identifier really is space-padded to fixed width, which is the variance R27 refuses to
+  correct and [SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) R3 matches through.
+- **The publication date also gets an interpreted column**, nullable. It arrives as text
+  (`DD-MM-YYYY`), and R27 permits reading it as a date for *ordering, filtering and counting
+  only* while forbidding the interpretation being stored in place of the publication; two columns
+  is what keeps both true. A date that cannot be interpreted leaves the column null — the
+  contract is stored anyway (#42), and the browsing feature is what gives it R19's *undated*
+  selection.
+- **The amount needs no such pair.** The source publishes it as a JSON **number**, not as text,
+  so there is no published spelling for an interpreted column to diverge from and no
+  uninterpretable-text case to preserve: one nullable numeric column is both what was published
+  and what R19 sorts on. It is VAT-inclusive, as R7 requires it to be labelled.
+- **The route to the publication at the source is derived, not stored.** It is
+  `licitacion?N={id}` — a constant and the publication identifier the row already carries — so
+  R16's per-row link costs no column. That is a measured fact about this source, not a general
+  one: a family whose publications are not addressable from their identifier would have to
+  capture the address at import, because it could not be retro-fitted onto millions of rows.
 - The interpreted publication date is what the browsing feature's mandatory year scoping will
   index on; this feature creates the index it will need, on the same reasoning — adding one to a
   table of millions later is a different operation from creating it empty.
@@ -266,7 +272,7 @@ stateDiagram-v2
     [*] --> NeverStarted: marked for the first time
     NeverStarted --> Incomplete: initial import starts
     Incomplete --> Incomplete: resumed (continues, never restarts)
-    Incomplete --> Complete: history floor reached
+    Incomplete --> Complete: stored count reaches recordsTotal
     Complete --> Complete: incremental (later feature)
 ```
 
@@ -277,22 +283,31 @@ stateDiagram-v2
   with that branch unimplemented and its three states already tracked.
 
 ### Walking a history in windows, newest first
-- The source answers one bounded date range per request, so an initial import walks the Órgano's
-  history in windows, **newest window first, backwards**. The window size is bounded by the
-  source's own maximum range, which task 1 confirms.
+- The source answers **at most three months per request** and at most **100 rows per page**
+  (measured — [`design/source-contract.md`](design/source-contract.md)), so an initial import
+  walks the Órgano's history in three-month windows, **newest window first, backwards**, paging
+  each window to exhaustion before stepping back.
 - Newest-first is chosen because an initial import of a large Órgano runs for days: the
   most-consulted contracts become browsable within hours instead of at the end, R18's *partial*
   marker describes a list growing backwards rather than one missing everything recent, and R19's
   default year — the most recent the Órgano has contracts in — is meaningful from the first
   batch.
-- **The walk ends at a configured history floor — the source's own published history, which
-  begins around 2018 — and reaching that floor is what marks the initial import complete.** It
-  does **not** stop at the first empty window. An empty window is evidence of a gap, not of the
-  earliest publication: for the small Órganos that are most of the catalogue a month with no
-  contratos menores is ordinary, and stopping there would mark an Órgano complete with most of
-  its history unread, failing #12 invisibly and leaving it thereafter on the incremental path.
-  If walking to the floor proves wasteful in practice, the alternative is *N consecutive* empty
-  windows with N justified against observed data — not a single one.
+- **The walk ends when the Órgano's stored count reaches the source's `recordsTotal`**, and
+  reaching it is what marks the initial import complete. Every response carries that figure — the
+  Órgano's whole contratos menores count, independent of the window queried — so completeness is
+  **checked against the source rather than inferred**. It also makes R9's progress a true
+  fraction, and lets an administrator cost an Órgano before starting it, with one `length=1`
+  request.
+- It does **not** stop at the first empty window. An empty window is evidence of a gap, not of
+  the earliest publication: for the small Órganos that are most of the catalogue a quarter with
+  no contratos menores is ordinary, and stopping there would mark an Órgano complete with most
+  of its history unread, failing #12 invisibly and leaving it thereafter on the incremental path.
+- `recordsTotal` is **live**, not a constant: it grows while a multi-day import runs, so the walk
+  cannot treat it as a fixed target to subtract from. It is a completeness *test*, evaluated when
+  the walk believes it is done. A configured floor — the source's published history begins around
+  2018 — remains as a backstop so a walk cannot run backwards forever if the two never converge,
+  and a walk that reaches the floor without matching the count ends **incomplete** rather than
+  silently complete.
 
 ### API surface ([ADR-0016](../../architecture/0016-rest-resource-naming.md), [ADR-0010](../../architecture/0010-design-first-openapi-contract.md), [ADR-0012](../../architecture/0012-rate-limit-http-contract.md))
 
@@ -347,9 +362,15 @@ stateDiagram-v2
 - **Prerequisite:** FEAT-0006 TASK-0008 moves the Órganos adapter onto that declarative client.
   Until it lands, `ContratosDeGaliciaOrganoSourceAdapter` still injects a programmatic
   `@Named` client and the shared policy is not actually shared.
-- The exact query surface — the request shape, its date-range parameters, its maximum range, how
-  a slice pages, whether a publication carries a stable identifier, and how a publication is
-  addressed — is **confirmed against the live source by task 1**, before any task commits to it.
+- **The adapter calls a JSON API, not a page.** The *Perfil do contratante* renders its tables
+  client-side from `api/v1/organismos/{organismo}/contratosmenores/table`, an unauthenticated
+  `GET` returning UTF-8 JSON, and `{organismo}` is **the same value the catalogue already stores
+  as `sourceKey`** — verified against `portada.jsp`. So there is no HTML to parse, no JavaScript
+  to execute, and no new identifier to map. The full contract, its limits and its caveats are in
+  [`design/source-contract.md`](design/source-contract.md).
+- The one thing the adapter must **not** do is discover the window limit from the source's
+  behaviour: an over-wide window answers with a bare `500` and no machine-readable body,
+  indistinguishable from a server fault. It stays inside three months by construction.
 - A run executes on a **dedicated single-thread virtual-thread executor**, kept off the
   request-serving pool, following the precedent FEAT-0006 set for its scheduled import. A
   multi-day job must not occupy request-serving capacity.
@@ -359,60 +380,58 @@ stateDiagram-v2
   continues to the next Órgano (R23).
 
 ## Sequencing (tasks, one small change each)
-1. **Confirm the contratos menores source contract** — against the live source: the per-Órgano,
-   date-bounded query shape and its maximum range, how a slice pages, whether each publication
-   carries a stable identifier, and how a single publication is addressed. Everything downstream
-   assumes an answer to each; the task's output is the recorded answer, not production code.
-   *(enables SPEC-0005 #12, #17, #25)*
-2. **Import mark on the Órgano catalogue** — a migration adding `importado` (not null, default
+1. **Import mark on the Órgano catalogue** — a migration adding `importado` (not null, default
    false) to `organo_contratacion`, the field on the `OrganoDeContratacion` aggregate, and the
    `OrganoRepository` reads/writes for it, with `OrganoReconciler`'s write set deliberately
    untouched. *(SPEC-0005 #4 storage half, #6)*
-3. **Mark administration API** — `MarkOrganoForImport` / `UnmarkOrganoForImport` use cases,
+2. **Mark administration API** — `MarkOrganoForImport` / `UnmarkOrganoForImport` use cases,
    `PUT`/`DELETE /api/admin/organo/{id}/importado`, and an `ADMIN`-only `GET /api/admin/organos`
    carrying the mark, both authored in `openapi.yaml` first. Marking does not yet trigger
-   anything — task 12 wires that once there is something to trigger. *(SPEC-0005 #1 mark half,
+   anything — task 11 wires that once there is something to trigger. *(SPEC-0005 #1 mark half,
    #4)*
-4. **`ContratoMenor` domain model + repository port** — the aggregate (UUID identity, the
-   source's publication identifier, whatever addresses it at the source, the awarding Órgano's
-   UUID, every published value as published, and the nullable interpreted date and amount) plus
-   the `ContratoMenorRepository` port. *Depends on task 1.* *(SPEC-0005 #11 storage half, #40
-   storage half, #42 storage half)*
-5. **Contratos menores store** — the migration creating `contrato_menor` (unique publication
+3. **`ContratoMenor` domain model + repository port** — the aggregate (UUID identity, the
+   source's publication identifier, the awarding Órgano's UUID, every published value as
+   published, the nullable interpreted publication date and the numeric amount) plus the
+   `ContratoMenorRepository` port. *(SPEC-0005 #11 storage half, #40 storage half, #42 storage
+   half)*
+4. **Contratos menores store** — the migration creating `contrato_menor` (unique publication
    identifier, FK to the Órgano, the index the year-scoped read will need) and the Micronaut Data
    JDBC implementation of the port, including the batch upsert that makes re-import idempotent.
    *(SPEC-0005 #17 no-duplicates half)*
-6. **`ContratoMenorSource` port + contratosdegalicia adapter** — the port and its declarative
-   `@ResilientClient` adapter on the shared `contratosdegalicia` id (ISO-8859-1, paged within a
-   slice), failing cleanly when the source is unreachable or its response is unusable. *Depends
-   on task 1 and on FEAT-0006 TASK-0008.* *(SPEC-0005 #36 source-failure half, #38 initial-import
-   mode only, #40 as-published half)*
-7. **Per-Órgano import state + the R8 mode rule** — a migration and repository for the
+5. **`ContratoMenorSource` port + contratosdegalicia adapter** — the port answering one
+   (Órgano, three-month window, page) slice, and its declarative `@ResilientClient` adapter on
+   the shared `contratosdegalicia` id, against the API of
+   [`design/source-contract.md`](design/source-contract.md); surfaces `recordsTotal` alongside
+   the rows, and fails cleanly when the source is unreachable or its response is unusable.
+   *Depends on FEAT-0006 TASK-0008.* *(SPEC-0005 #36 source-failure half, #38 initial-import mode
+   only, #40 as-published half)*
+6. **Per-Órgano import state + the R8 mode rule** — a migration and repository for the
    three-state fact, the cursor and the covered-through instant, with the mode-selection function
    that reads them; the incremental branch is named and left to that feature. *(SPEC-0005 #46 state
    half, #47 initial/resumed half only — the other two modes are not built)*
-8. **Import run record, abandoned rule and system-wide guard** — migration and repository for the
+7. **Import run record, abandoned rule and system-wide guard** — migration and repository for the
    run and its per-Órgano coverage rows; the derived-abandoned read applied in one place; the
    partial unique index admitting one live run; and the batch-size/abandonment-bound decision
    recorded. *(SPEC-0005 #32 guard half)*
-9. **Adopt the guard in the catalogue import** — `ImportOrganos` off its `AtomicBoolean` onto the
+8. **Adopt the guard in the catalogue import** — `ImportOrganos` off its `AtomicBoolean` onto the
    shared guard, recording a run row as it goes, with its unit and atomicity tests reshaped. Kept
-   separate from task 8 on FEAT-0006's own build-then-adopt precedent. *(SPEC-0005 #32 spans both
+   separate from task 7 on FEAT-0006's own build-then-adopt precedent. *(SPEC-0005 #32 spans both
    importers)*
-10. **A single Órgano's initial import** — the newest-first window walk to the history floor,
-    batch upsert, cursor and covered-through advanced after each batch, and resumption from the
-    cursor adding no duplicates. *(SPEC-0005 #12, #14 retained-and-resumed-on-demand halves only,
-    #16 storage half, #17, #46)*
-11. **Multi-Órgano orchestration** — eligibility filtering, Órganos processed serially, a clean
+9. **A single Órgano's initial import** — the newest-first walk in three-month windows, paged at
+   100 rows, ending when the stored count reaches the source's `recordsTotal`; batch upsert,
+   cursor and covered-through advanced after each batch, and resumption from the cursor adding no
+   duplicates. *(SPEC-0005 #12, #14 retained-and-resumed-on-demand halves only,
+   #16 storage half, #17, #46)*
+10. **Multi-Órgano orchestration** — eligibility filtering, Órganos processed serially, a clean
     stop when the Órgano is unmarked mid-run, per-Órgano failure isolation, and the run's
     per-Órgano states and counts. *(SPEC-0005 #3, #7 first two clauses, #8, #32 serial half, #36)*
-12. **Triggers and the run read** — `POST /api/admin/contratos-menores/import` and
+11. **Triggers and the run read** — `POST /api/admin/contratos-menores/import` and
     `POST /api/admin/organo/{id}/contratos-menores/import` returning `202` and a run identifier,
     `GET /api/admin/import-run/{id}` returning the verdict, covered and failed Órganos and the
     counts, and marking wired to the same use case so a mark requests an import and is refused,
     with its reason, when the guard is held. OpenAPI-first. *(SPEC-0005 #1 trigger half, #5
     immediate half only, #29 initial/resumed modes only, #30, #34)*
-13. **Admin marking UI** — the mark/unmark control and *marked* indicator in FEAT-0007's admin
+12. **Admin marking UI** — the mark/unmark control and *marked* indicator in FEAT-0007's admin
     Órganos section, and the run outcome shown where that section already reports an import.
     *Depends on FEAT-0007's Órganos section.* *(SPEC-0005 #4 UI half)*
 
@@ -448,8 +467,14 @@ are SPEC-0007's; #1's re-read and remove/restore operations are the curation fea
   Órgano, so pruning run history under SPEC-0007 R17 cannot strand a half-loaded Órgano with
   nowhere to resume from. *(SPEC-0005 #14)*
 - **An empty window mid-history** — ordinary for a small Órgano, and not a reason to stop: the
-  walk continues to the configured history floor, which is the only thing that marks an initial
-  import complete. *(SPEC-0005 #12)*
+  walk continues, and only the stored count reaching `recordsTotal` ends it. *(SPEC-0005 #12)*
+- **`recordsTotal` grows mid-walk**, because publications keep arriving during a multi-day
+  import. The walk does not treat it as a fixed target: it is re-read on every response and
+  tested when the walk believes it is done, so a figure that moved simply means the walk is not
+  finished yet. *(SPEC-0005 #12)*
+- **The count never converges** — a source-side quirk, or contracts the windows cannot reach.
+  The configured history floor stops the walk, and the Órgano is left **incomplete** rather than
+  marked complete, so it is resumed rather than quietly treated as loaded. *(SPEC-0005 #12, #13)*
 - **The same publication seen twice** — across a resumption overlap, a paging boundary or a
   straight re-run — upserts to the same row; the unique publication identifier makes a duplicate
   impossible even if the use-case logic slipped. *(SPEC-0005 #17)*
@@ -477,13 +502,19 @@ are SPEC-0007's; #1's re-read and remove/restore operations are the curation fea
   running while this one does. The obligation is met by the guard rather than by a check, which
   is worth knowing before someone writes the check. *(SPEC-0005 #3)*
 - **An Órgano that publishes no contratos menores at all** — the majority of the catalogue —
-  reaches the history floor having stored nothing. That is a completed import, not a failure, and
-  it stays invisible to users because the browsing feature renders no empty section. *(SPEC-0005
-  #26, browsing half deferred)*
+  answers `recordsTotal: 0`, so its initial import completes after a single request rather than
+  walking years of empty windows. That is a completed import, not a failure, and it stays
+  invisible to users because the browsing feature renders no empty section. *(SPEC-0005 #26,
+  browsing half deferred)*
 - **A source that back-dates a publication** — SPEC-0005 states the assumption that it does not,
   and marks it load-bearing rather than proven. A back-dated entry would fall behind the cursor
   and be reachable only by R10's historical re-read, which no feature owns yet. Recorded here so
   it is a known gap rather than a surprise. *(SPEC-0005 R8)*
-- **Accented text** — the source is ISO-8859-1, as the Órganos adapter already found; objects
-  and awardee names are decoded once, at the adapter, and stored without mojibake, since R27
-  forbids correcting them afterwards. *(SPEC-0005 #40)*
+- **Accented text** — the contratos menores API answers in **UTF-8**, unlike the ISO-8859-1 HTML
+  the Órganos adapter reads, so the two adapters must not share a charset assumption. Either way
+  the text is decoded once, at the adapter, and stored without mojibake, since R27 forbids
+  correcting it afterwards. *(SPEC-0005 #40)*
+- **An over-wide window** — a bug, not a source condition — answers `500` with no
+  machine-readable body, indistinguishable from a server fault, so it would be retried and
+  counted against the circuit breaker. The window is bounded by construction rather than
+  discovered from the response. *(SPEC-0005 #36)*
