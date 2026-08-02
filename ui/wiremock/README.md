@@ -54,8 +54,13 @@ These are stub limitations, not app bugs — worth knowing before you chase one:
   404.
 - **The metrics stream is finite.** WireMock cannot hold a real SSE connection open, so
   `metrics.json` dribbles a few samples over 30 s and then closes; `EventSource`
-  reconnects and replays them. Good enough to render the panel, not a faithful stand-in
-  for the live stream — which is why the acceptance suite asserts nothing about it.
+  reconnects and replays them. That is enough for the acceptance suite to drive the panel
+  — `stubEventStream` in [`../acceptance/support/wiremock.ts`](../acceptance/support/wiremock.ts)
+  programs a faster stream per scenario, padding each frame so it lands in exactly one
+  dribbled chunk and appending heartbeat comments to hold the connection open past the
+  last sample. What a replayed body still cannot prove is the **cadence** and the
+  **heartbeat interval** the server actually chooses, or that a `USER` is refused: those
+  are the backend suite's, not this one's.
 
 ## Changing state temporarily
 

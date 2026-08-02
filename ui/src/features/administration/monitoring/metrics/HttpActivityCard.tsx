@@ -1,5 +1,6 @@
 import { Badge, Card, Group, SimpleGrid, Text } from '@mantine/core';
 import { IconClock } from '@tabler/icons-react';
+import { useId } from 'react';
 
 import { strings } from '../../../../shared/lib/strings';
 import { Field } from './Field';
@@ -15,6 +16,7 @@ const ERROR_RATE_BADGE = {
 
 export function HttpActivityCard({ latest }: { latest: RuntimeMetrics | null }) {
   const t = strings.admin.dashboard.metrics;
+  const titleId = useId();
   const http = latest?.http;
   const rate = errorRate(http?.requestCount, http?.errorCount);
   // Classify severity on the same value the user actually sees (rounded to
@@ -24,8 +26,8 @@ export function HttpActivityCard({ latest }: { latest: RuntimeMetrics | null }) 
   const badge = displayedRate != null ? ERROR_RATE_BADGE[errorRateSeverity(displayedRate)] : null;
 
   return (
-    <Card withBorder radius="md" padding="lg">
-      <Text fw={700} mb="sm">
+    <Card role="group" aria-labelledby={titleId} withBorder radius="md" padding="lg">
+      <Text id={titleId} fw={700} mb="sm">
         {t.httpActivityCardTitle}
       </Text>
       <SimpleGrid cols={2} spacing="lg">
