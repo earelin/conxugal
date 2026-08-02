@@ -6,6 +6,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.taxonomia.TermoId;
+import io.micronaut.core.type.Argument;
+import io.micronaut.serde.ObjectMapper;
+import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.Test;
@@ -43,6 +47,24 @@ class OrganoResponseTest {
         new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", false, null));
 
     assertThat(response.active()).isFalse();
+  }
+
+  // The mapping producing a null termoId is only half of it: the serializer's default
+  // inclusion drops a null, which would take termoId out of the payload altogether — where
+  // the contract declares it required and a client filters on it to find the unclassified
+  // set, there being no separate collection to ask for. Asserting the serialized key rather
+  // than the record's field is what makes @JsonInclude(ALWAYS) load-bearing; without it this
+  // reads back as {"id":…,"name":…,"active":…} and fails.
+  @Test
+  void serialises_unclassified_organo_with_an_explicit_null_termo_id() throws IOException {
+    ObjectMapper objectMapper = ObjectMapper.getDefault();
+    OrganoResponse response = OrganoResponse.of(
+        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, null));
+
+    String json = objectMapper.writeValueAsString(response);
+
+    Argument<Map<String, Object>> asMap = Argument.mapOf(String.class, Object.class);
+    assertThat(objectMapper.readValue(json, asMap)).containsEntry("termoId", null);
   }
 
   // The record allows a null id so an Órgano can be built before the database assigns one;

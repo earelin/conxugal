@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.sql.DataSource;
+import org.assertj.core.groups.Tuple;
 import org.assertj.db.type.AssertDbConnection;
 import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
@@ -257,20 +258,35 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(organoRepository.findById(created.id()).orElseThrow().termoId()).isNull();
   }
 
+  // Each stage is observed through findAllOrderByName rather than findById, because that is
+  // the read GET /api/organos serves: a placement that only findById could see would leave
+  // the catalogue showing an Órgano in the wrong term. The second Órgano is here so a
+  // statement that updated more rows than it named cannot pass.
   @Test
   void updateTermo_sets_then_replaces_then_clears_the_placement() throws Exception {
     TermoId firstTermo = insertTermo("Deportes", null);
     TermoId secondTermo = insertTermo("Cultura", null);
     OrganoId id = insertOrgano("consorcio-x", "Consorcio X", true);
+    insertOrgano("axencia-y", "Axencia Y", true, secondTermo);
 
     organoRepository.updateTermo(id, firstTermo);
-    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isEqualTo(firstTermo);
+    assertThat(placementsByName()).containsExactly(
+        tuple("Axencia Y", secondTermo), tuple("Consorcio X", firstTermo));
 
     organoRepository.updateTermo(id, secondTermo);
-    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isEqualTo(secondTermo);
+    assertThat(placementsByName()).containsExactly(
+        tuple("Axencia Y", secondTermo), tuple("Consorcio X", secondTermo));
 
     organoRepository.updateTermo(id, null);
-    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isNull();
+    assertThat(placementsByName()).containsExactly(
+        tuple("Axencia Y", secondTermo), tuple("Consorcio X", null));
+  }
+
+  private List<Tuple> placementsByName() {
+    return organoRepository.findAllOrderByName()
+        .stream()
+        .map(organo -> tuple(organo.name(), organo.termoId()))
+        .toList();
   }
 
   // Neither helper below commits or rolls back: every test here only expects successful
