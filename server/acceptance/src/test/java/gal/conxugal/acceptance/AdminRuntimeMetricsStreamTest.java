@@ -41,13 +41,7 @@ class AdminRuntimeMetricsStreamTest {
       assertThat(first.getLong("jvm.uptimeMillis")).isPositive();
       assertThat(first.getInt("datastorePool.max")).isPositive();
 
-      for (int request = 0; request < REQUESTS_BETWEEN_SAMPLES; request++) {
-        ApplicationSession.authenticatedAs(adminSession)
-        .when()
-            .get("/api/admin/system-status")
-        .then()
-            .statusCode(200);
-      }
+      driveRequestsThroughTheInstance(adminSession);
 
       // The tick that follows those requests is the one that has to show them; a sample the
       // instance had already assembled and queued cannot, so read past it rather than fail.
@@ -104,6 +98,17 @@ class AdminRuntimeMetricsStreamTest {
         .get(MetricsStream.PATH)
     .then()
         .statusCode(401);
+  }
+
+  /** Traffic the instance has to have counted by the time it assembles its next sample. */
+  private static void driveRequestsThroughTheInstance(String adminSession) {
+    for (int request = 0; request < REQUESTS_BETWEEN_SAMPLES; request++) {
+      ApplicationSession.authenticatedAs(adminSession)
+      .when()
+          .get("/api/admin/system-status")
+      .then()
+          .statusCode(200);
+    }
   }
 
   /** The datastore URL, user and password of the instance under test all read {@code conxugal}. */
