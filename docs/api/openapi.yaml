@@ -8,13 +8,16 @@ info:
     prefix (ADR-0006). Authentication is a server-side session established by the
     server-rendered `/login` form (ADR-0005, outside this JSON API) and carried by a
     session cookie. Most operations are restricted to administrators (SPEC-0003 R1); the
-    one exception is `GET /api/me`, available to any authenticated user (SPEC-0002 R14).
+    exceptions are `GET /api/me` (SPEC-0002 R14) and the two Órganos reads
+    (`GET /api/organos` and `GET /api/organos/taxonomia`, SPEC-0004 R2, R8), available to
+    any authenticated user.
 
     This document is the design-first, authoritative contract for the API (ADR-0010):
     endpoints are specified here before they are implemented, and controllers conform to
     it. It currently covers the planned endpoints of FEAT-0004 (user administration,
-    system status, and the current-user lookup), FEAT-0005 (real-time metrics), and
-    FEAT-0006 (the Órganos de Contratación catalogue import trigger).
+    system status, and the current-user lookup), FEAT-0005 (real-time metrics),
+    FEAT-0006 (the Órganos de Contratación catalogue import trigger), and FEAT-0007 (the
+    Órganos catalogue and taxonomía reads).
 
 servers:
   - url: /
@@ -28,7 +31,9 @@ tags:
   - name: account
     description: The authenticated caller's own account (SPEC-0002 R14).
   - name: organos
-    description: Órganos de Contratación catalogue import (SPEC-0004 R1, R10, R12).
+    description: >-
+      The Órganos de Contratación catalogue, the taxonomía of terms it is classified
+      into, and the catalogue import (SPEC-0004 R1, R2, R8, R10, R12, R14).
 
 security:
   - cookieSession: []
@@ -288,6 +293,90 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/organos:
+    get:
+      tags: [organos]
+      operationId: listOrganos
+      summary: List the whole Órganos de Contratación catalogue
+      description: >-
+        Every stored Órgano — active and inactive alike — with its name and the term it is
+        filed under, or null when it is unclassified (SPEC-0004 R2, R8). Available to any
+        authenticated user, `USER` or `ADMIN`: reading the catalogue is not an
+        administration capability. Unfiltered and unpaged, and it takes no query
+        parameters. Callers join this list to `GET /api/organos/taxonomia` on
+        `termoId` = term `id` to build the tree, and filter `termoId` = null for the
+        unclassified set.
+      responses:
+        "200":
+          description: >-
+            The whole catalogue, **ordered by name** under a Galician collation, so
+            accented names sort where a Galician reader expects them (`Ávila` before
+            `Avión`, not after `Zamora`). The order is a guarantee callers may rely on and
+            need not re-derive. Empty only when nothing has been imported yet.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Organo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/organos/taxonomia:
+    get:
+      tags: [organos]
+      operationId: listTermos
+      summary: List every term of the Órganos taxonomía
+      description: >-
+        Every term of the taxonomía the catalogue is classified into, each naming its
+        parent or null when it is a root (SPEC-0004 R2, R14). A **flat list**, not a tree:
+        no term carries its children or the Órganos filed under it, and the caller
+        assembles the tree from the parent edges. Available to any authenticated user,
+        `USER` or `ADMIN`. Unfiltered and unpaged, and it takes no query parameters.
+      responses:
+        "200":
+          description: >-
+            Every term, **ordered by name** under a Galician collation, so accented names
+            sort where a Galician reader expects them (`Ávila` before `Avión`, not after
+            `Zamora`). The order is a guarantee callers may rely on and need not
+            re-derive; because grouping preserves relative order, siblings stay in name
+            order once a caller groups by `parentId`. Empty until the first term is
+            created — the normal state after a first import.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Termo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -718,6 +807,75 @@ components:
               maxLength: 64
               pattern: "^[\x20-\x7E]{1,64}$"
               example: "amd64"
+
+    Organo:
+      type: object
+      description: >-
+        One Órgano de Contratación of the stored catalogue, with its taxonomía placement
+        (SPEC-0004 R8, R17). `termoId` is always present, null when unclassified — the
+        absence of a placement is a value callers filter on, not a missing field.
+      required: [id, name, active, termoId]
+      example:
+        id: "8d1b0f6e-2c5a-4c1e-9a3f-6b7c8d9e0f11"
+        name: "Consellería de Sanidade"
+        active: true
+        termoId: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "8d1b0f6e-2c5a-4c1e-9a3f-6b7c8d9e0f11"
+          description: The Órgano's system-assigned identity, stable across imports.
+        name:
+          type: string
+          maxLength: 255
+          pattern: "^\\S(.*\\S)?$"
+          example: "Consellería de Sanidade"
+        active:
+          type: boolean
+          example: true
+          description: >-
+            False once the Órgano stops appearing in the source catalogue; it is never
+            removed (SPEC-0004 R6).
+        termoId:
+          type: [string, "null"]
+          format: uuid
+          example: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
+          description: >-
+            The single term this Órgano is filed under, matching a `Termo.id` from
+            `GET /api/organos/taxonomia`. Null means unclassified — there is no separate
+            unclassified collection, so callers filter for it (SPEC-0004 R17, R18).
+
+    Termo:
+      type: object
+      description: >-
+        One term of the Órganos taxonomía, carrying only the edge to its parent
+        (SPEC-0004 R14). It never lists its children or the Órganos filed under it: each
+        edge is stated once, from the side that stores it. `parentId` is always present,
+        null for a root — the absence of a parent is a value callers group on, not a
+        missing field.
+      required: [id, name, parentId]
+      example:
+        id: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
+        name: "Sanidade"
+        parentId: "4f2a6b8c-1d3e-4a5b-8c7d-9e0f1a2b3c44"
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
+        name:
+          type: string
+          maxLength: 255
+          pattern: "^\\S(.*\\S)?$"
+          example: "Sanidade"
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          example: "4f2a6b8c-1d3e-4a5b-8c7d-9e0f1a2b3c44"
+          description: >-
+            The term this one sits under. Null marks a root; the taxonomía is many-rooted
+            and of any depth (SPEC-0004 R14).
 
     ImportOutcome:
       type: object
