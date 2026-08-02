@@ -89,7 +89,9 @@ layout of
   mark, the two triggers, the run read that makes a trigger answerable, and an administrator's
   catalogue read carrying the mark.
 - **UI:** a mark/unmark control and a *marked* indicator in FEAT-0007's admin Órganos section,
-  with the run outcome surfaced where its import-trigger feedback already lives.
+  with the run outcome surfaced where its import-trigger feedback already lives. The visual
+  target is the mockup set in [`design/`](design/README.md), which also records what it
+  draws but deliberately does not build.
 
 **Out of scope (owned by later features):**
 - **The incremental mode and the scheduler** — R8's window floor, R21's recurring run, and with
@@ -234,7 +236,7 @@ matters here is **which facts belong to the Órgano and which to the run**, beca
   place.
 - **Batch size and the abandonment bound are one decision, taken together** (ADR-0017): batches
   coarser than the bound would make a healthy run read as dead, and batches finer than necessary
-  spend write load on the busiest path in the system. Task 8 chooses both and records the
+  spend write load on the busiest path in the system. Task 7 chooses both and records the
   reasoning.
 
 ### The guard, and the two ways a naive one is worse than the flag it replaces
@@ -247,14 +249,21 @@ run?" fails in two ways the flag did not:
    so one crash mid-run would block every import forever, with no operation to clear it.
    ADR-0017 already decided the answer: a run whose last advance is older than a configured
    bound **reads as abandoned**, applied in one place so no query can forget it. That rule is
-   not monitoring polish that can wait for SPEC-0007; it is what makes the guard safe, so task 8
+   not monitoring polish that can wait for SPEC-0007; it is what makes the guard safe, so task 7
    builds it.
 2. **The check and the write must be one act.** Two triggers — the mark control and an admin
    trigger today, the scheduler once the incremental feature lands — can both read *no live run* and both insert.
    The guard is the single thing standing between this system and a public source that
    [ADR-0014](../../architecture/0014-resilient-throttled-outbound-http-client.md) says owes us
-   nothing, so it is serialised in the database by a **partial unique index admitting one live
-   run row**, not by application-level checking.
+   nothing, so it is serialised **in the database, by a transaction-scoped advisory lock the
+   claim takes before it looks**, not by application-level checking.
+
+   A partial unique index admitting one live run row was the first design and does not work
+   here: an index predicate cannot reference `now()`, so a stale row keeps satisfying it, and
+   inserting past one would mean **writing** the abandoned state that
+   [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md) accepts is never
+   stored. The lock gives the same serialisation without that write, at the price of moving the
+   guarantee from the schema into the single code path that claims.
 
 **This changes shipped behaviour, deliberately.** `ImportOrganos` must now *write* a live run row
 — a guard cannot see an import that records nothing — which makes the catalogue import's
@@ -379,6 +388,50 @@ stateDiagram-v2
   contracts already stored for it and for Órganos processed earlier stay intact, and the run
   continues to the next Órgano (R23).
 
+### UI ([ADR-0003](../../architecture/0003-react-router-ui-served-by-backend.md), [ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md), [ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md))
+The visual target is the mockup set in **[`design/`](design/README.md)** — four screens that
+also record, in that folder's README, what they draw but deliberately do not build.
+
+- **One column, not a screen.** FEAT-0007's term-Órganos table gains `CONTRATOS MENORES`
+  between `ESTADO` and `ACCIÓNS`; `ACCIÓNS` keeps `Quitar do termo` untouched, and the count
+  caption under the table gains the marked tally — the *listed as marked* half of #4, derived
+  client-side from `GET /api/admin/organos` rather than from a new endpoint
+  ([`organos-import-mark.svg`](design/organos-import-mark.svg)).
+- **The control is a `Switch`**, because the mark is a durable attribute of the Órgano rather
+  than a one-off action and maps 1:1 onto the two endpoints; it is also the only control
+  narrow enough to add a fifth column without pushing Órgano names to three lines. Being
+  icon-only, it carries an `aria-label`. Turning it on opens a confirmation naming what the
+  mark costs — days of walking, and every other import refused meanwhile
+  ([`mark-organo.svg`](design/mark-organo.svg)). R4 does not require that dialog; it is a
+  design decision, taken because `Marcar e importar` is the honest name for what the `PUT`
+  does.
+- **The badge vocabulary is the three-state rule made visible** — `MARCADO`, `PARCIAL`,
+  `IMPORTADO` — so a half-loaded Órgano can never read as up to date on screen either, plus
+  **`SEN ACTUALIZAR`** for an Órgano that holds contracts but is no longer marked, and a dimmed
+  `—` only when there is nothing stored at all. The fourth badge exists because R5 **keeps**
+  the contracts of an unmarked Órgano: collapsing it into the dash would render an Órgano
+  holding a million rows identically to one never touched, and #7 requires the surface to say
+  it is no longer being updated. Which of the two stored states it holds — resumable or
+  complete, the difference between a later re-mark resuming and it running incrementally —
+  stays reachable on the badge's tooltip rather than costing a fifth badge. An inactive Órgano
+  keeps its row, dimmed, with the switch **disabled and explaining itself**, never hidden and
+  never red ([`mark-states.svg`](design/mark-states.svg)).
+- **The outcome banner sits where FEAT-0007's import feedback already lives**, reading
+  `GET /api/admin/import-run/{id}` on demand: in progress, succeeded, **partially succeeded**,
+  failed, and the two refusals — guard-held and not-eligible — rendered neutral, with no
+  counts, because a refusal is an outcome and not an error (#29, #30, #34). While either
+  import runs, both toolbar triggers are disabled with the guard as the stated reason: R22's
+  shipped cost, drawn rather than discovered
+  ([`import-run-outcome.svg`](design/import-run-outcome.svg)).
+- **Two absences are deliberate.** No progress indicator of any kind — that is
+  [SPEC-0007](../../specs/SPEC-0007-monitor-import-runs.md)'s, and this feature builds only
+  the run columns its own guard, resumer and outcome need. And because the only run read is
+  by identifier, the banner is bound to the run triggered in that session: a reload loses it,
+  and a persistent *última importación* caption would need a read no endpoint here offers —
+  the same gap FEAT-0007's design recorded for the catalogue import.
+- All copy is Galician and belongs in `ui/src/shared/lib/strings.ts`, not inline (SPEC-0001
+  AC7).
+
 ## Sequencing (tasks, one small change each)
 1. **Import mark on the Órgano catalogue** — a migration adding `importado` (not null, default
    false) to `organo_contratacion`, the field on the `OrganoDeContratacion` aggregate, and the
@@ -411,7 +464,7 @@ stateDiagram-v2
    half, #47 initial/resumed half only — the other two modes are not built)*
 7. **Import run record, abandoned rule and system-wide guard** — migration and repository for the
    run and its per-Órgano coverage rows; the derived-abandoned read applied in one place; the
-   partial unique index admitting one live run; and the batch-size/abandonment-bound decision
+   advisory-lock claim admitting one live run; and the batch-size/abandonment-bound decision
    recorded. *(SPEC-0005 #32 guard half)*
 8. **Adopt the guard in the catalogue import** — `ImportOrganos` off its `AtomicBoolean` onto the
    shared guard, recording a run row as it goes, with its unit and atomicity tests reshaped. Kept
@@ -432,12 +485,14 @@ stateDiagram-v2
     with its reason, when the guard is held. OpenAPI-first. *(SPEC-0005 #1 trigger half, #5
     immediate half only, #29 initial/resumed modes only, #30, #34)*
 12. **Admin marking UI** — the mark/unmark control and *marked* indicator in FEAT-0007's admin
-    Órganos section, and the run outcome shown where that section already reports an import.
+    Órganos section, and the run outcome shown where that section already reports an import,
+    against the mockups in [`design/`](design/README.md).
     *Depends on FEAT-0007's Órganos section.* *(SPEC-0005 #4 UI half)*
 
 **Criteria this feature deliberately leaves incomplete**, so no task is written against something
 it cannot prove: #5's *next scheduled run* clause, #14's *without an administrator intervening*
-clause, #29's *incrementally* clause, #33 and #44 whole, and #38's re-read and incremental modes
+clause, #29's *incrementally* clause, **#33's *next scheduled run* clause** — its
+*refused rather than queued, and the mark kept* half is met here — #44 whole, and #38's re-read and incremental modes
 all wait on the incremental feature; #14's progress-visibility half and #32's *recorded as a refused run* half
 are SPEC-0007's; #1's re-read and remove/restore operations are the curation feature's; and the
 *displayed* halves of #9, #11, #16, #26, #40 and #42 are the browsing feature's.
@@ -457,9 +512,10 @@ are SPEC-0007's; #1's re-read and remove/restore operations are the curation fea
 - **A run whose process dies** — its row still says *in progress*, and nothing sweeps it. The
   derived-abandoned read is what releases the guard after the configured bound; without it the
   first crash blocks every import in the system permanently. *(SPEC-0005 #32)*
-- **Two triggers in the same instant** — the mark control and an admin trigger both read *no live
-  run*. The partial unique index rejects the second insert, so one run starts and the other is
-  refused with the guard as its reason. *(SPEC-0005 #32)*
+- **Two triggers in the same instant** — the mark control and an admin trigger. The second waits
+  on the claim's advisory lock and then finds the first's live run, so one run starts and the
+  other is refused with the guard as its reason; neither reads *no live run* while the other is
+  inserting. *(SPEC-0005 #32)*
 - **Crash between a data commit and its cursor write** — the cursor points slightly behind what
   is stored; the resumption re-reads the overlap and the upsert makes it a no-op. *(SPEC-0005
   #14, #17)*
@@ -474,7 +530,7 @@ are SPEC-0007's; #1's re-read and remove/restore operations are the curation fea
   finished yet. *(SPEC-0005 #12)*
 - **The count never converges** — a source-side quirk, or contracts the windows cannot reach.
   The configured history floor stops the walk, and the Órgano is left **incomplete** rather than
-  marked complete, so it is resumed rather than quietly treated as loaded. *(SPEC-0005 #12, #13)*
+  marked complete, so it is resumed rather than quietly treated as loaded. *(SPEC-0005 #12, #46)*
 - **The same publication seen twice** — across a resumption overlap, a paging boundary or a
   straight re-run — upserts to the same row; the unique publication identifier makes a duplicate
   impossible even if the use-case logic slipped. *(SPEC-0005 #17)*
@@ -517,4 +573,6 @@ are SPEC-0007's; #1's re-read and remove/restore operations are the curation fea
 - **An over-wide window** — a bug, not a source condition — answers `500` with no
   machine-readable body, indistinguishable from a server fault, so it would be retried and
   counted against the circuit breaker. The window is bounded by construction rather than
-  discovered from the response. *(SPEC-0005 #36)*
+  discovered from the response. *(No spec criterion: a malformed request of ours is not a source
+  failure, so #36 does not cover it — the bound is measured in
+  [`design/source-contract.md`](design/source-contract.md).)*
