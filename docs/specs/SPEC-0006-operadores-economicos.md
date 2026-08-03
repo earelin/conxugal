@@ -602,13 +602,14 @@ One decision has since been taken:
     displayed exactly as published; no attribute is shown that no contract supplies. The
     **fiscal identifier is the single exception**, displayed in R3's canonical upper-cased form,
     and no other value is canonicalised anywhere.
-31. **(R14)** Under the reference environment and the dataset R14 states — at least 300 000
-    operadores, one of them holding 10 000 or more contracts across more than one Órgano — the
-    read latency of the operadores list (its first page, its count, and a page deep into the
-    selection) and of an operador's history (a family section's first page, count and total,
-    and the combined figures across every section) is **measured and recorded**. The criterion
-    is met by those measurements existing against those conditions; it asserts no threshold,
-    because R14 sets none until they do.
+31. **(R14)** Under the reference environment, dataset and concurrency conditions R14 states,
+    the read latency of **every read R14 names** is **measured and recorded**: the operadores
+    list — its first page, its count and its **last** page; **name lookup** on that list, a
+    partial, case- and accent-insensitive match; and an operador's contract history — a family
+    section's first page, count and total, that same section **sorted by amount descending**,
+    and the combined figures across every section. The criterion is met by those measurements
+    existing and being recorded against those conditions; it asserts no threshold, because R14
+    sets none until they do.
 32. **(R14)** The operadores list displays no per-operador contract count or amount total.
 33. **(R15)** An operador whose contracts publish three different names retains **all three** —
     the R4 winner as its principal name and the other two as alternatives — and an operador whose
