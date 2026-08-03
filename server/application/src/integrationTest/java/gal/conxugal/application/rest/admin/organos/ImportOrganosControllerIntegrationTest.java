@@ -1,5 +1,6 @@
 package gal.conxugal.application.rest.admin.organos;
 
+import static gal.conxugal.application.http.error.support.AssertProblem.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -54,13 +55,15 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
     when(importOrganos.run()).thenReturn(ImportOutcome.failure());
     String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
-    given(spec)
-        .header(HttpHeaders.COOKIE, sessionCookie)
-    .when()
-        .post("/api/admin/organos/import")
-    .then()
-        .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.getCode())
-        .contentType("application/problem+json");
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+        .when()
+            .post("/api/admin/organos/import");
+
+    assertProblem(response)
+        .hasStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+        .hasType("urn:conxugal:problem-type:organo-import-failed");
   }
 
   @Test

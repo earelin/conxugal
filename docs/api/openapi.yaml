@@ -4,17 +4,19 @@ info:
   title: Conxugal REST API
   version: 0.1.0
   description: >-
-    REST API for the Conxugal application. All endpoints live under the reserved `/api/`
-    prefix (ADR-0006). Authentication is a server-side session established by the
-    server-rendered `/login` form (ADR-0005, outside this JSON API) and carried by a
-    session cookie. Most operations are restricted to administrators (SPEC-0003 R1); the
-    one exception is `GET /api/me`, available to any authenticated user (SPEC-0002 R14).
+    REST API for the Conxugal application. All endpoints live under the reserved `/api/` prefix
+    (ADR-0006). Authentication is a server-side session established by the server-rendered
+    `/login` form (ADR-0005, outside this JSON API) and carried by a session cookie. Most
+    operations are restricted to administrators; the exceptions are `GET /api/me` and the two
+    Órganos reads (`GET /api/organos` and `GET /api/organos/taxonomia`), available to any
+    authenticated user.
 
-    This document is the design-first, authoritative contract for the API (ADR-0010):
-    endpoints are specified here before they are implemented, and controllers conform to
-    it. It currently covers the planned endpoints of FEAT-0004 (user administration,
-    system status, and the current-user lookup), FEAT-0005 (real-time metrics), and
-    FEAT-0006 (the Órganos de Contratación catalogue import trigger).
+    This document is the design-first, authoritative contract for the API (ADR-0010): endpoints
+    are specified here before they are implemented, and controllers conform to it. It currently
+    covers the planned endpoints of FEAT-0004 (user administration, system status, and the
+    current-user lookup), FEAT-0005 (real-time metrics), FEAT-0006 (the Órganos de Contratación
+    catalogue import trigger), and FEAT-0007 (the Órganos catalogue and taxonomía reads, and the
+    administration of the taxonomía and of each Órgano's placement in it).
 
 servers:
   - url: /
@@ -22,13 +24,15 @@ servers:
 
 tags:
   - name: users
-    description: User-account administration (SPEC-0003 R6-R16).
+    description: User-account administration.
   - name: system
-    description: System dashboard status and detailed runtime metrics (SPEC-0003 R2-R5, R17-R21).
+    description: System dashboard status and detailed runtime metrics.
   - name: account
-    description: The authenticated caller's own account (SPEC-0002 R14).
+    description: The authenticated caller's own account.
   - name: organos
-    description: Órganos de Contratación catalogue import (SPEC-0004 R1, R10, R12).
+    description: >-
+      The Órganos de Contratación catalogue, the taxonomía of terms it is classified into, and the
+      catalogue import.
 
 security:
   - cookieSession: []
@@ -39,7 +43,7 @@ paths:
       tags: [users]
       operationId: listUsers
       summary: List all user accounts
-      description: Every account, enabled and disabled, with its email, role, state and creation date (SPEC-0003 R6).
+      description: Every account, enabled and disabled, with its email, role, state and creation date.
       responses:
         "200":
           description: The full list of accounts.
@@ -71,9 +75,8 @@ paths:
       operationId: createUser
       summary: Create a user account
       description: >-
-        Create an account from an email and a role. The server generates the initial
-        password and returns it **once** in this response (SPEC-0003 R7, R13); it is never
-        retrievable afterwards (SPEC-0003 R16).
+        Create an account from an email and a role. The server generates the initial password and
+        returns it **once** in this response; it is never retrievable afterwards.
       requestBody:
         required: true
         description: The email and role for the new account.
@@ -102,7 +105,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
         "409":
-          description: An account with that email already exists; the existing account is unchanged (SPEC-0003 R8).
+          description: An account with that email already exists; the existing account is unchanged.
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
@@ -127,8 +130,8 @@ paths:
       operationId: setUserEnabled
       summary: Enable or disable a user account
       description: >-
-        Set an account's enabled state (SPEC-0003 R9, R10). Disabling the last enabled
-        administrator is refused (SPEC-0003 R12). Accounts are never deleted (SPEC-0003 R11).
+        Set an account's enabled state. Disabling the last enabled administrator is refused.
+        Accounts are never deleted.
       requestBody:
         required: true
         description: The account's desired enabled state.
@@ -159,7 +162,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
-          description: The change is refused because it would disable the last enabled administrator (SPEC-0003 R12).
+          description: The change is refused because it would disable the last enabled administrator.
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
@@ -182,10 +185,9 @@ paths:
       operationId: getSystemStatus
       summary: Current system status
       description: >-
-        A coarse operational snapshot assembled fresh per request (SPEC-0003 R4): overall
-        service state, datastore reachability, and coarse application/runtime info (build
-        version, environment, Java runtime, uptime, memory, OS). Never discloses secrets or
-        credentials (SPEC-0003 R5).
+        A coarse operational snapshot assembled fresh per request: overall service state,
+        datastore reachability, and coarse application/runtime info (build version, environment,
+        Java runtime, uptime, memory, OS). Never discloses secrets or credentials.
       responses:
         "200":
           description: The current system status.
@@ -218,15 +220,15 @@ paths:
       summary: Stream detailed runtime metrics (Server-Sent Events)
       description: >-
         A Server-Sent Events stream (`text/event-stream`, ADR-0009) that pushes successive
-        detailed runtime-metrics samples for debugging a running instance (SPEC-0003
-        R17-R18), interleaved with heartbeats. Each SSE event's `data` field is a JSON
-        object matching the `RuntimeMetrics` schema. Samples are assembled on demand and are
-        never stored by the backend (SPEC-0003 R20) and never contain secrets (SPEC-0003 R21).
+        detailed runtime-metrics samples for debugging a running instance, interleaved with
+        heartbeats. Each SSE event's `data` field is a JSON object matching the `RuntimeMetrics`
+        schema. Samples are assembled on demand and are never stored by the backend and never
+        contain secrets.
       responses:
         "200":
           description: >-
-            An open event stream. Each `message` event carries one `RuntimeMetrics` sample
-            as JSON in its `data` field; heartbeat comments keep the connection alive.
+            An open event stream. Each `message` event carries one `RuntimeMetrics` sample as JSON
+            in its `data` field; heartbeat comments keep the connection alive.
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
@@ -257,20 +259,18 @@ paths:
       operationId: importOrganos
       summary: Trigger an Órganos de Contratación catalogue import
       description: >-
-        Runs an import against the source catalogue and reconciles it into the stored
-        catalogue: new Órganos are added, existing ones are refreshed in place, and
-        Órganos absent from the source are marked inactive (SPEC-0004 R1, R5, R6, R10).
-        If an import is already running (triggered manually or by the schedule), this
-        returns the "already running" outcome rather than starting a second concurrent
-        run on that instance (SPEC-0004 R12; the guard is per-instance today — running
-        more than one instance of the service is not yet supported). If the source is
-        unreachable or returns an unusable response, nothing is written and this is
-        reported as a 500 (SPEC-0004 R13).
+        Runs an import against the source catalogue and reconciles it into the stored catalogue:
+        new Órganos are added, existing ones are refreshed in place, and Órganos absent from the
+        source are marked inactive. If an import is already running (triggered manually or by the
+        schedule), this returns the "already running" outcome rather than starting a second
+        concurrent run on that instance (the guard is per-instance today — running more than one
+        instance of the service is not yet supported). If the source is unreachable or returns an
+        unusable response, nothing is written and this is reported as a 500.
       responses:
         "200":
           description: >-
             The import completed (`SUCCESS`), or another run was already in progress
-            (`ALREADY_RUNNING`, SPEC-0004 R12).
+            (`ALREADY_RUNNING`).
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
@@ -293,16 +293,482 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /api/admin/organos/taxonomia/termos:
+    post:
+      tags: [organos]
+      operationId: createTermo
+      summary: Create a taxonomía term
+      description: >-
+        Add a term to the taxonomía, at the root when `parentId` is null and under an existing
+        term otherwise. The name is stored stripped of surrounding whitespace and must not
+        collide, case-insensitively, with a name already used by one of the siblings the new term
+        joins — roots being siblings of each other.
+      requestBody:
+        required: true
+        description: The name for the new term, and the term it sits under.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTermoRequest"
+      responses:
+        "201":
+          description: >-
+            The term was created. The body carries its system-assigned `id`, so a client can
+            select and expand the new term without re-reading `GET /api/organos/taxonomia`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Termo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            The named parent term does not exist; nothing is created. Carries the problem type
+            `urn:conxugal:problem-type:termo-not-found`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: >-
+            A sibling already carries that name, case-insensitively; nothing is created. Carries
+            the problem type `urn:conxugal:problem-type:duplicate-sibling-name`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/admin/organos/taxonomia/termo/{id}:
+    parameters:
+      - $ref: "#/components/parameters/TermoId"
+    patch:
+      tags: [organos]
+      operationId: renameTermo
+      summary: Rename a taxonomía term
+      description: >-
+        Change a term's name, leaving its place in the tree untouched. The new name is stored
+        stripped and is subject to the same sibling-name rule as a create.
+      requestBody:
+        required: true
+        description: The term's new name.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenameTermoRequest"
+      responses:
+        "200":
+          description: The term's new state.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Termo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            No term exists with that id; nothing is renamed. Carries the problem type
+            `urn:conxugal:problem-type:termo-not-found`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: >-
+            A sibling already carries that name, case-insensitively; nothing is renamed. Carries
+            the problem type `urn:conxugal:problem-type:duplicate-sibling-name`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      tags: [organos]
+      operationId: deleteTermo
+      summary: Delete a taxonomía term
+      description: >-
+        Remove a term from the taxonomía. Refused while the term still has child terms — the
+        administrator moves or removes them first. The Órganos filed directly in a deleted term
+        return to the unclassified set, arriving in `GET /api/organos` with a null `termoId`; no
+        Órgano is ever deleted.
+      responses:
+        "204":
+          description: The term was deleted, and any Órganos filed in it are now unclassified.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            No term exists with that id; nothing is deleted. Carries the problem type
+            `urn:conxugal:problem-type:termo-not-found`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: >-
+            The term still has child terms; the term and its children are unchanged. Carries the
+            problem type `urn:conxugal:problem-type:termo-has-children` — distinct from the cycle
+            refusal of `PUT .../parent`, which is also a 409.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/admin/organos/taxonomia/termo/{id}/parent:
+    parameters:
+      - $ref: "#/components/parameters/TermoId"
+    put:
+      tags: [organos]
+      operationId: moveTermo
+      summary: Move a taxonomía term to a new parent
+      description: >-
+        Re-parent a term, or move it out to the root with an explicit null `parentId`. Refused
+        when the target is the term itself or one of its own descendants, which would detach that
+        branch into a cycle, and when the term would land beside a sibling of the same name. A
+        refused move writes nothing.
+      requestBody:
+        required: true
+        description: The term to move under, or null to move it to the root.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoveTermoRequest"
+      responses:
+        "204":
+          description: The term was moved.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            Either the term being moved or the target parent does not exist; nothing is moved.
+            Carries the problem type `urn:conxugal:problem-type:termo-not-found`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: >-
+            The move is refused and the taxonomía is unchanged. Carries one of two problem types,
+            which a client must tell apart to explain the refusal:
+            `urn:conxugal:problem-type:termo-cycle` when the target is the term itself or one of
+            its descendants, and `urn:conxugal:problem-type:duplicate-sibling-name` when a sibling
+            under the target already carries that name.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/admin/organo/{id}/termo:
+    parameters:
+      - $ref: "#/components/parameters/OrganoId"
+    put:
+      tags: [organos]
+      operationId: assignOrganoTermo
+      summary: File an Órgano under a taxonomía term
+      description: >-
+        Place an Órgano in a term, **replacing** whatever term it was in — a placement is
+        singular, never additive, so an Órgano is never in two terms at once. This changes the
+        Órgano rather than the taxonomía, which is why it hangs off the Órgano's own path rather
+        than a taxonomía one.
+      requestBody:
+        required: true
+        description: The term to file the Órgano under.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignTermoRequest"
+      responses:
+        "204":
+          description: >-
+            The Órgano is now filed under that term, and under no other. The new placement is
+            visible in the next `GET /api/organos` as the Órgano's `termoId`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            Nothing is written. Carries one of two problem types, so a client can say which of the
+            two ids was wrong: `urn:conxugal:problem-type:organo-not-found` when no Órgano exists
+            with that id, and `urn:conxugal:problem-type:termo-not-found` when the named term does
+            not exist.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      tags: [organos]
+      operationId: clearOrganoTermo
+      summary: Return an Órgano to the unclassified set
+      description: >-
+        Remove an Órgano's placement, so it is filed under no term. Idempotent: clearing an Órgano
+        that is already unclassified succeeds and writes nothing. There is no unclassified
+        collection to move it into — an Órgano whose `termoId` is null *is* unclassified.
+      responses:
+        "204":
+          description: >-
+            The Órgano is filed under no term. Its `termoId` is null in the next `GET
+            /api/organos`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            No Órgano exists with that id; nothing is written. Carries the problem type
+            `urn:conxugal:problem-type:organo-not-found`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/organos:
+    get:
+      tags: [organos]
+      operationId: listOrganos
+      summary: List the whole Órganos de Contratación catalogue
+      description: >-
+        Every stored Órgano — active and inactive alike — with its name and the term it is filed
+        under, or null when it is unclassified. Available to any authenticated user, `USER` or
+        `ADMIN`: reading the catalogue is not an administration capability. Unfiltered and
+        unpaged, and it takes no query parameters. Callers join this list to `GET
+        /api/organos/taxonomia` on `termoId` = term `id` to build the tree, and filter `termoId` =
+        null for the unclassified set.
+      responses:
+        "200":
+          description: >-
+            The whole catalogue, **ordered by name** under a Galician collation, so accented names
+            sort where a Galician reader expects them (`Ávila` before `Avión`, not after
+            `Zamora`). The order is a guarantee callers may rely on and need not re-derive. Empty
+            only when nothing has been imported yet.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Organo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/organos/taxonomia:
+    get:
+      tags: [organos]
+      operationId: listTermos
+      summary: List every term of the Órganos taxonomía
+      description: >-
+        Every term of the taxonomía the catalogue is classified into, each naming its parent or
+        null when it is a root. A **flat list**, not a tree: no term carries its children or the
+        Órganos filed under it, and the caller assembles the tree from the parent edges. Available
+        to any authenticated user, `USER` or `ADMIN`. Unfiltered and unpaged, and it takes no
+        query parameters.
+      responses:
+        "200":
+          description: >-
+            Every term, **ordered by name** under a Galician collation, so accented names sort
+            where a Galician reader expects them (`Ávila` before `Avión`, not after `Zamora`). The
+            order is a guarantee callers may rely on and need not re-derive; because grouping
+            preserves relative order, siblings stay in name order once a caller groups by
+            `parentId`. Empty until the first term is created — the normal state after a first
+            import.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Termo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /api/me:
     get:
       tags: [account]
       operationId: getCurrentUser
       summary: The current authenticated user
       description: >-
-        The caller's own account: identity, role, creation date, and last login
-        (SPEC-0002 R14). Available to any authenticated user — `USER` or `ADMIN` — unlike
-        the `/api/admin/*` endpoints, which are `ADMIN`-only. Never includes the enabled
-        state (a live session already implies it) or the password.
+        The caller's own account: identity, role, creation date, and last login. Available to any
+        authenticated user — `USER` or `ADMIN` — unlike the `/api/admin/*` endpoints, which are
+        `ADMIN`-only. Never includes the enabled state (a live session already implies it) or the
+        password.
       responses:
         "200":
           description: The caller's own account.
@@ -333,8 +799,8 @@ components:
       in: cookie
       name: SESSION
       description: >-
-        Server-side session cookie established by the server-rendered login form (ADR-0005).
-        The browser sends it automatically, including on the `EventSource` metrics stream.
+        Server-side session cookie established by the server-rendered login form (ADR-0005). The
+        browser sends it automatically, including on the `EventSource` metrics stream.
 
   parameters:
     UserId:
@@ -342,6 +808,22 @@ components:
       in: path
       required: true
       description: The account's UUID identity.
+      schema:
+        type: string
+        format: uuid
+    TermoId:
+      name: id
+      in: path
+      required: true
+      description: The taxonomía term's UUID identity.
+      schema:
+        type: string
+        format: uuid
+    OrganoId:
+      name: id
+      in: path
+      required: true
+      description: The Órgano de Contratación's UUID identity.
       schema:
         type: string
         format: uuid
@@ -384,7 +866,7 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
     Unauthorized:
-      description: No valid session; the caller is not authenticated (SPEC-0002 R7). Protected API routes return 401 rather than an HTML redirect.
+      description: No valid session; the caller is not authenticated. Protected API routes return 401 rather than an HTML redirect.
       headers:
         RateLimit-Limit:
           $ref: "#/components/headers/RateLimitLimit"
@@ -397,7 +879,7 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
     Forbidden:
-      description: The caller is authenticated but is not an administrator (SPEC-0003 R1).
+      description: The caller is authenticated but is not an administrator.
       headers:
         RateLimit-Limit:
           $ref: "#/components/headers/RateLimitLimit"
@@ -461,11 +943,11 @@ components:
       type: string
       enum: [USER, ADMIN]
       example: "ADMIN"
-      description: An account's role. ADMIN is a strict superset of USER (SPEC-0002).
+      description: An account's role. ADMIN is a strict superset of USER.
 
     User:
       type: object
-      description: A user account and its current administration state (SPEC-0003 R6).
+      description: A user account and its current administration state.
       required: [id, email, role, enabled, createdAt]
       example:
         id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
@@ -498,12 +980,12 @@ components:
           format: date-time
           example: "2026-07-10T08:12:00Z"
           description: >-
-            The account's most recent successful login, recorded per SPEC-0002 R13.
-            Null until the account's first successful login.
+            The account's most recent successful login, recorded on each one. Null until the
+            account's first successful login.
 
     CurrentUser:
       type: object
-      description: The authenticated caller's own account (SPEC-0002 R14).
+      description: The authenticated caller's own account.
       required: [id, email, role, createdAt]
       example:
         id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
@@ -532,8 +1014,8 @@ components:
           format: date-time
           example: "2026-07-10T08:12:00Z"
           description: >-
-            The account's most recent successful login, recorded per SPEC-0002 R13.
-            Null until the account's first successful login.
+            The account's most recent successful login, recorded on each one. Null until the
+            account's first successful login.
 
     CreateUserRequest:
       type: object
@@ -548,13 +1030,12 @@ components:
           example: "new.admin@conxugal.gal"
         role:
           $ref: "#/components/schemas/Role"
-      description: The password is not accepted here; the server generates it (SPEC-0003 R7).
+      description: The password is not accepted here; the server generates it.
 
     CreatedUser:
       type: object
       description: >-
-        The account just created, including its one-time system-generated initial
-        password (SPEC-0003 R7, R13).
+        The account just created, including its one-time system-generated initial password.
       required: [id, email, role, enabled, createdAt, initialPassword]
       example:
         id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
@@ -586,13 +1067,13 @@ components:
           pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{16,}$"
           example: "Tg7#kLp2Qw9$mZxR"
           description: >-
-            The system-generated initial password, returned only in this creation response
-            and never again (SPEC-0003 R13, R16). At least 16 characters spanning upper- and
-            lower-case letters, digits and symbols (SPEC-0003 R15).
+            The system-generated initial password, returned only in this creation response and
+            never again. At least 16 characters spanning upper- and lower-case letters, digits and
+            symbols.
 
     SetEnabledRequest:
       type: object
-      description: The desired enabled state for an account (SPEC-0003 R9, R10).
+      description: The desired enabled state for an account.
       required: [enabled]
       example:
         enabled: false
@@ -604,7 +1085,7 @@ components:
 
     SystemStatus:
       type: object
-      description: A point-in-time snapshot of overall service health (SPEC-0003 R2-R5).
+      description: A point-in-time snapshot of overall service health.
       required: [status, datastore, checkedAt, application, runtime]
       example:
         status: "UP"
@@ -627,7 +1108,7 @@ components:
           type: string
           enum: [UP, DEGRADED]
           example: "UP"
-          description: Overall service state (SPEC-0003 R3).
+          description: Overall service state.
         datastore:
           type: object
           required: [reachable]
@@ -637,15 +1118,15 @@ components:
             reachable:
               type: boolean
               example: true
-              description: Whether the datastore is reachable (SPEC-0003 R3).
+              description: Whether the datastore is reachable.
         checkedAt:
           type: string
           format: date-time
           example: "2026-07-18T09:30:00Z"
-          description: When this snapshot was taken; it reflects the state at request time (SPEC-0003 R4).
+          description: When this snapshot was taken; it reflects the state at request time.
         application:
           type: object
-          description: Coarse build/deployment identity (SPEC-0003 R2).
+          description: Coarse build/deployment identity.
           required: [version, environment]
           example:
             version: "0.1.0-SNAPSHOT"
@@ -666,8 +1147,8 @@ components:
         runtime:
           type: object
           description: >-
-            Coarse JVM/OS figures for the running instance (SPEC-0003 R2). Never carries a
-            connection string, credential, host or key (SPEC-0003 R5).
+            Coarse JVM/OS figures for the running instance. Never carries a connection string,
+            credential, host or key.
           required:
             [javaVersion, javaVendor, uptimeMillis, memoryUsedBytes, memoryMaxBytes, osName, osArch]
           example:
@@ -719,12 +1200,162 @@ components:
               pattern: "^[\x20-\x7E]{1,64}$"
               example: "amd64"
 
+    Organo:
+      type: object
+      description: >-
+        One Órgano de Contratación of the stored catalogue, with its taxonomía placement.
+        `termoId` is always present, null when unclassified — the absence of a placement is a
+        value callers filter on, not a missing field.
+      required: [id, name, active, termoId]
+      example:
+        id: "8d1b0f6e-2c5a-4c1e-9a3f-6b7c8d9e0f11"
+        name: "Consellería de Sanidade"
+        active: true
+        termoId: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "8d1b0f6e-2c5a-4c1e-9a3f-6b7c8d9e0f11"
+          description: The Órgano's system-assigned identity, stable across imports.
+        name:
+          type: string
+          maxLength: 255
+          pattern: "^\\S(.*\\S)?$"
+          example: "Consellería de Sanidade"
+        active:
+          type: boolean
+          example: true
+          description: >-
+            False once the Órgano stops appearing in the source catalogue; it is never removed.
+        termoId:
+          type: [string, "null"]
+          format: uuid
+          example: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
+          description: >-
+            The single term this Órgano is filed under, matching a `Termo.id` from `GET
+            /api/organos/taxonomia`. Null means unclassified — there is no separate unclassified
+            collection, so callers filter for it.
+
+    Termo:
+      type: object
+      description: >-
+        One term of the Órganos taxonomía, carrying only the edge to its parent. It never lists
+        its children or the Órganos filed under it: each edge is stated once, from the side that
+        stores it. `parentId` is always present, null for a root — the absence of a parent is a
+        value callers group on, not a missing field.
+      required: [id, name, parentId]
+      example:
+        id: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
+        name: "Sanidade"
+        parentId: "4f2a6b8c-1d3e-4a5b-8c7d-9e0f1a2b3c44"
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
+        name:
+          type: string
+          maxLength: 255
+          pattern: "^\\S(.*\\S)?$"
+          example: "Sanidade"
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          example: "4f2a6b8c-1d3e-4a5b-8c7d-9e0f1a2b3c44"
+          description: >-
+            The term this one sits under. Null marks a root; the taxonomía is many-rooted and of
+            any depth.
+
+    CreateTermoRequest:
+      type: object
+      description: >-
+        The name for a new term and the term it sits under. A null `parentId` places the term at
+        the root, and so does omitting it.
+      required: [name]
+      example:
+        name: "Sanidade"
+        parentId: null
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          pattern: "^\\s*\\S[\\s\\S]*$"
+          example: "Sanidade e Benestar"
+          description: >-
+            Non-blank once stripped of surrounding whitespace, and stored stripped. Whitespace
+            *within* a name is ordinary — most terms are several words — and leading or trailing
+            whitespace is accepted here and does not survive, unlike the stored `Termo.name`,
+            which forbids surrounding whitespace outright because it never has any. The pattern
+            therefore rejects only an all-whitespace name, and is written so it means that whether
+            a validator anchors it or not. Must not collide case-insensitively with a sibling's
+            name.
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          example: "4f2a6b8c-1d3e-4a5b-8c7d-9e0f1a2b3c44"
+          description: The term to create this one under. Null creates it at the root.
+
+    RenameTermoRequest:
+      type: object
+      description: A term's new name.
+      required: [name]
+      example:
+        name: "Sanidade e Benestar"
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          pattern: "^\\s*\\S[\\s\\S]*$"
+          example: "Sanidade e Benestar"
+          description: >-
+            The replacement name: non-blank once stripped of surrounding whitespace, stored
+            stripped, and free among the names of the term's existing siblings, compared
+            case-insensitively. As on the create, whitespace within the name is ordinary and only
+            an all-whitespace name is rejected.
+
+    MoveTermoRequest:
+      type: object
+      description: >-
+        The term to move a term under. `parentId` is required because a null is a *value* here
+        rather than an omission: it is how a term is moved out to the root, so a body leaving the
+        field out states nothing and a caller must always send it. A null is equally never a
+        rejection — the field is nullable and carries no non-null constraint, or moving a term to
+        the root would be unexpressible.
+      required: [parentId]
+      example:
+        parentId: null
+      properties:
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          example: "4f2a6b8c-1d3e-4a5b-8c7d-9e0f1a2b3c44"
+          description: >-
+            The term to move under. Null moves it to the root. May be neither the term itself nor
+            one of its descendants.
+
+    AssignTermoRequest:
+      type: object
+      description: >-
+        The term to file an Órgano under. A placement is singular, so this replaces any current
+        one. To leave an Órgano in no term, delete the placement rather than assigning a null
+        here.
+      required: [termoId]
+      example:
+        termoId: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
+      properties:
+        termoId:
+          type: string
+          format: uuid
+          example: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
+          description: An existing term of the taxonomía, from `GET /api/organos/taxonomia`.
+
     ImportOutcome:
       type: object
       description: >-
-        The result of an import run that did not fail (SPEC-0004 R10, R12) — a source
-        failure is reported as a 500 instead (SPEC-0004 R13), never as this body. `added`,
-        `refreshed` and `deactivated` are always 0 unless `status` is `SUCCESS`.
+        The result of an import run that did not fail — a source failure is reported as a 500
+        instead, never as this body. `added`, `refreshed` and `deactivated` are always 0 unless
+        `status` is `SUCCESS`.
       required: [status, added, refreshed, deactivated]
       example:
         status: "SUCCESS"
@@ -737,35 +1368,35 @@ components:
           enum: [SUCCESS, ALREADY_RUNNING]
           example: "SUCCESS"
           description: >-
-            SUCCESS if the import completed; ALREADY_RUNNING if another import was
-            already in progress (SPEC-0004 R12).
+            SUCCESS if the import completed; ALREADY_RUNNING if another import was already in
+            progress.
         added:
           type: integer
           format: int32
           minimum: 0
           maximum: 100000
           example: 3
-          description: Órganos new to the source, stored as active (SPEC-0004 R5).
+          description: Órganos new to the source, stored as active.
         refreshed:
           type: integer
           format: int32
           minimum: 0
           maximum: 100000
           example: 12
-          description: Órganos already stored, matched by identity and updated in place (SPEC-0004 R5).
+          description: Órganos already stored, matched by identity and updated in place.
         deactivated:
           type: integer
           format: int32
           minimum: 0
           maximum: 100000
           example: 1
-          description: Previously-stored Órganos absent from this import, marked inactive (SPEC-0004 R6).
+          description: Previously-stored Órganos absent from this import, marked inactive.
 
     RuntimeMetrics:
       type: object
       description: >-
         One detailed runtime sample. The exact field set is illustrative and never includes
-        secrets or connection values (SPEC-0003 R21).
+        secrets or connection values.
       required: [timestamp]
       example:
         timestamp: "2026-07-18T09:30:00Z"
@@ -858,8 +1489,8 @@ components:
               maximum: 1
               example: 0.35
               description: >-
-                Recent system/CPU load, 0.0-1.0, or null on platforms where the running
-                instance does not report it.
+                Recent system/CPU load, 0.0-1.0, or null on platforms where the running instance
+                does not report it.
         http:
           type: object
           example:
@@ -938,14 +1569,13 @@ components:
           pattern: "^.{1,500}$"
           example: "An account with email new.admin@conxugal.gal already exists."
           description: >-
-            A human-readable, non-sensitive description of this occurrence. Null when the
-            problem type carries no further detail beyond its title.
+            A human-readable, non-sensitive description of this occurrence. Null when the problem
+            type carries no further detail beyond its title.
         instance:
           type: [string, "null"]
           pattern: "^.{1,500}$"
           example: "/api/admin/users"
           description: >-
-            The request path that produced this problem. Populated for generic/fallback
-            failures (e.g. an unexpected server error); absent (or null) for the specific
-            business-outcome problems (e.g. duplicate email, last-admin refusal) that don't
-            set it.
+            The request path that produced this problem. Populated for generic/fallback failures
+            (e.g. an unexpected server error); absent (or null) for the specific business-outcome
+            problems (e.g. duplicate email, last-admin refusal) that don't set it.
