@@ -35,13 +35,16 @@ function collectCounts(nodes: TermoNode[], counts: Map<string, number>): Map<str
   return counts;
 }
 
+// Chevron and leaf spacer share this width, which is what lines labels up
+// across a level whether or not the term has children.
+const MARKER_SIZE = 14;
+
 function ExpandMarker({ hasChildren, expanded }: { hasChildren: boolean; expanded: boolean }) {
-  // A fixed-width marker even for leaves, so labels line up at each level.
   if (!hasChildren) {
-    return <Box w={14} />;
+    return <Box w={MARKER_SIZE} />;
   }
   const Chevron = expanded ? IconChevronDown : IconChevronRight;
-  return <Chevron size={14} color="var(--mantine-color-gray-6)" aria-hidden />;
+  return <Chevron size={MARKER_SIZE} color="var(--mantine-color-gray-6)" aria-hidden />;
 }
 
 function TermoRow({ payload, count }: { payload: RenderTreeNodePayload; count: number }) {
