@@ -219,7 +219,7 @@ One decision remains outside this spec:
   stores the awardee's name and fiscal identifier on the
   [SPEC-0006](SPEC-0006-operadores-economicos.md) operador row, and each contract references
   that row; two awards to the same party do not store the party twice. What this costs is stated
-  rather than hidden, and R27 states it: a contract does not record the exact spelling **it** was
+  rather than hidden, and R27 states it: a contract does not record the awardee name **it** was
   published under, and an award whose identifier is unusable (SPEC-0006 R5) yields no operador
   and therefore records **no awardee at all** — a case the source is not observed to produce,
   since every published contract names its awardee with a NIF/CIF.
@@ -322,9 +322,9 @@ One decision remains outside this spec:
   belongs to the Órgano open. That is a rule about what a row states, not about what a page
   looks like, and it is the same rule SPEC-0006 R9 applies when it stops a row repeating the
   family its section names. It does **not** extend to the awardee: a row states its awardee, on
-  an operador's own history as anywhere else, under the single published spelling SPEC-0006 R4
-  selects for that operador. Per-contract spelling variance is not recorded (R7, R27) and so is
-  visible nowhere.
+  an operador's own history as anywhere else, under the single published name SPEC-0006 R4
+  selects for that operador and that operador's one canonical fiscal identifier (SPEC-0006 R3).
+  Per-contract name variance is not recorded (R7, R27) and so is visible nowhere.
 
   This route and its mirror — following a row's **awardee** to its operador
   ([SPEC-0006](SPEC-0006-operadores-economicos.md) R8, rendered on the row by R16) — are the
@@ -608,8 +608,9 @@ One decision remains outside this spec:
   particular has no bound at any layer.
 
   **The awardee is the remaining exception, and R7 states it**: it is stored once on its operador
-  rather than on each contract, so what a row shows is the spelling SPEC-0006 R4 selects for that
-  operador, not the spelling that contract was published under.
+  rather than on each contract, so what a row shows is the name SPEC-0006 R4 selects for that
+  operador — not the name that contract was published under — and that operador's fiscal
+  identifier in the canonical form SPEC-0006 R3 holds it in.
 
   Neither exception is a reason to **reject** a contract. A published amount or date that cannot
   be interpreted leaves that value absent, the contract is stored like any other, and it takes no
@@ -688,7 +689,7 @@ One decision remains outside this spec:
     has since become inactive but retains contracts under R5.
 21. **(R14)** An Órgano's own contratos menores list states no row's awarding Órgano, every
     row on it belonging to the Órgano already open — while still stating each row's awardee,
-    under the spelling SPEC-0006 R4 selects for that operador.
+    under the name SPEC-0006 R4 selects for that operador.
     > R14's third route — following a row's awarding Órgano to that Órgano's contracts — is
     > **proved by [SPEC-0006](SPEC-0006-operadores-economicos.md)'s criterion for it**, since no
     > surface this spec delivers has rows naming an awarding Órgano. Stated here, proved there;
@@ -763,14 +764,15 @@ One decision remains outside this spec:
     incremental runs, the system's request rate against the source stays within the
     configured budget, and no mode exceeds it.
 39. **(R26)** No contract list is reachable without authentication, and every awardee name
-    and fiscal identifier shown on a contract row is one the official source published for that
-    awardee — the spelling SPEC-0006 R4 selects for its operador — with nothing added that the
-    source did not publish.
+    shown on a contract row is one the official source published for that awardee — the name
+    SPEC-0006 R4 selects for its operador — and its fiscal identifier is that operador's
+    canonical one (SPEC-0006 R3), with nothing added that the source did not publish.
 40. **(R27)** Every value displayed matches what the official source publishes for that
     contract, with no value corrected, normalised, inferred, or enriched from elsewhere —
     **except the three R27 names**: the publication date, which is displayed as the date it was
-    interpreted to rather than as its published text; the awardee, whose stored spelling is its
-    operador's rather than that contract's; and every text value's **surrounding whitespace**,
+    interpreted to rather than as its published text; the awardee, whose stored name is its
+    operador's rather than that contract's and whose fiscal identifier is canonical
+    (SPEC-0006 R3); and every text value's **surrounding whitespace**,
     which is removed on the way in. A text value differing from its published form in any way
     other than leading and trailing whitespace is a defect — save the stated duration, capped at
     64 characters, which is the only bounded value and is never expected to reach its bound.

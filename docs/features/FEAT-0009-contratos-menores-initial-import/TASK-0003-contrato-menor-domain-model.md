@@ -66,22 +66,24 @@ rather than added to a table of millions later.
 >
 > - **SPEC-0005 R7** requires each stored contrato menor to carry *its awardee's name and fiscal
 >   identifier*; it now carries a reference instead.
-> - **SPEC-0006 #5** requires each contract row to display the identifier *exactly as published
->   for that contract*, padding and casing included. Every row of an operador's history will now
->   show the one spelling the operador row holds — the variance that criterion exists to expose
->   is no longer stored anywhere, and cannot be recovered without re-importing.
+> - **SPEC-0006 #5** required each contract row to display the identifier *exactly as published
+>   for that contract*. Every row of an operador's history now shows that operador's **one
+>   canonical fiscal identifier** (SPEC-0006 R3, trimmed and upper-cased) and the **one name**
+>   R4 selects — the per-contract variance that criterion existed to expose is not stored, and
+>   cannot be recovered without re-importing.
 > - **SPEC-0005 #40** (*every value displayed matches what the source published*) holds for the
 >   contract's own values and no longer for its awardee.
 >
-> A fourth consequence has no spec to break because no feature owns it yet: with per-contract
-> spellings gone, an operador's display name can no longer be **re-derived** from stored data if
-> its winning contract is later withdrawn — the stored rank becomes the only memory of where the
-> spelling came from. SPEC-0006 R7's lifecycle feature inherits that.
+> A fourth consequence followed and has since been answered: with per-contract names gone, an
+> operador's name could no longer be **re-derived** from stored data if its winning contract were
+> withdrawn. **SPEC-0006 R15 now retains every name an operador has borne**, each with the rank it
+> was last seen at, so the fallback is a choice among stored rows. The identifier never had the
+> problem, R3 holding it canonical and reached identically from every contract.
 >
 > **The specs have been amended to match**: SPEC-0005 R7 now holds the awardee on the operador
 > and names what that costs, R27 lists the awardee among its exceptions, and #11, #21,
-> #39 and #40 follow; SPEC-0006 #5, #25 and R13 now describe rows showing the operador's
-> spelling. This task implements the amended rule, not a divergence from it.
+> #39 and #40 follow; SPEC-0006 #5, #25 and R13 now describe rows showing the operador's name and
+> canonical identifier. This task implements the amended rule, not a divergence from it.
 
 - **Only identity is required**: the source identifier and the awarding Órgano. Every other
   field — the publication date included, since it can fail to parse — is nullable, and null means
@@ -97,7 +99,7 @@ rather than added to a table of millions later.
   does that at the boundary ([TASK-0005](TASK-0005-source-port-and-adapter.md)), so this aggregate
   stores what it is handed and trims nothing itself. No case folding, no collapsing of internal
   spacing, no rounding, no inferring: R27 forbids all of those, and permits only the padding the
-  source adds to serialise its fixed-width fields. (The awardee's spelling now lives on the
+  source adds to serialise its fixed-width fields. (The awardee now lives on the
   `operador_economico` row rather than on the contract, which is what the note above records.)
 - **A text value that was only whitespace is stored as null**, not as an empty string — it
   published nothing, and null is already this aggregate's word for that. One absent-value case,

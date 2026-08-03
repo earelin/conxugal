@@ -34,14 +34,15 @@ feature configuring no new rate. Build this task after it, or the sharing is asp
 - Each returned row is a source-entry value carrying the published fields verbatim — **including
   the awardee name and fiscal identifier**, which the contract no longer stores but
   [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s derivation needs from the
-  source row to match and to fill the operador's display fields:
+  source row to match on and to fill the operador's name:
   source id, publication date text, object, amount, duration, awardee name, awardee fiscal
   identifier. The amount arrives as a JSON number and is carried as a `Money` (TASK-0003), at
   the scale the source published and with no rounding.
 - **Every text field is trimmed of leading and trailing whitespace here, and nowhere else.** The
   source pads `nif` and `adjudicatario` out to fixed widths, and that padding is an artefact of
   its serialisation rather than anything it published (R27). Stripping it at the boundary is what
-  keeps every consumer above the port — the aggregate, the operador derivation, the match key —
+  keeps every consumer above the port — the aggregate, the operador derivation, the identifier
+  canonicalisation —
   from each having to know the source pads. A field left **empty once trimmed** is carried as
   **absent**, not as an empty string, so there is one absent-value case above the port and not
   two.

@@ -26,11 +26,13 @@ exists first.
   - `id UUID PRIMARY KEY` — a plain `uuid` column; `OperadorId` is the Java type an
     `AttributeConverter` maps onto it
     ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md));
-  - `match_key TEXT NOT NULL UNIQUE` — **the uniqueness is the requirement**, not a hint. It is
-    what makes "the same operador never splits in two" hold at the store level rather than in
-    whichever use case remembered to reduce the identifier first;
-  - `display_name TEXT NOT NULL`, `display_fiscal_id TEXT NOT NULL` — published spellings;
-  - the rank the display fields were taken from: `rank_publication_date DATE` (nullable, and
+  - `fiscal_id TEXT NOT NULL UNIQUE` — the identifier in R3's canonical form, trimmed and
+    upper-cased. **The uniqueness is the requirement**, not a hint: it is what makes "the same
+    operador never splits in two" hold at the store level rather than in whichever use case
+    remembered to canonicalise first. **One column, matched on and displayed** — no second column
+    holds a published spelling, which is the whole point of canonicalising;
+  - `name TEXT NOT NULL` — the published name, stored as published;
+  - the rank the name was taken from: `rank_publication_date DATE` (nullable, and
     null ranks **last**) and `rank_source_id BIGINT NOT NULL`.
 - A second table, `operador_economico_nome_alternativo`, holding the names R15 retains beside the
   principal one:
@@ -47,8 +49,8 @@ exists first.
     is a later feature's to measure and index for.
 - **No column classifies an operador** — nothing records whether the awardee is a natural person
   or a legal entity, deliberately and although the published identifier makes it inferable (R6).
-- The Micronaut Data JDBC implementation of `OperadorRepository`: find by match key, insert, the
-  combined display-and-rank update, and **retaining a name** as one
+- The Micronaut Data JDBC implementation of `OperadorRepository`: find by fiscal id, insert, the
+  combined name-and-rank update, and **retaining a name** as one
   `INSERT … ON CONFLICT (operador_economico_id, nome) DO UPDATE` that advances the date and source
   id. One statement, so a name already held is advanced rather than rejected, and no caller has to
   read first and race.
@@ -57,17 +59,19 @@ exists first.
   [TASK-0004](TASK-0004-derivation-during-import.md) is what populates it.
 
 ## Acceptance criteria
-- Inserting a second operador with an existing match key fails at the unique constraint without
-  altering the existing row.
+- Inserting a second operador with an existing fiscal identifier fails at the unique constraint
+  without altering the existing row.
   ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #3, one-operador half)
-- `findByMatchKey` returns the stored operador for a key reduced from any of its published
-  spellings, and nothing for a key that differs by internal spacing, punctuation or a character.
+- `findByFiscalId` returns the stored operador for the canonical form of any of its published
+  spellings, and nothing for one differing by internal spacing, punctuation or a character.
   (SPEC-0006 #3, #4)
+- A stored operador reads back with its identifier **upper-cased**, whatever case it was written
+  from — the store holds no other spelling to return. (SPEC-0006 #7, #30 exception)
 - An operador inserted with a null id comes back carrying the generated `OperadorId`, and reads
   back equal — the converter round-trips through `@GeneratedValue`, the mechanism
   [FEAT-0009 TASK-0003](../FEAT-0009-contratos-menores-initial-import/TASK-0003-contrato-menor-domain-model.md)
   establishes and ADR-0019 rests on.
-- The display-and-rank update writes all four values or none; a row never carries a spelling from
+- The name-and-rank update writes all three values or none; a row never carries a name from
   one contract and a rank from another. (SPEC-0006 #7)
 - An operador whose winning contract has no publication date stores a null rank date and is still
   found, updated and compared correctly. (SPEC-0006 #7)

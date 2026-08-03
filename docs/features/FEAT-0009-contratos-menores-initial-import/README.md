@@ -203,11 +203,12 @@ untouched. ADR-0019 also records the one risk this rests on — that Micronaut D
 - **The awardee is a foreign key, and the schema is normalised.** The published name and fiscal
   identifier are held **once**, on the `operador_economico` row, and no contract repeats them: a
   large Órgano's million contracts carry a UUID each rather than two padded strings each. What that
-  costs is stated rather than hidden — a contract no longer records the spelling **it** published —
+  costs is stated rather than hidden — a contract no longer records the name **it** published —
   and **the specs say so**: R7 holds the awardee on the operador, R27 lists it among its
   exceptions, and [SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #5 now describes rows
-  showing the operador's spelling. The casing variance R27 refuses to correct survives on the
-  operador row that R3 matches through; the per-contract variance is not stored anywhere.
+  showing the operador's name and its one canonical identifier. The name variance R27 refuses to
+  correct is retained on the operador under SPEC-0006 R15; the identifier's is not retained at
+  all, because R3 holds it canonical and rules its case meaningless.
 - **The publication date is stored as a date, and only as a date** — one nullable column, parsed
   at the adapter from the source's `DD-MM-YYYY` text, with that text not retained.
 

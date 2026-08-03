@@ -21,8 +21,8 @@ typed identifier).
 **This task has no dependencies, and that is deliberate: it is what unblocks
 [FEAT-0009](../FEAT-0009-contratos-menores-initial-import/README.md).** Its
 `TASK-0003` declares the `@Relation(MANY_TO_ONE)` to `OperadorEconomico`, so the type must exist
-before the contract aggregate can be written. The aggregate here **stores** the match key and the
-rank as values; the functions that compute and compare them are
+before the contract aggregate can be written. The aggregate here **stores** the canonical fiscal
+identifier and the rank as values; the functions that compute and compare them are
 [TASK-0001](TASK-0001-matching-emptiness-and-ranking-rules.md)'s, and nothing needs them until
 [TASK-0004](TASK-0004-derivation-during-import.md) resolves an award — so TASK-0001 is not on the
 path into FEAT-0009 and the two can be built in either order.
@@ -38,9 +38,8 @@ path into FEAT-0009 and the two can be built in either order.
   | Field | Type | Notes |
   | --- | --- | --- |
   | `id` | `OperadorId` | System-assigned, `null` only until the database assigns it |
-  | `matchKey` | `String` | The reduction [TASK-0001](TASK-0001-matching-emptiness-and-ranking-rules.md) computes. **Never displayed** (R13); the store is unique on it |
-  | `displayName` | `String` | The awardee name **as published** by the winning contract |
-  | `displayFiscalId` | `String` | The fiscal identifier **as published** by that same contract — casing and internal spacing intact; the source's surrounding padding is already stripped at the adapter (SPEC-0005 R27) |
+  | `fiscalId` | `String` | The fiscal identifier in R3's **canonical form** — trimmed and upper-cased by [TASK-0001](TASK-0001-matching-emptiness-and-ranking-rules.md). **Matched on and displayed**; the store is unique on it |
+  | `name` | `String` | The awardee name **as published** by the winning contract, untouched |
   | `rank` | the rank pair | Which contract those two came from: its publication date (nullable) and its source identifier |
   | `nomesAlternativos` | `Set<NomeAlternativo>` | Every **other** distinct name its contracts have published (R15) — empty when every contract published the principal name |
 
@@ -55,19 +54,20 @@ path into FEAT-0009 and the two can be built in either order.
     drift from it.
   - **Distinctness is by the published name exactly**, no folding of case or spacing: R13 forbids
     normalising a name, and two spellings that differ are two names. The type must not reuse
-    `OperadorMatchKey`'s reduction — that key exists for identifiers and never for display.
-  - The principal name is **not** repeated here. `displayName` holds the R4 winner and this set
+    the identifier's canonicalisation — that reduction exists for identifiers and never for names.
+  - The principal name is **not** repeated here. `name` holds the R4 winner and this set
     holds the rest, so the invariant is *no alternative equals the principal*, and promoting one
     means moving a value between the two rather than choosing among a set that contains both.
 
 - **Storing the rank is what makes R4 deterministic across runs** (#7). Without it, *is this
   contract newer than whatever won last time?* has no answer once the winning contract is out of
-  hand, and two imports over the same data could disagree about the spelling.
-- The display fields and the match key are **different things that look alike**, and the
-  aggregate is where that is enforced: nothing derives one from the other, and the match key
-  never leaves the domain.
-- `OperadorRepository` port: `findByMatchKey(String)`, `insert(...)`, an update of the
-  display fields **and** the rank together — they move as one, or the row remembers a spelling
+  hand, and two imports over the same data could disagree about the name.
+- **The name is published, the identifier is canonical, and the aggregate keeps that asymmetry
+  visible.** Nothing folds a name and nothing preserves an identifier's published case; a single
+  helper doing "normalise a string" for both would erase the distinction the two requirements
+  rest on.
+- `OperadorRepository` port: `findByFiscalId(String)`, `insert(...)`, an update of the
+  name **and** the rank together — they move as one, or the row remembers a name
   from one contract and a rank from another — and **retaining a published name**, which either
   adds an alternative or advances the rank of one already held (R15). One operation, not
   find-then-write: the store decides which of the two happened, so no caller can read, lose the
@@ -77,16 +77,18 @@ path into FEAT-0009 and the two can be built in either order.
   TASK-0001's emptiness test (R6).
 
 ## Acceptance criteria
-- The aggregate carries a match key distinct from both published spellings, and the identity is
-  an `OperadorId` distinct from either.
+- The aggregate carries **one** fiscal identifier, and the identity is an `OperadorId` distinct
+  from it. There is no second representation of the identifier to pick between.
   ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #2)
-- Published values round-trip unchanged: an operador built from a padded, lower-case identifier
-  keeps that exact spelling in `displayFiscalId` while matching on the reduced key.
-  (SPEC-0006 #3, #7)
-- Advancing an operador's display moves the name, the identifier spelling **and** the rank
-  together, or moves none of them — the aggregate offers no way to write one without the others.
-  *Deciding* whether a contract outranks the incumbent is TASK-0001's comparison, applied by
-  TASK-0004; this task only makes the three inseparable. (SPEC-0006 #7)
+- An operador built from a padded, lower-case identifier holds the **canonical** form and is
+  matched by it: the published case is retained nowhere, and no accessor returns the spelling it
+  was built from. (SPEC-0006 #3, #7)
+- The **name** round-trips unchanged — internal spacing, casing and punctuation as published —
+  so nothing about the aggregate canonicalises anything but the identifier. (SPEC-0006 #30)
+- Advancing an operador's display moves the name **and** the rank together, or moves neither —
+  the aggregate offers no way to write one without the other. *Deciding* whether a contract
+  outranks the incumbent is TASK-0001's comparison, applied by TASK-0004; this task only makes
+  the two inseparable. (SPEC-0006 #7)
 - Two names differing only in **letter case or internal spacing** are two distinct
   `NomeAlternativo` values, never merged — asserted as its own case, since folding them would
   invent the canonical form R13 forbids. (SPEC-0006 #35)

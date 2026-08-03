@@ -43,10 +43,10 @@ open stored-versus-computed question", and that deferring a latency budget is a 
 than in SPEC-0005, because nothing bounds a selection the way one Órgano in one year bounds an
 Órgano's contracts.
 
-**Every read needs a per-operador top-1.** R4 displays an operador under the name *and* the
-identifier spelling from its **most recently published** contract, ties broken by the higher
-contract identifier, with undated contracts ranked last. R8 then **orders the whole list by that
-display name** and matches fragments of it. Computed on read, one page of the operadores list is
+**Every read needs a per-operador top-1.** R4 displays an operador under the name from its
+**most recently published** contract, ties broken by the higher contract identifier, with undated
+contracts ranked last. R8 then **orders the whole list by that name** and matches fragments of
+it. Computed on read, one page of the operadores list is
 a top-1-per-group over millions of contract rows, ordered and filtered by the result of that
 top-1 — before paging into it positionally.
 
@@ -69,14 +69,15 @@ The catalogue is **stored state**: an `operador_economico` row per distinct fisc
 R3's equivalence, maintained by the import that stores the contracts it derives from, with each
 contract carrying a **foreign key to its operador**.
 
-**The identity is a match key, and it is not displayed.** The row is keyed by the identifier
-under R3's equivalence — trimmed of surrounding whitespace, case-folded — held as a column with
+**The identity is the identifier itself, held canonical.** The row carries **one** fiscal
+identifier column in R3's canonical form — trimmed of surrounding whitespace, upper-cased — under
 a unique constraint, so "two spellings are one operador" is true at the store level and not only
-in use-case logic. R13 forbids displaying it: what is shown is the published spelling carried by
-R4's winning contract, which the row holds as a separate value.
+in use-case logic. It is both what the row is matched on and what is displayed: there is no second
+representation, because R3 and R13 accept the canonical form as the identifier this system holds.
+The published letter case is retained nowhere.
 
 **The import resolves and writes the link.** When a contract batch is stored, each contract's
-published identifier is reduced to the match key; an empty key yields **no operador** (R5) and
+published identifier is canonicalised; an empty one yields **no operador** (R5) and
 leaves the contract's foreign key null; otherwise the operador is found or created and the
 contract row is written pointing at it. This happens **inside the batch's transaction**, so a
 contract and its link commit together and a crash cannot leave a stored contract whose operador
@@ -92,17 +93,18 @@ the system cannot use is not a reason to reject the contract carrying it. The br
 therefore expected never to be taken in production and is kept anyway, at the cost of one
 nullable column.
 
-**The operador keeps a surrogate UUID** alongside its unique match key, as
+**The operador keeps a surrogate UUID** alongside its unique fiscal identifier, as
 `OrganoDeContratacion` keeps one alongside its `sourceKey`. Keying rows directly on the
 identifier would save a lookup on the import's hot path, at the price of putting a published
 value in every foreign key — the thing that precedent exists to avoid.
 
-**R4's display fields are maintained on the row, not computed.** A stored contract carries the
+**R4's name is maintained on the row, not computed.** A stored contract carries the
 rank R4 defines — its interpreted publication date, undated ranking last, and its contract
-identifier as the tie-break — and the import advances the operador's display name and displayed
-spelling when it stores a contract that outranks the incumbent. The comparison is against the
-row, not against a scan of the operador's contracts, so the cost is per contract stored rather
-than per operador read.
+identifier as the tie-break — and the import advances the operador's name when it stores a
+contract that outranks the incumbent. The comparison is against the row, not against a scan of
+the operador's contracts, so the cost is per contract stored rather than per operador read.
+R4 ranks the name alone: the identifier is canonical and identical from every contract, so
+there is nothing about it to rank.
 
 **Being derived is expressed as a rule about writers, not as a computation.** No surface creates,
 renames or deletes an operador (SPEC-0006 R1, #29); the only writer is the derivation. That is
@@ -115,7 +117,7 @@ answer depends on measurements R14 has not taken:
 - **How R7's lifecycle and R4's demotion are driven when a change subtracts.** Withdrawal (
   SPEC-0005 R13) and corrections that move a contract between operadores are not built by the
   first operadores feature, and neither is R7's "unreachable when no visible contract remains".
-  Maintaining a display name forward is a comparison; maintaining it backward — when the winning
+  Maintaining a name forward is a comparison; maintaining it backward — when the winning
   contract is withdrawn or corrected out — needs either a recomputation for that one operador or
   a visible-contract count on the row. Both are local to one operador and both remain open. The
   obligation this ADR does accept is that whatever drives them writes to **this** row rather
@@ -126,7 +128,7 @@ answer depends on measurements R14 has not taken:
 ## Consequences
 
 ### Pros
-- R14's two hardest reads — the operadores list ordered by display name, and partial name lookup
+- R14's two hardest reads — the operadores list ordered by name, and partial name lookup
   — become an index over one table of hundreds of thousands of rows, instead of a
   top-1-per-group over millions of contracts computed before the first row can be ordered.
 - Because identity is the published NIF/CIF rather than a similarity judgement, a row written
@@ -146,7 +148,7 @@ answer depends on measurements R14 has not taken:
   table that exists, rather than of a query shape that has to be invented first.
 
 ### Cons
-- **The projection can be wrong**, which a computed catalogue cannot be. A display name is
+- **The projection can be wrong**, which a computed catalogue cannot be. A name is
   correct only while the contract that won R4 still wins it; a correction or withdrawal that
   demotes the winner leaves the row stale until something recomputes it, and the first
   operadores feature does not build that something. This is the real price, and it is why the
@@ -157,9 +159,9 @@ answer depends on measurements R14 has not taken:
   **name** becomes a choice among rows already stored rather than a re-read of every contract.
   Nothing yet performs that demotion — R7's lifecycle still owns it — but the data it needs is
   written when it can be, during the import, rather than left to a backfill only a re-import
-  could supply. The **identifier spelling keeps only its winner**, so for that half the price
-  stands as written; R15 records why the narrower fix was taken, and this ADR's open question
-  survives only for it.
+  could supply. The identifier half of this cost **no longer exists**: R3 holds one canonical
+  identifier reached from every contract identically, so there is no published spelling that
+  could go stale. Between R15 and canonicalisation, this open question is closed.
 - **The import gets slower and more coupled.** Storing a contrato menor now also reads and
   possibly writes an operador row, so the batch commit grows and the hot path of a multi-day job
   acquires a second table. The contention is bounded by R22's one-import-at-a-time guard, but it
@@ -168,9 +170,12 @@ answer depends on measurements R14 has not taken:
   because there is one importer, so the create-if-absent path rests on a guarantee outside this
   ADR; if a second writer ever appears — a second family importing in parallel, a backfill — the
   insert must handle the conflict rather than assume it away.
-- **Two representations of an identifier live on the row** — the match key and the published
-  spelling — and a reader who picks the wrong one violates R13 in the display or R3 in the
-  matching. The naming has to make that hard to get wrong.
+- **The published letter case of an identifier is not retained**, which is a real narrowing of
+  R13 and is recorded there rather than here. It buys away a con this record carried in draft —
+  two representations of one identifier on every row, where a reader picking the wrong one
+  breached R13 in the display or R3 in the matching — at the cost of displaying a form no
+  contract necessarily published. Case is the one difference R3 rules meaningless for identity,
+  which is what makes the trade acceptable.
 - **Reversing this costs a migration**, not a rewrite of a query: the table and the foreign key
   would have to be dropped from a `contrato_menor` table holding millions of rows.
 - The decision is taken **before** R14's measurements exist, on a cost argument rather than an
