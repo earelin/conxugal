@@ -1,8 +1,9 @@
-import { Button, Group, Modal, Stack, Text } from '@mantine/core';
+import { Button, Modal, Stack, Text } from '@mantine/core';
 import { useState } from 'react';
 
 import { strings } from '../../shared/lib/strings';
 import type { TermoNode } from './taxonomiaTree';
+import { TermoDialogFooter } from './TermoDialogFooter';
 import { useDeleteTermo } from './termoMutations';
 import { deleteRefusal, hasChildrenRefusal, type Refusal } from './termoRefusal';
 import { TermoRefusalAlert } from './TermoRefusalAlert';
@@ -40,14 +41,11 @@ function DeleteTermoForm({ termo, onDeleted, onCancel }: DeleteTermoFormProps) {
           {copy.deleteOrganosNote}
         </Text>
       )}
-      <Group justify="flex-end" mt="sm">
-        <Button variant="default" onClick={onCancel}>
-          {copy.cancel}
-        </Button>
+      <TermoDialogFooter onCancel={onCancel}>
         <Button color="red" onClick={onSubmit} disabled={blocked} loading={deleteTermo.isPending}>
           {copy.deleteSubmit}
         </Button>
-      </Group>
+      </TermoDialogFooter>
     </Stack>
   );
 }

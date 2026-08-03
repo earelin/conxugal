@@ -1,8 +1,9 @@
-import { Button, Group, Modal, Stack, Text } from '@mantine/core';
+import { Button, Modal, Stack, Text } from '@mantine/core';
 import { useState } from 'react';
 
 import { strings } from '../../shared/lib/strings';
 import { findTermoPath, type TermoNode } from './taxonomiaTree';
+import { TermoDialogFooter } from './TermoDialogFooter';
 import { useMoveTermo } from './termoMutations';
 import { TermoParentSelect } from './TermoParentSelect';
 import { cycleRefusal, moveRefusal, type Refusal, wouldCycle } from './termoRefusal';
@@ -64,14 +65,11 @@ function MoveTermoForm({ roots, termo, parentId, onMoved, onCancel }: MoveTermoF
           setRefusal(null);
         }}
       />
-      <Group justify="flex-end" mt="sm">
-        <Button variant="default" onClick={onCancel}>
-          {copy.cancel}
-        </Button>
+      <TermoDialogFooter onCancel={onCancel}>
         <Button onClick={onSubmit} disabled={cycles} loading={moveTermo.isPending}>
           {copy.moveSubmit}
         </Button>
-      </Group>
+      </TermoDialogFooter>
     </Stack>
   );
 }

@@ -1,7 +1,8 @@
-import { Button, Group, Modal, Stack, TextInput } from '@mantine/core';
+import { Button, Modal, Stack, TextInput } from '@mantine/core';
 
 import { strings } from '../../shared/lib/strings';
 import type { TermoNode } from './taxonomiaTree';
+import { TermoDialogFooter } from './TermoDialogFooter';
 import { useRenameTermo } from './termoMutations';
 import type { TermoNameValues } from './termoName';
 import { useTermoNameForm } from './termoNameForm';
@@ -39,14 +40,11 @@ function RenameTermoForm({ termo, onRenamed, onCancel }: RenameTermoFormProps) {
           error={errors.name?.message}
           {...register('name')}
         />
-        <Group justify="flex-end" mt="sm">
-          <Button variant="default" onClick={onCancel}>
-            {copy.cancel}
-          </Button>
+        <TermoDialogFooter onCancel={onCancel}>
           <Button type="submit" loading={renameTermo.isPending}>
             {copy.renameSubmit}
           </Button>
-        </Group>
+        </TermoDialogFooter>
       </Stack>
     </form>
   );

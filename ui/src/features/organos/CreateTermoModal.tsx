@@ -1,9 +1,10 @@
-import { Button, Group, Modal, Stack, TextInput } from '@mantine/core';
+import { Button, Modal, Stack, TextInput } from '@mantine/core';
 import { useState } from 'react';
 
 import { strings } from '../../shared/lib/strings';
 import type { Termo } from './organos';
 import type { TermoNode } from './taxonomiaTree';
+import { TermoDialogFooter } from './TermoDialogFooter';
 import { useCreateTermo } from './termoMutations';
 import type { TermoNameValues } from './termoName';
 import { useTermoNameForm } from './termoNameForm';
@@ -65,14 +66,11 @@ function CreateTermoForm({ roots, defaultParentId, onCreated, onCancel }: Create
             clearErrors('name');
           }}
         />
-        <Group justify="flex-end" mt="sm">
-          <Button variant="default" onClick={onCancel}>
-            {copy.cancel}
-          </Button>
+        <TermoDialogFooter onCancel={onCancel}>
           <Button type="submit" loading={createTermo.isPending}>
             {copy.createSubmit}
           </Button>
-        </Group>
+        </TermoDialogFooter>
       </Stack>
     </form>
   );
