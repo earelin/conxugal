@@ -1,5 +1,5 @@
 import { Box, Card, Skeleton, Text } from '@mantine/core';
-import type { ReactNode } from 'react';
+import { type ReactNode, useId } from 'react';
 
 import { strings } from '../../../../shared/lib/strings';
 import {
@@ -73,10 +73,15 @@ function MetricTile({
 }) {
   const loading = state === 'connecting';
   const dimmed = state === 'reconnecting';
+  // Named after its own label, like the dashboard's status cards, so each tile
+  // is addressable on its own. Several tiles show the same figure as a detail
+  // card below — the HTTP total appears in both — and without a name the only
+  // way to tell them apart would be counting matches across the page.
+  const labelId = useId();
 
   return (
-    <Card withBorder radius="md" padding="lg">
-      <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+    <Card role="group" aria-labelledby={labelId} withBorder radius="md" padding="lg">
+      <Text id={labelId} size="xs" fw={700} c="dimmed" tt="uppercase">
         {label}
       </Text>
       {loading ? (
