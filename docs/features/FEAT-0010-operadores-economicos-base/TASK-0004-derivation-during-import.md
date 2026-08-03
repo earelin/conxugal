@@ -24,9 +24,18 @@ one lands **after** there is an import to derive from.
 ## Scope
 - Inside the batch's transaction, for each contract being upserted: reduce **the fiscal
   identifier on the source row** to a match key, find or create the operador, advance the
-  operador's display fields and rank if this contract outranks the incumbent, and write the
-  contract with its `operadorEconomico` association pointing there. **Contract and link commit
-  together**, so a crash cannot leave a stored contract whose operador was never created.
+  operador's display fields and rank if this contract outranks the incumbent, **retain the name
+  the contract published** (R15), and write the contract with its `operadorEconomico` association
+  pointing there. **Contract and link commit together**, so a crash cannot leave a stored contract
+  whose operador was never created.
+- **Retaining the name is one branch, decided by the same comparison that moves the display.**
+  If the contract outranks the incumbent it becomes the new principal name and **the name it
+  displaced is retained as an alternative**; otherwise the contract's own name is retained as an
+  alternative. Either way one name moves into the alternatives, so the invariant *no alternative
+  equals the principal* holds after every contract, and a name arriving twice advances a date
+  rather than adding a row (TASK-0003's upsert).
+  - A contract republishing the **principal name itself** advances the operador's rank and
+    retains nothing — there is no alternative to add, and adding one would break the invariant.
 - **The published awardee comes from the source row, not from the stored contract.** The schema
   is normalised: `contrato_menor` keeps no awardee name or identifier, so the values this task
   matches on and copies into the operador's display fields are only in hand **while the batch is
@@ -50,6 +59,12 @@ one lands **after** there is an import to derive from.
   withdrawn or corrected away, and make an operador with no visible contracts unreachable. Both
   are R7's lifecycle, and both wait on SPEC-0005 R13's withdrawal, which no feature builds — so
   today nothing is invisible and there is nothing to subtract.
+  - **R15's retention is what will make the first of those possible**, and that is the reason it
+    is written now rather than when the lifecycle feature needs it: the names an operador has
+    borne exist only while its contracts are being imported, so a table added later could only be
+    filled by re-importing every contract. The same argument FEAT-0009 makes for creating
+    `operador_economico_id` with `contrato_menor`. This task **fills** that history; nothing here
+    reads it back.
 
 ## Acceptance criteria
 - Importing two contracts whose identifiers differ only in padding or case yields **one**
@@ -70,8 +85,20 @@ one lands **after** there is an import to derive from.
   half)
 - A contract with an irregular but non-empty identifier is attached to an operador rather than
   skipped. (SPEC-0006 #9)
-- Re-importing the same contracts changes nothing: no operador added, no display field moved.
-  (SPEC-0006 #2)
+- Re-importing the same contracts changes nothing: no operador added, no display field moved, and
+  **no alternative name added, removed or re-dated**. (SPEC-0006 #2, #37)
+- Importing three contracts of one operador under three different names leaves it displaying the
+  most recently published and retaining **the other two** as alternatives, each carrying the date
+  and source identifier of the most recent contract that published it. (SPEC-0006 #33, #34)
+- A contract arriving under a name the operador **already displays** advances its rank and adds
+  **no** alternative — the retained set never contains the principal name. (SPEC-0006 #33)
+- A contract that **outranks** the incumbent moves its own name into the display and the
+  displaced name into the alternatives, leaving neither duplicated. Asserted after two successive
+  promotions, so a name promoted, displaced and promoted again ends up in exactly one place.
+  (SPEC-0006 #33, #36)
+- Many contracts of one operador under the same name yield **one** alternative-name row carrying
+  the most recent of their dates — asserted by row count, since the failure this guards is a
+  table that grows per award. (SPEC-0006 #34)
 - Re-importing a contract whose published identifier changed repoints its `operadorEconomico`
   association to the operador the corrected identifier names, creating it if new. The previous
   operador is left stored with one fewer contract — making it unreachable is R7's, and is not

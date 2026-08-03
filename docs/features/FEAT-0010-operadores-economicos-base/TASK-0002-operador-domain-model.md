@@ -42,6 +42,23 @@ path into FEAT-0009 and the two can be built in either order.
   | `displayName` | `String` | The awardee name **as published** by the winning contract |
   | `displayFiscalId` | `String` | The fiscal identifier **as published** by that same contract — casing and internal spacing intact; the source's surrounding padding is already stripped at the adapter (SPEC-0005 R27) |
   | `rank` | the rank pair | Which contract those two came from: its publication date (nullable) and its source identifier |
+  | `nomesAlternativos` | `Set<NomeAlternativo>` | Every **other** distinct name its contracts have published (R15) — empty when every contract published the principal name |
+
+- **`NomeAlternativo`** — a published name plus **the same rank pair** the aggregate carries: the
+  publication date (nullable) and source identifier of the most recent contract that published
+  that name. Declared beside the aggregate, mapped `@Relation(ONE_TO_MANY)`.
+  - **It carries the rank pair, not just a date.** R4 breaks date ties on the higher contract
+    identifier and ranks undated contracts last, so a name holding only a date could not be
+    ordered against a name sharing it, and two names seen only on undated contracts could not be
+    ordered at all. Carrying both means the principal name and the alternatives compare under
+    **`TASK-0001`'s one rank comparison** — the same function, not a second ordering that could
+    drift from it.
+  - **Distinctness is by the published name exactly**, no folding of case or spacing: R13 forbids
+    normalising a name, and two spellings that differ are two names. The type must not reuse
+    `OperadorMatchKey`'s reduction — that key exists for identifiers and never for display.
+  - The principal name is **not** repeated here. `displayName` holds the R4 winner and this set
+    holds the rest, so the invariant is *no alternative equals the principal*, and promoting one
+    means moving a value between the two rather than choosing among a set that contains both.
 
 - **Storing the rank is what makes R4 deterministic across runs** (#7). Without it, *is this
   contract newer than whatever won last time?* has no answer once the winning contract is out of
@@ -49,9 +66,12 @@ path into FEAT-0009 and the two can be built in either order.
 - The display fields and the match key are **different things that look alike**, and the
   aggregate is where that is enforced: nothing derives one from the other, and the match key
   never leaves the domain.
-- `OperadorRepository` port: `findByMatchKey(String)`, `insert(...)`, and an update of the
+- `OperadorRepository` port: `findByMatchKey(String)`, `insert(...)`, an update of the
   display fields **and** the rank together — they move as one, or the row remembers a spelling
-  from one contract and a rank from another.
+  from one contract and a rank from another — and **retaining a published name**, which either
+  adds an alternative or advances the rank of one already held (R15). One operation, not
+  find-then-write: the store decides which of the two happened, so no caller can read, lose the
+  race and insert a duplicate the unique constraint would then reject.
 - No classification of any kind. No column, field or method records whether an awardee is a
   natural person or a legal entity, and nothing branches on the shape of an identifier beyond
   TASK-0001's emptiness test (R6).
@@ -67,6 +87,16 @@ path into FEAT-0009 and the two can be built in either order.
   together, or moves none of them — the aggregate offers no way to write one without the others.
   *Deciding* whether a contract outranks the incumbent is TASK-0001's comparison, applied by
   TASK-0004; this task only makes the three inseparable. (SPEC-0006 #7)
+- Two names differing only in **letter case or internal spacing** are two distinct
+  `NomeAlternativo` values, never merged — asserted as its own case, since folding them would
+  invent the canonical form R13 forbids. (SPEC-0006 #35)
+- A `NomeAlternativo` compares against the aggregate's own rank through **TASK-0001's comparison**
+  — the principal name sorts above an alternative sharing its date but carrying a lower contract
+  identifier, and above one from an undated contract. The two orderings are the same function, so
+  the retained names cannot disagree with R4. (SPEC-0006 #36)
+- The aggregate never holds an alternative **equal to its principal name**; advancing the display
+  to a new winner leaves the previous principal retained as an alternative and the new one absent
+  from the set. (SPEC-0006 #33)
 - No stored attribute records whether the awardee is a natural person or a legal entity.
   (SPEC-0006 #10, stored-attribute half)
 - Unit-tested without a database or HTTP server.

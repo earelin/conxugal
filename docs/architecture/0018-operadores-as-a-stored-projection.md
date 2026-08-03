@@ -151,6 +151,15 @@ answer depends on measurements R14 has not taken:
   demotes the winner leaves the row stale until something recomputes it, and the first
   operadores feature does not build that something. This is the real price, and it is why the
   paragraph above names it as unsettled rather than silently deferring it.
+
+  **SPEC-0006 R15 narrows this to the identifier spelling.** The catalogue retains every name an
+  operador has been published under, each with the rank it was last seen at, so demoting a stale
+  **name** becomes a choice among rows already stored rather than a re-read of every contract.
+  Nothing yet performs that demotion — R7's lifecycle still owns it — but the data it needs is
+  written when it can be, during the import, rather than left to a backfill only a re-import
+  could supply. The **identifier spelling keeps only its winner**, so for that half the price
+  stands as written; R15 records why the narrower fix was taken, and this ADR's open question
+  survives only for it.
 - **The import gets slower and more coupled.** Storing a contrato menor now also reads and
   possibly writes an operador row, so the batch commit grows and the hot path of a multi-day job
   acquires a second table. The contention is bounded by R22's one-import-at-a-time guard, but it

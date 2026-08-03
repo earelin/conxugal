@@ -32,10 +32,26 @@ exists first.
   - `display_name TEXT NOT NULL`, `display_fiscal_id TEXT NOT NULL` — published spellings;
   - the rank the display fields were taken from: `rank_publication_date DATE` (nullable, and
     null ranks **last**) and `rank_source_id BIGINT NOT NULL`.
+- A second table, `operador_economico_nome_alternativo`, holding the names R15 retains beside the
+  principal one:
+  - `operador_economico_id UUID NOT NULL REFERENCES operador_economico(id)`;
+  - `nome TEXT NOT NULL`;
+  - `last_published_date DATE` (nullable, null ranks **last**) and
+    `last_published_source_id BIGINT NOT NULL` — the same rank pair the operador row carries, so
+    the principal name and the alternatives order under one rule;
+  - **`UNIQUE (operador_economico_id, nome)` — this is the requirement, not a hint.** Without it
+    the table grows one row per contract instead of one per distinct name, and the largest
+    operador would hold tens of thousands of rows saying the same thing. It is also what makes
+    the retention idempotent under re-import (#37) at the store rather than in the caller.
+  - No index beyond that constraint's: nothing in this feature reads the table, and R8's lookup
+    is a later feature's to measure and index for.
 - **No column classifies an operador** — nothing records whether the awardee is a natural person
   or a legal entity, deliberately and although the published identifier makes it inferable (R6).
-- The Micronaut Data JDBC implementation of `OperadorRepository`: find by match key, insert, and
-  the combined display-and-rank update.
+- The Micronaut Data JDBC implementation of `OperadorRepository`: find by match key, insert, the
+  combined display-and-rank update, and **retaining a name** as one
+  `INSERT … ON CONFLICT (operador_economico_id, nome) DO UPDATE` that advances the date and source
+  id. One statement, so a name already held is advanced rather than rejected, and no caller has to
+  read first and race.
 - **No `contrato_menor` reference of any kind** — neither a column here nor an `ALTER` there.
   FEAT-0009's store task owns that column;
   [TASK-0004](TASK-0004-derivation-during-import.md) is what populates it.
@@ -55,4 +71,15 @@ exists first.
   one contract and a rank from another. (SPEC-0006 #7)
 - An operador whose winning contract has no publication date stores a null rank date and is still
   found, updated and compared correctly. (SPEC-0006 #7)
-- Integration-tested against PostgreSQL (Testcontainers), including the unique-constraint case.
+- Retaining a name an operador already holds **advances its date and source id in place** and adds
+  no second row; retaining a name it does not hold adds one. Asserted by row count, not only by
+  the values. (SPEC-0006 #34)
+- Retaining the **same name twice with the same contract** leaves the row byte-identical — the
+  upsert is idempotent, which is what makes a re-import cost nothing here. (SPEC-0006 #37)
+- Two names differing only in letter case are stored as **two rows** under one operador: the
+  unique constraint is on the published name, so nothing folds case at the store any more than in
+  the domain. (SPEC-0006 #35)
+- Deleting an operador is not offered, and the foreign key means an alternative name cannot
+  outlive the operador it belongs to.
+- Integration-tested against PostgreSQL (Testcontainers), including the unique-constraint case
+  and the name upsert's advance-not-duplicate behaviour.

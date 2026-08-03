@@ -26,7 +26,8 @@ than an error".
     the adapter ([SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) R27,
     [FEAT-0009 TASK-0005](../FEAT-0009-contratos-menores-initial-import/TASK-0005-source-port-and-adapter.md)),
     so identifiers reaching this function are already trimmed. It is kept because SPEC-0006 R3
-    makes the same equivalence govern **what a user types**, and because a match key that holds
+    makes the same equivalence govern **what a user types** — R8's identifier lookup — and
+    because a match key that holds
     only when its caller has already trimmed is a key that silently mismatches the day one
     caller has not. It costs one call.
 - **The emptiness test** — an identifier absent, or empty once surrounding whitespace is ignored,

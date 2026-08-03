@@ -64,13 +64,17 @@ import use case
   requires an award with an unusable identifier to be stored with **no** operador rather than an
   invented one, which is also the case in which **no awardee is recorded anywhere**; see the
   design note below.
+- **Domain (the name history):** every distinct name an operador's contracts have published,
+  retained beside it with the most recent date each was published and the contract that did so
+  (R15). The R4 winner is the operador's **principal name** and stays on the operador row; the
+  rest are **alternative names** on a table of their own.
 - **Domain (derivation):** resolving each stored contract to its operador as part of the import
-  batch, creating the operador when no contract has named it before, and advancing its display
-  fields when the contract outranks the incumbent.
-- **Infrastructure:** a migration creating `operador_economico` with a **unique** match key, and
-  the Micronaut Data JDBC implementation of the port. The nullable `operador_economico_id` foreign
-  key is **created with `contrato_menor` by FEAT-0009**, not added here — see the ordering note
-  above.
+  batch, creating the operador when no contract has named it before, advancing its display
+  fields when the contract outranks the incumbent, and retaining the name it published.
+- **Infrastructure:** a migration creating `operador_economico` with a **unique** match key and
+  `operador_economico_nome_alternativo` unique on (operador, name), and the Micronaut Data JDBC
+  implementation of the ports. The nullable `operador_economico_id` foreign key is **created with
+  `contrato_menor` by FEAT-0009**, not added here — see the ordering note above.
 
 **Out of scope (owned by later features):**
 - **Every read surface of SPEC-0006** — R8's operadores list, name and whole-identifier lookup
@@ -178,6 +182,58 @@ flowchart LR
 - The rule never invents a canonical form. `b12345678`, ` B12345678 ` and `B12345678` are one
   operador, displayed under whichever of those three its winning contract published.
 
+### Every name is kept, not only the winning one
+R15 retains **every name an operador has been published under**. The R4 winner is its **principal
+name** and stays on the operador row where the display already reads it; every other distinct name
+its contracts have published is an **alternative name**, on a table of its own:
+
+```mermaid
+erDiagram
+    OPERADOR_ECONOMICO ||--o{ NOME_ALTERNATIVO : "has borne"
+    OPERADOR_ECONOMICO {
+        uuid id PK
+        text match_key UK
+        text display_name "principal, R4 winner"
+        text display_fiscal_id
+        date rank_date
+        bigint rank_source_id
+    }
+    NOME_ALTERNATIVO {
+        uuid operador_economico_id FK
+        text nome UK "unique with the FK"
+        date last_published_date
+        bigint last_published_source_id
+    }
+```
+
+- **One row per distinct name, not per award.** The table is unique on (operador, name), so an
+  operador with 10 000 contracts under one name holds **one** alternative-name row's worth of
+  history, not 10 000. The retained fact is *this operador has been known by this name, most
+  recently then* — which is why the write is an upsert that advances a date rather than an insert.
+- **Each name carries the same rank pair the operador row does** — the publication date and the
+  contract's source identifier. That is not symmetry for its own sake: R4 breaks date ties on the
+  higher contract identifier and ranks undated contracts last, so a name holding only a date could
+  not be ordered against a name sharing that date, and two names seen only on undated contracts
+  could not be ordered at all. With both, **the principal name and the alternatives sort under one
+  rule**, and the history cannot disagree with R4 about which name should be showing.
+- **Distinctness is by the name exactly as published.** Two spellings that differ in case or
+  internal spacing are two names. R13 forbids normalising a published name, and folding them here
+  would invent a canonical form in the one place the system is meant to be remembering that
+  several existed.
+- **What this buys, stated plainly.** ADR-0018 names one thing as the projection's real price: a
+  display name is correct only while the contract that won R4 still wins it, and nothing can
+  recompute it from stored data when a correction or withdrawal demotes that contract. With the
+  names retained, that fallback becomes a choice among rows already held instead of a re-read of
+  every contract. **This feature does not build the fallback** — R7's lifecycle is still out of
+  scope below — it makes it buildable without a backfill that only a re-import could supply.
+- **What it does not buy.** Knowing an operador has borne a name is not knowing *which contract*
+  published it, so SPEC-0006 #5's per-contract spelling stays amended: a history row still shows
+  the operador's one spelling. And the **fiscal identifier spelling is not retained this way** —
+  only the winner's is kept, so the demotion this enables covers names alone. That is narrower
+  than ADR-0018's open question and narrower knowingly: identifier spellings now vary only by
+  letter case, R3 matches through case, and a stale case is cosmetic where a stale *name* can be a
+  different trading name entirely.
+
 ### The link, and where it is written
 - `contrato_menor.operador_economico_id` is a **nullable** foreign key — null exactly when R5 says
   the award yields no operador — and in the domain it is a `@Relation(MANY_TO_ONE)` association,
@@ -229,20 +285,23 @@ dependencies**, and 2 is the one FEAT-0009 waits on, so it can be taken first.
    Needed by task 4, not by tasks 2 or 3. *(SPEC-0006 #3 matching half, #4, #9)*
 2. **`OperadorEconomico` domain model + repository port** — the aggregate (`OperadorId` identity,
    match key, published display name, published identifier spelling, and the rank they were taken
-   from) and the `OperadorRepository` port: find by match key, insert, update the display fields.
-   **The task that unblocks FEAT-0009**, whose contract aggregate declares an association to this
-   type. *(SPEC-0006 #2, #10 stored-attribute half)*
-3. **Operador store** — the migration creating `operador_economico` with a **unique** match key,
-   and the Micronaut Data JDBC implementation of the port. It touches `contrato_menor` **not at
-   all**: the nullable `operador_economico_id` foreign key and its index are created by
-   FEAT-0009's store task, which is why this one lands **before** it.
-   *(SPEC-0006 #3 one-operador half, #4)*
+   from), the `NomeAlternativo` it holds many of (the published name plus the rank it was last
+   seen at), and the `OperadorRepository` port: find by match key, insert, update the display
+   fields, retain a name. **The task that unblocks FEAT-0009**, whose contract aggregate declares
+   an association to this type. *(SPEC-0006 #2, #10 stored-attribute half, #35)*
+3. **Operador store** — the migration creating `operador_economico` with a **unique** match key
+   and `operador_economico_nome_alternativo` **unique on (operador, name)**, and the Micronaut
+   Data JDBC implementation of the port, including the name upsert that advances a date rather
+   than inserting a duplicate. It touches `contrato_menor` **not at all**: the nullable
+   `operador_economico_id` foreign key and its index are created by FEAT-0009's store task, which
+   is why this one lands **before** it. *(SPEC-0006 #3 one-operador half, #4, #34)*
 4. **Derivation during the contratos menores import** — resolve each stored contract to its
    operador inside the batch transaction: no operador for an unusable identifier, find-or-create
-   otherwise, advance the display fields when the contract outranks the incumbent, and repoint the
-   reference when a re-import changes a contract's published identifier. *Depends on FEAT-0009's
-   single-Órgano import task.* *(SPEC-0006 #2, #6 storage half, #7, #8 no-operador half, #9, #14
-   moves-and-creates half, #30 no-normalisation half)*
+   otherwise, advance the display fields when the contract outranks the incumbent, **retain the
+   name the contract published**, and repoint the reference when a re-import changes a contract's
+   published identifier. *Depends on FEAT-0009's single-Órgano import task.* *(SPEC-0006 #2, #6
+   storage half, #7, #8 no-operador half, #9, #14 moves-and-creates half, #30 no-normalisation
+   half, #33, #36, #37)*
 
 **Criteria this feature deliberately leaves incomplete**, so no task claims what it cannot prove:
 every *displayed* and *reachable* half — criteria #1, #5, #6's display, #8's list appearance,

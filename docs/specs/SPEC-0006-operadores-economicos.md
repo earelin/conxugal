@@ -140,10 +140,10 @@ One decision remains open:
   The **padding half is now redundant for stored values** —
   [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R27 trims them on the way in, so two
   stored identifiers differing only in padding no longer occur. It is kept because the
-  equivalence also governs **what a user types**: R6's search must still find an operador from a
-  padded or differently-cased query, and a rule that holds in one place and not the other is a
-  rule that will be applied in only one. The **casing half is not redundant at all**; nothing
-  folds case anywhere. Without it the same operador splits in two and the
+  equivalence also governs **what a user types**: R8's identifier lookup must still find an
+  operador from a padded or differently-cased query, and a rule that holds in one place and not
+  the other is a rule that will be applied in only one. The **casing half is not redundant at
+  all**; nothing folds case anywhere. Without it the same operador splits in two and the
   cross-Órgano aggregation this spec exists for fails silently.
 - **R4** — The same identifier is published under **varying names**, and with varying padding
   and casing. Since R13 forbids normalising either, an operador is shown under the **name and
@@ -196,6 +196,41 @@ One decision remains open:
   becomes visible again — newly imported, or restored after withdrawal — makes its operador
   reachable again. R4's display name and identifier follow from whatever the contracts say
   after the change, not from what they said when the operador first appeared.
+
+- **R15** — The system retains **every name an operador has been published under**, not only
+  the one R4 selects. The R4 winner is the operador's **principal name**; every other distinct
+  name its contracts have published is retained as an **alternative name**, each with the **most
+  recent date on which a contract published it** and the identifier of the contract that did so.
+
+  A name is retained **once per operador however many contracts publish it** — the retained fact
+  is *this operador has been known by this name, most recently then*, not one entry per award.
+  Distinctness is by the name exactly as published: R13 forbids normalising it, and two spellings
+  that differ are two names, on the same reasoning that keeps R3's match rule off everything but
+  whitespace and case.
+
+  **The date and contract identifier are retained because R4's order needs both.** R4 ranks by
+  publication date and breaks ties on the higher contract identifier, and ranks a contract whose
+  date cannot be interpreted last; a name carrying only a date could not be ordered against
+  another sharing it, and two names seen only on undated contracts could not be ordered at all.
+  Retaining both means the principal name and the alternatives are ordered by **one rule**, so
+  the history can never disagree with R4 about which name should be showing.
+
+  **What this makes possible, and what it does not.** R7 requires the catalogue to re-derive as
+  the contracts currently stand; when a correction or withdrawal demotes the contract that won
+  R4, the principal name has to fall back to whatever now ranks highest.
+  [ADR-0018](../architecture/0018-operadores-as-a-stored-projection.md) records that this cannot
+  be done from stored data today and names it as the projection's real price. With the names
+  retained, the fallback is a choice among rows the system already holds rather than a re-read of
+  every contract. **It does not restore per-contract spelling.** R13 shows an operador's history
+  under one spelling, and knowing that a name exists is not knowing which contract published it,
+  so #5 is unaffected: this retains the *set* of names an operador has borne, not a per-row
+  record.
+
+  The **fiscal identifier spelling is deliberately not retained this way.** Only the R4 winner's
+  spelling is kept, so the demotion this requirement enables covers names alone. That is a
+  narrower fix than ADR-0018's open question, and it is narrower knowingly: identifier spellings
+  now vary only by letter case, R3 matches through that case, and a stale case is a cosmetic
+  wrong where a stale *name* can be a different trading name entirely.
 
 ### Finding an operador
 
@@ -542,3 +577,20 @@ One decision remains open:
     is met by those measurements existing against those conditions; it asserts no threshold,
     because R14 sets none until they do.
 32. **(R14)** The operadores list displays no per-operador contract count or amount total.
+33. **(R15)** An operador whose contracts publish three different names retains **all three** —
+    the R4 winner as its principal name and the other two as alternatives — and an operador whose
+    contracts all publish the same name retains that name once, with **no** alternative beside it.
+34. **(R15)** A name published by many of an operador's contracts is retained **once**, carrying
+    the publication date and contract identifier of the **most recent** contract that published
+    it; importing a further contract under that same name advances those two and adds no second
+    entry.
+35. **(R15)** Two names differing only in letter case or internal spacing are retained as **two**
+    names, not merged — R13 forbids normalising a published name, and the retention is by the name
+    exactly as published.
+36. **(R15)** Ordering an operador's principal name against its alternatives by publication date,
+    then by higher contract identifier, with undated contracts last, puts the **principal name
+    first** — the retained data and R4 agree by construction, including when the top two names
+    share a date and when every name comes from an undated contract.
+37. **(R15)** Re-importing contracts the system already holds leaves the retained names, their
+    dates and their contract identifiers **unchanged** — the retention is idempotent, as the
+    catalogue it belongs to is.
