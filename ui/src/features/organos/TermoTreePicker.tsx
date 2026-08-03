@@ -62,6 +62,7 @@ export interface TermoTreePickerProps {
  */
 export function TermoTreePicker({ roots, label, value, onChange, required }: TermoTreePickerProps) {
   const labelId = useId();
+  const listId = useId();
   const listRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
 
@@ -110,24 +111,25 @@ export function TermoTreePicker({ roots, label, value, onChange, required }: Ter
       <TextInput
         mt={4}
         aria-label={copy.searchLabel}
+        // Names the list it narrows, which is the only thing tying the two
+        // together: this is a search over a listbox, not a combobox that owns it.
+        aria-controls={listId}
         placeholder={copy.searchPlaceholder}
         leftSection={<IconSearch size={16} aria-hidden />}
         value={query}
         onChange={(event) => setQuery(event.currentTarget.value)}
         onKeyDown={enterListFromSearch}
       />
-      <Box
-        mt="xs"
-        style={{
-          border: '1px solid var(--mantine-color-gray-3)',
-          borderRadius: 'var(--mantine-radius-md)',
-        }}
-      >
+      <Box mt="xs" bd="1px solid gray.3" bdrs="md">
         <ScrollArea.Autosize mah={PANEL_HEIGHT} type="auto">
           <Box
             ref={listRef}
+            id={listId}
             role="listbox"
             aria-labelledby={labelId}
+            // The asterisk Input.Wrapper draws is aria-hidden, so without this
+            // the field's required-ness would be sighted-only.
+            aria-required={required}
             tabIndex={-1}
             onKeyDown={moveFocus}
             p={4}
@@ -158,6 +160,8 @@ export function TermoTreePicker({ roots, label, value, onChange, required }: Ter
                     >
                       {row.name}
                     </Text>
+                    {/* A Tabler icon paints its own stroke, so this is a CSS
+                        value rather than a Mantine colour token. */}
                     {selected && (
                       <IconCheck size={14} color="var(--mantine-color-indigo-8)" aria-hidden />
                     )}
@@ -166,11 +170,19 @@ export function TermoTreePicker({ roots, label, value, onChange, required }: Ter
               );
             })}
           </Box>
-          {rows.length === 0 && (
-            <Text c="dimmed" size="sm" p="sm">
-              {copy.noTermoMatches(query.trim())}
-            </Text>
-          )}
+          {/* Always mounted, so a screen reader hears the list empty out under
+              a query rather than nothing at all. An empty taxonomía is not a
+              failed search — it is the normal state before the first term is
+              created, and it says so. */}
+          <Box role="status">
+            {rows.length === 0 && (
+              <Text c="dimmed" size="sm" p="sm">
+                {roots.length === 0
+                  ? strings.admin.organos.treeEmpty
+                  : copy.noTermoMatches(query.trim())}
+              </Text>
+            )}
+          </Box>
         </ScrollArea.Autosize>
       </Box>
     </Input.Wrapper>

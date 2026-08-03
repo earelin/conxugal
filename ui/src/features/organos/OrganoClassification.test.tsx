@@ -107,6 +107,11 @@ function rowFor(name: string): HTMLElement {
   return within(paneTable()).getByText(name).closest('tr') as HTMLElement;
 }
 
+/** The cell carrying the name, which is where a row's dimming is applied. */
+function nameCellOf(name: string): HTMLElement {
+  return within(rowFor(name)).getAllByRole('cell')[0];
+}
+
 /** The Órgano named in each body row, which is what a pane's contents are. */
 const rowNames = (): (string | null)[] =>
   within(paneTable())
@@ -174,9 +179,11 @@ describe('órgano classification', () => {
     expect(
       screen.getByText(`2 ${strings.admin.organos.countUnclassifiedOther}`),
     ).toBeInTheDocument();
-    // The worklist is the null-termoId slice of the catalogue already read, not
-    // a third request.
+    // The worklist is the null-termoId slice of the two reads above, not a third
+    // request: `disableNetConnect` rejects any other call, and a rejected read
+    // would have replaced the whole section with its error alert.
     expect(nock.pendingMocks()).toEqual([]);
+    expect(screen.queryByText(strings.admin.organos.errorTitle)).not.toBeInTheDocument();
   });
 
   it('files an Órgano from the worklist, which leaves it in the same refresh', async () => {
@@ -352,6 +359,59 @@ describe('órgano classification', () => {
     });
     expect(catalogue.isDone()).toBe(true);
     expect(taxonomia.isDone()).toBe(true);
+
+    // The refusal asked for the re-read; once it has happened the message has
+    // nothing left to ask for.
+    const open = await dialog();
+
+    expect(within(open).queryByText(copy.termoNotFound)).not.toBeInTheDocument();
+    // The choice went with the term. Left held, it would keep the primary
+    // enabled over a destination the picker no longer shows, re-submitting the
+    // same doomed pair for as long as the reader kept clicking.
+    expect(
+      within(within(open).getByRole('listbox', { name: copy.termoLabel })).queryAllByRole(
+        'option',
+        {
+          selected: true,
+        },
+      ),
+    ).toEqual([]);
+    expect(within(open).getByRole('button', { name: copy.submit })).toBeDisabled();
+  });
+
+  it('lets the reader pick again after the refresh, and files it', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+    await showSection();
+
+    await assignFromRow(user, vivenda);
+    await chooseTermo(user, concellos.name);
+    nock(BASE_URL)
+      .put(`${ORGANO_PATH}/${vivenda.id}/termo`)
+      .reply(...refuses(404, 'termo-not-found'));
+    await confirmAssign(user);
+    await within(await dialog()).findByText(copy.termoNotFound);
+
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA.filter((termo) => termo.id !== concellos.id));
+    await user.click(within(await dialog()).getByRole('button', { name: copy.refresh }));
+    await waitFor(() => {
+      expect(within(tree()).queryByText(concellos.name)).not.toBeInTheDocument();
+    });
+
+    await chooseTermo(user, sanidade.name);
+    const put = nock(BASE_URL)
+      .put(`${ORGANO_PATH}/${vivenda.id}/termo`, { termoId: sanidade.id })
+      .reply(204);
+    mockCatalogue(filedIn(vivenda, sanidade.id));
+
+    await confirmAssign(user);
+
+    await waitFor(() => {
+      expect(put.isDone()).toBe(true);
+    });
   });
 
   it('reports a refused clear above the table it failed to change', async () => {
@@ -372,6 +432,52 @@ describe('órgano classification', () => {
     expect(rowNames()).toEqual([sergas.name, cunqueiro.name]);
   });
 
+  it('leaves a refused clear behind with the pane it was attempted in', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+    await showSection();
+
+    await openTermo(user, sanidade.name);
+    nock(BASE_URL)
+      .delete(`${ORGANO_PATH}/${sergas.id}/termo`)
+      .reply(...refuses(404, 'organo-not-found'));
+    await clearFromRow(user, sergas);
+    await screen.findByText(copy.organoNotFound);
+
+    // The message is about an Órgano the next pane does not even list.
+    await openTermo(user, educacion.name);
+
+    expect(screen.queryByText(copy.organoNotFound)).not.toBeInTheDocument();
+  });
+
+  it('takes a refused clear down once the refresh it asked for has happened', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+    await showSection();
+
+    await openTermo(user, sanidade.name);
+    nock(BASE_URL)
+      .delete(`${ORGANO_PATH}/${sergas.id}/termo`)
+      .reply(...refuses(404, 'organo-not-found'));
+    await clearFromRow(user, sergas);
+    await screen.findByText(copy.organoNotFound);
+
+    mockCatalogue(filedIn(sergas, null));
+    mockTaxonomia(TAXONOMIA);
+
+    await user.click(screen.getByRole('button', { name: copy.refresh }));
+
+    // Without this the alert is undismissable: its own button re-reads the
+    // section and leaves the message sitting over the result.
+    await waitFor(() => {
+      expect(screen.queryByText(copy.organoNotFound)).not.toBeInTheDocument();
+    });
+  });
+
   it('keeps an inactive Órgano dimmed, listed and still filed and unfiled at will', async () => {
     const user = userEvent.setup();
     mockCatalogue(CATALOGUE);
@@ -379,8 +485,11 @@ describe('órgano classification', () => {
     renderOrganosPage();
     await showSection();
 
-    // Dimmed rather than hidden, in the worklist as in a term's table.
+    // Dimmed rather than hidden, and dimmed in the sense SPEC-0004 means:
+    // asserting only the state badge would leave the opacity free to be dropped.
     expect(rowFor(turismo.name)).toHaveTextContent(strings.admin.organos.stateInactive);
+    expect(nameCellOf(turismo.name)).toHaveStyle({ opacity: '0.6' });
+    expect(nameCellOf(vivenda.name)).not.toHaveStyle({ opacity: '0.6' });
 
     await assignFromRow(user, turismo);
     await chooseTermo(user, sanidade.name);
@@ -432,6 +541,21 @@ describe('órgano classification', () => {
     expect(within(list).getAllByRole('option', { selected: true })).toHaveLength(1);
   });
 
+  it('says the taxonomía is empty rather than blaming an empty search', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia([]);
+    renderOrganosPage();
+    await screen.findByText(vivenda.name);
+
+    await assignFromRow(user, vivenda);
+
+    // The state right after a first import, when every row is in the worklist
+    // and this is the first dialog anyone opens.
+    expect(await within(await dialog()).findByText(strings.admin.organos.treeEmpty)).toBeVisible();
+    expect(within(await dialog()).queryByText(copy.noTermoMatches(''))).not.toBeInTheDocument();
+  });
+
   it('walks the term picker with the keyboard alone', async () => {
     const user = userEvent.setup();
     mockCatalogue(CATALOGUE);
@@ -480,10 +604,17 @@ describe('órgano classification', () => {
 
     await assignFromRow(user, vivenda);
     await chooseTermo(user, sanidade.name);
+
+    // Registered so the assertion has something to be false about: an unmocked
+    // PUT would be rejected by `disableNetConnect` and swallowed into the
+    // unmounted form's error state, leaving nothing behind to catch.
+    const put = nock(BASE_URL).put(`${ORGANO_PATH}/${vivenda.id}/termo`).reply(204);
+
     await user.click(
       within(await dialog()).getByRole('button', { name: strings.admin.organos.termo.cancel }),
     );
 
-    expect(nock.pendingMocks()).toEqual([]);
+    expect(put.isDone()).toBe(false);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

@@ -74,6 +74,18 @@ export function OrganosPage() {
     setAction(null);
   }
 
+  /**
+   * The section-level retry, which is not the dialog's own refresh: a failed
+   * read replaces the whole section, taking any open dialog with it, and
+   * bringing the reader back to a screen they never asked to return to would be
+   * a dialog re-opening by itself. The dialog's `Actualizar` keeps it open on
+   * purpose, so the two refreshes stay separate handlers.
+   */
+  function retrySection() {
+    setAssigning(null);
+    refetch();
+  }
+
   function afterDelete() {
     // The deleted term is gone from the next read; landing on its parent keeps
     // the administrator where they were working instead of at the worklist.
@@ -98,7 +110,7 @@ export function OrganosPage() {
       {isError && (
         <ErrorAlert
           title={strings.admin.organos.errorTitle}
-          onRetry={refetch}
+          onRetry={retrySection}
           retrying={isFetching}
         >
           {isHttpStatus(error, 403)
@@ -120,6 +132,10 @@ export function OrganosPage() {
           </Grid.Col>
           <Grid.Col span={{ base: 12, md: 7 }}>
             <TermoContentCard
+              // A refused clear belongs to the pane it was attempted in, and
+              // this card is otherwise reused across every selection — without
+              // the key its alert would follow the reader to the next term.
+              key={openTermoId ?? 'worklist'}
               openPath={openPath}
               unclassified={view.unclassified}
               termoActions={termoActions}

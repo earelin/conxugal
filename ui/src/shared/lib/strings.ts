@@ -290,7 +290,7 @@ export const strings = {
         // same way out, since neither is anything this browser can fix by
         // retrying the same write.
         refresh: 'Actualizar',
-        organoNotFound: 'Outra persoa eliminou este órgano. Actualiza a sección para vela ao día.',
+        organoNotFound: 'Outra persoa eliminou este órgano. Actualiza a sección para velo ao día.',
         termoNotFound:
           'Outra persoa eliminou o termo de destino. Actualiza a sección e escolle outro.',
         genericError: 'Non se puido completar a acción. Téntao de novo máis tarde.',

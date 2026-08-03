@@ -77,6 +77,13 @@ export function TermoContentCard({
   const clearOrgano = useClearOrgano();
   const [clearRefusal, setClearRefusal] = useState<Refusal | null>(null);
 
+  function refresh() {
+    // The refusal asked for a re-read; leaving it up afterwards would keep
+    // asking for one that has already happened, with no other way to dismiss it.
+    setClearRefusal(null);
+    onRefresh();
+  }
+
   // A clear needs no dialog: there is nothing to choose and nothing to confirm,
   // since the Órgano returns to the worklist rather than being deleted. So it
   // runs from the row and reports here, above the table it changes.
@@ -104,7 +111,7 @@ export function TermoContentCard({
         ))}
       </Breadcrumbs>
 
-      {/* Wraps rather than holding one line: at 360 px the three term actions
+      {/* Wraps rather than holding one line: at 360 px the four term actions
           do not fit beside a term name, and they drop under it instead of
           pushing the card into a horizontal scroll. */}
       <Group justify="space-between" align="flex-start">
@@ -117,14 +124,14 @@ export function TermoContentCard({
           )}
         </Stack>
         {/* The worklist is not a term: it has no name to change, no place in the
-            tree and nothing to delete. Assign lands here alongside them. */}
-        <Group gap="xs">{openPath.length > 0 && <TermoActionButtons {...termoActions} />}</Group>
+            tree and nothing to delete. Assign sits alongside them. */}
+        {openPath.length > 0 && <TermoActionButtons {...termoActions} />}
       </Group>
       <Divider my="sm" />
 
       {clearRefusal && (
         <Box mb="sm">
-          <TermoRefusalAlert refusal={clearRefusal} onRefresh={onRefresh} />
+          <TermoRefusalAlert refusal={clearRefusal} onRefresh={refresh} />
         </Box>
       )}
 

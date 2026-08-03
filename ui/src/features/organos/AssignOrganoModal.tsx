@@ -33,6 +33,13 @@ interface AssignOrganoFormProps {
   onRefresh: () => void;
 }
 
+/** Whether a chosen id is still in the section's current view of the world. */
+function resolves(view: TaxonomiaView, target: AssignTarget, id: string): boolean {
+  return target.kind === 'organo'
+    ? findTermoPath(view.roots, id).length > 0
+    : view.catalogue.some((organo) => organo.id === id);
+}
+
 function AssignOrganoForm({
   view,
   target,
@@ -40,22 +47,33 @@ function AssignOrganoForm({
   onCancel,
   onRefresh,
 }: AssignOrganoFormProps) {
-  // A reassignment opens on the Órgano's current term, the way the move dialog
-  // opens on a term's current parent.
-  const [choiceId, setChoiceId] = useState<string | null>(
-    target.kind === 'organo' ? target.organo.termoId : null,
-  );
+  const [pickedId, setPickedId] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const placeOrgano = usePlaceOrgano();
+
+  // Read back through the live view rather than trusted as held: both refusals
+  // mean another administrator deleted a record, and the refresh they offer is
+  // exactly when the choice already made can stop existing. Deriving it here
+  // empties the picker and disables the primary in one move — otherwise the
+  // dialog would show nothing selected and still let the same doomed pair be
+  // submitted again.
+  const choiceId = pickedId !== null && resolves(view, target, pickedId) ? pickedId : null;
 
   const organoId = target.kind === 'organo' ? target.organo.id : choiceId;
   const termoId = target.kind === 'termo' ? target.termo.id : choiceId;
 
   function choose(id: string) {
-    setChoiceId(id);
+    setPickedId(id);
     // A refusal is about the pair that was submitted; leaving it up over a new
     // choice would assert a clash nothing has tested for.
     setRefusal(null);
+  }
+
+  function refresh() {
+    // The message asked for a re-read; leaving it up afterwards would keep
+    // asking for one that has already happened.
+    setRefusal(null);
+    onRefresh();
   }
 
   function onSubmit() {
@@ -71,7 +89,7 @@ function AssignOrganoForm({
 
   return (
     <Stack gap="md">
-      <TermoRefusalAlert refusal={refusal} onRefresh={onRefresh} />
+      <TermoRefusalAlert refusal={refusal} onRefresh={refresh} />
 
       {target.kind === 'organo' ? (
         <>
@@ -119,10 +137,17 @@ interface AssignOrganoModalProps extends AssignOrganoFormProps {
 }
 
 export function AssignOrganoModal({ opened, onCancel, ...formProps }: AssignOrganoModalProps) {
-  const title = formProps.target.kind === 'organo' ? copy.titleTermo : copy.titleOrgano;
+  const { target } = formProps;
+  const title = target.kind === 'organo' ? copy.titleTermo : copy.titleOrgano;
+  // The half already settled keys the form, so the pending choice can never
+  // outlive the pair it belongs to and be read as the other half's id. Today
+  // the dialog is always unmounted between two openings, which makes this
+  // belt-and-braces — but the union exists to make that pairing unbreakable,
+  // and without the key it holds only by the layout's good manners.
+  const targetId = target.kind === 'organo' ? target.organo.id : target.termo.id;
   return (
     <Modal opened={opened} onClose={onCancel} title={title} radius="md">
-      <AssignOrganoForm onCancel={onCancel} {...formProps} />
+      <AssignOrganoForm key={targetId} onCancel={onCancel} {...formProps} />
     </Modal>
   );
 }

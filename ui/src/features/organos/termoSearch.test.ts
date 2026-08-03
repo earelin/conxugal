@@ -64,8 +64,15 @@ describe('buildTermoPickerRows', () => {
     ]);
   });
 
-  it('drops the branches that hold no match at all', () => {
-    expect(names('sanidade')).not.toContain('Concellos');
+  // The match is two levels down, so keeping it needs the whole chain above it
+  // — the case that proves the kept set is closed under parents rather than
+  // merely under immediate ones.
+  it('keeps every ancestor of a match, not just its parent', () => {
+    expect(names('innovacion')).toEqual([
+      'Consellerías',
+      'Consellería de Educación',
+      'Axencia Galega de Innovación',
+    ]);
   });
 
   it('keeps the chosen term visible however narrow the query gets', () => {

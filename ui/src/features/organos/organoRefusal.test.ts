@@ -19,14 +19,6 @@ describe('placementRefusal', () => {
     expect(placementRefusal(problem('termo-not-found')).message).toBe(copy.termoNotFound);
   });
 
-  // Both refusals are 404s, so telling them apart is the whole reason the client
-  // reads the problem type rather than the status.
-  it('tells the two 404s apart', () => {
-    expect(placementRefusal(problem('organo-not-found')).message).not.toBe(
-      placementRefusal(problem('termo-not-found')).message,
-    );
-  });
-
   it('falls back to the generic message for a problem type it does not know', () => {
     expect(placementRefusal(problem('termo-cycle')).message).toBe(copy.genericError);
   });
