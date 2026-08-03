@@ -1,5 +1,6 @@
 import { ActionIcon, Button, Group, Tooltip } from '@mantine/core';
 import { IconArrowMoveRight, IconPencil, IconTrash } from '@tabler/icons-react';
+import type { KeyboardEvent } from 'react';
 
 import { strings } from '../../shared/lib/strings';
 
@@ -12,52 +13,69 @@ export interface TermoActionHandlers {
   onDelete: () => void;
 }
 
-const ACTIONS = [
-  { key: 'rename', label: copy.rename, Icon: IconPencil, color: undefined },
-  { key: 'move', label: copy.move, Icon: IconArrowMoveRight, color: undefined },
-  { key: 'delete', label: copy.delete, Icon: IconTrash, color: 'red' },
-] as const;
-
-function handlerFor(handlers: TermoActionHandlers, key: (typeof ACTIONS)[number]['key']) {
-  return { rename: handlers.onRename, move: handlers.onMove, delete: handlers.onDelete }[key];
-}
-
 /** The term-content header's row: `Renomear` · `Mover` · `Eliminar`. */
-export function TermoActionButtons(handlers: TermoActionHandlers) {
+export function TermoActionButtons({ onRename, onMove, onDelete }: TermoActionHandlers) {
   return (
     <Group gap="xs" wrap="nowrap">
-      {ACTIONS.map(({ key, label, color }) => (
-        <Button key={key} variant="default" size="xs" c={color} onClick={handlerFor(handlers, key)}>
-          {label}
-        </Button>
-      ))}
+      <Button variant="default" size="xs" onClick={onRename}>
+        {copy.rename}
+      </Button>
+      <Button variant="default" size="xs" onClick={onMove}>
+        {copy.move}
+      </Button>
+      <Button variant="default" size="xs" c="red" onClick={onDelete}>
+        {copy.delete}
+      </Button>
     </Group>
   );
+}
+
+// Mantine's TreeNode owns Space and the arrows on the row itself — Space
+// toggles the branch — and these buttons are ordinary tabbable children of it.
+// Without this, Space on a focused icon both opens its dialog and collapses the
+// row underneath it.
+function keepKeyToSelf(event: KeyboardEvent) {
+  if (event.key === ' ' || event.key.startsWith('Arrow')) {
+    event.stopPropagation();
+  }
+}
+
+interface TermoActionIconsProps extends TermoActionHandlers {
+  /** Named in each label, since the same three actions also sit in the header. */
+  termoName: string;
 }
 
 /**
  * The same three actions on the selected tree row, where they take the place of
  * the count badge. Icon-only to fit a row that already carries a term name at a
- * 360 px viewport, so each one names itself for the accessibility tree.
+ * 360 px viewport, so each one names itself and its term for the accessibility
+ * tree.
  */
-export function TermoActionIcons(handlers: TermoActionHandlers) {
+export function TermoActionIcons({ termoName, onRename, onMove, onDelete }: TermoActionIconsProps) {
+  const actions = [
+    { label: copy.rename, Icon: IconPencil, color: 'indigo', onClick: onRename },
+    { label: copy.move, Icon: IconArrowMoveRight, color: 'indigo', onClick: onMove },
+    { label: copy.delete, Icon: IconTrash, color: 'red', onClick: onDelete },
+  ];
+
   return (
     <>
-      {ACTIONS.map(({ key, label, Icon, color }) => (
-        <Tooltip key={key} label={label}>
+      {actions.map(({ label, Icon, color, onClick }) => (
+        <Tooltip key={label} label={label}>
           <ActionIcon
             variant="subtle"
             size="sm"
-            color={color ?? 'indigo'}
-            aria-label={label}
+            color={color}
+            aria-label={`${label}: ${termoName}`}
+            onKeyDown={keepKeyToSelf}
             onClick={(event) => {
               // The row is a tree item: a click on it would otherwise walk up and
               // re-select the very term the dialog is about.
               event.stopPropagation();
-              handlerFor(handlers, key)();
+              onClick();
             }}
           >
-            <Icon size={15} />
+            <Icon size={16} />
           </ActionIcon>
         </Tooltip>
       ))}

@@ -30,12 +30,15 @@ function toTreeData(nodes: TermoNode[]): TreeNodeData[] {
   }));
 }
 
-function collectCounts(nodes: TermoNode[], counts: Map<string, number>): Map<string, number> {
+// The tree data Mantine renders carries only a value and a label, so a row that
+// needs anything else about its term — its count, or its name as a string
+// rather than a ReactNode — looks it up here by id.
+function indexById(nodes: TermoNode[], byId: Map<string, TermoNode>): Map<string, TermoNode> {
   for (const node of nodes) {
-    counts.set(node.id, node.organos.length);
-    collectCounts(node.children, counts);
+    byId.set(node.id, node);
+    indexById(node.children, byId);
   }
-  return counts;
+  return byId;
 }
 
 // Chevron and leaf spacer share this width, which is what lines labels up
@@ -52,11 +55,11 @@ function ExpandMarker({ hasChildren, expanded }: { hasChildren: boolean; expande
 
 interface TermoRowProps {
   payload: RenderTreeNodePayload;
-  count: number;
+  termo: TermoNode | undefined;
   actions: TermoActionHandlers;
 }
 
-function TermoRow({ payload, count, actions }: TermoRowProps) {
+function TermoRow({ payload, termo, actions }: TermoRowProps) {
   const { node, selected, expanded, hasChildren, elementProps } = payload;
 
   return (
@@ -73,11 +76,11 @@ function TermoRow({ payload, count, actions }: TermoRowProps) {
         {/* The open term trades its count for its actions rather than adding to
             the row: three icons plus a badge do not fit beside a term name at
             360 px, and the count is on screen in the content pane anyway. */}
-        {selected ? (
-          <TermoActionIcons {...actions} />
+        {selected && termo ? (
+          <TermoActionIcons termoName={termo.name} {...actions} />
         ) : (
           <Badge variant="light" color="gray" size="sm">
-            {count}
+            {termo?.organos.length ?? 0}
           </Badge>
         )}
       </Group>
@@ -102,7 +105,7 @@ export function TaxonomiaTreeCard({
 }: TaxonomiaTreeCardProps) {
   const [creating, setCreating] = useState(false);
   const data = useMemo(() => toTreeData(roots), [roots]);
-  const counts = useMemo(() => collectCounts(roots, new Map()), [roots]);
+  const termosById = useMemo(() => indexById(roots, new Map()), [roots]);
   // A fresh array literal here would bust useTree's own memo on every render of
   // the page and re-render every node.
   const selectedState = useMemo(
@@ -139,12 +142,19 @@ export function TaxonomiaTreeCard({
   // The tree instance is this component's, which is why the create dialog lives
   // here too: a term created under a parent the administrator had collapsed
   // would otherwise be selected but invisible.
+  //
+  // One write, not a call per ancestor: Mantine's `expand` spreads the expanded
+  // state its closure captured, so a loop of them within a batch keeps only the
+  // last — which would leave every ancestor above the immediate parent shut, and
+  // the new term still out of sight.
   function selectCreated(created: Termo) {
     setCreating(false);
     if (created.parentId !== null) {
-      for (const ancestor of findTermoPath(roots, created.parentId)) {
-        tree.expand(ancestor.id);
-      }
+      const ancestors = findTermoPath(roots, created.parentId);
+      tree.setExpandedState({
+        ...tree.expandedState,
+        ...Object.fromEntries(ancestors.map((ancestor) => [ancestor.id, true])),
+      });
     }
     onSelect(created.id);
   }
@@ -187,7 +197,7 @@ export function TaxonomiaTreeCard({
           renderNode={(payload) => (
             <TermoRow
               payload={payload}
-              count={counts.get(payload.node.value) ?? 0}
+              termo={termosById.get(payload.node.value)}
               actions={termoActions}
             />
           )}

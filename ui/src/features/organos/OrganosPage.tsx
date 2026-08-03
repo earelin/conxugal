@@ -34,6 +34,10 @@ export function OrganosPage() {
   const openTermoId = openPath.length > 0 ? selectedTermoId : null;
   const openTermo = openPath.at(-1) ?? null;
   const openParentId = openPath.at(-2)?.id ?? null;
+  // Derived, never held: a term can stop resolving under the section — a failed
+  // refetch, or another admin deleting it — and a held action would then re-open
+  // its dialog by itself the moment the next term was selected.
+  const openAction = openTermo === null ? null : action;
 
   const termoActions = {
     onRename: () => setAction('rename'),
@@ -102,13 +106,13 @@ export function OrganosPage() {
       {view && openTermo && (
         <>
           <RenameTermoModal
-            opened={action === 'rename'}
+            opened={openAction === 'rename'}
             termo={openTermo}
             onRenamed={closeAction}
             onCancel={closeAction}
           />
           <MoveTermoModal
-            opened={action === 'move'}
+            opened={openAction === 'move'}
             roots={view.roots}
             termo={openTermo}
             parentId={openParentId}
@@ -116,7 +120,7 @@ export function OrganosPage() {
             onCancel={closeAction}
           />
           <DeleteTermoModal
-            opened={action === 'delete'}
+            opened={openAction === 'delete'}
             termo={openTermo}
             onDeleted={afterDelete}
             onCancel={closeAction}

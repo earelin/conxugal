@@ -12,8 +12,8 @@ const PROBLEM_TYPE = {
 const copy = strings.admin.organos.termo;
 
 export interface Refusal {
-  /** An alert title where the refusal has one; null renders the message alone. */
-  title: string | null;
+  /** An alert title where the refusal has one; otherwise the message stands alone. */
+  title?: string;
   message: string;
 }
 
@@ -27,14 +27,14 @@ export interface Refusal {
  * Anything else — a transport failure, a 500, a 403 — falls through to the
  * generic message rather than being dressed up as a rule we can explain.
  */
-function commonRefusal(error: unknown): Refusal {
+export function termoRefusal(error: unknown): Refusal {
   if (isProblemType(error, PROBLEM_TYPE.duplicateSiblingName)) {
-    return { title: null, message: copy.duplicateSiblingName };
+    return { message: copy.duplicateSiblingName };
   }
   if (isProblemType(error, PROBLEM_TYPE.notFound)) {
-    return { title: null, message: copy.notFound };
+    return { message: copy.notFound };
   }
-  return { title: null, message: copy.genericError };
+  return { message: copy.genericError };
 }
 
 /**
@@ -52,9 +52,17 @@ export function cycleRefusal(termo: TermoNode, target: TermoNode | null): Refusa
   };
 }
 
-/** Names the children from the tree the section already holds; the problem body carries only ids. */
+/**
+ * Names the children from the tree the section already holds. An empty list is
+ * not "no children" — it is the server refusing over children this browser has
+ * not read yet, which is the only way this refusal reaches the wire at all,
+ * since a term with visible children never gets a delete request sent.
+ */
 export function hasChildrenRefusal(children: TermoNode[]): Refusal {
   const names = children.map((child) => child.name);
+  if (names.length === 0) {
+    return { title: copy.hasChildrenTitle, message: copy.hasChildrenUnknown };
+  }
   return {
     title: copy.hasChildrenTitle,
     message:
@@ -64,24 +72,16 @@ export function hasChildrenRefusal(children: TermoNode[]): Refusal {
   };
 }
 
-export function createRefusal(error: unknown): Refusal {
-  return commonRefusal(error);
-}
-
-export function renameRefusal(error: unknown): Refusal {
-  return commonRefusal(error);
-}
-
 export function moveRefusal(error: unknown, termo: TermoNode, target: TermoNode | null): Refusal {
   return isProblemType(error, PROBLEM_TYPE.cycle)
     ? cycleRefusal(termo, target)
-    : commonRefusal(error);
+    : termoRefusal(error);
 }
 
 export function deleteRefusal(error: unknown, termo: TermoNode): Refusal {
   return isProblemType(error, PROBLEM_TYPE.hasChildren)
     ? hasChildrenRefusal(termo.children)
-    : commonRefusal(error);
+    : termoRefusal(error);
 }
 
 /**

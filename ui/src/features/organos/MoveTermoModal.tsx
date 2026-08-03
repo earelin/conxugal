@@ -58,7 +58,13 @@ function MoveTermoForm({ roots, termo, parentId, onMoved, onCancel }: MoveTermoF
         rootOptionLabel={copy.moveParentRoot}
         required
         value={targetId}
-        onChange={setTargetId}
+        // A refusal is about the destination that was submitted. Leaving it up
+        // over a new one would assert a clash nothing has tested for, with the
+        // primary enabled to act on it.
+        onChange={(id) => {
+          setTargetId(id);
+          setRefusal(null);
+        }}
       />
       <Group justify="flex-end" mt="sm">
         <Button variant="default" onClick={onCancel}>

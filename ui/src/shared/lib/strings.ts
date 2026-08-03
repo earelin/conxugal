@@ -208,7 +208,7 @@ export const strings = {
         cancel: 'Cancelar',
         nameLabel: 'Nome',
         nameRequired: 'Escribe un nome para o termo.',
-        nameTooLong: 'O nome non pode ter máis de 255 caracteres.',
+        nameTooLong: (max: number) => `O nome non pode ter máis de ${max} caracteres.`,
 
         create: 'Novo termo',
         createTitle: 'Novo termo',
@@ -225,7 +225,7 @@ export const strings = {
         move: 'Mover',
         moveTitle: 'Mover termo',
         moveSubmit: 'Mover',
-        moveTermoLabel: 'Termo',
+        moveTermoLabel: 'Termo:',
         moveParentLabel: 'Novo termo pai',
         moveParentRoot: 'Na raíz da taxonomía',
 
@@ -254,6 +254,12 @@ export const strings = {
         hasChildrenOther: (count: number, children: string) =>
           `Ten ${count} termos fillos («${children}»). Move ou elimina antes os seus ` +
           'termos fillos; despois poderás eliminar este termo.',
+        // The server refuses on children this browser's copy of the tree does
+        // not have — another administrator added them — and the problem body
+        // carries no ids, so this is the one case that cannot name them.
+        hasChildrenUnknown:
+          'Ten termos fillos que aínda non aparecen aquí. Actualiza a sección, move ou ' +
+          'elimina antes os seus termos fillos; despois poderás eliminar este termo.',
         duplicateSiblingName: 'Xa existe un termo irmán con ese nome.',
         notFound: 'Outra persoa eliminou este termo. Actualiza a sección para velo ao día.',
         genericError: 'Non se puido completar a acción. Téntao de novo máis tarde.',

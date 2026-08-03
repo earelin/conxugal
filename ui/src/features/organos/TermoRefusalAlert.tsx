@@ -9,7 +9,7 @@ export function TermoRefusalAlert({ refusal }: { refusal: Refusal | null }) {
     return null;
   }
   return (
-    <Alert color="red" title={refusal.title ?? undefined} icon={<IconAlertTriangle size={18} />}>
+    <Alert color="red" title={refusal.title} icon={<IconAlertTriangle size={18} />}>
       {refusal.message}
     </Alert>
   );

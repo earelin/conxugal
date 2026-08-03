@@ -7,7 +7,7 @@ import { strings } from '../../shared/lib/strings';
 import type { TermoNode } from './taxonomiaTree';
 import { useRenameTermo } from './termoMutations';
 import { termoNameSchema, type TermoNameValues } from './termoName';
-import { isDuplicateSiblingName, type Refusal, renameRefusal } from './termoRefusal';
+import { isDuplicateSiblingName, type Refusal, termoRefusal } from './termoRefusal';
 import { TermoRefusalAlert } from './TermoRefusalAlert';
 
 const copy = strings.admin.organos.termo;
@@ -41,7 +41,7 @@ function RenameTermoForm({ termo, onRenamed, onCancel }: RenameTermoFormProps) {
           if (isDuplicateSiblingName(error)) {
             setError('name', { message: copy.duplicateSiblingName });
           } else {
-            setRefusal(renameRefusal(error));
+            setRefusal(termoRefusal(error));
           }
         },
       },

@@ -60,12 +60,16 @@ export function TermoParentSelect({
   description,
   required,
 }: TermoParentSelectProps) {
-  const data = useMemo(() => {
-    const options = flattenTermoOptions(roots);
-    return rootOptionLabel === undefined
-      ? options
-      : [{ value: ROOT_VALUE, label: rootOptionLabel }, ...options];
-  }, [roots, rootOptionLabel]);
+  // The root is either an option of its own or the empty value, and that one
+  // choice settles how the field clears and what an unset value means.
+  const withRootOption = rootOptionLabel !== undefined;
+  const data = useMemo(
+    () =>
+      rootOptionLabel === undefined
+        ? flattenTermoOptions(roots)
+        : [{ value: ROOT_VALUE, label: rootOptionLabel }, ...flattenTermoOptions(roots)],
+    [roots, rootOptionLabel],
+  );
 
   return (
     <Select
@@ -74,9 +78,9 @@ export function TermoParentSelect({
       placeholder={placeholder}
       required={required}
       data={data}
-      value={value ?? (rootOptionLabel === undefined ? null : ROOT_VALUE)}
-      clearable={rootOptionLabel === undefined}
-      allowDeselect={rootOptionLabel === undefined}
+      value={value ?? (withRootOption ? ROOT_VALUE : null)}
+      clearable={!withRootOption}
+      allowDeselect={!withRootOption}
       onChange={(selected) =>
         onChange(selected === null || selected === ROOT_VALUE ? null : selected)
       }

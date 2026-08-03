@@ -9,7 +9,7 @@ import type { TermoNode } from './taxonomiaTree';
 import { useCreateTermo } from './termoMutations';
 import { termoNameSchema, type TermoNameValues } from './termoName';
 import { TermoParentSelect } from './TermoParentSelect';
-import { createRefusal, isDuplicateSiblingName, type Refusal } from './termoRefusal';
+import { isDuplicateSiblingName, type Refusal, termoRefusal } from './termoRefusal';
 import { TermoRefusalAlert } from './TermoRefusalAlert';
 
 const copy = strings.admin.organos.termo;
@@ -30,6 +30,7 @@ function CreateTermoForm({ roots, defaultParentId, onCreated, onCancel }: Create
     register,
     handleSubmit,
     setError,
+    clearErrors,
     formState: { errors },
   } = useForm<TermoNameValues>({
     resolver: zodResolver(termoNameSchema),
@@ -48,7 +49,7 @@ function CreateTermoForm({ roots, defaultParentId, onCreated, onCancel }: Create
           if (isDuplicateSiblingName(error)) {
             setError('name', { message: copy.duplicateSiblingName });
           } else {
-            setRefusal(createRefusal(error));
+            setRefusal(termoRefusal(error));
           }
         },
       },
@@ -72,7 +73,15 @@ function CreateTermoForm({ roots, defaultParentId, onCreated, onCancel }: Create
           placeholder={copy.createParentPlaceholder}
           description={copy.createParentHelp}
           value={parentId}
-          onChange={setParentId}
+          // Both refusals a create can hit are about the parent — a name is only
+          // duplicate among a given parent's children — so neither survives a
+          // change of one. The name's own field error clears on the next
+          // keystroke; this is the half that would otherwise stick.
+          onChange={(id) => {
+            setParentId(id);
+            setRefusal(null);
+            clearErrors('name');
+          }}
         />
         <Group justify="flex-end" mt="sm">
           <Button variant="default" onClick={onCancel}>

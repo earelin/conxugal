@@ -1,6 +1,6 @@
 import { MantineProvider } from '@mantine/core';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -10,6 +10,7 @@ import { createQueryClient } from '../../shared/lib/queryClient';
 import { strings } from '../../shared/lib/strings';
 import type { Organo, Termo } from './organos';
 import { OrganosPage } from './OrganosPage';
+import { MAX_TERMO_NAME_LENGTH } from './termoName';
 
 const BASE_URL = 'http://localhost:3000';
 const TERMOS_PATH = '/api/admin/organos/taxonomia/termos';
@@ -82,13 +83,28 @@ async function openTermo(user: UserEvent, name: string) {
   await user.click(node);
 }
 
-/** Says which of the two entry points into the same dialog a test is driving. */
+/**
+ * Says which of the two entry points into the same dialog a test is driving.
+ * Each action names the tree icon, the header button and the open dialog's own
+ * primary alike, so the pane button is identified by excluding the other two
+ * rather than by position among them.
+ */
 function paneAction(name: string): HTMLElement {
-  return screen.getAllByRole('button', { name }).filter((button) => !tree().contains(button))[0];
+  const dialogs = screen.queryAllByRole('dialog');
+  const outside = screen
+    .getAllByRole('button', { name })
+    .filter((button) => !tree().contains(button) && !dialogs.some((d) => d.contains(button)));
+  expect(outside).toHaveLength(1);
+  return outside[0];
 }
 
 function treeAction(name: string): HTMLElement {
-  return within(tree()).getByRole('button', { name });
+  return within(tree()).getByRole('button', { name: new RegExp(`^${name}: `) });
+}
+
+/** The row's own tree item, not an ancestor's — which contains its label too. */
+function treeItemFor(name: string): HTMLElement {
+  return within(tree()).getByText(name).closest('[role="treeitem"]') as HTMLElement;
 }
 
 function nameField(): Promise<HTMLElement> {
@@ -101,10 +117,13 @@ async function typeName(user: UserEvent, name: string) {
   await user.type(field, name);
 }
 
-async function chooseParent(user: UserEvent, option: string) {
-  await user.click(await screen.findByRole('combobox', { name: copy.moveParentLabel }));
+async function chooseOption(user: UserEvent, field: string, option: string) {
+  await user.click(await screen.findByRole('combobox', { name: field }));
   await user.click(await screen.findByRole('option', { name: option }));
 }
+
+const chooseParent = (user: UserEvent, option: string) =>
+  chooseOption(user, copy.moveParentLabel, option);
 
 async function submit(user: UserEvent, name: string) {
   await user.click(within(await dialog()).getByRole('button', { name }));
@@ -143,6 +162,33 @@ describe('taxonomía management', () => {
     expect(await screen.findByRole('heading', { name: created.name })).toBeInTheDocument();
     expect(within(tree()).getByText(created.name)).toBeInTheDocument();
     expect(post.isDone()).toBe(true);
+  });
+
+  it('reveals a term created under a collapsed ancestor, not just selects it', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    // Clicking a row toggles it, so this shuts the branch two levels above the
+    // parent the new term is about to join.
+    await openTermo(user, consellerias.name);
+    expect(within(tree()).queryByText(sanidade.name)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: copy.create }));
+    await typeName(user, 'Hospitais');
+    await chooseOption(user, copy.createParentLabel, `${consellerias.name} › ${sanidade.name}`);
+
+    const created: Termo = { id: 't-9', name: 'Hospitais', parentId: sanidade.id };
+    nock(BASE_URL).post(TERMOS_PATH).reply(201, created);
+    mockTaxonomia([...TAXONOMIA, created]);
+
+    await submit(user, copy.createSubmit);
+
+    // Every ancestor has to open, not just the immediate parent — otherwise the
+    // term is selected and named in the content pane while its row stays hidden.
+    expect(await within(await screen.findByRole('tree')).findByText(created.name)).toBeVisible();
+    expect(within(tree()).getByText(sanidade.name)).toBeVisible();
   });
 
   it('offers the open term as the parent, so creating under it is one click', async () => {
@@ -196,6 +242,10 @@ describe('taxonomía management', () => {
     renderOrganosPage();
 
     await openTermo(user, sanidade.name);
+    // Both terms are in the tree before the move, so the assertion has to be
+    // about where the moved one now sits, not that it is present at all.
+    expect(within(treeItemFor(concellos.name)).queryByText(sanidade.name)).not.toBeInTheDocument();
+
     await user.click(treeAction(copy.move));
     await chooseParent(user, concellos.name);
 
@@ -207,9 +257,12 @@ describe('taxonomía management', () => {
 
     await submit(user, copy.moveSubmit);
 
+    await waitFor(() =>
+      expect(within(treeItemFor(concellos.name)).getByText(sanidade.name)).toBeInTheDocument(),
+    );
     expect(
-      await within(await screen.findByRole('tree')).findByText(concellos.name),
-    ).toBeInTheDocument();
+      within(treeItemFor(consellerias.name)).queryByText(sanidade.name),
+    ).not.toBeInTheDocument();
     expect(put.isDone()).toBe(true);
   });
 
@@ -220,6 +273,8 @@ describe('taxonomía management', () => {
     renderOrganosPage();
 
     await openTermo(user, sanidade.name);
+    expect(within(treeItemFor(consellerias.name)).getByText(sanidade.name)).toBeInTheDocument();
+
     await user.click(paneAction(copy.move));
     await chooseParent(user, copy.moveParentRoot);
 
@@ -232,7 +287,13 @@ describe('taxonomía management', () => {
 
     await submit(user, copy.moveSubmit);
 
-    expect(await screen.findByRole('heading', { name: sanidade.name })).toBeInTheDocument();
+    // Out of its old parent, still in the tree — a root of its own.
+    await waitFor(() =>
+      expect(
+        within(treeItemFor(consellerias.name)).queryByText(sanidade.name),
+      ).not.toBeInTheDocument(),
+    );
+    expect(within(tree()).getByText(sanidade.name)).toBeInTheDocument();
     expect(put.isDone()).toBe(true);
   });
 
@@ -386,13 +447,118 @@ describe('taxonomía management', () => {
     expect(await screen.findByText(copy.notFound)).toBeVisible();
     expect(screen.queryByText(copy.genericError)).not.toBeInTheDocument();
 
-    // The section recovers on the next read rather than staying broken.
-    mockCatalogue(CATALOGUE);
-    mockTaxonomia([consellerias, concellos]);
+    // The section recovers on the next read rather than staying broken. Nothing
+    // refetches after a *failed* mutation, so the refresh has to come from a
+    // real one — here the admin gives up on the stale term and deletes another,
+    // whose 204 invalidates both reads.
     await submit(user, copy.cancel);
     await openTermo(user, concellos.name);
+    await user.click(paneAction(copy.delete));
 
-    expect(await screen.findByRole('heading', { name: concellos.name })).toBeInTheDocument();
+    nock(BASE_URL).delete(`${TERMO_PATH}/${concellos.id}`).reply(204);
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia([consellerias]);
+
+    await submit(user, copy.deleteSubmit);
+
+    // The term the other administrator removed is gone from the tree, and the
+    // section renders it rather than breaking on the id it was still holding.
+    await waitFor(() => expect(within(tree()).queryByText(concellos.name)).not.toBeInTheDocument());
+    expect(within(tree()).queryByText(sanidade.name)).not.toBeInTheDocument();
+    expect(within(tree()).getByText(consellerias.name)).toBeInTheDocument();
+    expect(nock.pendingMocks()).toEqual([]);
+  });
+
+  it('names no children when the server refuses a delete the tree thought was safe', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    // Concellos is childless in this browser's copy, so the dialog opens
+    // unblocked and the request goes out; another admin has since added a child.
+    await openTermo(user, concellos.name);
+    await user.click(paneAction(copy.delete));
+
+    nock(BASE_URL)
+      .delete(`${TERMO_PATH}/${concellos.id}`)
+      .reply(409, problemBody('termo-has-children', 409), PROBLEM_HEADERS);
+
+    await submit(user, copy.deleteSubmit);
+
+    // The problem body carries no child ids and this tree has none to name, so
+    // the message must not claim a count it does not have.
+    expect(await screen.findByText(copy.hasChildrenUnknown)).toBeVisible();
+    expect(screen.getByText(copy.hasChildrenTitle)).toBeVisible();
+    expect(screen.queryByText(copy.hasChildrenOther(0, ''))).not.toBeInTheDocument();
+  });
+
+  it('rejects an over-long name in the dialog, without asking the server', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    await screen.findByText(consellerias.name);
+    await user.click(screen.getByRole('button', { name: copy.create }));
+    await typeName(user, 'a'.repeat(MAX_TERMO_NAME_LENGTH + 1));
+    await submit(user, copy.createSubmit);
+
+    expect(await screen.findByText(copy.nameTooLong(MAX_TERMO_NAME_LENGTH))).toBeVisible();
+    expect(nock.pendingMocks()).toEqual([]);
+  });
+
+  it('picks a parent in the create dialog, and clearing it goes back to the root', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    await screen.findByText(consellerias.name);
+    await user.click(screen.getByRole('button', { name: copy.create }));
+    await typeName(user, 'Hospitais');
+
+    const parentLabel = `${consellerias.name} › ${sanidade.name}`;
+    await chooseOption(user, copy.createParentLabel, parentLabel);
+    // Deselecting the chosen option is how an empty field — a root term — is
+    // reached again, which is what the field's helper text promises.
+    await chooseOption(user, copy.createParentLabel, parentLabel);
+
+    const created: Termo = { id: 't-9', name: 'Hospitais', parentId: null };
+    const post = nock(BASE_URL)
+      .post(TERMOS_PATH, { name: 'Hospitais', parentId: null })
+      .reply(201, created);
+    mockTaxonomia([...TAXONOMIA, created]);
+
+    await submit(user, copy.createSubmit);
+
+    expect(await screen.findByRole('heading', { name: created.name })).toBeInTheDocument();
+    expect(post.isDone()).toBe(true);
+  });
+
+  it('drops a refusal about the previous destination when the target changes', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    await openTermo(user, sanidade.name);
+    await user.click(paneAction(copy.move));
+    await chooseParent(user, concellos.name);
+
+    nock(BASE_URL)
+      .put(`${TERMO_PATH}/${sanidade.id}/parent`)
+      .reply(409, problemBody('duplicate-sibling-name', 409), PROBLEM_HEADERS);
+
+    await submit(user, copy.moveSubmit);
+    expect(await screen.findByText(copy.duplicateSiblingName)).toBeVisible();
+
+    // A clash under Concellos says nothing about the root, and the primary is
+    // enabled again — leaving the banner up would assert a rule nothing tested.
+    await chooseParent(user, copy.moveParentRoot);
+
+    expect(screen.queryByText(copy.duplicateSiblingName)).not.toBeInTheDocument();
+    expect(within(await dialog()).getByRole('button', { name: copy.moveSubmit })).toBeEnabled();
   });
 
   it('rejects a blank name in the dialog, without asking the server', async () => {
