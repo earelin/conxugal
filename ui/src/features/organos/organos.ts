@@ -21,6 +21,7 @@ export interface Termo {
 
 // Both keys share the ['organos'] prefix so a mutation can invalidate the whole
 // section with one call, or either read on its own.
+export const SECTION_QUERY_KEY = ['organos'] as const;
 export const ORGANOS_QUERY_KEY = ['organos', 'catalogo'] as const;
 export const TAXONOMIA_QUERY_KEY = ['organos', 'taxonomia'] as const;
 

@@ -70,3 +70,9 @@ class NoopEventSource {
 vi.stubGlobal('matchMedia', matchMediaMock);
 vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 vi.stubGlobal('EventSource', NoopEventSource);
+
+// jsdom lays nothing out and so implements no scrolling either. Mantine's
+// Combobox scrolls its active option into view from a timer, which outlives the
+// test that opened the dropdown: the TypeError surfaces as an uncaught
+// exception attributed to whichever test happened to be running next.
+Element.prototype.scrollIntoView = () => {};

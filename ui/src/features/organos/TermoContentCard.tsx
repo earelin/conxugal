@@ -4,6 +4,7 @@ import { strings } from '../../shared/lib/strings';
 import type { Organo } from './organos';
 import { OrganosTable } from './OrganosTable';
 import type { TermoNode } from './taxonomiaTree';
+import { TermoActionButtons, type TermoActionHandlers } from './TermoActionControls';
 
 // Term names repeat across levels — nothing stops a term carrying its
 // ancestor's name — so each crumb keeps the id it came from as its key.
@@ -53,9 +54,10 @@ interface TermoContentCardProps {
   /** Root-to-term chain of the open term; empty selects the worklist. */
   openPath: TermoNode[];
   unclassified: Organo[];
+  termoActions: TermoActionHandlers;
 }
 
-export function TermoContentCard({ openPath, unclassified }: TermoContentCardProps) {
+export function TermoContentCard({ openPath, unclassified, termoActions }: TermoContentCardProps) {
   const pane = openPath.length > 0 ? termoPane(openPath) : unclassifiedPane(unclassified);
   const count = pane.organos.length;
 
@@ -69,7 +71,10 @@ export function TermoContentCard({ openPath, unclassified }: TermoContentCardPro
         ))}
       </Breadcrumbs>
 
-      <Group justify="space-between" align="flex-start" wrap="nowrap">
+      {/* Wraps rather than holding one line: at 360 px the three term actions
+          do not fit beside a term name, and they drop under it instead of
+          pushing the card into a horizontal scroll. */}
+      <Group justify="space-between" align="flex-start">
         <Stack gap={0}>
           <Title order={3}>{pane.title}</Title>
           {pane.subtitle && (
@@ -78,8 +83,9 @@ export function TermoContentCard({ openPath, unclassified }: TermoContentCardPro
             </Text>
           )}
         </Stack>
-        {/* Pane action slot: rename, move, delete and assign land here. */}
-        <Group gap="xs" />
+        {/* The worklist is not a term: it has no name to change, no place in the
+            tree and nothing to delete. Assign lands here alongside them. */}
+        <Group gap="xs">{openPath.length > 0 && <TermoActionButtons {...termoActions} />}</Group>
       </Group>
       <Divider my="sm" />
 

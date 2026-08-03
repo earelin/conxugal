@@ -204,6 +204,66 @@ export const strings = {
       errorTitle: 'Non se puido cargar a sección de Órganos',
       errorForbidden: 'Non tes permisos para ver esta información.',
       errorGeneric: 'Téntao de novo máis tarde.',
+      termo: {
+        cancel: 'Cancelar',
+        nameLabel: 'Nome',
+        nameRequired: 'Escribe un nome para o termo.',
+        nameTooLong: (max: number) => `O nome non pode ter máis de ${max} caracteres.`,
+
+        create: 'Novo termo',
+        createTitle: 'Novo termo',
+        createSubmit: 'Crear termo',
+        createNamePlaceholder: 'p. ex. Hospitais e centros de saúde',
+        createParentLabel: 'Termo pai',
+        createParentPlaceholder: 'Sen termo pai',
+        createParentHelp: 'Déixao baleiro para crear un termo raíz.',
+
+        rename: 'Renomear',
+        renameTitle: 'Renomear termo',
+        renameSubmit: 'Renomear',
+
+        move: 'Mover',
+        moveTitle: 'Mover termo',
+        moveSubmit: 'Mover',
+        moveTermoLabel: 'Termo:',
+        moveParentLabel: 'Novo termo pai',
+        moveParentRoot: 'Na raíz da taxonomía',
+
+        delete: 'Eliminar',
+        deleteTitle: 'Eliminar termo',
+        deleteSubmit: 'Eliminar',
+        deleteConfirm: (name: string) => `Eliminar «${name}»?`,
+        deleteOrganosNote:
+          'Os órganos deste termo pasan a «Sen clasificar»; nunca se elimina un órgano.',
+
+        // The four refusals, keyed on the problem type the server sends. They
+        // read as different messages on purpose: a cycle and a
+        // blocked-by-children delete are both 409, and one shared "conflito"
+        // would leave the administrator with nothing to act on.
+        cycleTitle: 'Non se pode mover aquí',
+        cycleUnderSelf: (termo: string) =>
+          `Non podes mover «${termo}» dentro de si mesmo: crearía un ciclo na taxonomía. ` +
+          'Elixe un destino que non sexa el mesmo nin un dos seus fillos.',
+        cycleUnderChild: (target: string, termo: string) =>
+          `«${target}» é un termo fillo de «${termo}»: movelo aquí crearía un ciclo na ` +
+          'taxonomía. Elixe un destino que non sexa el mesmo nin un dos seus fillos.',
+        hasChildrenTitle: 'Este termo non se pode eliminar',
+        hasChildrenOne: (child: string) =>
+          `Ten 1 termo fillo («${child}»). Move ou elimina antes os seus termos fillos; ` +
+          'despois poderás eliminar este termo.',
+        hasChildrenOther: (count: number, children: string) =>
+          `Ten ${count} termos fillos («${children}»). Move ou elimina antes os seus ` +
+          'termos fillos; despois poderás eliminar este termo.',
+        // The server refuses on children this browser's copy of the tree does
+        // not have — another administrator added them — and the problem body
+        // carries no ids, so this is the one case that cannot name them.
+        hasChildrenUnknown:
+          'Ten termos fillos que aínda non aparecen aquí. Actualiza a sección, move ou ' +
+          'elimina antes os seus termos fillos; despois poderás eliminar este termo.',
+        duplicateSiblingName: 'Xa existe un termo irmán con ese nome.',
+        notFound: 'Outra persoa eliminou este termo. Actualiza a sección para velo ao día.',
+        genericError: 'Non se puido completar a acción. Téntao de novo máis tarde.',
+      },
     },
   },
 } as const;
