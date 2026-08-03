@@ -284,10 +284,18 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void inserted_organo_is_unmarked_by_default() {
-    OrganoDeContratacion created =
-        organoRepository.insert(new OrganoDeContratacion("consorcio-x", "Consorcio X"));
+    organoRepository.insert(new OrganoDeContratacion("consorcio-x", "Consorcio X"));
 
-    assertThat(organoRepository.findById(created.id()).orElseThrow().importable()).isFalse();
+    assertCatalogue(row("Consorcio X", true, false, null));
+  }
+
+  // The eligibility read filters in SQL, so it would still pass if the column never reached
+  // the record. This is the read the administrator's catalogue and the importer both build on.
+  @Test
+  void findById_reports_the_mark_of_marked_organo() throws Exception {
+    OrganoId id = insertOrgano("consorcio-x", "Consorcio X", true, true, null);
+
+    assertThat(organoRepository.findById(id).orElseThrow().importable()).isTrue();
   }
 
   // Asserted over the table rather than through a read-back, because the claim is about the

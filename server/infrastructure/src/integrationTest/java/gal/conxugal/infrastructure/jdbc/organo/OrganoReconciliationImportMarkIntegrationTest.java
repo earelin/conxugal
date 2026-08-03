@@ -20,10 +20,7 @@ import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import javax.sql.DataSource;
 import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
 import org.junit.jupiter.api.AfterEach;
@@ -39,10 +36,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * exactly as it found it. Only the database can answer this — a mocked repository shows which
  * port methods the reconciler calls, not which columns the statements behind them write.
  *
- * <p>Shaped like {@code ImportOrganosAtomicityIntegrationTest}: the DI-managed
- * {@code ImportOrganos} bean is injected rather than constructed so the reconciler carries its
- * {@code @Transactional} advice, and the run happens on its own thread so its transaction
- * borrows a connection independent of the raw ones this test reads and writes with.
+ * <p>The DI-managed {@code ImportOrganos} bean is injected rather than constructed, so its call
+ * into the reconciler resolves to the bean carrying the {@code @Transactional} advice and the
+ * run really does commit. Unlike {@code ImportOrganosAtomicityIntegrationTest} it needs no
+ * separate thread: the fixtures are committed through their own raw connections before the run
+ * starts, and the assertions read after it has returned.
  */
 @MicronautTest(startApplication = false)
 @Testcontainers(disabledWithoutDocker = true)
@@ -73,6 +71,9 @@ class OrganoReconciliationImportMarkIntegrationTest implements TestPropertyProvi
   @Inject
   OrganoSource organoSource;
 
+  @Inject
+  DataSource dataSource;
+
   @MockBean(OrganoSource.class)
   OrganoSource organoSourceMock() {
     return mock(OrganoSource.class);
@@ -100,11 +101,10 @@ class OrganoReconciliationImportMarkIntegrationTest implements TestPropertyProvi
                 new OrganoSourceEntry("unmarked", "Unmarked"),
                 new OrganoSourceEntry("brand-new", "Brand New")));
 
-    ImportOutcome outcome = runOnItsOwnThread(importOrganos::run);
+    ImportOutcome outcome = importOrganos.run();
 
     assertThat(outcome.status()).isEqualTo(ImportOutcome.Status.SUCCESS);
-    Table organos = AssertDbConnectionFactory
-        .of(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
+    Table organos = AssertDbConnectionFactory.of(dataSource)
         .create()
         .table("organo_contratacion")
         .columnsToOrder(new Table.Order[] {Table.Order.asc("name")})
@@ -122,12 +122,6 @@ class OrganoReconciliationImportMarkIntegrationTest implements TestPropertyProvi
     assertThat(organos).row(index).value("name").isEqualTo(name);
     assertThat(organos).row(index).value("active").isEqualTo(active);
     assertThat(organos).row(index).value("importable").isEqualTo(importable);
-  }
-
-  private static <T> T runOnItsOwnThread(Callable<T> call) throws Exception {
-    try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
-      return executor.submit(call).get(10, TimeUnit.SECONDS);
-    }
   }
 
   private static void insertOrgano(String sourceKey, String name, boolean active,

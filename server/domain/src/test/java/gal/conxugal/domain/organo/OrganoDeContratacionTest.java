@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 class OrganoDeContratacionTest {
 
   @Test
-  void exposes_id_source_key_name_and_active() {
+  void exposes_id_source_key_name_active_and_import_mark() {
     OrganoId id = new OrganoId(UUID.randomUUID());
     OrganoDeContratacion organo =
         new OrganoDeContratacion(
@@ -20,6 +20,7 @@ class OrganoDeContratacionTest {
     assertThat(organo.sourceKey()).isEqualTo("xunta-consorcio-galego");
     assertThat(organo.name()).isEqualTo("Consorcio Galego");
     assertThat(organo.active()).isTrue();
+    assertThat(organo.importable()).isFalse();
   }
 
   @Test
