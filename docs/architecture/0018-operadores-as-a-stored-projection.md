@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-08-01
 spec: SPEC-0006
 supersedes: null
@@ -9,7 +9,7 @@ superseded_by: null
 # 0018. Operadores económicos are a stored projection, maintained by the import that feeds it
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 [SPEC-0006](../specs/SPEC-0006-operadores-economicos.md) turns the awardee named on every

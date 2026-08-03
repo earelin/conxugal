@@ -20,11 +20,11 @@ It settles nothing about identity that
 the catalogue is **stored state maintained by the import**, keyed by the fiscal identifier in
 R3's canonical form, with each contract carrying a foreign key to its operador.
 
-> **ADR-0018 is `proposed`, not accepted**, and this feature builds directly onto it — the whole
-> of tasks 2 to 4 rests on the catalogue being stored rather than computed. Its status should be
-> settled before those tasks are picked up, on the same reasoning FEAT-0009 states for ADR-0017.
-> Nothing below hedges against the decision changing: if it does, this feature is rewritten
-> rather than adjusted.
+> **The decision this feature builds onto is settled.**
+> [ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md) is `accepted`, so the
+> whole of tasks 2 to 4 — which rest on the catalogue being stored rather than computed — stand on
+> a decision no longer up for debate. Nothing below hedges against it changing, and nothing needs
+> to.
 
 **No operador is readable yet.** R8's list and lookup, R9's cross-Órgano contract history, R10's
 filters and sorts and R11's paging are all later features — this one stops at the stored,

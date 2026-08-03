@@ -113,8 +113,8 @@ One decision has since been taken:
   architecturally significant, is settled by
   [ADR-0018](../architecture/0018-operadores-as-a-stored-projection.md): the catalogue is
   **stored state maintained by the import**, with each contract carrying a foreign key to its
-  operador. That record is `proposed`, so a feature building directly onto it should confirm its
-  status first. What the choice decides — whether R7's lifecycle happens automatically or has to
+  operador. That record is `accepted`, so the features below rest on a decision that is no longer
+  up for debate. What the choice decides — whether R7's lifecycle happens automatically or has to
   be driven, and whether R14's reads are viable over hundreds of thousands of operadores — is
   argued there, not here.
 
