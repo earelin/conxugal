@@ -81,7 +81,9 @@ failures before committing changes to this module.
   (hence its own `tsconfig.acceptance.json` and a `boundaries/ignore` entry). Specs
   drive only accessible roles/labels and the Galician copy of `strings.ts`; they
   must not assert on locale-formatted dates, which differ between browser
-  builds. They run serially — WireMock is one shared process.
+  builds — a helper that formats numbers has to pin its own separators rather
+  than trust the runtime's gl-ES data, as `metricsFormat.ts` does. They run
+  serially — WireMock is one shared process.
 - **TypeScript 7 / 6 split**: `devDependencies.typescript` is aliased to
   `@typescript/typescript6` (Microsoft's compatibility shim) so anything that
   `require`s/`import`s the `typescript` module — `typescript-eslint`, whose

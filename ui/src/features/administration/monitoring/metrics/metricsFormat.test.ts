@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   deltaOf,
@@ -64,6 +64,10 @@ describe('formatPercent', () => {
 });
 
 describe('formatDecimal', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('formats with two decimal digits by default, using the gl-ES comma separator', () => {
     expect(formatDecimal(4.2)).toBe('4,20');
   });
@@ -82,6 +86,29 @@ describe('formatDecimal', () => {
 
   it('groups thousands with a space, matching formatCount, not a dot', () => {
     expect(formatDecimal(1234.5)).toBe('1 234,50');
+  });
+
+  it('keeps the Galician separators when the runtime has no gl-ES data to resolve', () => {
+    // Node ships full ICU and formats gl-ES as "1.234,50"; a browser build that
+    // lacks it resolves to the "1,234.50" shape instead — the two disagree about
+    // which of '.' and ',' is the decimal mark. Standing in for such a build is
+    // the only way to see that from here, and headless Chromium is one: it
+    // rendered 1,90 s as "1 90 s" until this was fixed.
+    const RealNumberFormat = Intl.NumberFormat;
+    class FallbackNumberFormat {
+      readonly formatToParts: (value: number) => Intl.NumberFormatPart[];
+      constructor(_locales: unknown, options: Intl.NumberFormatOptions) {
+        const delegate = new RealNumberFormat('en-US', options);
+        this.formatToParts = (value) => delegate.formatToParts(value);
+      }
+    }
+    vi.spyOn(Intl, 'NumberFormat').mockImplementation(
+      FallbackNumberFormat as unknown as typeof Intl.NumberFormat,
+    );
+
+    expect(formatDecimal(1234.5)).toBe('1 234,50');
+    expect(formatDecimal(1.902)).toBe('1,90');
+    expect(formatDecimal(-4.2)).toBe('-4,20');
   });
 });
 

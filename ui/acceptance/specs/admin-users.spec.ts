@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import { accounts, generatedPassword } from '../support/fixtures';
+import { enabledBadge, rowFor, toggleButton } from '../support/locators';
 import { bodiesSentTo, resetMappings } from '../support/wiremock';
 
 test.beforeEach(async ({ page }) => {
@@ -98,19 +99,3 @@ test.describe('User administration', () => {
     expect(await bodiesSentTo('POST', toggles)).toEqual([{ enabled: false }, { enabled: true }]);
   });
 });
-
-function rowFor(page: Page, email: string) {
-  return page.getByRole('row').filter({ hasText: email });
-}
-
-// The enabled labels are substrings of the disabled ones — "Activada" of
-// "Desactivada", "Activar" of "Desactivar" — and both getByText and the `name`
-// option match on substrings, case-insensitively. Every assertion on this pair
-// must therefore be exact, or a disabled account would satisfy it.
-function enabledBadge(row: ReturnType<typeof rowFor>) {
-  return row.getByText('Activada', { exact: true });
-}
-
-function toggleButton(row: ReturnType<typeof rowFor>, label: 'Activar' | 'Desactivar') {
-  return row.getByRole('button', { name: label, exact: true });
-}

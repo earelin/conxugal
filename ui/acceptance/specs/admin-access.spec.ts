@@ -2,7 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 
 import { nonAdminSession } from '../support/fixtures';
 import { nav, navLink } from '../support/locators';
-import { resetMappings, stubJson } from '../support/wiremock';
+import { requestCountFor, resetMappings, stubJson } from '../support/wiremock';
 
 test.beforeEach(async () => {
   await resetMappings();
@@ -38,6 +38,11 @@ test.describe('Administration area access', () => {
     // the server denies the admin endpoints regardless of what the SPA renders.
     await page.goto('/administracion');
     await expect(page.getByRole('heading', { name: 'Páxina non atopada' })).toBeVisible();
+
+    // No metrics panel, and no attempt to open its stream: a `USER` never even
+    // reaches the point where the server would have to refuse.
+    await expect(page.getByRole('heading', { name: 'Métricas en tempo real' })).toHaveCount(0);
+    expect(await requestCountFor('GET', '/api/admin/metrics')).toBe(0);
   });
 });
 

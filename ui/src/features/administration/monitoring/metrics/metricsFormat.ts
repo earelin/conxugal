@@ -14,15 +14,24 @@ export function formatPercent(fraction: number): string {
 }
 
 export function formatDecimal(n: number, fractionDigits = 2): string {
-  // gl-ES groups thousands with '.', but formatCount above groups with a
-  // space — keep both consistent (and unambiguous next to the ',' decimal
-  // separator) by using the same space grouping here.
+  // Grouping is a space, to match formatCount above; the decimal mark is the
+  // comma Galician writes. Both are taken from the formatter's own parts rather
+  // than patched into its output: which character plays which role depends on
+  // the locale data the runtime actually resolves for gl-ES, and a build that
+  // falls back to '.' as the decimal separator would have had that separator
+  // rewritten as a space — 1,90 rendered as "1 90".
   return new Intl.NumberFormat('gl-ES', {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   })
-    .format(n)
-    .replace(/\./g, ' ');
+    .formatToParts(n)
+    .map((part) => {
+      if (part.type === 'group') {
+        return ' ';
+      }
+      return part.type === 'decimal' ? ',' : part.value;
+    })
+    .join('');
 }
 
 export function formatTime(date: Date): string {

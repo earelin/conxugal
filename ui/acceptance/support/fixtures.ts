@@ -49,6 +49,89 @@ export const degradedSystemStatus = {
   },
 };
 
+/**
+ * The three runtime samples `metrics.json` streams, in order. Every figure the
+ * metrics specs assert is derived from these by hand — heap 370/383/355 MB of
+ * 1024, load 21/24/18 %, 48/50/47 threads — so a changed sample has to be
+ * followed through to the expectations rather than silently weakening them.
+ */
+export const metricsSamples = [
+  {
+    timestamp: '2026-07-31T12:45:00Z',
+    jvm: {
+      heapUsedBytes: 387973120,
+      heapMaxBytes: 1073741824,
+      nonHeapUsedBytes: 134217728,
+      threadCount: 48,
+      uptimeMillis: 273120000,
+      gcCollectionCount: 112,
+      gcCollectionTimeMillis: 1840,
+    },
+    system: { cpuLoad: 0.21 },
+    http: { requestCount: 18432, errorCount: 37 },
+    datastorePool: { active: 3, idle: 7, max: 10 },
+  },
+  {
+    timestamp: '2026-07-31T12:45:05Z',
+    jvm: {
+      heapUsedBytes: 401604608,
+      heapMaxBytes: 1073741824,
+      nonHeapUsedBytes: 134479872,
+      threadCount: 50,
+      uptimeMillis: 273125000,
+      gcCollectionCount: 112,
+      gcCollectionTimeMillis: 1840,
+    },
+    system: { cpuLoad: 0.24 },
+    http: { requestCount: 18461, errorCount: 37 },
+    datastorePool: { active: 4, idle: 6, max: 10 },
+  },
+  {
+    timestamp: '2026-07-31T12:45:10Z',
+    jvm: {
+      heapUsedBytes: 372244480,
+      heapMaxBytes: 1073741824,
+      nonHeapUsedBytes: 134479872,
+      threadCount: 47,
+      uptimeMillis: 273130000,
+      gcCollectionCount: 113,
+      gcCollectionTimeMillis: 1902,
+    },
+    system: { cpuLoad: 0.18 },
+    http: { requestCount: 18490, errorCount: 38 },
+    datastorePool: { active: 2, idle: 8, max: 10 },
+  },
+];
+
+/**
+ * A sample whose error rate — 400 of 18 490, or 2.16 % — clears the 1 % boundary
+ * the panel calls elevated. The healthy samples above all sit in the default
+ * band, so without this one nothing distinguishes a working classification from
+ * a badge hardcoded to `NORMAL`.
+ */
+export const elevatedErrorRateSample = {
+  ...metricsSamples[2],
+  http: { requestCount: 18490, errorCount: 400 },
+};
+
+/**
+ * The values a leaking backend might smuggle into a sample. The real endpoint
+ * never emits them (SPEC-0003 R21, asserted by the backend suite); they are here
+ * so the panel can be proven to render only the fields it knows, rather than
+ * echoing whatever the stream carries.
+ */
+export const secretsNeverStreamed = {
+  jdbcUrl: 'jdbc:postgresql://db.interno.conxugal.gal:5432/conxugal',
+  // eslint-disable-next-line sonarjs/no-hardcoded-passwords -- an invented value the panel must not render
+  password: 'nunca-debe-aparecer-na-pantalla',
+};
+
+/** A sample carrying those values alongside the pool counts the panel does render. */
+export const sampleWithSecrets = {
+  ...metricsSamples[2],
+  datastorePool: { ...metricsSamples[2].datastorePool, ...secretsNeverStreamed },
+};
+
 /** A `USER` session, for the scenario that checks the admin area stays hidden. */
 export const nonAdminSession = {
   id: '7e91a3c5-2b68-4d17-9f83-1c4a5e6b8d20',

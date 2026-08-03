@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0003
-adrs: [0002, 0004, 0006, 0009, 0010]
+adrs: [0002, 0004, 0006, 0009, 0010, 0018]
 status: draft
 ---
 
@@ -122,6 +122,11 @@ flowchart LR
    dashboard panel that subscribes via `EventSource`, renders samples live, keeps a bounded
    client-side history cleared on reload, and closes the stream on unmount.
    *(SPEC-0003 #15, #16, #17, #18)*
+6. **[TASK-0006](TASK-0006-frontend-acceptance-tests.md) — Frontend acceptance tests**
+   *(frontend)*: black-box Playwright coverage of the panel against a WireMock-served
+   stream ([ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md))
+   — live samples, the client-side history and its loss on reload, reconnection, and no
+   secret on screen. *(SPEC-0003 #15, #16, #17, #18)*
 
 ## Edge cases
 - **Non-admin subscribing** — a `USER` or unauthenticated request to `/api/admin/metrics`
