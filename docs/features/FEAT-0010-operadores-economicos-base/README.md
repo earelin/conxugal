@@ -195,8 +195,8 @@ erDiagram
         uuid id PK
         text fiscal_id UK "canonical: trimmed, upper-cased"
         text name "principal, R4 winner"
-        date rank_date
-        bigint rank_source_id
+        date name_rank_date
+        bigint name_rank_source_id
     }
     NOME_ALTERNATIVO {
         uuid operador_economico_id FK

@@ -32,8 +32,9 @@ exists first.
     remembered to canonicalise first. **One column, matched on and displayed** — no second column
     holds a published spelling, which is the whole point of canonicalising;
   - `name TEXT NOT NULL` — the published name, stored as published;
-  - the rank the name was taken from: `rank_publication_date DATE` (nullable, and
-    null ranks **last**) and `rank_source_id BIGINT NOT NULL`.
+  - the rank the name was taken from: `name_rank_date DATE` (nullable, and null ranks
+    **last**) and `name_rank_source_id BIGINT NOT NULL`. The `name_` prefix is the point: R4
+    ranks the name alone, so a bare `rank_` would read as ranking the row.
 - A second table, `operador_economico_nome_alternativo`, holding the names R15 retains beside the
   principal one:
   - `operador_economico_id UUID NOT NULL REFERENCES operador_economico(id)`;
