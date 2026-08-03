@@ -20,7 +20,7 @@
     "api:down": "docker compose down"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.4.3",
+    "@hookform/resolvers": "^5.5.7",
     "@mantine/charts": "^9.4.1",
     "@mantine/core": "^9.5.0",
     "@mantine/hooks": "^9.4.1",
@@ -62,7 +62,7 @@
     "eslint-plugin-sonarjs": "^4.2.0",
     "eslint-plugin-testing-library": "^7.16.2",
     "eslint-plugin-unused-imports": "^4.4.1",
-    "globals": "^17.7.0",
+    "globals": "^17.8.0",
     "jsdom": "^29.1.1",
     "nock": "^14.0.16",
     "postcss": "^8.5.23",
