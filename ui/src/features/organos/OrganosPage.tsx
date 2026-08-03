@@ -15,15 +15,14 @@ export function OrganosPage() {
   const [selectedTermoId, setSelectedTermoId] = useState<string | null>(null);
   const { view, isPending, isFetching, isError, error, refetch } = useOrganosTaxonomia();
 
-  // The selected term can disappear under a refetch — another admin deletes it
-  // while it is open. Both panes read the same reconciled value so they cannot
-  // disagree: without this the tree would highlight nothing (its id matches no
-  // node) while the content pane fell back to the worklist, leaving the reader
-  // on a list nothing claims to have selected.
-  const openTermoId =
-    view && selectedTermoId !== null && findTermoPath(view.roots, selectedTermoId).length > 0
-      ? selectedTermoId
-      : null;
+  // Resolved once, here, and handed to both panes so they cannot disagree about
+  // what is open. The selected term can disappear under a refetch — another
+  // admin deletes it while it is open — and an unresolvable id falls back to the
+  // worklist; deriving that separately per pane is what would let the tree
+  // highlight nothing while the content pane showed a list.
+  const openPath =
+    view && selectedTermoId !== null ? findTermoPath(view.roots, selectedTermoId) : [];
+  const openTermoId = openPath.length > 0 ? selectedTermoId : null;
 
   return (
     <Stack gap="md">
@@ -62,11 +61,7 @@ export function OrganosPage() {
             />
           </Grid.Col>
           <Grid.Col span={{ base: 12, md: 7 }}>
-            <TermoContentCard
-              roots={view.roots}
-              unclassified={view.unclassified}
-              selectedTermoId={openTermoId}
-            />
+            <TermoContentCard openPath={openPath} unclassified={view.unclassified} />
           </Grid.Col>
         </Grid>
       )}

@@ -3,7 +3,7 @@ import { Breadcrumbs, Card, Divider, Group, Stack, Text, Title } from '@mantine/
 import { strings } from '../../shared/lib/strings';
 import type { Organo } from './organos';
 import { OrganosTable } from './OrganosTable';
-import { findTermoPath, type TermoNode } from './taxonomiaTree';
+import type { TermoNode } from './taxonomiaTree';
 
 // Term names repeat across levels — nothing stops a term carrying its
 // ancestor's name — so each crumb keeps the id it came from as its key.
@@ -50,16 +50,13 @@ function termoPane(path: TermoNode[]): Pane {
 }
 
 interface TermoContentCardProps {
-  roots: TermoNode[];
+  /** Root-to-term chain of the open term; empty selects the worklist. */
+  openPath: TermoNode[];
   unclassified: Organo[];
-  selectedTermoId: string | null;
 }
 
-export function TermoContentCard({ roots, unclassified, selectedTermoId }: TermoContentCardProps) {
-  const path = selectedTermoId === null ? [] : findTermoPath(roots, selectedTermoId);
-  // A selected term can vanish under a concurrent delete; falling back to the
-  // worklist keeps the pane populated instead of blanking it.
-  const pane = path.length > 0 ? termoPane(path) : unclassifiedPane(unclassified);
+export function TermoContentCard({ openPath, unclassified }: TermoContentCardProps) {
+  const pane = openPath.length > 0 ? termoPane(openPath) : unclassifiedPane(unclassified);
   const count = pane.organos.length;
 
   return (
