@@ -13,7 +13,8 @@ import org.jspecify.annotations.Nullable;
  * {@code infrastructure} module. Reconciliation is always update-in-place: an existing
  * row is matched by {@code sourceKey} and written to via {@link #update} or
  * {@link #updateActive}, never deleted and reinserted. Neither of those touches the
- * taxonomy placement — an import can neither move nor drop it.
+ * taxonomy placement or the import mark — an import can neither move nor drop the one, nor
+ * set or clear the other.
  */
 public interface OrganoRepository {
 
@@ -24,6 +25,12 @@ public interface OrganoRepository {
   List<OrganoDeContratacion> findAllOrderByName();
 
   List<OrganoDeContratacion> findAllBySourceKeyIn(Collection<String> sourceKeys);
+
+  /**
+   * Every Órgano eligible for a contratos menores import. Eligibility is the pair — active in
+   * the catalogue <em>and</em> marked — so no caller can answer it with only half of it.
+   */
+  List<OrganoDeContratacion> findAllByActiveTrueAndImportableTrue();
 
   Optional<OrganoDeContratacion> findById(OrganoId id);
 
@@ -38,4 +45,7 @@ public interface OrganoRepository {
 
   /** Sets (non-null) or clears (null) the Órgano's single taxonomy placement. */
   void updateTermo(@Id OrganoId id, @Nullable TermoId termoId);
+
+  /** Sets or clears the contratos menores import mark, touching no other column. */
+  void updateImportable(@Id OrganoId id, boolean importable);
 }

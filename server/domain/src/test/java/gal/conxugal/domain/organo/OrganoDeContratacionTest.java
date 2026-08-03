@@ -13,7 +13,8 @@ class OrganoDeContratacionTest {
   void exposes_id_source_key_name_and_active() {
     OrganoId id = new OrganoId(UUID.randomUUID());
     OrganoDeContratacion organo =
-        new OrganoDeContratacion(id, "xunta-consorcio-galego", "Consorcio Galego", true, null);
+        new OrganoDeContratacion(
+            id, "xunta-consorcio-galego", "Consorcio Galego", true, false, null);
 
     assertThat(organo.id()).isEqualTo(id);
     assertThat(organo.sourceKey()).isEqualTo("xunta-consorcio-galego");
@@ -24,7 +25,8 @@ class OrganoDeContratacionTest {
   @Test
   void allows_null_id_before_being_persisted() {
     OrganoDeContratacion organo =
-        new OrganoDeContratacion(null, "xunta-consorcio-galego", "Consorcio Galego", true, null);
+        new OrganoDeContratacion(
+            null, "xunta-consorcio-galego", "Consorcio Galego", true, false, null);
 
     assertThat(organo.id()).isNull();
   }
@@ -35,7 +37,7 @@ class OrganoDeContratacionTest {
         .isThrownBy(
             () ->
                 new OrganoDeContratacion(
-                    new OrganoId(UUID.randomUUID()), null, "Consorcio Galego", true, null));
+                    new OrganoId(UUID.randomUUID()), null, "Consorcio Galego", true, false, null));
   }
 
   @Test
@@ -44,7 +46,8 @@ class OrganoDeContratacionTest {
         .isThrownBy(
             () ->
                 new OrganoDeContratacion(
-                    new OrganoId(UUID.randomUUID()), "xunta-consorcio-galego", null, true, null));
+                    new OrganoId(UUID.randomUUID()), "xunta-consorcio-galego", null, true, false,
+                    null));
   }
 
   @Test
@@ -64,7 +67,7 @@ class OrganoDeContratacionTest {
     OrganoDeContratacion organo =
         new OrganoDeContratacion(
             new OrganoId(UUID.randomUUID()), "xunta-consorcio-galego", "Consorcio Galego", true,
-            termoId);
+            false, termoId);
 
     assertThat(organo.termoId()).isEqualTo(termoId);
   }
@@ -75,5 +78,13 @@ class OrganoDeContratacionTest {
         new OrganoDeContratacion("xunta-consorcio-galego", "Consorcio Galego");
 
     assertThat(organo.termoId()).isNull();
+  }
+
+  @Test
+  void newly_discovered_organo_is_not_marked_for_import() {
+    OrganoDeContratacion organo =
+        new OrganoDeContratacion("xunta-consorcio-galego", "Consorcio Galego");
+
+    assertThat(organo.importable()).isFalse();
   }
 }

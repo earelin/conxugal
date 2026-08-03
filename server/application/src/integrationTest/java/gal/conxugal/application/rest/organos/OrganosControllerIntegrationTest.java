@@ -56,9 +56,9 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
     OrganoId sanidadeId = new OrganoId(UUID.randomUUID());
     when(listOrganos.list()).thenReturn(
         List.of(
-            new OrganoDeContratacion(marId, "mar", "Consellería do Mar", false, null),
+            new OrganoDeContratacion(marId, "mar", "Consellería do Mar", false, false, null),
             new OrganoDeContratacion(sanidadeId, "sanidade", "Consellería de Sanidade", true,
-                SANIDADE)));
+                false, SANIDADE)));
 
     Response response = readAs(spec, TestUserFactory.normalUser(), "/api/organos");
 
@@ -97,7 +97,7 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
   void admin_reads_both_lists_too(RequestSpecification spec) {
     when(listOrganos.list()).thenReturn(
         List.of(new OrganoDeContratacion(new OrganoId(UUID.randomUUID()), "sanidade",
-            "Consellería de Sanidade", true, SANIDADE)));
+            "Consellería de Sanidade", true, false, SANIDADE)));
     when(listTermos.list()).thenReturn(List.of(new Termo(SANIDADE, "Sanidade", null)));
     User admin = TestUserFactory.adminUser();
 
@@ -113,9 +113,9 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
     when(listOrganos.list()).thenReturn(
         List.of(
             new OrganoDeContratacion(new OrganoId(UUID.randomUUID()), "mar", "Consellería do Mar",
-                true, null),
+                true, false, null),
             new OrganoDeContratacion(new OrganoId(UUID.randomUUID()), "sanidade",
-                "Consellería de Sanidade", true, null)));
+                "Consellería de Sanidade", true, false, null)));
     when(listTermos.list()).thenReturn(List.of());
     User user = TestUserFactory.normalUser();
 

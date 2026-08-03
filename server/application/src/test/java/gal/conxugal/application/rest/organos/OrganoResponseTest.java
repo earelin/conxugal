@@ -22,7 +22,7 @@ class OrganoResponseTest {
   @Test
   void unwraps_the_identities_classified_organo_carries() {
     OrganoResponse response = OrganoResponse.of(
-        new OrganoDeContratacion(ORGANO_ID, "sanidade", "Consellería de Sanidade", true,
+        new OrganoDeContratacion(ORGANO_ID, "sanidade", "Consellería de Sanidade", true, false,
             TERMO_ID));
 
     SoftAssertions.assertSoftly(softly -> {
@@ -36,7 +36,7 @@ class OrganoResponseTest {
   @Test
   void maps_unclassified_organo_to_null_termo_id() {
     OrganoResponse response = OrganoResponse.of(
-        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, null));
+        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, false, null));
 
     assertThat(response.termoId()).isNull();
   }
@@ -44,7 +44,7 @@ class OrganoResponseTest {
   @Test
   void carries_the_inactive_state_rather_than_dropping_the_organo() {
     OrganoResponse response = OrganoResponse.of(
-        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", false, null));
+        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", false, false, null));
 
     assertThat(response.active()).isFalse();
   }
@@ -59,7 +59,7 @@ class OrganoResponseTest {
   void serialises_unclassified_organo_with_an_explicit_null_termo_id() throws IOException {
     ObjectMapper objectMapper = ObjectMapper.getDefault();
     OrganoResponse response = OrganoResponse.of(
-        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, null));
+        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, false, null));
 
     String json = objectMapper.writeValueAsString(response);
 
