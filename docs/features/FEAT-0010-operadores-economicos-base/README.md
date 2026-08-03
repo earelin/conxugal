@@ -55,8 +55,7 @@ import use case
 > features interleave without a cycle.
 
 ## Scope
-- **Domain (the operador):** an `OperadorEconomico` aggregate — a system-assigned
-  `OperadorEconomicoId`
+- **Domain (the operador):** an `OperadorEconomico` aggregate — a system-assigned `OperadorId`
   ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)), the **canonical fiscal
   identifier** it is both matched and displayed on (R3), and the **published name** with the rank
   it was taken from — plus an `OperadorRepository` port (find by fiscal identifier, insert, update
@@ -289,8 +288,7 @@ dependencies**, and 2 and 3 are the ones FEAT-0009 waits on, so 2 can be taken f
    case canonicalise to one value; identifiers differing in internal spacing, punctuation or any
    character do not.
    Needed by task 4, not by tasks 2 or 3. *(SPEC-0006 #3 matching half, #4, #7, #9)*
-2. **`OperadorEconomico` domain model + repository port** — the aggregate
-   (`OperadorEconomicoId` identity,
+2. **`OperadorEconomico` domain model + repository port** — the aggregate (`OperadorId` identity,
    canonical fiscal identifier, published name, and the rank the name was taken from), the
    `NomeAlternativo` it holds many of (the published name plus the rank it was last seen at), and
    the `OperadorRepository` port: find by fiscal identifier, insert, update the name, retain a

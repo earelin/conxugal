@@ -28,7 +28,7 @@ identifier and the rank as values; the functions that compute and compare them a
 path into FEAT-0009 and the two can be built in either order.
 
 ## Scope
-- **`OperadorEconomicoId`**, a record wrapping a `UUID`, with its `AttributeConverter` — ADR-0019's
+- **`OperadorId`**, a record wrapping a `UUID`, with its `AttributeConverter` — ADR-0019's
   pattern for a new aggregate. It is also the type
   [FEAT-0009](../FEAT-0009-contratos-menores-initial-import/README.md)'s `ContratoMenor` carries
   as its optional operador reference, which is why this task lands before that aggregate is
@@ -37,7 +37,7 @@ path into FEAT-0009 and the two can be built in either order.
 
   | Field | Type | Notes |
   | --- | --- | --- |
-  | `id` | `OperadorEconomicoId` | System-assigned, `null` only until the database assigns it |
+  | `id` | `OperadorId` | System-assigned, `null` only until the database assigns it |
   | `fiscalId` | `String` | The fiscal identifier in R3's **canonical form** — trimmed and upper-cased by [TASK-0001](TASK-0001-matching-emptiness-and-ranking-rules.md). **Matched on and displayed**; the store is unique on it |
   | `name` | `String` | The awardee name **as published** by the winning contract, untouched |
   | `rank` | the rank pair | Which contract those two came from: its publication date (nullable) and its source identifier |
@@ -77,8 +77,8 @@ path into FEAT-0009 and the two can be built in either order.
   TASK-0001's emptiness test (R6).
 
 ## Acceptance criteria
-- The aggregate carries **one** fiscal identifier, and the identity is an `OperadorEconomicoId`
-  distinct from it. There is no second representation of the identifier to pick between.
+- The aggregate carries **one** fiscal identifier, and the identity is an `OperadorId` distinct
+  from it. There is no second representation of the identifier to pick between.
   ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #2)
 - An operador built from a padded, lower-case identifier holds the **canonical** form and is
   matched by it: the published case is retained nowhere, and no accessor returns the spelling it
