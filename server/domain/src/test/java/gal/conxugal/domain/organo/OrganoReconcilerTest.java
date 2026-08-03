@@ -185,9 +185,9 @@ class OrganoReconcilerTest {
   // it: the only proof a mocked repository can give is that the write is never reached.
   @Test
   void reconciling_never_writes_the_import_mark() {
-    OrganoDeContratacion markedAndRefreshed = marked("refreshed", "Old Name", true, true);
-    OrganoDeContratacion markedAndAbsent = marked("absent", "Absent", true, true);
-    OrganoDeContratacion markedAndInactive = marked("reactivated", "Reactivated", false, true);
+    OrganoDeContratacion markedAndRefreshed = organo("refreshed", "Old Name", true, true);
+    OrganoDeContratacion markedAndAbsent = organo("absent", "Absent", true, true);
+    OrganoDeContratacion markedAndInactive = organo("reactivated", "Reactivated", false, true);
     when(organoRepository.findAllOrderByName())
         .thenReturn(List.of(markedAndRefreshed, markedAndAbsent, markedAndInactive));
 
@@ -201,10 +201,10 @@ class OrganoReconcilerTest {
   }
 
   private static OrganoDeContratacion organo(String sourceKey, String name, boolean active) {
-    return marked(sourceKey, name, active, false);
+    return organo(sourceKey, name, active, false);
   }
 
-  private static OrganoDeContratacion marked(
+  private static OrganoDeContratacion organo(
       String sourceKey, String name, boolean active, boolean importable) {
     return new OrganoDeContratacion(
         new OrganoId(UUID.randomUUID()), sourceKey, name, active, importable, null);
