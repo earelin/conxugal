@@ -28,7 +28,9 @@ JDBC and SQL stay entirely in `infrastructure`.
   - `publication_date DATE` — nullable, and the **only** date column: the source's `DD-MM-YYYY`
     text is interpreted at the adapter and not stored (TASK-0003 records what that costs against
     R27);
-  - `objeto TEXT`, `amount NUMERIC`, `duration TEXT` — **nullable**. `amount` stays a plain
+  - `obxecto TEXT`, `amount NUMERIC`, `duration TEXT` — **nullable**. `TEXT` carries no length
+    bound, which is deliberate: the source publishes no maximum, so the schema imposes none.
+    `amount` stays a plain
     `NUMERIC`; `Money` is a Java type an `AttributeConverter` maps onto it, so the schema knows
     nothing about the wrapper and no currency column exists. The three mirror the aggregate's
     rule that only identity is required (TASK-0003): a `NOT NULL` here would reject a real award

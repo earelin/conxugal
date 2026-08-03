@@ -43,7 +43,7 @@ rather than added to a table of millions later.
   | `sourceId` | `long` | The source's own `id`. **The stable identity across imports** (R11) and what the uniqueness of R12 is enforced on |
   | `organoId` | `UUID` | The awarding Órgano's **UUID**, never its source key |
   | `publicationDate` | `LocalDate`, nullable | Interpreted at the adapter from the source's `DD-MM-YYYY` text. **One field, not a pair** — the published text is not retained |
-  | `objeto` | `String`, nullable | As published, including the source's own 60-character truncation |
+  | `obxecto` | `String`, nullable | As published, at whatever length the source publishes it — no cap of our own |
   | `amount` | `Money`, nullable | Published as a JSON **number**, VAT-inclusive — see below |
   | `duration` | `String`, nullable | As published, free text |
   | `operadorEconomico` | `OperadorEconomico`, nullable | **A foreign-key association** to the operador catalogue, not a copy of its data |
@@ -92,9 +92,16 @@ rather than added to a table of millions later.
   **systematically** is a different matter — that is the adapter judging the response unusable
   ([TASK-0005](TASK-0005-source-port-and-adapter.md)), not a row stored half-empty.
 
-- **No published value is altered on the way in.** No trimming, no case folding, no rounding, no
-  inferring — R27 forbids it. (The awardee's padding now survives on the `operador` row rather
-  than on the contract, which is what the note above records.)
+- **No published value is altered on the way in, beyond the whitespace R27 does not count as
+  published.** Text values arrive already trimmed of leading and trailing whitespace — the
+  adapter does that at the boundary ([TASK-0005](TASK-0005-source-port-and-adapter.md)), so this
+  aggregate stores what it is handed and trims nothing itself. No case folding, no collapsing of
+  internal spacing, no rounding, no inferring: R27 forbids all of those, and permits only the
+  padding the source adds to serialise its fixed-width fields. (The awardee's spelling now lives
+  on the `operador` row rather than on the contract, which is what the note above records.)
+- **A text value that was only whitespace is stored as null**, not as an empty string — it
+  published nothing, and null is already this aggregate's word for that. One absent-value case,
+  not two.
 - **The publication date is stored interpreted, and only interpreted.** It arrives as
   `DD-MM-YYYY` text, is parsed at the adapter, and one nullable `LocalDate` holds the result;
   the published string is not kept.
@@ -162,10 +169,14 @@ rather than added to a table of millions later.
   operador row, and the aggregate holds no awardee name or fiscal identifier of its own. A
   contract whose award has no usable identifier yields **null** there and is still a valid
   aggregate. ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #8, no-operador half)
-- Constructing a contract from published values preserves the **text** values byte-for-byte —
-  the object comes back at its published length and the duration as published.
-  (SPEC-0005 #40 storage half, **except the publication date**, stored interpreted, **and the
-  awardee**, which the operador row now holds)
+- Constructing a contract from published values preserves the **text** values byte-for-byte
+  within their trimmed bounds — `obxecto` comes back at its published length, however long that
+  is, and the duration as published. Neither the aggregate nor any construction path truncates,
+  folds case, or collapses internal spacing; a value handed in with internal runs of spaces keeps
+  them.
+  (SPEC-0005 #40 storage half, **except the publication date**, stored interpreted, **the
+  awardee**, which the operador row now holds, and **surrounding whitespace**, removed at the
+  adapter)
 - `Money` holds the published figure exactly — a value with more or fewer decimals than two
   round-trips unchanged, and no construction path rounds or rescales it. Two amounts add
   exactly, with no binary floating-point drift, and `Money` cannot be added to or compared with a

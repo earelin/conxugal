@@ -581,9 +581,24 @@ One decision remains outside this spec:
   its published text is not retained. This is a deliberate narrowing of "as published", taken
   because a second column per value earns its keep only where the two can differ meaningfully,
   and it is bounded to these two values — every other published value is stored as published,
-  byte for byte.
+  byte for byte within its trimmed bounds.
 
-  **The awardee is the other exception, and R7 states it**: it is stored once on its operador
+  **Surrounding whitespace is not a published value.** The source pads its text fields out to
+  fixed widths, so a value arrives carrying spaces that carry no information: they are an
+  artefact of how the source serialises its fields, not something it published about the
+  contract. Every text value is therefore stored with **leading and trailing whitespace
+  removed, and nothing else** — no internal spacing collapsed, no case folded, no punctuation
+  touched. A value that is **only** whitespace published nothing and is stored as absent, on the
+  same rule that stores an uninterpretable date as no date.
+
+  This is a narrowing of "as published" in the same sense as the two above, and a much smaller
+  one: it discards only characters the source itself does not treat as content. It is bounded
+  deliberately — trimming further, to collapse internal runs or fold case, would start merging
+  values that genuinely differ, which is what R7's *store what is published* forbids and what
+  [SPEC-0006](SPEC-0006-operadores-economicos.md) R3 keeps out of its match rule for the same
+  reason.
+
+  **The awardee is the remaining exception, and R7 states it**: it is stored once on its operador
   rather than on each contract, so what a row shows is the spelling SPEC-0006 R4 selects for that
   operador, not the spelling that contract was published under.
 
@@ -744,9 +759,11 @@ One decision remains outside this spec:
     source did not publish.
 40. **(R27)** Every value displayed matches what the official source publishes for that
     contract, with no value corrected, normalised, inferred, or enriched from elsewhere —
-    **except the two R27 names**: the publication date, which is displayed as the date it was
-    interpreted to rather than as its published text, and the awardee, whose stored spelling is
-    its operador's rather than that contract's.
+    **except the three R27 names**: the publication date, which is displayed as the date it was
+    interpreted to rather than as its published text; the awardee, whose stored spelling is its
+    operador's rather than that contract's; and every text value's **surrounding whitespace**,
+    which is removed on the way in. A text value differing from its published form in any way
+    other than leading and trailing whitespace is a defect.
 41. **(R27)** A displayed duration is accompanied by an indication that the source frequently
     publishes a per-Órgano default rather than a per-contract value.
 42. **(R27)** A contract whose published amount or publication date cannot be interpreted is

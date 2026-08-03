@@ -61,13 +61,21 @@ are ISO-8859-1.
 | --- | --- | --- |
 | `id` | integer | The publication identifier. Stable, and **totally ordered** — which is what [SPEC-0006](../../../specs/SPEC-0006-operadores-economicos.md) R4 needs for its tie-break. Older publications carry lower ids (2018 → ~289 000, 2026 → ~2 001 000). |
 | `publicado` | string | Publication date, **`DD-MM-YYYY`**. Text, so it needs interpreting for R19's year scoping. |
-| `objeto` | string | **Capped at 60 characters in the source itself** — see below. |
+| `objeto` | string | Free text, **no length cap** — the sample row below happens to be 60 characters, but longer values are published and arrive in full. |
 | `importe` | number | JSON number, already numeric. **VAT-inclusive** (the detail page renders it "3.630,00 con IVE"), which is what SPEC-0005 R7 requires to be labelled. |
-| `nif` | string | Awardee fiscal identifier, **space-padded to fixed width** (`"33545498K           "`). This is the padding [SPEC-0006](../../../specs/SPEC-0006-operadores-economicos.md) R3's match rule exists for, observed rather than assumed. |
+| `nif` | string | Awardee fiscal identifier, **space-padded to fixed width** (a nine-character NIF arriving in a twenty-character field). This is the padding [SPEC-0005](../../../specs/SPEC-0005-import-browse-contratos-menores.md) R27 trims on the way in, observed rather than assumed. |
 | `adjudicatario` | string | Awardee name, space-padded the same way. |
 | `duracion` | string | Free text (`"1 mes"`). |
 
 `recordsFiltered` is the count **within the requested window**; `recordsTotal` is described below.
+
+**Text fields arrive padded, and `objeto` arrives whole.** `nif` and `adjudicatario` are padded
+out to fixed widths with trailing spaces that carry no information — the reason
+[SPEC-0005](../../../specs/SPEC-0005-import-browse-contratos-menores.md) R27 stores text values
+trimmed of surrounding whitespace. `objeto` carries **no length cap**: an earlier reading of this
+endpoint took the 60-character sample row above for a cap in the source's own data, and contracts
+have since been found whose object is longer and comes back in full. **The row carries the whole
+object**, so there is nothing longer to fetch behind it.
 
 ### Measured limits
 
@@ -122,16 +130,16 @@ extra to capture at import time.
 
 ## What the source does not give
 
-- **The full object.** `objeto` comes back at exactly 60 characters, cut mid-word. The detail
-  page shows **the same 60 characters** — verified on two contracts (`2001090`, `2001110`) — so
-  the truncation is in the source's own data, not in the API. There is nothing longer to fetch.
-  This is why the import needs **no per-contract request**: one call per window-page carries
-  every attribute the system will ever hold.
 - **Contract type, tramitación, and the publication timestamp** exist on the detail page
   (`Tipo de contrato: Servizos`, `Data de difusión: 05-05-2026 06:01`) but **only there** — one
   further request per contract, which for the largest Órganos means millions. This confirms
   SPEC-0005's reason for excluding contract type rather than contradicting it.
 - **CPV**, as SPEC-0005 already records.
+
+None of these is a value the system stores, so the import still needs **no per-contract
+request**: one call per window-page carries every attribute the system will ever hold. That
+conclusion originally rested partly on `objeto` being capped at the row; it does not need to —
+the row carries the object in full, so the detail page holds nothing this system wants.
 
 ## Caveats
 
@@ -143,7 +151,12 @@ extra to capture at import time.
   ordering (`publicado` ascending) and not on sorting the source. This costs nothing: the walk's
   newest-first property is a property of **which window** is requested, and within a window every
   row is paged through regardless of order.
-- The 60-character cap was verified on two contracts of one Órgano; it is presented as the
-  source's behaviour, not as a documented guarantee.
+- **A 60-character cap on `objeto` was recorded here and was wrong.** It was read off two
+  contracts of one Órgano (`2001090`, `2001110`) whose objects happened to be that long, and
+  longer ones have since been observed arriving in full. Nothing downstream should carry a length
+  bound: the column is `TEXT` and the aggregate imposes no maximum. The reasoning that failed was
+  generalising a limit from agreeing samples rather than from a stated rule — the padding widths
+  and the window and page limits below are stated or enforced by the endpoint, which is why they
+  are not in the same category.
 - `id` was observed to increase with publication date. The adapter must not depend on that — only
   on `id` being stable and totally ordered, which is all SPEC-0006 R4 asks.

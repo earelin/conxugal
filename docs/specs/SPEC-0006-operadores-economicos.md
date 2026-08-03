@@ -135,7 +135,15 @@ One decision remains open:
   Because the source publishes identifiers with inconsistent padding and casing, two awards
   name the same operador when their identifiers are equal **ignoring surrounding whitespace
   and letter case**. This equivalence governs **matching only**: what is displayed is always
-  the value exactly as published (R13). Without it the same operador splits in two and the
+  the value exactly as published (R13).
+
+  The **padding half is now redundant for stored values** —
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R27 trims them on the way in, so two
+  stored identifiers differing only in padding no longer occur. It is kept because the
+  equivalence also governs **what a user types**: R6's search must still find an operador from a
+  padded or differently-cased query, and a rule that holds in one place and not the other is a
+  rule that will be applied in only one. The **casing half is not redundant at all**; nothing
+  folds case anywhere. Without it the same operador splits in two and the
   cross-Órgano aggregation this spec exists for fails silently.
 - **R4** — The same identifier is published under **varying names**, and with varying padding
   and casing. Since R13 forbids normalising either, an operador is shown under the **name and
@@ -353,6 +361,16 @@ One decision remains open:
   with no correction, normalisation, inference or enrichment from any other source. The
   matching equivalence of R3 governs comparison only, never display.
 
+  **The one thing "exactly" does not cover is surrounding whitespace.** The source pads its text
+  fields out to fixed widths, and
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R27 strips that padding as the value
+  enters the system, on the grounds that it is an artefact of serialisation rather than something
+  published. So an operador the source pads out to twenty characters is displayed under
+  `33545498K`, never under that value with its eleven trailing spaces. Nothing between the first
+  and last non-space character is touched:
+  internal spacing, casing and punctuation are displayed exactly as published, which is the
+  variance R13 exists to preserve.
+
   **"As published" means published somewhere, not published on that row.** The awardee's name and
   identifier are stored **once**, on the operador
   ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R7), under the single spelling R4
@@ -512,8 +530,10 @@ One decision remains open:
 29. **(R12)** No surface offers a way to delete or erase an operador, and no function removes
     an operador's name or fiscal identifier from the system.
 30. **(R13)** Every operador name, fiscal identifier and contract attribute displayed matches
-    what the official source published, with no value corrected, normalised, inferred or
-    enriched; no attribute is shown that no contract supplies.
+    what the official source published **once its surrounding whitespace is removed**
+    ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R27), with no value otherwise
+    corrected, normalised, inferred or enriched — internal spacing, casing and punctuation
+    displayed exactly as published; no attribute is shown that no contract supplies.
 31. **(R14)** Under the reference environment and the dataset R14 states — at least 300 000
     operadores, one of them holding 10 000 or more contracts across more than one Órgano — the
     read latency of the operadores list (its first page, its count, and a page deep into the

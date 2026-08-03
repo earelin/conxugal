@@ -36,9 +36,18 @@ feature configuring no new rate. Build this task after it, or the sharing is asp
   [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s derivation needs from the
   source row to match and to fill the operador's display fields:
   source id, publication date text, object, amount, duration, awardee name, awardee fiscal
-  identifier. No trimming, no case folding, no date parsing — interpretation happens above the
-  port (R27). The amount arrives as a JSON number and is carried as a `Money` (TASK-0003), at
+  identifier. The amount arrives as a JSON number and is carried as a `Money` (TASK-0003), at
   the scale the source published and with no rounding.
+- **Every text field is trimmed of leading and trailing whitespace here, and nowhere else.** The
+  source pads `nif` and `adjudicatario` out to fixed widths, and that padding is an artefact of
+  its serialisation rather than anything it published (R27). Stripping it at the boundary is what
+  keeps every consumer above the port — the aggregate, the operador derivation, the match key —
+  from each having to know the source pads. A field left **empty once trimmed** is carried as
+  **absent**, not as an empty string, so there is one absent-value case above the port and not
+  two.
+- **Nothing else about the text is touched:** no case folding, no collapsing of internal runs of
+  spaces, no punctuation stripped, no date parsing. Trimming is the one narrowing R27 allows;
+  interpretation still happens above the port.
 - The adapter **declares a client interface** carrying `@ResilientClient` and
   `@Client(id = "contratosdegalicia")` — **the same id the Órganos adapter binds** — so both go
   through the one set of policies `ContratosDeGaliciaResilienceFactory` publishes per source.
@@ -63,11 +72,20 @@ feature configuring no new rate. Build this task after it, or the sharing is asp
 
 ## Acceptance criteria
 - Given a stubbed source, the adapter returns one window-page's rows with every published value
-  intact — padded fiscal identifier and awardee name, the object at its published length, the
-  date as `DD-MM-YYYY` text, the amount as a `Money` at its published scale — and accented text
-  decoded from **UTF-8**
-  without mojibake.
+  intact — the object at its published length however long, the date as `DD-MM-YYYY` text, the
+  amount as a `Money` at its published scale — and accented text decoded from **UTF-8** without
+  mojibake.
   ([SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) #40 as-published half)
+- A row whose `nif` and `adjudicatario` arrive **space-padded** yields those values with the
+  padding gone and **everything between the first and last non-space character untouched** —
+  internal spacing, casing and punctuation all preserved. Asserted on a value with internal
+  spaces, so trimming is distinguished from normalising rather than inferred from a single-word
+  case passing. (SPEC-0005 #40, whitespace narrowing)
+- A text field arriving **empty, or as whitespace only**, is surfaced as **absent** — the two
+  reach consumers as one case, not as an empty string alongside a null.
+- An object **longer than the sample row's 60 characters** round-trips at its full length, with
+  no truncation anywhere in the adapter or its response binding. (The cap recorded in
+  `design/source-contract.md` was wrong; this criterion is what stops it being re-introduced.)
 - `recordsTotal` is surfaced alongside the rows on every response, including one whose window
   matched nothing — the precondition for #12's completeness test, which
   [TASK-0009](TASK-0009-single-organo-initial-import.md) proves.

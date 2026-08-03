@@ -22,10 +22,18 @@ than an error".
 - **The match key** — the published fiscal identifier reduced by ignoring **surrounding
   whitespace and letter case, and nothing else**. Internal spacing, punctuation and any differing
   character produce a different key, so two real suppliers are never merged into one.
+  - **Whitespace tolerance is no longer about the import.** The source's padding is stripped at
+    the adapter ([SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) R27,
+    [FEAT-0009 TASK-0005](../FEAT-0009-contratos-menores-initial-import/TASK-0005-source-port-and-adapter.md)),
+    so identifiers reaching this function are already trimmed. It is kept because SPEC-0006 R3
+    makes the same equivalence govern **what a user types**, and because a match key that holds
+    only when its caller has already trimmed is a key that silently mismatches the day one
+    caller has not. It costs one call.
 - **The emptiness test** — an identifier absent, or empty once surrounding whitespace is ignored,
   is **unusable**: it yields no match key at all. Nothing beyond emptiness is validated; the
   source publishes irregular but genuine identifiers, and rejecting them would discard real
-  awards.
+  awards. Trimming upstream means a whitespace-only identifier normally arrives already absent;
+  this function still handles it, for the same reason.
 - **The rank** — a comparable pair over a contract: its publication date (**null
   ranks last**), then its source identifier (**higher wins**). This is what R4 means by
   *most recently published*, made total and deterministic rather than "some tie-break".
