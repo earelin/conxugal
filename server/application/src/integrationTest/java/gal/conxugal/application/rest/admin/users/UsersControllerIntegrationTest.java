@@ -1,5 +1,6 @@
 package gal.conxugal.application.rest.admin.users;
 
+import static gal.conxugal.application.http.error.support.AssertProblem.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -14,6 +15,7 @@ import gal.conxugal.domain.user.LastEnabledAdminException;
 import gal.conxugal.domain.user.Role;
 import gal.conxugal.domain.user.SetUserEnabled;
 import gal.conxugal.domain.user.User;
+import gal.conxugal.domain.user.UserId;
 import gal.conxugal.domain.user.UserNotFoundException;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpStatus;
@@ -76,7 +78,7 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
     User admin = TestUserFactory.adminUser();
     seedUser(admin);
     User neverLoggedIn = new User(
-        UUID.randomUUID(), "nova@example.com", "stored-hash", Role.USER, true,
+        new UserId(UUID.randomUUID()), "nova@example.com", "stored-hash", Role.USER, true,
         Instant.parse("2026-01-01T00:00:00Z"));
     when(userRepository.findAll()).thenReturn(List.of(admin, neverLoggedIn));
     String sessionCookie = loginAs(spec, admin);
@@ -99,7 +101,7 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
     User admin = TestUserFactory.adminUser();
     seedUser(admin);
     User created = new User(
-        UUID.randomUUID(), "new.admin@example.com", "hashed-password", Role.ADMIN, true,
+        new UserId(UUID.randomUUID()), "new.admin@example.com", "hashed-password", Role.ADMIN, true,
         Instant.parse("2026-07-18T09:30:00Z"));
     GeneratedPassword initialPassword = new GeneratedPassword("Tg7#kLp2Qw9$mZxR");
     when(createUser.create("new.admin@example.com", Role.ADMIN))
@@ -133,9 +135,9 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
         .when()
             .post("/api/admin/users");
 
-    response.then()
-        .statusCode(HttpStatus.CONFLICT.getCode())
-        .contentType("application/problem+json");
+    assertProblem(response)
+        .hasStatus(HttpStatus.CONFLICT)
+        .hasType("urn:conxugal:problem-type:duplicate-email");
   }
 
   @Test
@@ -196,7 +198,7 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
   void enabling_an_unknown_id_is_not_found(RequestSpecification spec) {
     User admin = TestUserFactory.adminUser();
     seedUser(admin);
-    UUID unknownId = UUID.randomUUID();
+    UserId unknownId = new UserId(UUID.randomUUID());
     when(setUserEnabled.setEnabled(unknownId, true))
         .thenThrow(new UserNotFoundException(unknownId));
     String sessionCookie = loginAs(spec, admin);

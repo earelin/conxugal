@@ -2,6 +2,7 @@ package gal.conxugal.application.http.auth.support;
 
 import gal.conxugal.domain.user.Role;
 import gal.conxugal.domain.user.User;
+import gal.conxugal.domain.user.UserId;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -14,12 +15,12 @@ public final class TestUserFactory {
   }
 
   public static User normalUser() {
-    return new User(UUID.randomUUID(), "user@example.com", "user-password", Role.USER, true,
-        CREATED_AT);
+    return new User(new UserId(UUID.randomUUID()), "user@example.com", "user-password",
+        Role.USER, true, CREATED_AT);
   }
 
   public static User adminUser() {
-    return new User(UUID.randomUUID(), "admin@example.com", "admin-password", Role.ADMIN, true,
-        CREATED_AT);
+    return new User(new UserId(UUID.randomUUID()), "admin@example.com", "admin-password",
+        Role.ADMIN, true, CREATED_AT);
   }
 }

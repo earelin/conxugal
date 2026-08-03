@@ -1,5 +1,7 @@
 import { Box, Card, Group, SimpleGrid, Stack, Text } from '@mantine/core';
 import { IconLock } from '@tabler/icons-react';
+import { useId } from 'react';
+
 import { strings } from '../../../../shared/lib/strings';
 import { Field } from './Field';
 import { formatPercent } from './metricsFormat';
@@ -82,11 +84,12 @@ function LegendDot({
 
 export function DatastorePoolCard({ latest }: { latest: RuntimeMetrics | null }) {
   const t = strings.admin.dashboard.metrics;
+  const titleId = useId();
   const summary = computePoolSummary(latest?.datastorePool);
 
   return (
-    <Card withBorder radius="md" padding="lg">
-      <Text fw={700} mb="sm">
+    <Card role="group" aria-labelledby={titleId} withBorder radius="md" padding="lg">
+      <Text id={titleId} fw={700} mb="sm">
         {t.datastorePoolCardTitle}
       </Text>
       <Stack gap="xs">

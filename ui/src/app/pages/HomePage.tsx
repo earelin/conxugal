@@ -1,4 +1,5 @@
 import { Stack, Text, Title } from '@mantine/core';
+
 import { strings } from '../../shared/lib/strings';
 
 export function HomePage() {

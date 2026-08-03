@@ -1,13 +1,13 @@
 package gal.conxugal.infrastructure.jdbc.organo;
 
 import gal.conxugal.domain.organo.taxonomia.Termo;
+import gal.conxugal.domain.organo.taxonomia.TermoId;
 import gal.conxugal.domain.organo.taxonomia.TermoRepository;
 import io.micronaut.data.annotation.Query;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.GenericRepository;
 import java.util.List;
-import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -17,10 +17,10 @@ import org.jspecify.annotations.Nullable;
  */
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public interface JdbcTermoRepository
-    extends TermoRepository, GenericRepository<Termo, UUID> {
+    extends TermoRepository, GenericRepository<Termo, TermoId> {
 
   /** The one query that cannot derive — see the port for why. */
   @Override
   @Query("SELECT * FROM termo WHERE parent_id IS NOT DISTINCT FROM :parentId")
-  List<Termo> findByParentId(@Nullable UUID parentId);
+  List<Termo> findByParentId(@Nullable TermoId parentId);
 }

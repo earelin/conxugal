@@ -1,7 +1,10 @@
 package gal.conxugal.application.rest.admin.users;
 
+import static java.util.Objects.requireNonNull;
+
 import gal.conxugal.domain.user.CreatedAccount;
 import gal.conxugal.domain.user.Role;
+import gal.conxugal.domain.user.User;
 import io.micronaut.serde.annotation.Serdeable;
 import java.time.Instant;
 import java.util.UUID;
@@ -13,9 +16,10 @@ public record CreatedUserResponse(
     String initialPassword) {
 
   static CreatedUserResponse of(CreatedAccount createdAccount) {
+    User user = createdAccount.user();
     return new CreatedUserResponse(
-        createdAccount.user().id(), createdAccount.user().email(), createdAccount.user().role(),
-        createdAccount.user().enabled(), createdAccount.user().createdAt(),
+        requireNonNull(user.id(), "a persisted user must carry an id").value(), user.email(),
+        user.role(), user.enabled(), user.createdAt(),
         createdAccount.initialPassword().value());
   }
 

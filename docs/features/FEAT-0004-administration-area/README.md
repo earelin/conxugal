@@ -1,7 +1,7 @@
 ---
 spec: SPEC-0003
-adrs: [0002, 0003, 0004, 0006, 0010]
-status: draft
+adrs: [0002, 0003, 0004, 0006, 0008, 0010, 0018]
+status: implemented
 ---
 
 # FEAT-0004. Administration area
@@ -21,10 +21,8 @@ the `@Secured(ADMIN)` rules already delivered in
 ## Scope
 - **Domain (auth):** extend `User` with an `enabled` state and a creation timestamp; add the account-management
   use cases (list, create, disable, enable) and extend the `UserRepository` port; add a
-  `UserFactory` that builds new `User` instances (assigning a UUID identity and stamping
-  `createdAt`) and a `PasswordGenerator` domain service that produces a random initial
-  password for new accounts; make the existing `Authenticate` use case reject disabled
-  accounts.
+  `PasswordGenerator` domain service that produces a random initial password for new
+  accounts; make the existing `Authenticate` use case reject disabled accounts.
 - **Domain (system status):** a `SystemStatus` model and a port that reports overall
   service state and datastore reachability.
 - **Infrastructure:** a migration adding the `enabled` and `created_at` columns; extend
@@ -55,7 +53,6 @@ flowchart LR
     end
     subgraph domain["domain"]
         lifecycle["ListUsers / CreateUser / SetUserEnabled"]
-        factory["UserFactory (UUID + createdAt)"]
         pwgen["PasswordGenerator (service)"]
         authuc["Authenticate (rejects disabled)"]
         status["SystemStatus + SystemStatusProbe (port)"]
@@ -73,13 +70,13 @@ flowchart LR
 - `User` gains an `enabled` boolean and a `createdAt` timestamp. The `UserRepository`
   port grows `findAll()`, an insert for new accounts, and an operation to set an
   account's `enabled` state.
-- A `UserFactory` builds every new `User`, assigning the identity (a UUID) and stamping
-  `createdAt`; both the id source and the clock are injected, so construction is
-  deterministic and unit-testable and the id/timestamp policy lives in one place.
-  `CreateUser` obtains the new account from the factory rather than constructing it
-  inline (rather than relying on a database default for either value). The migration
-  backfills pre-existing rows' `created_at` with a column default (see infrastructure
-  task).
+- `CreateUser` stamps `createdAt` from an injected clock, so creation is deterministic and
+  unit-testable without a database. The identity is not stamped by the domain: the `users.id`
+  column's `DEFAULT uuidv7()` assigns it and the insert returns it, which
+  **[ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md)**
+  allows by letting the domain `User` carry its own persistence-mapping annotations. A `User`
+  that has not been persisted yet therefore has a null id. The migration backfills
+  pre-existing rows' `created_at` with a column default (see infrastructure task).
 - `Authenticate` denies a disabled account **after** the password check so the outcome
   stays indistinct from a wrong-password failure (SPEC-0002 R3): a disabled account is
   never a distinguishable signal.
@@ -91,7 +88,8 @@ flowchart LR
 - `PasswordGenerator` draws from a cryptographically secure RNG (`SecureRandom`) and
   applies the fixed strength policy of SPEC-0003 R15 — at least 16 characters spanning
   uppercase, lowercase, digits, and symbols — so every generated password clears the same
-  bar (SPEC-0003 R14). The RNG source is injected so the policy is unit-testable.
+  bar (SPEC-0003 R14). It owns its `SecureRandom` rather than taking one in: seeding the RNG
+  would only prove the shuffling, so the policy is asserted over generated output instead.
 - `SetUserEnabled` refuses to disable the last enabled `ADMIN` (SPEC-0003 R12); the
   count is checked in the same transaction as the update.
 
@@ -141,29 +139,40 @@ flowchart LR
   (consistent with SPEC-0001 R6).
 
 ## Sequencing (tasks, one small change each)
-1. **Account-lifecycle domain** — add `enabled` and `createdAt` to `User`; add `ListUsers`,
-   `CreateUser`, `SetUserEnabled` use cases and extend `UserRepository`; add the
-   `UserFactory` (assigns UUID + `createdAt` from injected id source and clock) and the
-   `PasswordGenerator` service, and have `CreateUser` build the account via the factory
-   and generate and return the initial password once; make `Authenticate` reject disabled
-   accounts. *(SPEC-0003 #6–#9, #11, #12; SPEC-0002 #3)*
-2. **User-store infrastructure** — migration adding the `enabled` column (default true) and
+1. **Account-lifecycle domain** ([TASK-0001](TASK-0001-account-lifecycle-domain.md)) — add
+   `enabled` and `createdAt` to `User`; add `ListUsers`, `CreateUser`, `SetUserEnabled` use
+   cases and extend `UserRepository`; add the `PasswordGenerator` service, and have
+   `CreateUser` stamp `createdAt` from the injected clock and generate and return the
+   initial password once; make `Authenticate` reject disabled accounts.
+   *(SPEC-0003 #6–#9, #11, #12; SPEC-0002 #3)*
+2. **User-store infrastructure** ([TASK-0002](TASK-0002-user-store-infrastructure.md)) —
+   migration adding the `enabled` column (default true) and
    the `created_at` column (default current timestamp, to backfill existing rows); extend
    `JdbcUserRepository` with `findAll`, insert, and set-enabled. *(SPEC-0003 #5–#9)*
-3. **User-administration REST endpoints** — `@Secured(ADMIN)` endpoints for list, create,
+3. **User-administration REST endpoints**
+   ([TASK-0003](TASK-0003-user-administration-rest-endpoints.md)) — `@Secured(ADMIN)`
+   endpoints for list, create,
    and enable/disable under `/api/admin/users`; the create response carries the generated
    password once. *(SPEC-0003 #1, #5–#8, #11, #12)*
-4. **System-status probe + endpoint** — `SystemStatus` model, `SystemStatusProbe` port,
+4. **System-status probe + endpoint**
+   ([TASK-0004](TASK-0004-system-status-probe-and-endpoint.md)) — `SystemStatus` model,
+   `SystemStatusProbe` port,
    datastore/runtime adapter, and `GET /api/admin/system-status`. *(SPEC-0003 #1–#4)*
 5. **Current-user endpoint** ([TASK-0007](TASK-0007-current-user-endpoint.md)) —
    `FindCurrentUser` use case and `GET /api/me`, available to any authenticated user
    (not `ADMIN`-gated); needed by the admin UI shell to gate the nav client-side.
    *(SPEC-0002 #11)*
-6. **Admin UI shell + dashboard** — admin section, admin-only nav gating (read from
+6. **Admin UI shell + dashboard** ([TASK-0005](TASK-0005-admin-ui-shell-and-dashboard.md)) —
+   admin section, admin-only nav gating (read from
    `GET /api/me`), and the dashboard page consuming system status. *(SPEC-0003 #1, #2)*
-7. **User-administration UI** — user list (email, role, state, created date, last login
+7. **User-administration UI** ([TASK-0006](TASK-0006-user-administration-ui.md)) — user list
+   (email, role, state, created date, last login
    date), create-user form (email + role only), the one-time generated-password reveal
    after creation, and the disable/enable action. *(SPEC-0003 #5–#7, #9, #10; SPEC-0002 #10)*
+8. **Frontend acceptance tests** ([TASK-0008](TASK-0008-frontend-acceptance-tests.md)) —
+   black-box Playwright coverage of the admin screens, driving the built SPA with the API
+   replaced by WireMock ([ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md));
+   the same stub also gives `npm run dev` a local API. *(SPEC-0003 #1, #2, #5, #6, #10, #12)*
 
 ## Edge cases
 - **Disabled account is indistinct at login** — a disabled account produces the same

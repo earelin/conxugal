@@ -1,4 +1,5 @@
-import { IconLayoutDashboard, IconUsers, type Icon } from '@tabler/icons-react';
+import { type Icon, IconLayoutDashboard, IconSitemap, IconUsers } from '@tabler/icons-react';
+
 import type { Role } from '../shared/entities/currentUser';
 import { strings } from '../shared/lib/strings';
 
@@ -33,6 +34,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: strings.nav.panel, to: '/administracion', end: true, icon: IconLayoutDashboard },
       { label: strings.nav.users, to: '/administracion/usuarios', icon: IconUsers },
+      { label: strings.nav.organos, to: '/administracion/organos', icon: IconSitemap },
     ],
   },
 ];

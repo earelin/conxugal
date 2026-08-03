@@ -408,38 +408,30 @@ endpoint declaring the discriminator in its contract —
 [TASK-0010](TASK-0010-import-trigger-ui.md) is blocked until it does.
 
 **Where the code lands ([ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md)).**
-That ADR is accepted and left its migration to "whichever feature or maintenance task picks
-this up"; this is the first UI work since, so the feature answers it explicitly rather than
-letting whoever types first decide. **New code follows the ADR layout; the existing tree is
-not migrated here.** The section is a slice at `ui/src/features/organos/`, exposing one
-`index.ts` barrel, owning its own components, API calls and local state, and importing
-nothing from `routes/admin/`. `ui/src/api/`, `ui/src/commons/` and `ui/src/routes/admin/`
-stay exactly where they are.
+The section is a slice at `ui/src/features/organos/`, exposing one `index.ts` barrel, owning
+its own components, API calls and local state, and importing nothing from another feature.
 
-The trade-off is taken with open eyes: `ui/src` is left a **hybrid** of two layouts, and
-because the old tree is untouched, `eslint-plugin-boundaries` is *not* wired up either —
-there is nothing coherent for it to enforce yet, so the new slice's boundary rests on review
-until the migration lands. The full migration and the lint wiring remain unowned, and this
-feature does not claim them: they are still follow-up work for a maintenance task or the
-next frontend feature, which will find one slice already in the target shape rather than
-none.
+> **Updated on landing.** This section was drafted expecting `ui/src` to still be
+> `api/` + `commons/` + `routes/admin/`, and planned for a hybrid tree with the new slice's
+> boundary resting on review. The ADR-0015 migration landed first, so
+> [TASK-0007](TASK-0007-organos-section-and-tree-view.md) found `ui/src` already laid out as
+> `app/ → features/ → shared/entities → shared/ui + shared/lib`, with
+> `eslint-plugin-boundaries` wired into `ui/eslint.config.js` and enforcing the direction on
+> every build. There is no hybrid and no unowned migration left; the slice's boundary is a
+> lint failure, not a review convention.
 
-**Three files move down, and they are the ones that carry behaviour.** The ADR's own trigger
-for promoting a file is a second consumer appearing, and that is exactly what this slice is:
+**The behaviour-carrying files were already promoted, and the reason they had to be still
+governs.** `ErrorAlert` sits in `shared/ui/`, and `httpClient.ts` (`apiFetch`, `HttpError`)
+and `httpError.ts` in `shared/lib/`. What TASK-0007 added is the **retry affordance**
+`ErrorAlert` lacked, which the failed-fetch case below depends on.
 
-- **`ErrorAlert` → `shared/ui/`**, for the failed-fetch case below. It also gains the retry
-  affordance it does not have today.
-- **`httpClient.ts` (`apiFetch`, `HttpError`) and `httpError.ts` → `shared/lib/`**, with
-  `api/queryClient.ts` repointed at the new location. This is not tidiness. The single
-  `QueryClient` wired in `main.tsx` keys **both** of its cross-cutting policies on
-  `error instanceof HttpError`: the retry policy, and the redirect to `/login` on a 401. A
-  slice that honoured "import nothing from `api/`" by rolling its own error type would get
-  three blind retries on every failed read whatever the status — slow enough to mask the
-  failed-fetch state this feature designs so carefully — and would **silently lose the
-  session-expiry redirect**. Exactly one `HttpError` class may exist in the app.
-
-Three files is still not the migration, and ADR-0015 already lists all three under
-`shared/ui/` and `shared/lib/`. Nothing else moves.
+The constraint behind the promotion is permanent: the single `QueryClient` wired in
+`main.tsx` keys **both** of its cross-cutting policies on `error instanceof HttpError` — the
+retry policy, and the redirect to `/login` on a 401. A slice rolling its own error type
+would get three blind retries on every failed read whatever the status — slow enough to mask
+the failed-fetch state this feature designs so carefully — and would **silently lose the
+session-expiry redirect**. Exactly one `HttpError` class may exist in the app, which is why
+`ProblemError` below extends it rather than standing beside it.
 
 **The slice reads `problem+json`.** The five problem types exist so the UI can tell a cycle
 from a blocked delete, and both are 409 — but `apiFetch` today throws away the response body

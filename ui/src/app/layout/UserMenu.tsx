@@ -1,12 +1,13 @@
 import { Avatar, Box, Group, Loader, Menu, Stack, Text, UnstyledButton } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconChevronDown, IconLogout } from '@tabler/icons-react';
+
 import type { CurrentUser } from '../../shared/entities/currentUser';
 import { useLogout } from '../../shared/entities/currentUser';
 import { HttpError } from '../../shared/lib/httpClient';
 import { strings } from '../../shared/lib/strings';
-import { ErrorAlert } from '../../shared/ui/ErrorAlert';
 import { initialsOf } from '../../shared/ui/avatar';
+import { ErrorAlert } from '../../shared/ui/ErrorAlert';
 import classes from './UserMenu.module.css';
 
 export function UserMenu({ currentUser }: { currentUser: CurrentUser }) {

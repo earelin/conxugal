@@ -1,10 +1,10 @@
 package gal.conxugal.domain.organo;
 
+import gal.conxugal.domain.organo.taxonomia.TermoId;
 import io.micronaut.data.annotation.GeneratedValue;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
 import java.util.Objects;
-import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -15,11 +15,11 @@ import org.jspecify.annotations.Nullable;
  */
 @MappedEntity("organo_contratacion")
 public record OrganoDeContratacion(
-    @Id @GeneratedValue @Nullable UUID id,
+    @Id @GeneratedValue @Nullable OrganoId id,
     String sourceKey,
     String name,
     boolean active,
-    @Nullable UUID termoId) {
+    @Nullable TermoId termoId) {
 
   public OrganoDeContratacion {
     Objects.requireNonNull(sourceKey, "sourceKey must not be null");

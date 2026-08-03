@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.db.api.Assertions.assertThat;
 
 import gal.conxugal.domain.organo.taxonomia.Termo;
+import gal.conxugal.domain.organo.taxonomia.TermoId;
 import gal.conxugal.domain.organo.taxonomia.TermoRepository;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -20,6 +21,7 @@ import java.util.UUID;
 import javax.sql.DataSource;
 import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -66,8 +68,8 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void round_trips_several_levels_of_nesting_as_flat_parent_edges() throws Exception {
-    UUID rootId = insertTermo("Deportes", null);
-    UUID childId = insertTermo("Fútbol", rootId);
+    TermoId rootId = insertTermo("Deportes", null);
+    TermoId childId = insertTermo("Fútbol", rootId);
     insertTermo("Liga", childId);
 
     List<Termo> termos = termoRepository.findAllOrderByName();
@@ -95,18 +97,38 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
         .containsExactly("Ávila", "Avión", "Zamora");
   }
 
+  // Every other test here either writes and inspects the table, or reads rows raw SQL put
+  // there — so none of them shows a write arriving in the whole-table read the taxonomía
+  // endpoint actually serves. Driving both halves through the repository is what proves a
+  // create, a rename and a move are visible in the next findAllOrderByName().
+  @Test
+  void writes_are_visible_in_the_next_whole_table_read() {
+    Termo root = termoRepository.insert(new Termo("Deportes", null));
+    Termo child = termoRepository.insert(new Termo("Fútbol", root.id()));
+
+    termoRepository.updateName(child.id(), "Baloncesto");
+    termoRepository.updateParentId(child.id(), null);
+
+    assertThat(termoRepository.findAllOrderByName())
+        .extracting(Termo::name, Termo::parentId)
+        .containsExactly(
+            tuple("Baloncesto", null),
+            tuple("Deportes", null));
+  }
+
   @Test
   void inserts_root_termo_with_database_generated_id() {
     Termo created = termoRepository.insert(new Termo("Deportes", null));
 
-    assertThat(created.id()).isNotNull();
+    TermoId createdId = created.id();
+    assertThat(createdId).isNotNull();
     Table termos = termoTable();
     assertThat(termos).hasNumberOfRows(1);
     // Matching the stored id against the returned one is what proves the latter is the id
     // the database assigned, rather than merely non-null.
     assertThat(termos)
         .row(0)
-            .value("id").isEqualTo(created.id())
+            .value("id").isEqualTo(createdId.value())
             .value("name").isEqualTo("Deportes")
             .value("parent_id").isNull();
   }
@@ -117,18 +139,22 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
     Termo child = termoRepository.insert(new Termo("Fútbol", parent.id()));
 
+    TermoId parentId = parent.id();
+    TermoId childId = child.id();
+    assertThat(parentId).isNotNull();
+    assertThat(childId).isNotNull();
     // The one insert the generated statement has to carry parent_id on.
     assertThat(termoTable())
         .row(1)
-            .value("id").isEqualTo(child.id())
+            .value("id").isEqualTo(childId.value())
             .value("name").isEqualTo("Fútbol")
-            .value("parent_id").isEqualTo(parent.id());
+            .value("parent_id").isEqualTo(parentId.value());
   }
 
   @Test
   void finds_stored_termo_by_id() throws Exception {
-    UUID parentId = insertTermo("Deportes", null);
-    UUID id = insertTermo("Fútbol", parentId);
+    TermoId parentId = insertTermo("Deportes", null);
+    TermoId id = insertTermo("Fútbol", parentId);
 
     Termo found = termoRepository.findById(id).orElseThrow();
 
@@ -139,13 +165,13 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void finds_nothing_for_an_unknown_id() {
-    assertThat(termoRepository.findById(UUID.randomUUID())).isEmpty();
+    assertThat(termoRepository.findById(new TermoId(UUID.randomUUID()))).isEmpty();
   }
 
   @Test
   void renames_termo_leaving_its_parent_untouched() throws Exception {
-    UUID parentId = insertTermo("Deportes", null);
-    UUID id = insertTermo("Fútbol", parentId);
+    TermoId parentId = insertTermo("Deportes", null);
+    TermoId id = insertTermo("Fútbol", parentId);
 
     termoRepository.updateName(id, "Fútbol Sala");
 
@@ -156,16 +182,16 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
             .value("name").isEqualTo("Deportes")
             .value("parent_id").isNull()
         .row(1)
-            .value("id").isEqualTo(id)
+            .value("id").isEqualTo(id.value())
             .value("name").isEqualTo("Fútbol Sala")
-            .value("parent_id").isEqualTo(parentId);
+            .value("parent_id").isEqualTo(parentId.value());
   }
 
   @Test
   void re_parents_termo_between_parents_and_then_to_the_root() throws Exception {
-    UUID firstParent = insertTermo("Deportes", null);
-    UUID secondParent = insertTermo("Cultura", null);
-    UUID id = insertTermo("Fútbol", firstParent);
+    TermoId firstParent = insertTermo("Deportes", null);
+    TermoId secondParent = insertTermo("Cultura", null);
+    TermoId id = insertTermo("Fútbol", firstParent);
 
     termoRepository.updateParentId(id, secondParent);
 
@@ -175,26 +201,26 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
     // already null and would pass anyway.
     assertThat(afterMove)
         .row(0)
-            .value("id").isEqualTo(secondParent)
+            .value("id").isEqualTo(secondParent.value())
             .value("parent_id").isNull()
         .row(1)
-            .value("id").isEqualTo(firstParent)
+            .value("id").isEqualTo(firstParent.value())
             .value("parent_id").isNull()
         .row(2)
-            .value("id").isEqualTo(id)
-            .value("parent_id").isEqualTo(secondParent);
+            .value("id").isEqualTo(id.value())
+            .value("parent_id").isEqualTo(secondParent.value());
 
     termoRepository.updateParentId(id, null);
 
     assertThat(termoTable())
         .row(2)
-            .value("id").isEqualTo(id)
+            .value("id").isEqualTo(id.value())
             .value("parent_id").isNull();
   }
 
   @Test
   void deletes_exactly_one_termo() throws Exception {
-    UUID id = insertTermo("Deportes", null);
+    TermoId id = insertTermo("Deportes", null);
     insertTermo("Cultura", null);
 
     termoRepository.deleteById(id);
@@ -208,8 +234,8 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void reports_children_for_parent_and_none_for_leaf() throws Exception {
-    UUID parentId = insertTermo("Deportes", null);
-    UUID leafId = insertTermo("Fútbol", parentId);
+    TermoId parentId = insertTermo("Deportes", null);
+    TermoId leafId = insertTermo("Fútbol", parentId);
 
     assertThat(termoRepository.existsByParentId(parentId)).isTrue();
     assertThat(termoRepository.existsByParentId(leafId)).isFalse();
@@ -219,8 +245,8 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void finds_the_direct_children_of_parent() throws Exception {
-    UUID parentId = insertTermo("Deportes", null);
-    UUID childId = insertTermo("Fútbol", parentId);
+    TermoId parentId = insertTermo("Deportes", null);
+    TermoId childId = insertTermo("Fútbol", parentId);
     insertTermo("Liga", childId);
     insertTermo("Cultura", null);
 
@@ -236,7 +262,7 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void finds_the_roots_for_null_parent() throws Exception {
-    UUID rootId = insertTermo("Deportes", null);
+    TermoId rootId = insertTermo("Deportes", null);
     insertTermo("Cultura", null);
     insertTermo("Fútbol", rootId);
 
@@ -263,17 +289,17 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
   // triggers a constraint violation cannot use it as-is — an aborted statement poisons that
   // shared connection until it is rolled back, including for the next test's @AfterEach
   // truncate. See TermoMigrationIntegrationTest's commit/rollbackQuietly variant.
-  private UUID insertTermo(String name, UUID parentId) throws Exception {
+  private TermoId insertTermo(String name, @Nullable TermoId parentId) throws Exception {
     String sql = "INSERT INTO termo (id, name, parent_id) VALUES (uuidv7(), ?, ?) RETURNING id";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, name);
-      statement.setObject(2, parentId);
+      statement.setObject(2, parentId == null ? null : parentId.value());
       try (ResultSet resultSet = statement.executeQuery()) {
         if (!resultSet.next()) {
           throw new IllegalStateException("Insert did not return a generated id");
         }
-        return resultSet.getObject("id", UUID.class);
+        return new TermoId(resultSet.getObject("id", UUID.class));
       }
     }
   }

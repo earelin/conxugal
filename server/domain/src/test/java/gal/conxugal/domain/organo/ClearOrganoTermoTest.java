@@ -6,6 +6,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import gal.conxugal.domain.organo.taxonomia.TermoId;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,9 +30,9 @@ class ClearOrganoTermoTest {
 
   @Test
   void returns_placed_organo_to_the_unclassified_set() {
-    UUID organoId = UUID.randomUUID();
+    OrganoId organoId = new OrganoId(UUID.randomUUID());
     when(organoRepository.findById(organoId))
-        .thenReturn(Optional.of(placedIn(organoId, UUID.randomUUID())));
+        .thenReturn(Optional.of(placedIn(organoId, new TermoId(UUID.randomUUID()))));
 
     clearOrganoTermo.clear(organoId);
 
@@ -40,7 +41,7 @@ class ClearOrganoTermoTest {
 
   @Test
   void clearing_an_already_unclassified_organo_writes_nothing() {
-    UUID organoId = UUID.randomUUID();
+    OrganoId organoId = new OrganoId(UUID.randomUUID());
     when(organoRepository.findById(organoId)).thenReturn(Optional.of(unclassified(organoId)));
 
     clearOrganoTermo.clear(organoId);
@@ -50,7 +51,7 @@ class ClearOrganoTermoTest {
 
   @Test
   void rejects_unknown_organo_and_writes_nothing() {
-    UUID unknownOrganoId = UUID.randomUUID();
+    OrganoId unknownOrganoId = new OrganoId(UUID.randomUUID());
     when(organoRepository.findById(unknownOrganoId)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> clearOrganoTermo.clear(unknownOrganoId))
@@ -58,11 +59,11 @@ class ClearOrganoTermoTest {
     verify(organoRepository, never()).updateTermo(any(), any());
   }
 
-  private static OrganoDeContratacion unclassified(UUID organoId) {
+  private static OrganoDeContratacion unclassified(OrganoId organoId) {
     return placedIn(organoId, null);
   }
 
-  private static OrganoDeContratacion placedIn(UUID organoId, UUID termoId) {
+  private static OrganoDeContratacion placedIn(OrganoId organoId, TermoId termoId) {
     return new OrganoDeContratacion(organoId, "source-key", "Facenda", true, termoId);
   }
 }

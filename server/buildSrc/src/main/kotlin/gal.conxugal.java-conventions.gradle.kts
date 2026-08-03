@@ -103,6 +103,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 dependencies {
+    spotbugsPlugins(libs.findLibrary("fb-contrib").get())
     spotbugsPlugins(libs.findLibrary("findsecbugs-plugin").get())
     errorprone(libs.findLibrary("errorprone-core").get())
 }

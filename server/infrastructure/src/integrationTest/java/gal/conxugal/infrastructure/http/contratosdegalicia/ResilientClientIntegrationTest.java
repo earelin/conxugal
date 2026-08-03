@@ -66,8 +66,6 @@ class ResilientClientIntegrationTest implements TestPropertyProvider {
       wireMock.start();
     }
     Map<String, String> properties = new LinkedHashMap<>();
-    // The Órganos adapter still builds its own client from this; TASK-0008 retires it.
-    properties.put("conxugal.contratosdegalicia.base-url", wireMock.getBaseUrl());
     properties.put("micronaut.http.services.contratosdegalicia.url", wireMock.getBaseUrl());
     properties.put("micronaut.http.services.contratosdegalicia.connect-timeout", "5s");
     properties.put("micronaut.http.services.contratosdegalicia.read-timeout", "10s");

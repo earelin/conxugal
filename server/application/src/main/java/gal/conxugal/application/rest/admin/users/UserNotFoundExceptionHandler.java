@@ -3,12 +3,13 @@ package gal.conxugal.application.rest.admin.users;
 import gal.conxugal.domain.user.UserNotFoundException;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
+import io.micronaut.http.HttpStatus;
 import io.micronaut.http.server.exceptions.ExceptionHandler;
+import io.micronaut.problem.HttpStatusType;
 import io.micronaut.problem.ThrowableProblemHandler;
 import jakarta.inject.Singleton;
 import java.net.URI;
 import org.zalando.problem.Problem;
-import org.zalando.problem.Status;
 
 @Singleton
 class UserNotFoundExceptionHandler
@@ -29,7 +30,7 @@ class UserNotFoundExceptionHandler
         Problem.builder()
             .withType(TYPE)
             .withTitle("Not Found")
-            .withStatus(Status.NOT_FOUND)
+            .withStatus(new HttpStatusType(HttpStatus.NOT_FOUND))
             .withDetail("No account exists with id: " + exception.getUserId())
             .build());
   }

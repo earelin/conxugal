@@ -7,12 +7,14 @@
 export const strings = {
   appName: 'conxugal',
   appTagline: 'Contratos públicos da Xunta de Galicia',
+  retry: 'Tentar de novo',
   nav: {
     home: 'Inicio',
     about: 'Acerca de',
     adminSection: 'Administración',
     panel: 'Panel',
     users: 'Usuarios',
+    organos: 'Órganos',
   },
   roleLabel: {
     ADMIN: 'Administradora',
@@ -178,6 +180,30 @@ export const strings = {
       copy: 'Copiar',
       copied: 'Copiado',
       done: 'Feito',
+    },
+    organos: {
+      title: 'Órganos',
+      subtitle: 'Organiza o catálogo nunha taxonomía e clasifica os órganos de contratación.',
+      treeTitle: 'Taxonomía',
+      treeEmpty: 'Aínda non hai termos na taxonomía.',
+      unclassified: 'Sen clasificar',
+      unclassifiedSubtitle: 'Órganos importados que aínda non teñen termo asignado.',
+      columnOrgano: 'Órgano',
+      columnState: 'Estado',
+      columnActions: 'Accións',
+      stateActive: 'Activo',
+      stateInactive: 'Inactivo',
+      termEmpty: 'Este termo aínda non ten órganos.',
+      unclassifiedEmpty: 'Non hai órganos sen clasificar.',
+      // Split by plural category rather than built by a helper so the pieces
+      // lift into a translation catalogue as they stand.
+      countInTermOne: 'órgano neste termo',
+      countInTermOther: 'órganos neste termo',
+      countUnclassifiedOne: 'órgano sen clasificar',
+      countUnclassifiedOther: 'órganos sen clasificar',
+      errorTitle: 'Non se puido cargar a sección de Órganos',
+      errorForbidden: 'Non tes permisos para ver esta información.',
+      errorGeneric: 'Téntao de novo máis tarde.',
     },
   },
 } as const;

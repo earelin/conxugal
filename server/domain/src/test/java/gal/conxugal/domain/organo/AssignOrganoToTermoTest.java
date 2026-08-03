@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.domain.organo.taxonomia.Termo;
+import gal.conxugal.domain.organo.taxonomia.TermoId;
 import gal.conxugal.domain.organo.taxonomia.TermoNotFoundException;
 import gal.conxugal.domain.organo.taxonomia.TermoRepository;
 import java.util.Optional;
@@ -37,8 +38,8 @@ class AssignOrganoToTermoTest {
 
   @Test
   void files_organo_under_the_term() {
-    UUID organoId = UUID.randomUUID();
-    UUID termoId = UUID.randomUUID();
+    OrganoId organoId = new OrganoId(UUID.randomUUID());
+    TermoId termoId = new TermoId(UUID.randomUUID());
     when(organoRepository.findById(organoId)).thenReturn(Optional.of(unclassified(organoId)));
     when(termoRepository.findById(termoId))
         .thenReturn(Optional.of(new Termo(termoId, "Deportes", null)));
@@ -50,9 +51,9 @@ class AssignOrganoToTermoTest {
 
   @Test
   void reassigning_replaces_the_previous_placement() {
-    UUID organoId = UUID.randomUUID();
-    UUID firstTermoId = UUID.randomUUID();
-    UUID secondTermoId = UUID.randomUUID();
+    OrganoId organoId = new OrganoId(UUID.randomUUID());
+    TermoId firstTermoId = new TermoId(UUID.randomUUID());
+    TermoId secondTermoId = new TermoId(UUID.randomUUID());
     when(organoRepository.findById(organoId)).thenReturn(Optional.of(unclassified(organoId)));
     when(termoRepository.findById(firstTermoId))
         .thenReturn(Optional.of(new Termo(firstTermoId, "Deportes", null)));
@@ -73,18 +74,19 @@ class AssignOrganoToTermoTest {
 
   @Test
   void rejects_unknown_organo_and_writes_nothing() {
-    UUID unknownOrganoId = UUID.randomUUID();
+    OrganoId unknownOrganoId = new OrganoId(UUID.randomUUID());
     when(organoRepository.findById(unknownOrganoId)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> assignOrganoToTermo.assign(unknownOrganoId, UUID.randomUUID()))
+    assertThatThrownBy(
+            () -> assignOrganoToTermo.assign(unknownOrganoId, new TermoId(UUID.randomUUID())))
         .isInstanceOf(OrganoNotFoundException.class);
     verify(organoRepository, never()).updateTermo(any(), any());
   }
 
   @Test
   void rejects_unknown_term_and_writes_nothing() {
-    UUID organoId = UUID.randomUUID();
-    UUID unknownTermoId = UUID.randomUUID();
+    OrganoId organoId = new OrganoId(UUID.randomUUID());
+    TermoId unknownTermoId = new TermoId(UUID.randomUUID());
     when(organoRepository.findById(organoId)).thenReturn(Optional.of(unclassified(organoId)));
     when(termoRepository.findById(unknownTermoId)).thenReturn(Optional.empty());
 
@@ -93,7 +95,7 @@ class AssignOrganoToTermoTest {
     verify(organoRepository, never()).updateTermo(any(), any());
   }
 
-  private static OrganoDeContratacion unclassified(UUID organoId) {
+  private static OrganoDeContratacion unclassified(OrganoId organoId) {
     return new OrganoDeContratacion(organoId, "source-key", "Facenda", true, null);
   }
 }

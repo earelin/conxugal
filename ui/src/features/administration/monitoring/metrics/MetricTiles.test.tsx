@@ -1,10 +1,11 @@
 import { MantineProvider } from '@mantine/core';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+
 import { theme } from '../../../../app/theme';
 import { strings } from '../../../../shared/lib/strings';
-import { HeapTile, HttpTile, SystemLoadTile, ThreadsTile } from './MetricTiles';
 import { METRICS_HISTORY_LIMIT, type RuntimeMetrics } from './metricsStream';
+import { HeapTile, HttpTile, SystemLoadTile, ThreadsTile } from './MetricTiles';
 
 const t = strings.admin.dashboard.metrics;
 

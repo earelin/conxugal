@@ -1,0 +1,28 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/api/admin/system-status"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "status": "UP",
+      "datastore": { "reachable": true },
+      "checkedAt": "2026-07-31T12:45:00Z",
+      "application": {
+        "version": "0.1.0-SNAPSHOT",
+        "environment": "local"
+      },
+      "runtime": {
+        "javaVersion": "25.0.1",
+        "javaVendor": "Eclipse Adoptium",
+        "uptimeMillis": 273120000,
+        "memoryUsedBytes": 536870912,
+        "memoryMaxBytes": 1073741824,
+        "osName": "Linux",
+        "osArch": "amd64"
+      }
+    }
+  }
+}

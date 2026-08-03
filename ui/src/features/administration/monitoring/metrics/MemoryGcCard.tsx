@@ -1,4 +1,6 @@
 import { Card, Group, Progress, SimpleGrid, Stack, Text } from '@mantine/core';
+import { useId } from 'react';
+
 import { strings } from '../../../../shared/lib/strings';
 import { Field } from './Field';
 import {
@@ -15,6 +17,7 @@ import { orNoValue } from './orNoValue';
 
 export function MemoryGcCard({ latest }: { latest: RuntimeMetrics | null }) {
   const t = strings.admin.dashboard.metrics;
+  const titleId = useId();
   const jvm = latest?.jvm;
   const heapPercent = latest ? heapUsedPercent(latest) : null;
   const heapMbPart = heapUsageMb(latest);
@@ -24,8 +27,8 @@ export function MemoryGcCard({ latest }: { latest: RuntimeMetrics | null }) {
       : (heapMbPart ?? t.noValue);
 
   return (
-    <Card withBorder radius="md" padding="lg">
-      <Text fw={700} mb="sm">
+    <Card role="group" aria-labelledby={titleId} withBorder radius="md" padding="lg">
+      <Text id={titleId} fw={700} mb="sm">
         {t.memoryGcCardTitle}
       </Text>
       <Stack gap="xs">

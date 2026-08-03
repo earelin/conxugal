@@ -1,5 +1,7 @@
 package gal.conxugal.application.rest.admin.users;
 
+import static java.util.Objects.requireNonNull;
+
 import gal.conxugal.domain.user.Role;
 import gal.conxugal.domain.user.User;
 import io.micronaut.core.annotation.Nullable;
@@ -15,7 +17,7 @@ public record UserResponse(
 
   static UserResponse of(User user) {
     return new UserResponse(
-        user.id(), user.email(), user.role(), user.enabled(), user.createdAt(),
-        user.lastLoginAt());
+        requireNonNull(user.id(), "a persisted user must carry an id").value(), user.email(),
+        user.role(), user.enabled(), user.createdAt(), user.lastLoginAt());
   }
 }

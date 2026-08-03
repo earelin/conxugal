@@ -1,7 +1,6 @@
 package gal.conxugal.domain.organo.taxonomia;
 
 import jakarta.inject.Singleton;
-import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -18,7 +17,7 @@ public class CreateTermo {
     this.termoRepository = termoRepository;
   }
 
-  public Termo create(String name, @Nullable UUID parentId) {
+  public Termo create(String name, @Nullable TermoId parentId) {
     if (parentId != null && termoRepository.findById(parentId).isEmpty()) {
       throw new TermoNotFoundException(parentId);
     }

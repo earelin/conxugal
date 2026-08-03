@@ -1,0 +1,68 @@
+{
+  "mappings": [
+    {
+      "name": "List every account",
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/admin/users"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": [
+          {
+            "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            "email": "ana.pereira@conxugal.gal",
+            "role": "ADMIN",
+            "enabled": true,
+            "createdAt": "2025-02-03T09:30:00Z",
+            "lastLoginAt": "2026-07-10T08:12:00Z"
+          },
+          {
+            "id": "5c2d1e08-9a44-4f3b-8d21-7b6e0c9a1f52",
+            "email": "brais.otero@conxugal.gal",
+            "role": "USER",
+            "enabled": true,
+            "createdAt": "2025-03-12T11:05:00Z",
+            "lastLoginAt": "2026-07-08T16:40:00Z"
+          },
+          {
+            "id": "7e91a3c5-2b68-4d17-9f83-1c4a5e6b8d20",
+            "email": "diego.senra@conxugal.gal",
+            "role": "USER",
+            "enabled": true,
+            "createdAt": "2026-05-05T08:00:00Z",
+            "lastLoginAt": null
+          },
+          {
+            "id": "b4d6f80a-1c39-4e52-a7b8-3f9d2c5e7104",
+            "email": "helena.mar@conxugal.gal",
+            "role": "USER",
+            "enabled": false,
+            "createdAt": "2025-09-18T14:20:00Z",
+            "lastLoginAt": "2026-03-02T07:55:00Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Create an account, echoing the submitted email and role",
+      "request": {
+        "method": "POST",
+        "urlPath": "/api/admin/users"
+      },
+      "response": {
+        "status": 201,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "2a8c4f16-6d75-4b93-8e01-9c7a3b5d2f48",
+          "email": "{{jsonPath request.body '$.email'}}",
+          "role": "{{jsonPath request.body '$.role'}}",
+          "enabled": true,
+          "createdAt": "2026-07-31T12:45:00Z",
+          "initialPassword": "Tg7#kLp2Qw9$mZxR"
+        }
+      }
+    }
+  ]
+}

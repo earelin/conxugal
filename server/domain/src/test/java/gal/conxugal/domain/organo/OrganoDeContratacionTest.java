@@ -3,6 +3,7 @@ package gal.conxugal.domain.organo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
+import gal.conxugal.domain.organo.taxonomia.TermoId;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +11,7 @@ class OrganoDeContratacionTest {
 
   @Test
   void exposes_id_source_key_name_and_active() {
-    UUID id = UUID.randomUUID();
+    OrganoId id = new OrganoId(UUID.randomUUID());
     OrganoDeContratacion organo =
         new OrganoDeContratacion(id, "xunta-consorcio-galego", "Consorcio Galego", true, null);
 
@@ -34,7 +35,7 @@ class OrganoDeContratacionTest {
         .isThrownBy(
             () ->
                 new OrganoDeContratacion(
-                    UUID.randomUUID(), null, "Consorcio Galego", true, null));
+                    new OrganoId(UUID.randomUUID()), null, "Consorcio Galego", true, null));
   }
 
   @Test
@@ -43,7 +44,7 @@ class OrganoDeContratacionTest {
         .isThrownBy(
             () ->
                 new OrganoDeContratacion(
-                    UUID.randomUUID(), "xunta-consorcio-galego", null, true, null));
+                    new OrganoId(UUID.randomUUID()), "xunta-consorcio-galego", null, true, null));
   }
 
   @Test
@@ -59,10 +60,11 @@ class OrganoDeContratacionTest {
 
   @Test
   void carries_at_most_one_term_placement() {
-    UUID termoId = UUID.randomUUID();
+    TermoId termoId = new TermoId(UUID.randomUUID());
     OrganoDeContratacion organo =
         new OrganoDeContratacion(
-            UUID.randomUUID(), "xunta-consorcio-galego", "Consorcio Galego", true, termoId);
+            new OrganoId(UUID.randomUUID()), "xunta-consorcio-galego", "Consorcio Galego", true,
+            termoId);
 
     assertThat(organo.termoId()).isEqualTo(termoId);
   }

@@ -1,5 +1,6 @@
 import { Sparkline } from '@mantine/charts';
 import { Box, Text } from '@mantine/core';
+
 import { strings } from '../../../../shared/lib/strings';
 import {
   METRICS_HISTORY_LIMIT,

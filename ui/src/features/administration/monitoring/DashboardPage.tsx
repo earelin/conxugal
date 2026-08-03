@@ -17,10 +17,11 @@ import {
   IconLock,
   IconRefresh,
 } from '@tabler/icons-react';
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, type ReactNode, Suspense, useId } from 'react';
+
 import { HttpError } from '../../../shared/lib/httpClient';
 import { strings } from '../../../shared/lib/strings';
-import { useSystemStatus, type SystemStatus } from './systemStatus';
+import { type SystemStatus, useSystemStatus } from './systemStatus';
 
 // Code-split: @mantine/charts (and its recharts peer) are only needed once an
 // ADMIN opens this page, not for every visitor of the app's eager entry chunk.
@@ -63,9 +64,14 @@ function DashboardError({ error }: { error: unknown }) {
 }
 
 function StatCard({ label, value, healthy }: { label: string; value: string; healthy: boolean }) {
+  // Named after its own heading so each card is addressable on its own rather
+  // than by counting matches across the page. A group, not a section: a landmark
+  // per card would clutter landmark navigation for no benefit.
+  const labelId = useId();
+
   return (
-    <Card withBorder radius="md" padding="lg">
-      <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+    <Card role="group" aria-labelledby={labelId} withBorder radius="md" padding="lg">
+      <Text id={labelId} size="xs" fw={700} c="dimmed" tt="uppercase">
         {label}
       </Text>
       <Group justify="space-between" mt="xs">
@@ -100,6 +106,7 @@ function DashboardContent({
   isRefreshing: boolean;
   onRefresh: () => void;
 }) {
+  const systemInfoId = useId();
   const isUp = status.status === 'UP';
   const serviceLabel = isUp
     ? strings.admin.dashboard.serviceUp
@@ -160,8 +167,8 @@ function DashboardContent({
         />
       </SimpleGrid>
 
-      <Card withBorder radius="md" padding="lg">
-        <Text fw={700} mb="sm">
+      <Card role="group" aria-labelledby={systemInfoId} withBorder radius="md" padding="lg">
+        <Text id={systemInfoId} fw={700} mb="sm">
           {strings.admin.dashboard.systemInfoTitle}
         </Text>
         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg">

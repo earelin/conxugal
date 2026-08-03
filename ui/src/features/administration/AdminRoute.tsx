@@ -1,6 +1,7 @@
 import { Center, Loader } from '@mantine/core';
 import type { ReactNode } from 'react';
 import { Outlet } from 'react-router';
+
 import { useCurrentUser } from '../../shared/entities/currentUser';
 
 /**

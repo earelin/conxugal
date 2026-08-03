@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.db.api.Assertions.assertThat;
 
 import gal.conxugal.domain.organo.OrganoDeContratacion;
+import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.OrganoRepository;
+import gal.conxugal.domain.organo.taxonomia.TermoId;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -19,9 +21,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.sql.DataSource;
+import org.assertj.core.groups.Tuple;
 import org.assertj.db.type.AssertDbConnection;
 import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -155,7 +159,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void updates_name_and_active_on_the_existing_row_matched_by_id() throws Exception {
-    UUID id = insertOrgano("consorcio-x", "Consorcio X", true);
+    OrganoId id = insertOrgano("consorcio-x", "Consorcio X", true);
 
     organoRepository.update(id, "Consorcio X Renamed", false);
 
@@ -170,7 +174,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
   @Test
   void update_preserves_other_stored_rows() throws Exception {
     insertOrgano("consorcio-x", "Consorcio X", true);
-    UUID otherId = insertOrgano("axencia-y", "Axencia Y", true);
+    OrganoId otherId = insertOrgano("axencia-y", "Axencia Y", true);
 
     organoRepository.update(otherId, "Axencia Y Renamed", true);
 
@@ -181,7 +185,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void toggles_the_active_state_without_touching_name() throws Exception {
-    UUID id = insertOrgano("consorcio-x", "Consorcio X", true);
+    OrganoId id = insertOrgano("consorcio-x", "Consorcio X", true);
 
     organoRepository.updateActive(id, false);
 
@@ -199,7 +203,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void set_active_only_changes_the_matched_row() throws Exception {
-    UUID id = insertOrgano("consorcio-x", "Consorcio X", true);
+    OrganoId id = insertOrgano("consorcio-x", "Consorcio X", true);
     insertOrgano("axencia-y", "Axencia Y", true);
 
     organoRepository.updateActive(id, false);
@@ -211,8 +215,8 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void update_preserves_existing_placement() throws Exception {
-    UUID termoId = insertTermo("Deportes", null);
-    UUID id = insertOrgano("consorcio-x", "Consorcio X", true, termoId);
+    TermoId termoId = insertTermo("Deportes", null);
+    OrganoId id = insertOrgano("consorcio-x", "Consorcio X", true, termoId);
 
     organoRepository.update(id, "Consorcio X Renamed", true);
 
@@ -222,8 +226,8 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void updateActive_preserves_existing_placement() throws Exception {
-    UUID termoId = insertTermo("Deportes", null);
-    UUID id = insertOrgano("consorcio-x", "Consorcio X", true, termoId);
+    TermoId termoId = insertTermo("Deportes", null);
+    OrganoId id = insertOrgano("consorcio-x", "Consorcio X", true, termoId);
 
     organoRepository.updateActive(id, false);
 
@@ -233,7 +237,7 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void findAllOrderByName_reports_termo_id_for_placed_and_unplaced_organos() throws Exception {
-    UUID termoId = insertTermo("Deportes", null);
+    TermoId termoId = insertTermo("Deportes", null);
     insertOrgano("consorcio-x", "Consorcio X", true, termoId);
     insertOrgano("axencia-y", "Axencia Y", true, null);
 
@@ -254,20 +258,35 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(organoRepository.findById(created.id()).orElseThrow().termoId()).isNull();
   }
 
+  // Each stage is observed through findAllOrderByName rather than findById, because that is
+  // the read GET /api/organos serves: a placement that only findById could see would leave
+  // the catalogue showing an Órgano in the wrong term. The second Órgano is here so a
+  // statement that updated more rows than it named cannot pass.
   @Test
   void updateTermo_sets_then_replaces_then_clears_the_placement() throws Exception {
-    UUID firstTermo = insertTermo("Deportes", null);
-    UUID secondTermo = insertTermo("Cultura", null);
-    UUID id = insertOrgano("consorcio-x", "Consorcio X", true);
+    TermoId firstTermo = insertTermo("Deportes", null);
+    TermoId secondTermo = insertTermo("Cultura", null);
+    OrganoId id = insertOrgano("consorcio-x", "Consorcio X", true);
+    insertOrgano("axencia-y", "Axencia Y", true, secondTermo);
 
     organoRepository.updateTermo(id, firstTermo);
-    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isEqualTo(firstTermo);
+    assertThat(placementsByName()).containsExactly(
+        tuple("Axencia Y", secondTermo), tuple("Consorcio X", firstTermo));
 
     organoRepository.updateTermo(id, secondTermo);
-    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isEqualTo(secondTermo);
+    assertThat(placementsByName()).containsExactly(
+        tuple("Axencia Y", secondTermo), tuple("Consorcio X", secondTermo));
 
     organoRepository.updateTermo(id, null);
-    assertThat(organoRepository.findById(id).orElseThrow().termoId()).isNull();
+    assertThat(placementsByName()).containsExactly(
+        tuple("Axencia Y", secondTermo), tuple("Consorcio X", null));
+  }
+
+  private List<Tuple> placementsByName() {
+    return organoRepository.findAllOrderByName()
+        .stream()
+        .map(organo -> tuple(organo.name(), organo.termoId()))
+        .toList();
   }
 
   // Neither helper below commits or rolls back: every test here only expects successful
@@ -275,12 +294,12 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
   // under test see these uncommitted writes within the same transaction. Contrast
   // TermoMigrationIntegrationTest's insertTermo, which does commit/rollback because
   // several of its tests deliberately trigger a constraint violation.
-  private UUID insertOrgano(String sourceKey, String name, boolean active) throws Exception {
+  private OrganoId insertOrgano(String sourceKey, String name, boolean active) throws Exception {
     return insertOrgano(sourceKey, name, active, null);
   }
 
-  private UUID insertOrgano(String sourceKey, String name, boolean active, UUID termoId)
-      throws Exception {
+  private OrganoId insertOrgano(String sourceKey, String name, boolean active,
+      @Nullable TermoId termoId) throws Exception {
     String sql =
         "INSERT INTO organo_contratacion (id, source_key, name, active, termo_id) "
             + "VALUES (uuidv7(), ?, ?, ?, ?) RETURNING id";
@@ -289,28 +308,28 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
       statement.setString(1, sourceKey);
       statement.setString(2, name);
       statement.setBoolean(3, active);
-      statement.setObject(4, termoId);
+      statement.setObject(4, termoId == null ? null : termoId.value());
       try (ResultSet resultSet = statement.executeQuery()) {
         if (!resultSet.next()) {
           throw new IllegalStateException("Insert did not return a generated id");
         }
-        return resultSet.getObject("id", UUID.class);
+        return new OrganoId(resultSet.getObject("id", UUID.class));
       }
     }
   }
 
-  private UUID insertTermo(String name, UUID parentId) throws Exception {
+  private TermoId insertTermo(String name, @Nullable TermoId parentId) throws Exception {
     String sql =
         "INSERT INTO termo (id, name, parent_id) VALUES (uuidv7(), ?, ?) RETURNING id";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, name);
-      statement.setObject(2, parentId);
+      statement.setObject(2, parentId == null ? null : parentId.value());
       try (ResultSet resultSet = statement.executeQuery()) {
         if (!resultSet.next()) {
           throw new IllegalStateException("Insert did not return a generated id");
         }
-        return resultSet.getObject("id", UUID.class);
+        return new TermoId(resultSet.getObject("id", UUID.class));
       }
     }
   }

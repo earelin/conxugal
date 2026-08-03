@@ -1,6 +1,7 @@
 import { MantineProvider } from '@mantine/core';
 import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { theme } from '../../../../app/theme';
 import { strings } from '../../../../shared/lib/strings';
 import { MetricsPanel } from './MetricsPanel';
