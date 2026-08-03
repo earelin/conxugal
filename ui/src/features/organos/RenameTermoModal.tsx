@@ -1,13 +1,10 @@
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Group, Modal, Stack, TextInput } from '@mantine/core';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
 
 import { strings } from '../../shared/lib/strings';
 import type { TermoNode } from './taxonomiaTree';
 import { useRenameTermo } from './termoMutations';
-import { termoNameSchema, type TermoNameValues } from './termoName';
-import { isDuplicateSiblingName, type Refusal, termoRefusal } from './termoRefusal';
+import type { TermoNameValues } from './termoName';
+import { useTermoNameForm } from './termoNameForm';
 import { TermoRefusalAlert } from './TermoRefusalAlert';
 
 const copy = strings.admin.organos.termo;
@@ -19,33 +16,17 @@ interface RenameTermoFormProps {
 }
 
 function RenameTermoForm({ termo, onRenamed, onCancel }: RenameTermoFormProps) {
-  const [refusal, setRefusal] = useState<Refusal | null>(null);
   const renameTermo = useRenameTermo();
+  const { form, refusal, clearRefusal, reportRefusal } = useTermoNameForm(termo.name);
   const {
     register,
     handleSubmit,
-    setError,
     formState: { errors },
-  } = useForm<TermoNameValues>({
-    resolver: zodResolver(termoNameSchema),
-    defaultValues: { name: termo.name },
-  });
+  } = form;
 
   function onSubmit({ name }: TermoNameValues) {
-    setRefusal(null);
-    renameTermo.mutate(
-      { id: termo.id, name },
-      {
-        onSuccess: onRenamed,
-        onError: (error) => {
-          if (isDuplicateSiblingName(error)) {
-            setError('name', { message: copy.duplicateSiblingName });
-          } else {
-            setRefusal(termoRefusal(error));
-          }
-        },
-      },
-    );
+    clearRefusal();
+    renameTermo.mutate({ id: termo.id, name }, { onSuccess: onRenamed, onError: reportRefusal });
   }
 
   return (

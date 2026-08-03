@@ -1,15 +1,13 @@
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Group, Modal, Stack, TextInput } from '@mantine/core';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
 
 import { strings } from '../../shared/lib/strings';
 import type { Termo } from './organos';
 import type { TermoNode } from './taxonomiaTree';
 import { useCreateTermo } from './termoMutations';
-import { termoNameSchema, type TermoNameValues } from './termoName';
+import type { TermoNameValues } from './termoName';
+import { useTermoNameForm } from './termoNameForm';
 import { TermoParentSelect } from './TermoParentSelect';
-import { isDuplicateSiblingName, type Refusal, termoRefusal } from './termoRefusal';
 import { TermoRefusalAlert } from './TermoRefusalAlert';
 
 const copy = strings.admin.organos.termo;
@@ -24,36 +22,20 @@ interface CreateTermoFormProps {
 
 function CreateTermoForm({ roots, defaultParentId, onCreated, onCancel }: CreateTermoFormProps) {
   const [parentId, setParentId] = useState(defaultParentId);
-  const [refusal, setRefusal] = useState<Refusal | null>(null);
   const createTermo = useCreateTermo();
+  const { form, refusal, clearRefusal, reportRefusal } = useTermoNameForm('');
   const {
     register,
     handleSubmit,
-    setError,
     clearErrors,
     formState: { errors },
-  } = useForm<TermoNameValues>({
-    resolver: zodResolver(termoNameSchema),
-    defaultValues: { name: '' },
-  });
+  } = form;
 
   function onSubmit({ name }: TermoNameValues) {
-    setRefusal(null);
-    createTermo.mutate(
-      { name, parentId },
-      {
-        onSuccess: onCreated,
-        onError: (error) => {
-          // The dialog stays open either way, so the typed name survives and the
-          // administrator corrects it rather than retyping it.
-          if (isDuplicateSiblingName(error)) {
-            setError('name', { message: copy.duplicateSiblingName });
-          } else {
-            setRefusal(termoRefusal(error));
-          }
-        },
-      },
-    );
+    clearRefusal();
+    // The dialog stays open on a refusal either way, so the typed name survives
+    // and the administrator corrects it rather than retyping it.
+    createTermo.mutate({ name, parentId }, { onSuccess: onCreated, onError: reportRefusal });
   }
 
   return (
@@ -79,7 +61,7 @@ function CreateTermoForm({ roots, defaultParentId, onCreated, onCancel }: Create
           // keystroke; this is the half that would otherwise stick.
           onChange={(id) => {
             setParentId(id);
-            setRefusal(null);
+            clearRefusal();
             clearErrors('name');
           }}
         />
