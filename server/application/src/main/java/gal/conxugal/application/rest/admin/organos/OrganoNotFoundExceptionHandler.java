@@ -1,5 +1,6 @@
 package gal.conxugal.application.rest.admin.organos;
 
+import gal.conxugal.domain.organo.OrganoNotFoundException;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
@@ -11,28 +12,26 @@ import java.net.URI;
 import org.zalando.problem.Problem;
 
 @Singleton
-class ImportFailedExceptionHandler
-    implements ExceptionHandler<ImportFailedException, HttpResponse<?>> {
+class OrganoNotFoundExceptionHandler
+    implements ExceptionHandler<OrganoNotFoundException, HttpResponse<?>> {
 
-  private static final URI TYPE = URI.create("urn:conxugal:problem-type:organo-import-failed");
+  private static final URI TYPE = URI.create("urn:conxugal:problem-type:organo-not-found");
 
   private final ThrowableProblemHandler throwableProblemHandler;
 
-  ImportFailedExceptionHandler(ThrowableProblemHandler throwableProblemHandler) {
+  OrganoNotFoundExceptionHandler(ThrowableProblemHandler throwableProblemHandler) {
     this.throwableProblemHandler = throwableProblemHandler;
   }
 
   @Override
-  public HttpResponse<?> handle(HttpRequest request, ImportFailedException exception) {
+  public HttpResponse<?> handle(HttpRequest request, OrganoNotFoundException exception) {
     return throwableProblemHandler.handle(
         request,
         Problem.builder()
             .withType(TYPE)
-            .withTitle("Import Failed")
-            .withStatus(new HttpStatusType(HttpStatus.INTERNAL_SERVER_ERROR))
-            .withDetail(
-                "The Órganos import failed: the source was unreachable or returned an "
-                    + "unusable response.")
+            .withTitle("Órgano Not Found")
+            .withStatus(new HttpStatusType(HttpStatus.NOT_FOUND))
+            .withDetail("No Órgano exists with id: %s".formatted(exception.getOrganoId()))
             .build());
   }
 }

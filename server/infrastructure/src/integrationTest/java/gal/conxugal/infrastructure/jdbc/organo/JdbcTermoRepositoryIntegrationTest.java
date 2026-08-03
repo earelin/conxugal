@@ -97,6 +97,25 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
         .containsExactly("Ávila", "Avión", "Zamora");
   }
 
+  // Every other test here either writes and inspects the table, or reads rows raw SQL put
+  // there — so none of them shows a write arriving in the whole-table read the taxonomía
+  // endpoint actually serves. Driving both halves through the repository is what proves a
+  // create, a rename and a move are visible in the next findAllOrderByName().
+  @Test
+  void writes_are_visible_in_the_next_whole_table_read() {
+    Termo root = termoRepository.insert(new Termo("Deportes", null));
+    Termo child = termoRepository.insert(new Termo("Fútbol", root.id()));
+
+    termoRepository.updateName(child.id(), "Baloncesto");
+    termoRepository.updateParentId(child.id(), null);
+
+    assertThat(termoRepository.findAllOrderByName())
+        .extracting(Termo::name, Termo::parentId)
+        .containsExactly(
+            tuple("Baloncesto", null),
+            tuple("Deportes", null));
+  }
+
   @Test
   void inserts_root_termo_with_database_generated_id() {
     Termo created = termoRepository.insert(new Termo("Deportes", null));

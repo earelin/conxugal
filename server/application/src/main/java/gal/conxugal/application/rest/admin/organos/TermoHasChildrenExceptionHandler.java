@@ -1,6 +1,6 @@
-package gal.conxugal.application.rest.admin.users;
+package gal.conxugal.application.rest.admin.organos;
 
-import gal.conxugal.domain.user.LastEnabledAdminException;
+import gal.conxugal.domain.organo.taxonomia.TermoHasChildrenException;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
@@ -12,28 +12,27 @@ import java.net.URI;
 import org.zalando.problem.Problem;
 
 @Singleton
-class LastEnabledAdminExceptionHandler
-    implements ExceptionHandler<LastEnabledAdminException, HttpResponse<?>> {
+class TermoHasChildrenExceptionHandler
+    implements ExceptionHandler<TermoHasChildrenException, HttpResponse<?>> {
 
-  private static final URI TYPE = URI.create("urn:conxugal:problem-type:last-enabled-admin");
+  private static final URI TYPE = URI.create("urn:conxugal:problem-type:termo-has-children");
 
   private final ThrowableProblemHandler throwableProblemHandler;
 
-  LastEnabledAdminExceptionHandler(ThrowableProblemHandler throwableProblemHandler) {
+  TermoHasChildrenExceptionHandler(ThrowableProblemHandler throwableProblemHandler) {
     this.throwableProblemHandler = throwableProblemHandler;
   }
 
   @Override
-  public HttpResponse<?> handle(HttpRequest request, LastEnabledAdminException exception) {
+  public HttpResponse<?> handle(HttpRequest request, TermoHasChildrenException exception) {
     return throwableProblemHandler.handle(
         request,
         Problem.builder()
             .withType(TYPE)
-            .withTitle("Conflict")
+            .withTitle("Term Has Children")
             .withStatus(new HttpStatusType(HttpStatus.CONFLICT))
-            .withDetail(
-                "Cannot disable the only remaining enabled ADMIN account: "
-                    + exception.getUserId())
+            .withDetail("Cannot delete term %s while it has child terms"
+                .formatted(exception.getTermoId()))
             .build());
   }
 }
