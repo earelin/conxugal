@@ -215,6 +215,63 @@ describe('taxonomía management', () => {
     expect(post.isDone()).toBe(true);
   });
 
+  it('closes the create dialog on Cancelar without creating anything', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    await screen.findByText(consellerias.name);
+    await user.click(screen.getByRole('button', { name: copy.create }));
+    await typeName(user, 'Deputacións');
+    await submit(user, copy.cancel);
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(within(tree()).queryByText('Deputacións')).not.toBeInTheDocument();
+    expect(nock.pendingMocks()).toEqual([]);
+  });
+
+  it('opens a row action with the keyboard without collapsing the row underneath it', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia([...TAXONOMIA, innovacion]);
+    renderOrganosPage();
+
+    // A click both selects and toggles, so the second one puts the row back to
+    // selected *and* expanded — the state this test is about.
+    await openTermo(user, sanidade.name);
+    await openTermo(user, sanidade.name);
+    expect(within(tree()).getByText(innovacion.name)).toBeInTheDocument();
+
+    // Mantine's tree row owns Space and collapses the branch on it, and these
+    // icons are tabbable children of that row.
+    treeAction(copy.move).focus();
+    await user.keyboard(' ');
+
+    expect(
+      within(await dialog()).getByRole('button', { name: copy.moveSubmit }),
+    ).toBeInTheDocument();
+    expect(within(tree()).getByText(innovacion.name)).toBeInTheDocument();
+  });
+
+  it('keeps arrow keys on a focused row action instead of walking the tree', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    await openTermo(user, sanidade.name);
+    const action = treeAction(copy.move);
+    action.focus();
+
+    // The row's own handler moves focus between tree items; from inside a
+    // control that would yank the administrator off the button they are on.
+    await user.keyboard('{ArrowDown}');
+
+    expect(document.activeElement).toBe(action);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('renames the open term from the content header', async () => {
     const user = userEvent.setup();
     mockCatalogue(CATALOGUE);
