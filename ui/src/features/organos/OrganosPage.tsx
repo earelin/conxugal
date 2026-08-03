@@ -4,15 +4,28 @@ import { useState } from 'react';
 import { isHttpStatus } from '../../shared/lib/httpError';
 import { strings } from '../../shared/lib/strings';
 import { ErrorAlert } from '../../shared/ui/ErrorAlert';
+import { AssignOrganoModal, type AssignTarget } from './AssignOrganoModal';
 import { DeleteTermoModal } from './DeleteTermoModal';
 import { MoveTermoModal } from './MoveTermoModal';
 import { useOrganosTaxonomia } from './organos';
 import { RenameTermoModal } from './RenameTermoModal';
-import { findTermoPath } from './taxonomiaTree';
+import { findTermoPath, type TaxonomiaView } from './taxonomiaTree';
 import { TaxonomiaTreeCard } from './TaxonomiaTreeCard';
 import { TermoContentCard } from './TermoContentCard';
 
 type TermoAction = 'rename' | 'move' | 'delete';
+
+/** Which half of the assign pair the entry point settled, held as an id. */
+type AssignRequest = { kind: 'organo'; organoId: string } | { kind: 'termo'; termoId: string };
+
+function resolveAssignTarget(view: TaxonomiaView, request: AssignRequest): AssignTarget | null {
+  if (request.kind === 'organo') {
+    const organo = view.catalogue.find((candidate) => candidate.id === request.organoId);
+    return organo ? { kind: 'organo', organo } : null;
+  }
+  const termo = findTermoPath(view.roots, request.termoId).at(-1);
+  return termo ? { kind: 'termo', termo } : null;
+}
 
 export function OrganosPage() {
   // null selects the pinned worklist, which is where a freshly imported
@@ -22,6 +35,9 @@ export function OrganosPage() {
   // rather than in either pane: the tree row and the content header are two
   // ways into the same dialog, not two dialogs.
   const [action, setAction] = useState<TermoAction | null>(null);
+  // Ids, not records: the dialog is about whatever the section currently holds
+  // under them, and re-resolving each render is what keeps it honest.
+  const [assigning, setAssigning] = useState<AssignRequest | null>(null);
   const { view, isPending, isFetching, isError, error, refetch } = useOrganosTaxonomia();
 
   // Resolved once, here, and handed to both panes so they cannot disagree about
@@ -38,11 +54,20 @@ export function OrganosPage() {
   // refetch, or another admin deleting it — and a held action would then re-open
   // its dialog by itself the moment the next term was selected.
   const openAction = openTermo === null ? null : action;
+  // Same rule for the assign dialog, and it earns it twice over: either record
+  // can be deleted by another admin while the dialog is open, and an id that
+  // stops resolving simply unmounts it.
+  const assignTarget = view && assigning ? resolveAssignTarget(view, assigning) : null;
 
   const termoActions = {
     onRename: () => setAction('rename'),
     onMove: () => setAction('move'),
     onDelete: () => setAction('delete'),
+    onAssign: () => {
+      if (openTermoId !== null) {
+        setAssigning({ kind: 'termo', termoId: openTermoId });
+      }
+    },
   };
 
   function closeAction() {
@@ -98,9 +123,24 @@ export function OrganosPage() {
               openPath={openPath}
               unclassified={view.unclassified}
               termoActions={termoActions}
+              onAssignOrgano={(organo) => setAssigning({ kind: 'organo', organoId: organo.id })}
+              onRefresh={refetch}
             />
           </Grid.Col>
         </Grid>
+      )}
+
+      {/* Mounted only while its target resolves, which is also what drops the
+          picker's search and pending choice between two openings. */}
+      {view && assignTarget && (
+        <AssignOrganoModal
+          opened
+          view={view}
+          target={assignTarget}
+          onAssigned={() => setAssigning(null)}
+          onCancel={() => setAssigning(null)}
+          onRefresh={refetch}
+        />
       )}
 
       {view && openTermo && (

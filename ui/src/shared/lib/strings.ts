@@ -264,6 +264,37 @@ export const strings = {
         notFound: 'Outra persoa eliminou este termo. Actualiza a sección para velo ao día.',
         genericError: 'Non se puido completar a acción. Téntao de novo máis tarde.',
       },
+      assign: {
+        // The two ways into the same dialog, named for where they are read:
+        // from a worklist row it is the órgano that needs a termo, from a
+        // term's header it is the termo that needs an órgano.
+        fromWorklist: 'Asignar a termo',
+        fromTermo: 'Asignar órgano',
+        clear: 'Quitar do termo',
+
+        titleTermo: 'Asignar a un termo',
+        titleOrgano: 'Asignar órgano',
+        submit: 'Asignar',
+        organoLabel: 'Órgano',
+        termoLabel: 'Termo',
+        currently: (placement: string) => `Actualmente: ${placement}`,
+
+        searchLabel: 'Buscar termo',
+        searchPlaceholder: 'Buscar termo…',
+        noTermoMatches: (query: string) => `Ningún termo coincide con «${query}».`,
+        organoPlaceholder: 'Buscar órgano…',
+        noOrganoMatches: 'Ningún órgano coincide.',
+        inactive: 'Inactivo',
+
+        // Both refusals name what another administrator changed and offer the
+        // same way out, since neither is anything this browser can fix by
+        // retrying the same write.
+        refresh: 'Actualizar',
+        organoNotFound: 'Outra persoa eliminou este órgano. Actualiza a sección para vela ao día.',
+        termoNotFound:
+          'Outra persoa eliminou o termo de destino. Actualiza a sección e escolle outro.',
+        genericError: 'Non se puido completar a acción. Téntao de novo máis tarde.',
+      },
     },
   },
 } as const;

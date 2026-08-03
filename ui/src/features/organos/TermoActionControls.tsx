@@ -6,17 +6,24 @@ import { strings } from '../../shared/lib/strings';
 
 const copy = strings.admin.organos.termo;
 
-/** The three writes that act on whichever term is open. */
+/** The writes that act on whichever term is open. */
 export interface TermoActionHandlers {
   onRename: () => void;
   onMove: () => void;
   onDelete: () => void;
+  /** Files an Órgano into this term — the term's half of the assign dialog. */
+  onAssign: () => void;
 }
 
-/** The term-content header's row: `Renomear` · `Mover` · `Eliminar`. */
-export function TermoActionButtons({ onRename, onMove, onDelete }: TermoActionHandlers) {
+/** The term-content header's row: `Asignar órgano` · `Renomear` · `Mover` · `Eliminar`. */
+export function TermoActionButtons({ onRename, onMove, onDelete, onAssign }: TermoActionHandlers) {
   return (
-    <Group gap="xs" wrap="nowrap">
+    // Four of these do not fit beside a term name at 360 px, so they wrap onto a
+    // second line rather than pushing the card into a horizontal scroll.
+    <Group gap="xs" justify="flex-end">
+      <Button size="xs" onClick={onAssign}>
+        {strings.admin.organos.assign.fromTermo}
+      </Button>
       <Button variant="default" size="xs" onClick={onRename}>
         {copy.rename}
       </Button>
@@ -41,15 +48,19 @@ function keepKeyToSelf(event: KeyboardEvent) {
 }
 
 interface TermoActionIconsProps extends TermoActionHandlers {
-  /** Named in each label, since the same three actions also sit in the header. */
+  /** Named in each label, since the same actions also sit in the header. */
   termoName: string;
 }
 
 /**
- * The same three actions on the selected tree row, where they take the place of
- * the count badge. Icon-only to fit a row that already carries a term name at a
- * 360 px viewport, so each one names itself and its term for the accessibility
- * tree.
+ * The three term-shape actions on the selected tree row, where they take the
+ * place of the count badge. Icon-only to fit a row that already carries a term
+ * name at a 360 px viewport, so each one names itself and its term for the
+ * accessibility tree.
+ *
+ * Assign is deliberately not a fourth icon here: three plus a badge is already
+ * what fits, and filing an Órgano is reachable from the content header and from
+ * every worklist row.
  */
 export function TermoActionIcons({ termoName, onRename, onMove, onDelete }: TermoActionIconsProps) {
   const actions = [

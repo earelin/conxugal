@@ -11,6 +11,20 @@ export interface TermoNode {
 export interface TaxonomiaView {
   roots: TermoNode[];
   unclassified: Organo[];
+  /**
+   * The whole catalogue as the server sent it. Kept alongside the tree because a
+   * picker over every Órgano wants them in name order; reassembling the list
+   * from `roots` and `unclassified` would order it by position in the taxonomía
+   * instead, and re-sorting is what this module refuses to do.
+   */
+  catalogue: Organo[];
+}
+
+export const PATH_SEPARATOR = ' › ';
+
+/** A term's place read as one line: `Consellerías › Consellería de Sanidade`. */
+export function termoPathLabel(path: TermoNode[]): string {
+  return path.map((node) => node.name).join(PATH_SEPARATOR);
 }
 
 /**
@@ -61,7 +75,7 @@ export function buildTaxonomiaView(termos: Termo[], organos: Organo[]): Taxonomi
     }
   }
 
-  return { roots, unclassified };
+  return { roots, unclassified, catalogue: organos };
 }
 
 /** The chain of terms from a root down to `id`, empty when no term matches. */
