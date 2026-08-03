@@ -40,7 +40,7 @@ path into FEAT-0009 and the two can be built in either order.
   | `id` | `OperadorId` | System-assigned, `null` only until the database assigns it |
   | `matchKey` | `String` | The reduction [TASK-0001](TASK-0001-matching-emptiness-and-ranking-rules.md) computes. **Never displayed** (R13); the store is unique on it |
   | `displayName` | `String` | The awardee name **as published** by the winning contract |
-  | `displayFiscalId` | `String` | The fiscal identifier **as published** by that same contract — padding and casing intact |
+  | `displayFiscalId` | `String` | The fiscal identifier **as published** by that same contract — casing and internal spacing intact; the source's surrounding padding is already stripped at the adapter (SPEC-0005 R27) |
   | `rank` | the rank pair | Which contract those two came from: its publication date (nullable) and its source identifier |
 
 - **Storing the rank is what makes R4 deterministic across runs** (#7). Without it, *is this

@@ -35,13 +35,14 @@ import use case
 
 > **Its base lands before the contratos menores store, not after it.** The link between the two
 > tables is a foreign key on the **contract** side, so the ordering that avoids an `ALTER`
-> entirely is: `operador` exists first, and FEAT-0009 then **creates** `contrato_menor` with a
-> nullable `operador_id` already on it. Adding that column later to a table holding a million
-> rows, and backfilling it from data that is only correct if re-derived, is a materially
-> different operation — the same argument FEAT-0009 makes for creating its year index up front.
+> entirely is: `operador_economico` exists first, and FEAT-0009 then **creates**
+> `contrato_menor` with a nullable `operador_economico_id` already on it. Adding that column
+> later to a table holding a million rows, and backfilling it from data that is only correct if
+> re-derived, is a materially different operation — the same argument FEAT-0009 makes for
+> creating its year index up front.
 >
-> So **tasks 2 and 3** — the aggregate and the `operador` table — are the prerequisites of
-> FEAT-0009's domain and store tasks: the first supplies the type its association points at, the
+> So **tasks 2 and 3** — the aggregate and the `operador_economico` table — are the prerequisites
+> of FEAT-0009's domain and store tasks: the first supplies the type its association points at, the
 > second the table its foreign key points at. **Task 1 is not on that path.** Its three functions
 > are needed only when an award is actually resolved, which is task 4, and task 4 is also the
 > only one that waits on FEAT-0009's import. Nothing here references `contrato_menor`, so the two
@@ -66,9 +67,10 @@ import use case
 - **Domain (derivation):** resolving each stored contract to its operador as part of the import
   batch, creating the operador when no contract has named it before, and advancing its display
   fields when the contract outranks the incumbent.
-- **Infrastructure:** a migration creating `operador` with a **unique** match key, and the
-  Micronaut Data JDBC implementation of the port. The nullable `operador_id` foreign key is
-  **created with `contrato_menor` by FEAT-0009**, not added here — see the ordering note above.
+- **Infrastructure:** a migration creating `operador_economico` with a **unique** match key, and
+  the Micronaut Data JDBC implementation of the port. The nullable `operador_economico_id` foreign
+  key is **created with `contrato_menor` by FEAT-0009**, not added here — see the ordering note
+  above.
 
 **Out of scope (owned by later features):**
 - **Every read surface of SPEC-0006** — R8's operadores list, name and whole-identifier lookup
@@ -105,7 +107,7 @@ flowchart LR
     end
     subgraph infrastructure["infrastructure (driven)"]
         jdbc["JdbcOperadorRepository"]
-        migration["operador table"]
+        migration["operador_economico table"]
     end
     importUseCase --> derive
     derive --> rules
@@ -123,8 +125,9 @@ flowchart LR
   incrementally, and it is why no task here has a merge, a split or a confidence threshold in it.
 - Two awards name the same operador when their published fiscal identifiers are equal
   **ignoring surrounding whitespace and letter case** (R3). That reduction is the **match key**,
-  and it is what the `operador` table is unique on — so "the same operador never splits in two"
-  holds at the store level, not only in whichever use case remembered to normalise. The spec is
+  and it is what the `operador_economico` table is unique on — so "the same operador never splits
+  in two" holds at the store level, not only in whichever use case remembered to normalise. The
+  spec is
   blunt about why it matters: matched naively "the aggregation fails silently, and a quiet
   undercount is worse than an error".
 - **Nothing else is ignored.** Internal spacing, punctuation and any differing character produce
@@ -136,7 +139,7 @@ flowchart LR
   wrong one reads as wrong.
 - An identifier that is **absent, or empty once trimmed**, is *unusable* (R5): the contract is
   stored and gets **no operador** — never a placeholder, never a shared "unknown" row that would
-  silently pool unrelated awards. Its `operador_id` stays null, and because the schema is
+  silently pool unrelated awards. Its `operador_economico_id` stays null, and because the schema is
   normalised that contract records **no awardee name either**, which the R5 branch did not cost
   when the contract carried its own.
   Nothing beyond emptiness is validated: the source publishes irregular but genuine identifiers,
@@ -176,9 +179,9 @@ flowchart LR
   operador, displayed under whichever of those three its winning contract published.
 
 ### The link, and where it is written
-- `contrato_menor.operador_id` is a **nullable** foreign key — null exactly when R5 says the
-  award yields no operador — and in the domain it is a `@Relation(MANY_TO_ONE)` association, not
-  a loose id.
+- `contrato_menor.operador_economico_id` is a **nullable** foreign key — null exactly when R5 says
+  the award yields no operador — and in the domain it is a `@Relation(MANY_TO_ONE)` association,
+  not a loose id.
 - **Because the schema is normalised, this row is the only record of an awardee.** A contract
   stores no published name or identifier of its own, so two things follow and neither is
   discovered late. An award whose identifier is unusable has a null key and therefore **no
@@ -229,10 +232,11 @@ dependencies**, and 2 is the one FEAT-0009 waits on, so it can be taken first.
    from) and the `OperadorRepository` port: find by match key, insert, update the display fields.
    **The task that unblocks FEAT-0009**, whose contract aggregate declares an association to this
    type. *(SPEC-0006 #2, #10 stored-attribute half)*
-3. **Operador store** — the migration creating `operador` with a **unique** match key, and the
-   Micronaut Data JDBC implementation of the port. It touches `contrato_menor` **not at all**:
-   the nullable `operador_id` foreign key and its index are created by FEAT-0009's store task,
-   which is why this one lands **before** it. *(SPEC-0006 #3 one-operador half, #4)*
+3. **Operador store** — the migration creating `operador_economico` with a **unique** match key,
+   and the Micronaut Data JDBC implementation of the port. It touches `contrato_menor` **not at
+   all**: the nullable `operador_economico_id` foreign key and its index are created by
+   FEAT-0009's store task, which is why this one lands **before** it.
+   *(SPEC-0006 #3 one-operador half, #4)*
 4. **Derivation during the contratos menores import** — resolve each stored contract to its
    operador inside the batch transaction: no operador for an unusable identifier, find-or-create
    otherwise, advance the display fields when the contract outranks the incumbent, and repoint the

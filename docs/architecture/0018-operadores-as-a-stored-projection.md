@@ -50,12 +50,13 @@ display name** and matches fragments of it. Computed on read, one page of the op
 a top-1-per-group over millions of contract rows, ordered and filtered by the result of that
 top-1 — before paging into it positionally.
 
-**Writes are rare, bounded and already batched.** The catalogue changes only when contracts
-change, and contracts change only during an import: an initial import, an incremental window, or
-a correction refreshed in place. [FEAT-0009](../features/FEAT-0009-contratos-menores-initial-import/README.md)
-already commits contracts in batches and already runs one import at a time system-wide
-([SPEC-0005](../specs/SPEC-0005-import-browse-contratos-menores.md) R22), so there is exactly
-one writer, and it is a writer that is already paying for a batch commit.
+**Writes are rare, bounded and already batched.** The catalogue changes only when contracts change,
+and contracts change only during an import: an initial import, an incremental window, or a
+correction refreshed in place.
+[FEAT-0009](../features/FEAT-0009-contratos-menores-initial-import/README.md) already commits
+contracts in batches and already runs one import at a time system-wide
+([SPEC-0005](../specs/SPEC-0005-import-browse-contratos-menores.md) R22), so there is exactly one
+writer, and it is a writer that is already paying for a batch commit.
 
 **The derivation is not monotonic.** R7 requires the catalogue to "re-derive from the contracts
 as they currently stand": a correction can move a contract to a different operador, a withdrawal
@@ -64,8 +65,8 @@ projection cannot be an append-only accumulation — it has to be maintained aga
 subtract, not only add.
 
 ## Decision
-The catalogue is **stored state**: an `operador` row per distinct fiscal identifier under R3's
-equivalence, maintained by the import that stores the contracts it derives from, with each
+The catalogue is **stored state**: an `operador_economico` row per distinct fiscal identifier under
+R3's equivalence, maintained by the import that stores the contracts it derives from, with each
 contract carrying a **foreign key to its operador**.
 
 **The identity is a match key, and it is not displayed.** The row is keyed by the identifier

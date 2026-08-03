@@ -11,7 +11,7 @@ depends_on: [TASK-0003]
 The schema and driven adapter behind [TASK-0003](TASK-0003-contrato-menor-domain-model.md)'s
 port. **Prerequisite outside this feature:**
 [FEAT-0010 TASK-0003](../FEAT-0010-operadores-economicos-base/TASK-0003-operador-store.md)
-creates the `operador` table this one's foreign key points at. Governed by
+creates the `operador_economico` table this one's foreign key points at. Governed by
 [ADR-0002](../../architecture/0002-hexagonal-architecture.md) and
 [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md);
 JDBC and SQL stay entirely in `infrastructure`.
@@ -28,24 +28,28 @@ JDBC and SQL stay entirely in `infrastructure`.
   - `publication_date DATE` — nullable, and the **only** date column: the source's `DD-MM-YYYY`
     text is interpreted at the adapter and not stored (TASK-0003 records what that costs against
     R27);
-  - `obxecto TEXT`, `amount NUMERIC`, `duration TEXT` — **nullable**. `TEXT` carries no length
-    bound, which is deliberate: the source publishes no maximum, so the schema imposes none.
-    `amount` stays a plain
-    `NUMERIC`; `Money` is a Java type an `AttributeConverter` maps onto it, so the schema knows
+  - `obxecto TEXT`, `amount NUMERIC`, `duration VARCHAR(64)` — **nullable**. `obxecto` is `TEXT`
+    and carries no length bound, deliberately: the source publishes no maximum for it. `duration`
+    is the one bounded column — the source publishes short phrases there (`"1 mes"`), so 64
+    characters is generous, and the bound is **never reached by an insert**: the adapter caps the
+    value in Java first ([TASK-0005](TASK-0005-source-port-and-adapter.md)), so an unexpectedly
+    long duration loses its tail rather than failing a batch and rejecting a real award (#42).
+    The constraint is the backstop that keeps that cap honest, not the thing enforcing it.
+    `amount` stays a plain `NUMERIC`; `Money` is a Java type an `AttributeConverter` maps onto it,
+    so the schema knows
     nothing about the wrapper and no currency column exists. The three mirror the aggregate's
     rule that only identity is required (TASK-0003): a `NOT NULL` here would reject a real award
     over a field the source left blank, which is what #42 forbids for the amount and the date and
     what R7's *store what is published* forbids for the rest;
-  - `operador_id UUID REFERENCES operador(id)` — **nullable**, plus an index on it. This single
-    column **is** the awardee: the schema is normalised, so the name and fiscal identifier live
-    once on `operador` and no contract row repeats them. It is what TASK-0003's
-    `@Relation(MANY_TO_ONE)` maps. Created here, with the table, rather than added later: it is
-    the reason
-    [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s base lands first, since
-    `ALTER`-ing it onto a table of millions and backfilling from re-derived data is a different
-    operation entirely. Nothing in this feature ever writes it —
-    [FEAT-0010 TASK-0004](../FEAT-0010-operadores-economicos-base/TASK-0004-derivation-during-import.md)
-    is the only thing that does, and SPEC-0006 R5 is why it stays nullable;
+  - `operador_economico_id UUID REFERENCES operador_economico(id)` — **nullable**, plus an index on
+    it. This single column **is** the awardee: the schema is normalised, so the name and fiscal
+    identifier live once on `operador_economico` and no contract row repeats them. It is what
+    TASK-0003's `@Relation(MANY_TO_ONE)` maps. Created here, with the table, rather than added
+    later: it is the reason [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s base
+    lands first, since `ALTER`-ing it onto a table of millions and backfilling from re-derived data
+    is a different operation entirely. Nothing in this feature ever writes it — [FEAT-0010
+    TASK-0004](../FEAT-0010-operadores-economicos-base/TASK-0004-derivation-during-import.md) is the
+    only thing that does, and SPEC-0006 R5 is why it stays nullable;
   - an index on `(organo_id, publication_date)` — what the browsing feature's
     mandatory year scoping reads on. It is created **here, empty**, because adding it later to
     a table of millions is a different operation from creating it now.
@@ -77,14 +81,18 @@ JDBC and SQL stay entirely in `infrastructure`.
 - A contract stored by an earlier batch and absent from a later one is still present and
   unchanged afterwards — nothing in this adapter deletes. (SPEC-0005 #17)
 - Published text round-trips unchanged through the store — the object at its published length,
-  the duration as published — an interpreted date round-trips as the same `LocalDate`, and a
-  `Money` round-trips at its published scale without rounding, with a null date and null amount
+  however long, and the duration as the adapter handed it over — an interpreted date round-trips
+  as the same `LocalDate`, and a `Money` round-trips at its published scale without rounding,
+  with a null date and null amount
   where the source gave nothing interpretable. (SPEC-0005 #40 storage half, less the date and the
   awardee, #42 stored-not-rejected half)
 - The contract table holds **no awardee column**: reading a contract's awardee means joining
-  `operador`, and a contract with a null `operador_id` is stored and readable like any other.
-  (SPEC-0006 #8, no-operador half)
+  `operador_economico`, and a contract with a null `operador_economico_id` is stored and readable
+  like any other. (SPEC-0006 #8, no-operador half)
 - `countByOrganoId` returns the stored count for one Órgano and is unaffected by another
   Órgano's contracts.
+- A duration at exactly the column's 64 characters stores and reads back whole — the boundary is
+  asserted, so the cap and the column cannot drift apart and turn a legal value into a failed
+  batch.
 - Integration-tested against PostgreSQL (Testcontainers), including the unique-constraint and
   the mixed-batch count cases.

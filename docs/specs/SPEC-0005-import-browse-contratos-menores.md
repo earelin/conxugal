@@ -598,6 +598,15 @@ One decision remains outside this spec:
   [SPEC-0006](SPEC-0006-operadores-economicos.md) R3 keeps out of its match rule for the same
   reason.
 
+  **The stated duration is stored capped at 64 characters**, and it is the only value with a
+  length bound. The source publishes short phrases there — the field carries a per-Órgano default
+  far more often than a real term, which is why R27 already requires it to be shown as
+  unreliable — so the cap is not expected to be reached. It is set because a value that overran
+  its column would fail the batch and **reject a real award**, which the last paragraph of this
+  requirement refuses; losing the tail of an already-unreliable field is the smaller loss, and it
+  is taken knowingly rather than discovered. No other value is capped: the contract's object in
+  particular has no bound at any layer.
+
   **The awardee is the remaining exception, and R7 states it**: it is stored once on its operador
   rather than on each contract, so what a row shows is the spelling SPEC-0006 R4 selects for that
   operador, not the spelling that contract was published under.
@@ -763,7 +772,8 @@ One decision remains outside this spec:
     interpreted to rather than as its published text; the awardee, whose stored spelling is its
     operador's rather than that contract's; and every text value's **surrounding whitespace**,
     which is removed on the way in. A text value differing from its published form in any way
-    other than leading and trailing whitespace is a defect.
+    other than leading and trailing whitespace is a defect — save the stated duration, capped at
+    64 characters, which is the only bounded value and is never expected to reach its bound.
 41. **(R27)** A displayed duration is accompanied by an indication that the source frequently
     publishes a per-Órgano default rather than a per-contract value.
 42. **(R27)** A contract whose published amount or publication date cannot be interpreted is

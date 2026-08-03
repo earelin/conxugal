@@ -45,9 +45,16 @@ feature configuring no new rate. Build this task after it, or the sharing is asp
   from each having to know the source pads. A field left **empty once trimmed** is carried as
   **absent**, not as an empty string, so there is one absent-value case above the port and not
   two.
+- **The duration is capped at 64 characters here, in Java, before it can reach a column.** The
+  source publishes short phrases in that field (`"1 mes"`), so the cap is generous and is not
+  expected to fire; it exists so that an unexpectedly long value **loses its tail rather than
+  failing the batch**, which would reject a real award and breach #42. Capping in Java rather
+  than letting `VARCHAR(64)` reject the row is what makes that choice ours instead of the
+  database's. The cap applies to the duration and to nothing else — `obxecto` has no bound
+  anywhere.
 - **Nothing else about the text is touched:** no case folding, no collapsing of internal runs of
-  spaces, no punctuation stripped, no date parsing. Trimming is the one narrowing R27 allows;
-  interpretation still happens above the port.
+  spaces, no punctuation stripped, no date parsing. Trimming and the duration cap are the
+  narrowings R27 allows; interpretation still happens above the port.
 - The adapter **declares a client interface** carrying `@ResilientClient` and
   `@Client(id = "contratosdegalicia")` — **the same id the Órganos adapter binds** — so both go
   through the one set of policies `ContratosDeGaliciaResilienceFactory` publishes per source.
@@ -86,6 +93,9 @@ feature configuring no new rate. Build this task after it, or the sharing is asp
 - An object **longer than the sample row's 60 characters** round-trips at its full length, with
   no truncation anywhere in the adapter or its response binding. (The cap recorded in
   `design/source-contract.md` was wrong; this criterion is what stops it being re-introduced.)
+- A duration **longer than 64 characters** comes back capped at 64, and one of exactly 64 comes
+  back untouched — the boundary asserted on both sides, since an off-by-one here fails a batch at
+  the column rather than showing up as a short string.
 - `recordsTotal` is surfaced alongside the rows on every response, including one whose window
   matched nothing — the precondition for #12's completeness test, which
   [TASK-0009](TASK-0009-single-organo-initial-import.md) proves.

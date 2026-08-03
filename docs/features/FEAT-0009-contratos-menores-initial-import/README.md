@@ -110,13 +110,14 @@ layout of
 - **Browsing (R14–R19)** — the family split, the mandatory year scoping, the sort, R17's paging
   control, the per-row link to the source and the crossing into an operador — and the R24
   latency measurement taken over them. All of it reads the rows this feature stores.
-- **The import-run monitoring surface** — [SPEC-0007](../../specs/SPEC-0007-monitor-import-runs.md)'s
-  run list, its filters, run diagnostics, live progress and retention. This feature builds **only
-  the run columns its own guard, its own resumer and R20's outcome need**, and one plain read of
-  one run; SPEC-0007's features widen the same rows rather than opening a second store, which is
-  the property ADR-0017 exists to guarantee. Note that ADR-0017 decides *where* the state lives
-  and says explicitly that the **schema is not decided there** — so no column here is justified
-  by "SPEC-0007 will want it", and each is justified below by a requirement this feature meets.
+- **The import-run monitoring surface** —
+  [SPEC-0007](../../specs/SPEC-0007-monitor-import-runs.md)'s run list, its filters, run
+  diagnostics, live progress and retention. This feature builds **only the run columns its own
+  guard, its own resumer and R20's outcome need**, and one plain read of one run; SPEC-0007's
+  features widen the same rows rather than opening a second store, which is the property ADR-0017
+  exists to guarantee. Note that ADR-0017 decides *where* the state lives and says explicitly that
+  the **schema is not decided there** — so no column here is justified by "SPEC-0007 will want it",
+  and each is justified below by a requirement this feature meets.
 - **Operadores económicos** ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md)) — this
   feature owes them the awardee **as the source publishes it**, surfaced by its adapter, and the
   foreign key on every contract. Since the schema is normalised, the awardee's name and fiscal
@@ -124,11 +125,11 @@ layout of
   that key — both [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s — are what
   make a contract's awardee knowable at all.
 
-  **That feature's base goes first, not after.** Its rules, aggregate and `operador` table are
-  prerequisites of tasks 3 and 4 here, so `contrato_menor` is **created carrying** a nullable
-  `operador_id` rather than having one added to a table of millions later — the same reasoning
-  that creates the year index up front. This feature declares that column and that field and
-  **never writes either**; FEAT-0010's derivation task, which does, is the one thing that still
+  **That feature's base goes first, not after.** Its rules, aggregate and `operador_economico` table
+  are prerequisites of tasks 3 and 4 here, so `contrato_menor` is **created carrying** a nullable
+  `operador_economico_id` rather than having one added to a table of millions later — the same
+  reasoning that creates the year index up front. This feature declares that column and that field
+  and **never writes either**; FEAT-0010's derivation task, which does, is the one thing that still
   lands after this feature's import.
 
 ## Design
@@ -193,14 +194,19 @@ untouched. ADR-0019 also records the one risk this rests on — that Micronaut D
   level and not only in use-case logic, exactly as `source_key` does for the catalogue. The
   awarding Órgano is referenced by its **UUID**, not its source key.
 - **Every published value the contract keeps is stored as published** (R27) — object and duration,
-  with the source's padding and casing intact.
+  with the source's casing and internal spacing intact. Two bounded exceptions, both R27's and
+  both taken at the adapter: **surrounding whitespace is stripped**, since the padding the source
+  uses to fill its fixed-width fields is an artefact of serialisation rather than anything it
+  published; and the **duration is capped at 64 characters**, so a value longer than the column
+  loses its tail instead of failing the batch and rejecting a real award. The object carries no
+  bound at any layer.
 - **The awardee is a foreign key, and the schema is normalised.** The published name and fiscal
-  identifier are held **once**, on the `operador` row, and no contract repeats them: a large
-  Órgano's million contracts carry a UUID each rather than two padded strings each. What that
-  costs is stated rather than hidden — a contract no longer records the spelling **it** published
-  — and **the specs say so**: R7 holds the awardee on the operador, R27 lists it as one of two
-  exceptions, and [SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #5 now describes
-  rows showing the operador's spelling. The padding R27 refuses to correct survives on the
+  identifier are held **once**, on the `operador_economico` row, and no contract repeats them: a
+  large Órgano's million contracts carry a UUID each rather than two padded strings each. What that
+  costs is stated rather than hidden — a contract no longer records the spelling **it** published —
+  and **the specs say so**: R7 holds the awardee on the operador, R27 lists it among its
+  exceptions, and [SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #5 now describes rows
+  showing the operador's spelling. The casing variance R27 refuses to correct survives on the
   operador row that R3 matches through; the per-contract variance is not stored anywhere.
 - **The publication date is stored as a date, and only as a date** — one nullable column, parsed
   at the adapter from the source's `DD-MM-YYYY` text, with that text not retained.
@@ -224,8 +230,9 @@ untouched. ADR-0019 also records the one risk this rests on — that Micronaut D
   R16's per-row link costs no column. That is a measured fact about this source, not a general
   one: a family whose publications are not addressable from their identifier would have to
   capture the address at import, because it could not be retro-fitted onto millions of rows.
-- The publication date is what the browsing feature's mandatory year scoping will index on; this feature creates the index it will need, on the same reasoning — adding one to a
-  table of millions later is a different operation from creating it empty.
+- The publication date is what the browsing feature's mandatory year scoping will index on; this
+  feature creates the index it will need, on the same reasoning — adding one to a table of millions
+  later is a different operation from creating it empty.
 
 ### State has two homes, and the split is decided by retention
 [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md) settles that a run's state
@@ -249,13 +256,13 @@ matters here is **which facts belong to the Órgano and which to the run**, beca
   *last imported successfully* and *ever attempted*; it does not protect a cursor, and this
   feature does not assume it will.
 - **The covered-through instant is not "the last successful import".** Under a newest-first walk
-  (below) an initial import covers `[cursor, T₀]`, where `T₀` is when its **first** window was
-  taken — and an initial import spanning several resumptions has several run starts. If
-  the incremental feature's floor measured from the latest of them, everything published between the first
-  attempt and that resumption would fall outside every future window and be reachable only by
-  R10, which no feature owns: R8's named "silent data-loss mechanism", reintroduced by an
-  off-by-one in a timestamp. So the Órgano records `T₀` when the initial import first runs and
-  **carries it across resumptions**, and that is the instant the incremental feature measures from.
+  (below) an initial import covers `[cursor, T₀]`, where `T₀` is when its **first** window was taken
+  — and an initial import spanning several resumptions has several run starts. If the incremental
+  feature's floor measured from the latest of them, everything published between the first attempt
+  and that resumption would fall outside every future window and be reachable only by R10, which no
+  feature owns: R8's named "silent data-loss mechanism", reintroduced by an off-by-one in a
+  timestamp. So the Órgano records `T₀` when the initial import first runs and **carries it across
+  resumptions**, and that is the instant the incremental feature measures from.
 
 ### One run record, read by the guard and by whoever triggered
 - A run is recorded **when it is triggered**, with its covered Órganos **enumerated then** —
@@ -287,14 +294,14 @@ run?" fails in two ways the flag did not:
    bound **reads as abandoned**, applied in one place so no query can forget it. That rule is
    not monitoring polish that can wait for SPEC-0007; it is what makes the guard safe, so task 7
    builds it.
-2. **The check and the write must be one act.** Two triggers — the mark control and an admin
-   trigger today, the scheduler once the incremental feature lands — can both read *no live run* and both insert.
-   The guard is the single thing standing between this system and a public source that
+2. **The check and the write must be one act.** Two triggers — the mark control and an admin trigger
+   today, the scheduler once the incremental feature lands — can both read *no live run* and both
+   insert. The guard is the single thing standing between this system and a public source that
    [ADR-0014](../../architecture/0014-resilient-throttled-outbound-http-client.md) says owes us
-   nothing, so it is serialised **in the database, by the transaction-scoped advisory lock the
-   claim takes before it looks** — the mechanism
-   [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md) decides, and the reason
-   it is not a partial unique index — never by application-level checking.
+   nothing, so it is serialised **in the database, by the transaction-scoped advisory lock the claim
+   takes before it looks** — the mechanism
+   [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md) decides, and the reason it
+   is not a partial unique index — never by application-level checking.
 
 **This changes shipped behaviour, deliberately.** `ImportOrganos` must now *write* a live run row
 — a guard cannot see an import that records nothing — which makes the catalogue import's
@@ -481,8 +488,8 @@ also record, in that folder's README, what they draw but deliberately do not bui
    reuses. *Depends on FEAT-0010's operador domain model.* *(SPEC-0005 #11 storage half,
    #40 storage half, #42 storage half)*
 4. **Contratos menores store** — the migration creating `contrato_menor` (unique publication
-   identifier, FK to the Órgano, the nullable `operador_id` FK this feature never writes, and
-   the index the year-scoped read will need) and the Micronaut Data JDBC implementation of the
+   identifier, FK to the Órgano, the nullable `operador_economico_id` FK this feature never writes,
+   and the index the year-scoped read will need) and the Micronaut Data JDBC implementation of the
    port, including the batch upsert that makes re-import idempotent. *Depends on FEAT-0010's
    operador store.* *(SPEC-0005 #17 no-duplicates half)*
 5. **`ContratoMenorSource` port + contratosdegalicia adapter** — the port answering one
@@ -525,11 +532,11 @@ also record, in that folder's README, what they draw but deliberately do not bui
 
 **Criteria this feature deliberately leaves incomplete**, so no task is written against something
 it cannot prove: #5's *next scheduled run* clause, #14's *without an administrator intervening*
-clause, #29's *incrementally* clause, **#33's *next scheduled run* clause** — its
-*refused rather than queued, and the mark kept* half is met here — #44 whole, and #38's re-read and incremental modes
-all wait on the incremental feature; #14's progress-visibility half and #32's *recorded as a refused run* half
-are SPEC-0007's; #1's re-read and remove/restore operations are the curation feature's; and the
-*displayed* halves of #9, #11, #16, #26, #40 and #42 are the browsing feature's.
+clause, #29's *incrementally* clause, **#33's *next scheduled run* clause** — its *refused rather
+than queued, and the mark kept* half is met here — #44 whole, and #38's re-read and incremental
+modes all wait on the incremental feature; #14's progress-visibility half and #32's *recorded as a
+refused run* half are SPEC-0007's; #1's re-read and remove/restore operations are the curation
+feature's; and the *displayed* halves of #9, #11, #16, #26, #40 and #42 are the browsing feature's.
 
 ## Edge cases
 - **Catalogue re-import while Órganos are marked** — SPEC-0004's reconciliation updates name and

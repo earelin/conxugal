@@ -8,21 +8,21 @@ depends_on: [TASK-0002]
 
 # Operador store: migration + JDBC repository
 
-The `operador` table and the driven adapter behind
+The `operador_economico` table and the driven adapter behind
 [TASK-0002](TASK-0002-operador-domain-model.md)'s port. JDBC and SQL stay entirely in
 `infrastructure` ([ADR-0002](../../architecture/0002-hexagonal-architecture.md),
 [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md)).
 
 **This lands before `contrato_menor` is created**, and that ordering is the point. The foreign
 key between the two tables is on the **contract** side, so FEAT-0009's store task creates
-`contrato_menor` with a nullable `operador_id` already on it, referencing this table. The
+`contrato_menor` with a nullable `operador_economico_id` already on it, referencing this table. The
 alternative — adding the column later — means an `ALTER` against a table this system expects to
 reach millions of rows, which is the operation this project avoids by creating things while they
 are empty. Nothing here references `contrato_menor`, so there is no cycle: this table simply
 exists first.
 
 ## Scope
-- A migration (next free `V` number) creating `operador`:
+- A migration (next free `V` number) creating `operador_economico`:
   - `id UUID PRIMARY KEY` — a plain `uuid` column; `OperadorId` is the Java type an
     `AttributeConverter` maps onto it
     ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md));

@@ -45,13 +45,13 @@ rather than added to a table of millions later.
   | `publicationDate` | `LocalDate`, nullable | Interpreted at the adapter from the source's `DD-MM-YYYY` text. **One field, not a pair** — the published text is not retained |
   | `obxecto` | `String`, nullable | As published, at whatever length the source publishes it — no cap of our own |
   | `amount` | `Money`, nullable | Published as a JSON **number**, VAT-inclusive — see below |
-  | `duration` | `String`, nullable | As published, free text |
+  | `duration` | `String`, nullable | As published, free text, **capped at 64 characters** by the adapter before it reaches the aggregate |
   | `operadorEconomico` | `OperadorEconomico`, nullable | **A foreign-key association** to the operador catalogue, not a copy of its data |
 
 - **The awardee is a relationship, not columns on this row.** The property is
-  `@Relation(Relation.Kind.MANY_TO_ONE)` mapped by `@MappedProperty("operador_id")`, so
+  `@Relation(Relation.Kind.MANY_TO_ONE)` mapped by `@MappedProperty("operador_economico_id")`, so
   `contrato_menor` holds one foreign key and the awardee's name and fiscal identifier live
-  **once**, on the `operador` row that
+  **once**, on the `operador_economico` row that
   [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md) owns. **The schema is
   normalised**: no awardee value is duplicated per contract, and the millions of contracts one
   large Órgano publishes carry a UUID each instead of two padded strings each.
@@ -79,7 +79,7 @@ rather than added to a table of millions later.
 > spelling came from. SPEC-0006 R7's lifecycle feature inherits that.
 >
 > **The specs have been amended to match**: SPEC-0005 R7 now holds the awardee on the operador
-> and names what that costs, R27 lists the awardee as one of its two exceptions, and #11, #21,
+> and names what that costs, R27 lists the awardee among its exceptions, and #11, #21,
 > #39 and #40 follow; SPEC-0006 #5, #25 and R13 now describe rows showing the operador's
 > spelling. This task implements the amended rule, not a divergence from it.
 
@@ -93,12 +93,12 @@ rather than added to a table of millions later.
   ([TASK-0005](TASK-0005-source-port-and-adapter.md)), not a row stored half-empty.
 
 - **No published value is altered on the way in, beyond the whitespace R27 does not count as
-  published.** Text values arrive already trimmed of leading and trailing whitespace — the
-  adapter does that at the boundary ([TASK-0005](TASK-0005-source-port-and-adapter.md)), so this
-  aggregate stores what it is handed and trims nothing itself. No case folding, no collapsing of
-  internal spacing, no rounding, no inferring: R27 forbids all of those, and permits only the
-  padding the source adds to serialise its fixed-width fields. (The awardee's spelling now lives
-  on the `operador` row rather than on the contract, which is what the note above records.)
+  published.** Text values arrive already trimmed of leading and trailing whitespace — the adapter
+  does that at the boundary ([TASK-0005](TASK-0005-source-port-and-adapter.md)), so this aggregate
+  stores what it is handed and trims nothing itself. No case folding, no collapsing of internal
+  spacing, no rounding, no inferring: R27 forbids all of those, and permits only the padding the
+  source adds to serialise its fixed-width fields. (The awardee's spelling now lives on the
+  `operador_economico` row rather than on the contract, which is what the note above records.)
 - **A text value that was only whitespace is stored as null**, not as an empty string — it
   published nothing, and null is already this aggregate's word for that. One absent-value case,
   not two.
@@ -106,7 +106,7 @@ rather than added to a table of millions later.
   `DD-MM-YYYY` text, is parsed at the adapter, and one nullable `LocalDate` holds the result;
   the published string is not kept.
 
-  **R27 now names this as one of its two exceptions** — the interpretation replaces the published
+  **R27 now names this among its exceptions** — the interpretation replaces the published
   string rather than accompanying it — so a date that cannot be interpreted leaves the field null
   and that contract shows no date rather than the text the source published. What survives is the
   half that matters: the contract is **stored, never rejected** (#42), and a null date is exactly
@@ -130,12 +130,12 @@ rather than added to a table of millions later.
     here.
   - The amount needs no as-published pair, unlike the date: the source publishes it as a JSON
     **number**, so there is no published spelling to lose.
-- **The association is declared here and never resolved here.**
-  [FEAT-0010 TASK-0004](../FEAT-0010-operadores-economicos-base/TASK-0004-derivation-during-import.md)
-  is the only thing that ever fills it, and until it lands every contract stores a null — which
-  means **no awardee is stored at all in the meantime**, since the contract keeps none of its
-  own. That is a consequence of normalising, and it is the reason FEAT-0010's derivation should
-  not lag far behind the first import.
+- **The association is declared here and never resolved here.** [FEAT-0010
+  TASK-0004](../FEAT-0010-operadores-economicos-base/TASK-0004-derivation-during-import.md) is the
+  only thing that ever fills it, and until it lands every contract stores a null — which means **no
+  awardee is stored at all in the meantime**, since the contract keeps none of its own. That is a
+  consequence of normalising, and it is the reason FEAT-0010's derivation should not lag far behind
+  the first import.
 - **The awarding Órgano is referenced by a raw `UUID`, not an `OrganoId`.** ADR-0019 converts a
   shipped aggregate only when a feature has reason to touch its identity, and typing the
   catalogue is not this feature's work — so the reference stays untyped until it is, and the
@@ -171,9 +171,10 @@ rather than added to a table of millions later.
   aggregate. ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #8, no-operador half)
 - Constructing a contract from published values preserves the **text** values byte-for-byte
   within their trimmed bounds — `obxecto` comes back at its published length, however long that
-  is, and the duration as published. Neither the aggregate nor any construction path truncates,
-  folds case, or collapses internal spacing; a value handed in with internal runs of spaces keeps
-  them.
+  is, and the duration exactly as the adapter handed it over. Neither the aggregate nor any
+  construction path truncates, folds case, or collapses internal spacing; a value handed in with
+  internal runs of spaces keeps them, and a duration arrives already capped rather than being
+  capped here.
   (SPEC-0005 #40 storage half, **except the publication date**, stored interpreted, **the
   awardee**, which the operador row now holds, and **surrounding whitespace**, removed at the
   adapter)
