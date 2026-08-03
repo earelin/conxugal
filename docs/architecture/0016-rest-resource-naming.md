@@ -1,15 +1,17 @@
 ---
-status: accepted
+status: superseded
 date: 2026-07-26
 spec: null
 supersedes: null
-superseded_by: null
+superseded_by: 0020
 ---
 
 # 0016. Plural resource paths for collections, singular for a single element
 
 ## Status
-Accepted
+Superseded by [ADR-0020](0020-actions-as-verbs-in-rest-paths.md), which keeps every
+rule below and adds one exception: the last path segment may be a verb when it names an action
+rather than a thing.
 
 ## Context
 [ADR-0006](0006-reserved-api-url-prefix.md) reserves `/api/` for every REST endpoint but
