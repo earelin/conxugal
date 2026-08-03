@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1046" viewBox="0 0 1280 1046" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title>Marca de importación — estados do control nunha fila do catálogo</title>
+  <rect width="1280" height="1046" fill="#f8f9fa"/>
+
+  <text x="40" y="58" font-size="22" font-weight="700" fill="#212529">Marca de importación — estados dunha fila</text>
+  <text x="40" y="82" font-size="13" fill="#868e96">A columna CONTRATOS MENORES da táboa de órganos: un interruptor que marca o órgano e un indicador do que se leva importado dese órgano.</text>
+  <line x1="40" y1="106" x2="1240" y2="106" stroke="#dee2e6"/>
+
+  <!-- ===== card: states ===== -->
+  <rect x="40" y="132" width="1200" height="492" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="130" width="1200" height="492" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="64" y="164" font-size="15" font-weight="600" fill="#212529">Os seis estados que a fila pode amosar</text>
+  <line x1="64" y1="180" x2="1216" y2="180" stroke="#f1f3f5"/>
+  <text x="64" y="206" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ESTADO</text>
+  <text x="300" y="206" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">CONTROL</text>
+  <text x="520" y="206" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">QUE SIGNIFICA</text>
+
+  <!-- 1. sen marcar -->
+  <text x="64" y="246" font-size="14" font-weight="600" fill="#212529">Sen marcar</text>
+  <text x="64" y="264" font-size="11" fill="#868e96">o valor de todo órgano novo</text>
+  <rect x="300" y="240" width="36" height="20" rx="10" fill="#ced4da"/>
+  <circle cx="310" cy="250" r="7.5" fill="#ffffff"/>
+  <text x="382" y="250" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#adb5bd">—</text>
+  <text x="520" y="246" font-size="12" fill="#495057">Non se importa ningún contrato menor deste órgano.</text>
+  <text x="520" y="264" font-size="11" fill="#868e96">Unha reimportación do catálogo nunca marca nada: opta o administrador, un por un.</text>
+  <line x1="64" y1="283" x2="1216" y2="283" stroke="#f1f3f5"/>
+
+  <!-- 2. marcado, sen comezar -->
+  <text x="64" y="312" font-size="14" font-weight="600" fill="#212529">Marcado, sen comezar</text>
+  <text x="64" y="330" font-size="11" fill="#868e96">aínda non se gardou nada</text>
+  <rect x="300" y="306" width="36" height="20" rx="10" fill="#4c6ef5"/>
+  <circle cx="326" cy="316" r="7.5" fill="#ffffff"/>
+  <rect x="344" y="305" width="76" height="22" rx="11" fill="#edf2ff"/>
+  <text x="382" y="317" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#3b5bdb">MARCADO</text>
+  <text x="520" y="312" font-size="12" fill="#495057">Elixible, pero a primeira importación aínda non gardou ningún contrato.</text>
+  <text x="520" y="330" font-size="11" fill="#868e96">Non se confunde con «importado sen resultados»: son estados distintos, e o sistema sábeo.</text>
+  <line x1="64" y1="349" x2="1216" y2="349" stroke="#f1f3f5"/>
+
+  <!-- 3. incompleta -->
+  <text x="64" y="378" font-size="14" font-weight="600" fill="#212529">Importación incompleta</text>
+  <text x="64" y="396" font-size="11" fill="#868e96">interrompida ou aínda a medias</text>
+  <rect x="300" y="372" width="36" height="20" rx="10" fill="#4c6ef5"/>
+  <circle cx="326" cy="382" r="7.5" fill="#ffffff"/>
+  <rect x="344" y="371" width="76" height="22" rx="11" fill="#fff4e6"/>
+  <text x="382" y="383" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#e8590c">PARCIAL</text>
+  <text x="520" y="378" font-size="12" fill="#495057">Gárdase o que xa se importou e tamén por onde continuar.</text>
+  <text x="520" y="396" font-size="11" fill="#868e96">A seguinte importación retoma desde aí; nunca reinicia nin duplica o xa gardado.</text>
+  <line x1="64" y1="415" x2="1216" y2="415" stroke="#f1f3f5"/>
+
+  <!-- 4. completa -->
+  <text x="64" y="444" font-size="14" font-weight="600" fill="#212529">Historial completo</text>
+  <text x="64" y="462" font-size="11" fill="#868e96">contrastado coa propia fonte</text>
+  <rect x="300" y="438" width="36" height="20" rx="10" fill="#4c6ef5"/>
+  <circle cx="326" cy="448" r="7.5" fill="#ffffff"/>
+  <rect x="344" y="437" width="76" height="22" rx="11" fill="#ebfbee"/>
+  <text x="382" y="449" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">IMPORTADO</text>
+  <text x="520" y="444" font-size="12" fill="#495057">Está todo o historial que a fonte publicaba no momento da importación.</text>
+  <text x="520" y="462" font-size="11" fill="#868e96">Ata que exista o refresco periódico, non se pon ao día só: hai que volver disparar a importación.</text>
+  <line x1="64" y1="481" x2="1216" y2="481" stroke="#f1f3f5"/>
+
+  <!-- 5. desmarcado con contratos -->
+  <text x="64" y="510" font-size="14" font-weight="600" fill="#212529">Desmarcado con contratos</text>
+  <text x="64" y="528" font-size="11" fill="#868e96">gardado, pero xa non se actualiza</text>
+  <rect x="300" y="504" width="36" height="20" rx="10" fill="#ced4da"/>
+  <circle cx="310" cy="514" r="7.5" fill="#ffffff"/>
+  <rect x="344" y="503" width="118" height="22" rx="11" fill="#f1f3f5"/>
+  <text x="403" y="515" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#495057">SEN ACTUALIZAR</text>
+  <text x="520" y="510" font-size="12" fill="#495057">Consérvase todo o importado, pero ningunha execución volve a este órgano.</text>
+  <text x="520" y="528" font-size="11" fill="#868e96">Non é o mesmo que «sen marcar»: alí non hai nada gardado. Ao pasar por riba dise se o gardado é parcial ou completo.</text>
+  <line x1="64" y1="547" x2="1216" y2="547" stroke="#f1f3f5"/>
+
+  <!-- 6. inactivo -->
+  <text x="64" y="576" font-size="14" font-weight="600" fill="#212529">Órgano inactivo</text>
+  <text x="64" y="594" font-size="11" fill="#868e96">bloqueado, non agochado</text>
+  <rect x="300" y="570" width="36" height="20" rx="10" fill="#e9ecef"/>
+  <circle cx="310" cy="580" r="7.5" fill="#f8f9fa" stroke="#dee2e6"/>
+  <g stroke="#adb5bd" stroke-width="1.4" fill="none" stroke-linecap="round">
+    <rect x="345" y="576" width="10" height="8" rx="1.5"/>
+    <path d="M347 576 v-2.5 a3 3 0 0 1 6 0 v2.5"/>
+  </g>
+  <text x="360" y="581" dominant-baseline="central" font-size="11" fill="#adb5bd">Só activos</text>
+  <rect x="300" y="532" width="212" height="28" rx="6" fill="#212529"/>
+  <path d="M356 560 l5.2 6 l5.2 -6 Z" fill="#212529"/>
+  <text x="406" y="546" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#ffffff">Só se importan os órganos activos.</text>
+  <text x="520" y="576" font-size="12" fill="#495057">O interruptor queda desactivado e o motivo dise ao pasar por riba.</text>
+  <text x="520" y="594" font-size="11" fill="#868e96">Gris, nunca vermello: un órgano inactivo non é un erro, e a fila segue na táboa atenuada.</text>
+
+  <!-- ===== card: what each change does ===== -->
+  <rect x="40" y="650" width="588" height="152" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="648" width="588" height="152" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="64" y="672" width="36" height="20" rx="10" fill="#4c6ef5"/>
+  <circle cx="90" cy="682" r="7.5" fill="#ffffff"/>
+  <text x="112" y="682" dominant-baseline="central" font-size="15" font-weight="600" fill="#212529">Marcar</text>
+  <text x="604" y="682" text-anchor="end" dominant-baseline="central" font-size="11" fill="#adb5bd">PUT · admin</text>
+  <line x1="64" y1="706" x2="604" y2="706" stroke="#f1f3f5"/>
+  <text x="64" y="728" font-size="12" fill="#495057">Garda a marca e pide xa unha importación só dese órgano.</text>
+  <text x="64" y="750" font-size="12" fill="#495057">Se xa hai outra importación en curso, a marca queda gardada e o</text>
+  <text x="64" y="768" font-size="12" fill="#495057">que se rexeita é a importación — dise, e pódese tentar de novo.</text>
+  <text x="64" y="788" font-size="11" fill="#868e96">A primeira importación percorre todo o historial: pode durar días.</text>
+
+  <rect x="652" y="650" width="588" height="152" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="652" y="648" width="588" height="152" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="676" y="672" width="36" height="20" rx="10" fill="#ced4da"/>
+  <circle cx="686" cy="682" r="7.5" fill="#ffffff"/>
+  <text x="724" y="682" dominant-baseline="central" font-size="15" font-weight="600" fill="#212529">Desmarcar</text>
+  <text x="1216" y="682" text-anchor="end" dominant-baseline="central" font-size="11" fill="#adb5bd">DELETE · admin</text>
+  <line x1="676" y1="706" x2="1216" y2="706" stroke="#f1f3f5"/>
+  <text x="676" y="728" font-size="12" fill="#495057">Quita a marca e detén a importación en curso nese órgano, no</text>
+  <text x="676" y="746" font-size="12" fill="#495057">seguinte corte limpo; os demais órganos seguen.</text>
+  <text x="676" y="768" font-size="12" fill="#495057">O xa gardado consérvase e a fila queda como SEN ACTUALIZAR.</text>
+  <text x="676" y="788" font-size="11" fill="#868e96">Volver marcalo retoma onde quedou; non o trata como se estivese ao día.</text>
+
+  <!-- ===== card: rules ===== -->
+  <rect x="40" y="830" width="1200" height="180" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="828" width="1200" height="180" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="64" y="860" font-size="15" font-weight="600" fill="#212529">Regras que esta columna fai visibles</text>
+  <line x1="64" y1="876" x2="1216" y2="876" stroke="#f1f3f5"/>
+  <circle cx="70" cy="900" r="2" fill="#adb5bd"/>
+  <text x="84" y="904" font-size="12" fill="#495057">A marca vive no órgano: as reimportacións do catálogo actualizan nome e estado, e nunca a tocan.</text>
+  <circle cx="70" cy="926" r="2" fill="#adb5bd"/>
+  <text x="84" y="930" font-size="12" fill="#495057">Ler dúas veces a mesma publicación non crea duplicados: actualízase a fila que xa existe.</text>
+  <circle cx="70" cy="952" r="2" fill="#adb5bd"/>
+  <text x="84" y="956" font-size="12" fill="#495057">Unha importación nunca borra, e desmarcar tampouco: a retirada explícita dun contrato é doutra funcionalidade posterior.</text>
+  <circle cx="70" cy="978" r="2" fill="#adb5bd"/>
+  <text x="84" y="982" font-size="12" fill="#495057">Só o administrador ve esta columna; para o resto, un órgano sen importar e un sen contratos son o mesmo.</text>
+</svg>

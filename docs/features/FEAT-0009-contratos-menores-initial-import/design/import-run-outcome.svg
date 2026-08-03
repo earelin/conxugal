@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1080" viewBox="0 0 1280 1080" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title>Importación de contratos menores — estados do resultado dunha execución</title>
+  <rect width="1280" height="1080" fill="#f8f9fa"/>
+
+  <text x="40" y="58" font-size="22" font-weight="700" fill="#212529">Resultado dunha importación de contratos menores</text>
+  <text x="40" y="82" font-size="13" fill="#868e96">O disparo é asíncrono: responde cun identificador de execución e o resultado lese despois. A franxa aparece na sección Órganos, onde xa se informa da importación do catálogo.</text>
+  <line x1="40" y1="106" x2="1240" y2="106" stroke="#dee2e6"/>
+
+  <!-- ================= 1. en curso ================= -->
+  <text x="40" y="168" font-size="15" font-weight="600" fill="#212529">En curso</text>
+  <text x="40" y="192" font-size="11" fill="#868e96">O disparo responde de inmediato co</text>
+  <text x="40" y="210" font-size="11" fill="#868e96">identificador da execución; a carga</text>
+  <text x="40" y="228" font-size="11" fill="#868e96">segue en segundo plano durante horas</text>
+  <text x="40" y="246" font-size="11" fill="#868e96">ou días. A franxa non se anima soa:</text>
+  <text x="40" y="264" font-size="11" fill="#868e96">di cando se consultou e ofrece</text>
+  <text x="40" y="282" font-size="11" fill="#868e96">actualizar.</text>
+
+  <rect x="268" y="150" width="972" height="148" rx="8" fill="#edf2ff"/>
+  <circle cx="306" cy="178" r="13" fill="#ffffff"/>
+  <g stroke="#4263eb" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M299 180 a7 7 0 1 1 2 5"/>
+    <path d="M299.5 174 v3.4 h3.4"/>
+  </g>
+  <text x="330" y="174" font-size="14" font-weight="600" fill="#3b5bdb">Importación de contratos menores en curso</text>
+  <text x="330" y="192" font-size="12" fill="#4263eb">12 órganos no alcance · comezou ás 08:14</text>
+  <text x="330" y="210" font-size="11" fill="#868e96">Consultado hai 2 min</text>
+  <rect x="1076" y="164" width="104" height="28" rx="8" fill="#ffffff" stroke="#bac8ff"/>
+  <g stroke="#4263eb" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1093 178 a5 5 0 1 0 1.3 -3.4"/>
+    <path d="M1093.5 173 v2.6 h2.6"/>
+  </g>
+  <text x="1108" y="178" dominant-baseline="central" font-size="12" font-weight="600" fill="#3b5bdb">Actualizar</text>
+  <g stroke="#4263eb" stroke-width="1.6" stroke-linecap="round">
+    <line x1="1203" y1="173" x2="1213" y2="183"/><line x1="1213" y1="173" x2="1203" y2="183"/>
+  </g>
+
+  <rect x="330" y="226" width="742" height="56" rx="8" fill="none" stroke="#bac8ff" stroke-dasharray="4 3"/>
+  <rect x="346" y="238" width="212" height="32" rx="8" fill="#f1f3f5"/>
+  <g stroke="#adb5bd" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M366 248 v7"/>
+    <path d="M362.5 252.5 l3.5 3.5 l3.5 -3.5"/>
+    <path d="M360 260 h12"/>
+  </g>
+  <text x="382" y="254" dominant-baseline="central" font-size="13" font-weight="600" fill="#adb5bd">Importar contratos menores</text>
+  <rect x="570" y="238" width="172" height="32" rx="8" fill="#f1f3f5"/>
+  <g stroke="#adb5bd" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M590 254 a5.5 5.5 0 1 0 1.4 -3.7"/>
+    <path d="M590.5 249 v2.8 h2.8"/>
+  </g>
+  <text x="606" y="254" dominant-baseline="central" font-size="13" font-weight="600" fill="#adb5bd">Importar catálogo</text>
+  <g stroke="#adb5bd" stroke-width="1.4" fill="none" stroke-linecap="round">
+    <rect x="762" y="250" width="10" height="8" rx="1.5"/>
+    <path d="M764 250 v-2.5 a3 3 0 0 1 6 0 v2.5"/>
+  </g>
+  <text x="780" y="254" dominant-baseline="central" font-size="12" fill="#868e96">Mentres dura, ningunha outra importación pode comezar — nin a do catálogo.</text>
+
+  <line x1="40" y1="316" x2="1240" y2="316" stroke="#e9ecef"/>
+
+  <!-- ================= 2. rematada ================= -->
+  <text x="40" y="354" font-size="15" font-weight="600" fill="#212529">Rematada</text>
+  <text x="40" y="378" font-size="11" fill="#868e96">Todos os órganos do alcance</text>
+  <text x="40" y="396" font-size="11" fill="#868e96">completáronse. Os recontos son os da</text>
+  <text x="40" y="414" font-size="11" fill="#868e96">execución, non os do almacén.</text>
+
+  <rect x="268" y="336" width="972" height="96" rx="8" fill="#ebfbee"/>
+  <circle cx="306" cy="364" r="13" fill="#ffffff"/>
+  <path d="M299 364 l5 5 l10 -11" stroke="#2f9e44" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="330" y="360" font-size="14" font-weight="600" fill="#2b8a3e">Importación de contratos menores rematada</text>
+  <text x="330" y="378" font-size="12" fill="#2f9e44">12 órganos cubertos · 18 402 contratos engadidos · 96 actualizados</text>
+  <text x="330" y="396" font-size="11" fill="#868e96">Comezou ás 08:14 · rematou ás 11:42</text>
+  <text x="330" y="416" font-size="11" fill="#868e96">Ata que exista o refresco periódico, estes órganos non se actualizan sós.</text>
+  <rect x="1076" y="350" width="104" height="28" rx="8" fill="#ffffff" stroke="#b2f2bb"/>
+  <g stroke="#2f9e44" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1093 364 a5 5 0 1 0 1.3 -3.4"/>
+    <path d="M1093.5 359 v2.6 h2.6"/>
+  </g>
+  <text x="1108" y="364" dominant-baseline="central" font-size="12" font-weight="600" fill="#2f9e44">Actualizar</text>
+  <g stroke="#2f9e44" stroke-width="1.6" stroke-linecap="round">
+    <line x1="1203" y1="359" x2="1213" y2="369"/><line x1="1213" y1="359" x2="1203" y2="369"/>
+  </g>
+
+  <line x1="40" y1="450" x2="1240" y2="450" stroke="#e9ecef"/>
+
+  <!-- ================= 3. rematada parcialmente ================= -->
+  <text x="40" y="488" font-size="15" font-weight="600" fill="#212529">Rematada parcialmente</text>
+  <text x="40" y="512" font-size="11" fill="#868e96">Un fallo detén ese órgano, non a</text>
+  <text x="40" y="530" font-size="11" fill="#868e96">execución: os demais séguense</text>
+  <text x="40" y="548" font-size="11" fill="#868e96">importando. É o resultado máis</text>
+  <text x="40" y="566" font-size="11" fill="#868e96">probable dunha execución de moitos</text>
+  <text x="40" y="584" font-size="11" fill="#868e96">órganos, non unha excepción.</text>
+
+  <rect x="268" y="470" width="972" height="116" rx="8" fill="#fff4e6"/>
+  <circle cx="306" cy="498" r="13" fill="#ffffff"/>
+  <g stroke="#e8590c" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M306 491 l6.5 11.5 h-13 z"/>
+    <path d="M306 495.5 v3.4"/>
+  </g>
+  <circle cx="306" cy="501.4" r="0.9" fill="#e8590c"/>
+  <text x="330" y="494" font-size="14" font-weight="600" fill="#d9480f">Importación de contratos menores rematada parcialmente</text>
+  <text x="330" y="512" font-size="12" fill="#e8590c">11 de 12 órganos completados · 17 980 contratos engadidos · 96 actualizados</text>
+  <line x1="330" y1="526" x2="1180" y2="526" stroke="#ffd8a8"/>
+  <text x="330" y="546" font-size="12" font-weight="600" fill="#d9480f">Fallou 1 órgano</text>
+  <text x="330" y="564" font-size="12" fill="#e8590c" xml:space="preserve">Axencia Galega de Innovación<tspan fill="#adb5bd"> · </tspan><tspan fill="#868e96">a fonte non respondeu; o xa gardado consérvase</tspan></text>
+  <text x="1180" y="546" text-anchor="end" font-size="11" fill="#868e96">Comezou ás 08:14 · rematou ás 11:51</text>
+  <rect x="1076" y="484" width="104" height="28" rx="8" fill="#ffffff" stroke="#ffd8a8"/>
+  <g stroke="#e8590c" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1093 498 a5 5 0 1 0 1.3 -3.4"/>
+    <path d="M1093.5 493 v2.6 h2.6"/>
+  </g>
+  <text x="1108" y="498" dominant-baseline="central" font-size="12" font-weight="600" fill="#d9480f">Actualizar</text>
+  <g stroke="#e8590c" stroke-width="1.6" stroke-linecap="round">
+    <line x1="1203" y1="493" x2="1213" y2="503"/><line x1="1213" y1="493" x2="1203" y2="503"/>
+  </g>
+
+  <line x1="40" y1="604" x2="1240" y2="604" stroke="#e9ecef"/>
+
+  <!-- ================= 4. fallida ================= -->
+  <text x="40" y="642" font-size="15" font-weight="600" fill="#212529">Fallida</text>
+  <text x="40" y="666" font-size="11" fill="#868e96">Ningún órgano do alcance puido</text>
+  <text x="40" y="684" font-size="11" fill="#868e96">importarse. Único estado en vermello:</text>
+  <text x="40" y="702" font-size="11" fill="#868e96">un rexeitamento non é un erro.</text>
+
+  <rect x="268" y="624" width="972" height="96" rx="8" fill="#fff5f5"/>
+  <circle cx="306" cy="652" r="13" fill="#ffffff"/>
+  <g stroke="#e03131" stroke-width="2" fill="none" stroke-linecap="round">
+    <line x1="301" y1="647" x2="311" y2="657"/><line x1="311" y1="647" x2="301" y2="657"/>
+  </g>
+  <text x="330" y="648" font-size="14" font-weight="600" fill="#c92a2a">A importación de contratos menores fallou</text>
+  <text x="330" y="666" font-size="12" fill="#e03131">0 de 12 órganos completados · a fonte non respondeu</text>
+  <text x="330" y="684" font-size="11" fill="#868e96">Comezou ás 08:14 · rematou ás 08:39</text>
+  <text x="330" y="704" font-size="11" fill="#868e96">Os contratos xa gardados consérvanse; volver disparala retoma onde quedou.</text>
+  <rect x="1076" y="638" width="104" height="28" rx="8" fill="#ffffff" stroke="#ffc9c9"/>
+  <g stroke="#e03131" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1093 652 a5 5 0 1 0 1.3 -3.4"/>
+    <path d="M1093.5 647 v2.6 h2.6"/>
+  </g>
+  <text x="1108" y="652" dominant-baseline="central" font-size="12" font-weight="600" fill="#c92a2a">Actualizar</text>
+  <g stroke="#e03131" stroke-width="1.6" stroke-linecap="round">
+    <line x1="1203" y1="647" x2="1213" y2="657"/><line x1="1213" y1="647" x2="1203" y2="657"/>
+  </g>
+
+  <line x1="40" y1="738" x2="1240" y2="738" stroke="#e9ecef"/>
+
+  <!-- ================= 5. rexeitada: xa hai unha importación ================= -->
+  <text x="40" y="776" font-size="15" font-weight="600" fill="#212529">Rexeitada — garda</text>
+  <text x="40" y="800" font-size="11" fill="#868e96">Só pode haber unha importación no</text>
+  <text x="40" y="818" font-size="11" fill="#868e96">sistema. A marca si se garda; o que</text>
+  <text x="40" y="836" font-size="11" fill="#868e96">se rexeita é a importación que pedía.</text>
+  <text x="40" y="854" font-size="11" fill="#868e96">Neutro, non vermello: é normal.</text>
+
+  <rect x="268" y="758" width="972" height="112" rx="8" fill="#f1f3f5"/>
+  <circle cx="306" cy="786" r="13" fill="#ffffff"/>
+  <g stroke="#868e96" stroke-width="1.7" fill="none" stroke-linecap="round">
+    <circle cx="306" cy="786" r="7"/>
+    <line x1="301" y1="791" x2="311" y2="781"/>
+  </g>
+  <text x="330" y="782" font-size="14" font-weight="600" fill="#495057">Marcouse o órgano, pero non se iniciou ningunha importación</text>
+  <text x="330" y="800" font-size="12" fill="#495057">Xa se está a executar outra importación. A marca de Servizo Galego de Saúde (SERGAS) quedou gardada.</text>
+  <text x="330" y="818" font-size="11" fill="#868e96">Rexeitada ás 08:15</text>
+  <line x1="330" y1="832" x2="1180" y2="832" stroke="#e9ecef"/>
+  <text x="330" y="852" font-size="11" fill="#868e96">Mentres non exista o refresco periódico, ningún proceso a retoma: hai que volver disparala.</text>
+  <rect x="1064" y="772" width="116" height="28" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="1122" y="786" dominant-baseline="central" text-anchor="middle" font-size="12" font-weight="600" fill="#495057">Tentar de novo</text>
+  <g stroke="#868e96" stroke-width="1.6" stroke-linecap="round">
+    <line x1="1203" y1="781" x2="1213" y2="791"/><line x1="1213" y1="781" x2="1203" y2="791"/>
+  </g>
+
+  <line x1="40" y1="888" x2="1240" y2="888" stroke="#e9ecef"/>
+
+  <!-- ================= 6. rexeitada: órgano non elixible ================= -->
+  <text x="40" y="926" font-size="15" font-weight="600" fill="#212529">Rexeitada — non elixible</text>
+  <text x="40" y="950" font-size="11" fill="#868e96">Distinta da anterior, e dío: o órgano</text>
+  <text x="40" y="968" font-size="11" fill="#868e96">nomeado non está activo e marcado.</text>
+  <text x="40" y="986" font-size="11" fill="#868e96">Non hai execución, nin recontos.</text>
+
+  <rect x="268" y="908" width="972" height="96" rx="8" fill="#f1f3f5"/>
+  <circle cx="306" cy="936" r="13" fill="#ffffff"/>
+  <g stroke="#868e96" stroke-width="1.7" fill="none" stroke-linecap="round">
+    <circle cx="306" cy="936" r="7"/>
+    <line x1="301" y1="941" x2="311" y2="931"/>
+  </g>
+  <text x="330" y="932" font-size="14" font-weight="600" fill="#495057">Non se iniciou ningunha importación</text>
+  <text x="330" y="950" font-size="12" fill="#495057">Hospital Álvaro Cunqueiro está inactivo: só se importan os órganos activos e marcados.</text>
+  <text x="330" y="968" font-size="11" fill="#868e96">Rexeitada ás 08:15</text>
+  <text x="330" y="988" font-size="11" fill="#868e96">O catálogo desactiva un órgano cando deixa de publicarse; volverá ser elixible se reaparece.</text>
+  <g stroke="#868e96" stroke-width="1.6" stroke-linecap="round">
+    <line x1="1203" y1="931" x2="1213" y2="941"/><line x1="1213" y1="931" x2="1203" y2="941"/>
+  </g>
+
+  <line x1="40" y1="1022" x2="1240" y2="1022" stroke="#e9ecef"/>
+  <text x="40" y="1050" font-size="11" fill="#868e96">O detalle en vivo dunha execución — lista de execucións, filtros, diagnóstico e progreso — non se amosa aquí: chega coa vixilancia de execucións (SPEC-0007). Esta franxa le unha soa execución, a que se acaba de disparar.</text>
+</svg>

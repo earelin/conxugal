@@ -1,5 +1,5 @@
 ---
-status: draft
+status: active
 ---
 
 # SPEC-0005. Import and browse Contratos Menores
@@ -39,7 +39,7 @@ Every contrato menor names its awardee together with a fiscal identifier. The ca
 each one carries, are specified separately in
 [SPEC-0006](SPEC-0006-operadores-economicos.md): they are fed by every contract family, not
 only this one, so they outlive this spec. What this spec owes SPEC-0006 is the awardee data
-on each stored contract (R7) and the removal rule that keeps a derived operador honest
+each import supplies (R7) and the removal rule that keeps a derived operador honest
 (R13).
 
 This spec consumes the Órgano catalogue of SPEC-0004 — it is the first consumer of that
@@ -140,9 +140,8 @@ Two decisions that earlier drafts deferred are **settled**:
 2. **A long-running, resumable import job holds its state in the database** — required by R9
    and R10, and recorded in
    [ADR-0017](../architecture/0017-import-run-state-in-postgresql.md), which also settles what
-   [SPEC-0007](SPEC-0007-monitor-import-runs.md) R5, R7 and R8 need. Settled **subject to that
-   ADR being accepted**: it is `proposed` today, so a feature building directly onto it should
-   confirm its status first.
+   [SPEC-0007](SPEC-0007-monitor-import-runs.md) R5, R7 and R8 need. That ADR is **accepted**,
+   so a feature may build directly onto it.
 
 One decision remains outside this spec:
 
@@ -213,10 +212,19 @@ One decision remains outside this spec:
   independently of the source thereafter.
 - **R7** — Each stored contrato menor carries the attributes the source publishes — the
   Órgano that awarded it, its **publication date**, its object, its amount, its stated
-  duration, and its **awardee's name and fiscal identifier** — together with a stable
-  identity by which the same contract is recognised across successive imports. The awardee
-  attributes are what SPEC-0006 derives its catalogue from, and are stored whether or not
-  they yield an operador there. The amount is the published figure **including VAT**, and is
+  duration, and its **awardee** — together with a stable identity by which the same contract is
+  recognised across successive imports.
+
+  **The awardee is held once, on the operador it names, not on each contract.** The system
+  stores the awardee's name and fiscal identifier on the
+  [SPEC-0006](SPEC-0006-operadores-economicos.md) operador row, and each contract references
+  that row; two awards to the same party do not store the party twice. What this costs is stated
+  rather than hidden, and R27 states it: a contract does not record the awardee name **it** was
+  published under, and an award whose identifier is unusable (SPEC-0006 R5) yields no operador
+  and therefore records **no awardee at all** — a case the source is not observed to produce,
+  since every published contract names its awardee with a NIF/CIF.
+
+  The amount is the published figure **including VAT**, and is
   labelled as such wherever it or any total derived from it is shown: the legal thresholds
   that define a contrato menor are VAT-exclusive, so an unlabelled figure invites exactly
   the wrong comparison.
@@ -313,9 +321,10 @@ One decision remains outside this spec:
   No row **repeats** the awarding Órgano on a list already scoped to one, since every row there
   belongs to the Órgano open. That is a rule about what a row states, not about what a page
   looks like, and it is the same rule SPEC-0006 R9 applies when it stops a row repeating the
-  family its section names. It does **not** extend to the awardee: a row states its awardee as
-  published for that contract even on an operador's own history, because R27 keeps published
-  spellings and SPEC-0006 R4 displays only one of them — so the variance is visible nowhere else.
+  family its section names. It does **not** extend to the awardee: a row states its awardee, on
+  an operador's own history as anywhere else, under the single published name SPEC-0006 R4
+  selects for that operador and that operador's one canonical fiscal identifier (SPEC-0006 R3).
+  Per-contract name variance is not recorded (R7, R27) and so is visible nowhere.
 
   This route and its mirror — following a row's **awardee** to its operador
   ([SPEC-0006](SPEC-0006-operadores-economicos.md) R8, rendered on the row by R16) — are the
@@ -549,8 +558,9 @@ One decision remains outside this spec:
 
   One place where "reproduces what the source publishes" **stops being true** is named rather
   than glossed: R13 keeps a removed contract **remembered as removed**, so once the source
-  withdraws a publication the system still holds that award's awardee name and fiscal
-  identifier, indefinitely, after the source has stopped publishing them. That is deliberate —
+  withdraws a publication the system still holds that awardee's operador row — the name
+  SPEC-0006 R4 selects and the canonical identifier R3 holds — indefinitely, after the source has
+  stopped publishing them. That is deliberate —
   it is what makes a removal restorable and what stops a later import silently re-adding a
   withdrawn contract — and it is the same decision, at contract level, that
   [SPEC-0006](SPEC-0006-operadores-economicos.md) R12 records at operador level when it states
@@ -563,16 +573,55 @@ One decision remains outside this spec:
 
   **Interpreting a value is not correcting it.** R19 sorts by amount and filters by the year
   of the publication date, which means reading a published amount as a number and a published
-  date as a date. That interpretation governs **ordering, filtering and counting only**; what
-  is stored and what is displayed remain the published text, exactly as
-  [SPEC-0006](SPEC-0006-operadores-economicos.md) draws the same line for its matching rule.
+  date as a date.
 
-  A published amount or date that **cannot be interpreted** is not a reason to reject the
-  contract: it is stored and displayed as published like any other, and it simply takes no
-  part in the ordering it cannot support, being ordered last when sorting by the value it
-  lacks. A contract whose **date** cannot be interpreted belongs to no year and is reached
-  through R19's **undated** selection. Discarding such contracts would lose real awards, which
-  is the same reasoning SPEC-0006 applies to an unusable fiscal identifier.
+  **Two values are stored interpreted rather than as text, and the rule above yields to that.**
+  The **amount** is published as a number and stored as one. The **publication date** is
+  published as text and stored as a date: the interpretation replaces the published string
+  rather than accompanying it, so a date the system cannot interpret is stored as *no date* and
+  its published text is not retained. This is a deliberate narrowing of "as published", taken
+  because a second column per value earns its keep only where the two can differ meaningfully,
+  and it is bounded to these two values — every other published value is stored as published,
+  byte for byte within its trimmed bounds and, for the stated duration alone, within the length
+  bound named below.
+
+  **Surrounding whitespace is not a published value.** The source pads its text fields out to
+  fixed widths, so a value arrives carrying spaces that carry no information: they are an
+  artefact of how the source serialises its fields, not something it published about the
+  contract. Every text value is therefore stored with **leading and trailing whitespace
+  removed, and nothing else** — no internal spacing collapsed, no case folded, no punctuation
+  touched. A value that is **only** whitespace published nothing and is stored as absent, on the
+  same rule that stores an uninterpretable date as no date.
+
+  This is a narrowing of "as published" in the same sense as the interpreted values above, and a
+  much smaller
+  one: it discards only characters the source itself does not treat as content. It is bounded
+  deliberately — trimming further, to collapse internal runs or fold case, would start merging
+  values that genuinely differ, which is what R7's *store what is published* forbids and what
+  [SPEC-0006](SPEC-0006-operadores-economicos.md) R3 keeps out of its match rule for the same
+  reason.
+
+  **The stated duration is stored capped at 64 characters**, and it is the only value with a
+  length bound. The source publishes short phrases there — the field carries a per-Órgano default
+  far more often than a real term, which is why R27 already requires it to be shown as
+  unreliable — so the cap is not expected to be reached. It is set because a value that overran
+  its column would fail the batch and **reject a real award**, which the last paragraph of this
+  requirement refuses; losing the tail of an already-unreliable field is the smaller loss, and it
+  is taken knowingly rather than discovered. No other value is capped: the contract's object in
+  particular has no bound at any layer.
+
+  **The awardee is the remaining exception, and R7 states it**: it is stored once on its operador
+  rather than on each contract, so what a row shows is the name SPEC-0006 R4 selects for that
+  operador — not the name that contract was published under — and that operador's fiscal
+  identifier in the canonical form SPEC-0006 R3 holds it in.
+
+  None of these narrowings is a reason to **reject** a contract. A published amount or date that
+  cannot
+  be interpreted leaves that value absent, the contract is stored like any other, and it takes no
+  part in the ordering it cannot support, being ordered last when sorting by the value it lacks.
+  A contract with **no date** belongs to no year and is reached through R19's **undated**
+  selection. Discarding such contracts would lose real awards, which is the same reasoning
+  SPEC-0006 applies to an unusable fiscal identifier.
 
 ## Acceptance criteria
 
@@ -605,8 +654,10 @@ One decision remains outside this spec:
    system holds — with no per-contract screen to open for further data.
 10. **(R7)** Every displayed amount, and every total derived from amounts, is labelled as
     including VAT.
-11. **(R7)** A contract whose published awardee data yields no operador under SPEC-0006 R5
-    still stores and displays that awardee's name and fiscal identifier as published.
+11. **(R7)** A contract whose published awardee data yields no operador under SPEC-0006 R5 is
+    **stored and browsable like any other**, showing every attribute it holds and **no awardee**
+    — since the awardee is held on the operador that award did not produce. It is not rejected,
+    and it offers no awardee route that leads nowhere.
 12. **(R8)** An Órgano's initial import yields **every publication the source holds for it,
     back to its earliest published date** — not merely contracts from years before the current
     one, which a run covering only the last few years would also produce.
@@ -641,8 +692,8 @@ One decision remains outside this spec:
     taxonomy term — is still reachable and its contracts are still viewable; so is one that
     has since become inactive but retains contracts under R5.
 21. **(R14)** An Órgano's own contratos menores list states no row's awarding Órgano, every
-    row on it belonging to the Órgano already open — while still stating each row's awardee as
-    published for that contract.
+    row on it belonging to the Órgano already open — while still stating each row's awardee,
+    under the name SPEC-0006 R4 selects for that operador.
     > R14's third route — following a row's awarding Órgano to that Órgano's contracts — is
     > **proved by [SPEC-0006](SPEC-0006-operadores-economicos.md)'s criterion for it**, since no
     > surface this spec delivers has rows naming an awarding Órgano. Stated here, proved there;
@@ -717,17 +768,26 @@ One decision remains outside this spec:
     incremental runs, the system's request rate against the source stays within the
     configured budget, and no mode exceeds it.
 39. **(R26)** No contract list is reachable without authentication, and every awardee name
-    and fiscal identifier on a contract row matches what the official source publishes for
-    that award.
+    shown on a contract row is one the official source published for that awardee — the name
+    SPEC-0006 R4 selects for its operador — and its fiscal identifier is that operador's
+    canonical one (SPEC-0006 R3), with nothing added that the source did not publish.
 40. **(R27)** Every value displayed matches what the official source publishes for that
-    contract, with no value corrected, normalised, inferred, or enriched from elsewhere.
+    contract, with no value corrected, normalised, inferred, or enriched from elsewhere —
+    **except the four R27 names**: the publication date, which is displayed as the date it was
+    interpreted to rather than as its published text; the awardee, whose stored name is its
+    operador's rather than that contract's and whose fiscal identifier is canonical
+    (SPEC-0006 R3); every text value's **surrounding whitespace**, which is removed on the way
+    in; and the **stated duration**, capped at 64 characters, the only bounded value and never
+    expected to reach its bound. A text value differing from its published form in any other way
+    is a defect.
 41. **(R27)** A displayed duration is accompanied by an indication that the source frequently
     publishes a per-Órgano default rather than a per-contract value.
 42. **(R27)** A contract whose published amount or publication date cannot be interpreted is
-    stored and displayed as published and is ordered last when sorting by the value it lacks,
-    rather than being rejected at import; one whose date cannot be interpreted appears in no
-    year's selection but is reachable through the undated selection of R19, so no stored
-    contract is unreachable.
+    **stored rather than rejected at import**, with that value absent, and is ordered last when
+    sorting by the value it lacks; one with no date appears in no year's selection but is
+    reachable through the undated selection of R19, so no stored contract is unreachable. It is
+    *displayed as published* only for the values R27 keeps as published — an uninterpretable
+    date is shown as absent, its published text having not been retained.
 43. **(R19)** An Órgano holding no contract whose publication date resists interpretation is
     offered **no undated selection at all** — the affordance is absent rather than present and
     empty, on the same reasoning that keeps an empty section from being rendered.
