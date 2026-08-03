@@ -1,6 +1,6 @@
 import { isProblemType } from '../../shared/lib/httpError';
 import { strings } from '../../shared/lib/strings';
-import type { TermoNode } from './taxonomiaTree';
+import { findTermoPath, type TermoNode } from './taxonomiaTree';
 
 const PROBLEM_TYPE = {
   cycle: 'urn:conxugal:problem-type:termo-cycle',
@@ -35,6 +35,19 @@ export function termoRefusal(error: unknown): Refusal {
     return { message: copy.notFound };
   }
   return { message: copy.genericError };
+}
+
+/**
+ * The rule the move dialog refuses on, stated once: a term cannot land on
+ * itself, nor anywhere inside its own branch, because either detaches that
+ * branch from the tree. The server checks it too and is the authority; this is
+ * what lets the dialog explain a destination it can already see is impossible.
+ */
+export function wouldCycle(termo: TermoNode, target: TermoNode | null): boolean {
+  if (target === null) {
+    return false;
+  }
+  return target.id === termo.id || findTermoPath(termo.children, target.id).length > 0;
 }
 
 /**

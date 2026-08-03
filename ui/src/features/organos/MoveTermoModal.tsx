@@ -5,7 +5,7 @@ import { strings } from '../../shared/lib/strings';
 import { findTermoPath, type TermoNode } from './taxonomiaTree';
 import { useMoveTermo } from './termoMutations';
 import { TermoParentSelect } from './TermoParentSelect';
-import { cycleRefusal, moveRefusal, type Refusal } from './termoRefusal';
+import { cycleRefusal, moveRefusal, type Refusal, wouldCycle } from './termoRefusal';
 import { TermoRefusalAlert } from './TermoRefusalAlert';
 
 const copy = strings.admin.organos.termo;
@@ -28,9 +28,7 @@ function MoveTermoForm({ roots, termo, parentId, onMoved, onCancel }: MoveTermoF
   // The term itself and its own descendants stay in the picker and are refused
   // here instead, so the rule explains itself where the administrator looks for
   // the destination rather than going missing from the list.
-  const cycles =
-    target !== null &&
-    (target.id === termo.id || findTermoPath(termo.children, target.id).length > 0);
+  const cycles = wouldCycle(termo, target);
 
   function onSubmit() {
     setRefusal(null);
