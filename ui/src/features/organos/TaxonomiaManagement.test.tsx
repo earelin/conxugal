@@ -48,11 +48,13 @@ function mockTaxonomia(termos: Termo[]) {
  * messages degrades to the generic one — which is the bug these tests exist to
  * rule out.
  */
-function problemBody(type: string, status: number) {
-  return { type: `urn:conxugal:problem-type:${type}`, title: type, status };
+function refuses(status: number, type: string) {
+  return [
+    status,
+    { type: `urn:conxugal:problem-type:${type}`, title: type, status },
+    { 'Content-Type': 'application/problem+json' },
+  ] as const;
 }
-
-const PROBLEM_HEADERS = { 'Content-Type': 'application/problem+json' };
 
 /**
  * `env="test"` is Mantine's own switch for jsdom, and this is the first suite
@@ -380,7 +382,7 @@ describe('taxonomía management', () => {
 
     nock(BASE_URL)
       .put(`${TERMO_PATH}/${sanidade.id}/parent`)
-      .reply(409, problemBody('termo-cycle', 409), PROBLEM_HEADERS);
+      .reply(...refuses(409, 'termo-cycle'));
 
     await submit(user, copy.moveSubmit);
 
@@ -418,7 +420,7 @@ describe('taxonomía management', () => {
 
     nock(BASE_URL)
       .post(TERMOS_PATH)
-      .reply(409, problemBody('duplicate-sibling-name', 409), PROBLEM_HEADERS);
+      .reply(...refuses(409, 'duplicate-sibling-name'));
 
     await submit(user, copy.createSubmit);
 
@@ -440,7 +442,7 @@ describe('taxonomía management', () => {
 
     nock(BASE_URL)
       .patch(`${TERMO_PATH}/${sanidade.id}`)
-      .reply(404, problemBody('termo-not-found', 404), PROBLEM_HEADERS);
+      .reply(...refuses(404, 'termo-not-found'));
 
     await submit(user, copy.renameSubmit);
 
@@ -482,7 +484,7 @@ describe('taxonomía management', () => {
 
     nock(BASE_URL)
       .delete(`${TERMO_PATH}/${concellos.id}`)
-      .reply(409, problemBody('termo-has-children', 409), PROBLEM_HEADERS);
+      .reply(...refuses(409, 'termo-has-children'));
 
     await submit(user, copy.deleteSubmit);
 
@@ -548,7 +550,7 @@ describe('taxonomía management', () => {
 
     nock(BASE_URL)
       .put(`${TERMO_PATH}/${sanidade.id}/parent`)
-      .reply(409, problemBody('duplicate-sibling-name', 409), PROBLEM_HEADERS);
+      .reply(...refuses(409, 'duplicate-sibling-name'));
 
     await submit(user, copy.moveSubmit);
     expect(await screen.findByText(copy.duplicateSiblingName)).toBeVisible();
