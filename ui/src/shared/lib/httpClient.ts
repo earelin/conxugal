@@ -42,22 +42,27 @@ function isProblemBody(body: unknown): body is ProblemBody {
   );
 }
 
+function claimsProblemJson(response: Response): boolean {
+  return response.headers.get('Content-Type')?.includes('application/problem+json') ?? false;
+}
+
 async function errorFor(response: Response): Promise<HttpError> {
-  const fallbackMessage = `Request failed with status ${response.status}`;
-  if (!response.headers.get('Content-Type')?.includes('application/problem+json')) {
-    return new HttpError(response.status, fallbackMessage);
-  }
+  const { status } = response;
+  const fallbackMessage = `Request failed with status ${status}`;
 
   // A body that never arrives or does not parse must not mask the HTTP failure
-  // itself, so a broken problem+json degrades to the plain error.
-  const body: unknown = await response.json().catch(() => null);
+  // itself, so anything short of a well-formed problem+json degrades to the
+  // plain error.
+  const body: unknown = claimsProblemJson(response)
+    ? await response.json().catch(() => null)
+    : null;
   if (!isProblemBody(body)) {
-    return new HttpError(response.status, fallbackMessage);
+    return new HttpError(status, fallbackMessage);
   }
 
   const detail = typeof body.detail === 'string' ? body.detail : null;
   const title = typeof body.title === 'string' ? body.title : null;
-  return new ProblemError(response.status, body.type, detail, detail ?? title ?? fallbackMessage);
+  return new ProblemError(status, body.type, detail, detail ?? title ?? fallbackMessage);
 }
 
 export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
