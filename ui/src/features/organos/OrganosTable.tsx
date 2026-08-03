@@ -12,6 +12,9 @@ const NARROW_COLUMN: CSSProperties = { whiteSpace: 'nowrap', width: '1%' };
 // ACTIVO into "A…". The state has to stay readable at every width.
 const UNTRUNCATED_LABEL = { root: { maxWidth: 'none' }, label: { overflow: 'visible' } };
 
+// The admin tables' column-header treatment.
+const COLUMN_HEADER = { tt: 'uppercase', fz: 'xs', c: 'dimmed' } as const;
+
 function OrganoRow({ organo }: { organo: Organo }) {
   // Inactive Órganos are dimmed rather than hidden: they stay part of the
   // catalogue and stay classifiable.
@@ -50,13 +53,11 @@ export function OrganosTable({ organos, emptyMessage, label }: OrganosTableProps
     <Table aria-label={label} verticalSpacing="sm">
       <Table.Thead>
         <Table.Tr>
-          <Table.Th tt="uppercase" fz="xs" c="dimmed">
-            {strings.admin.organos.columnOrgano}
-          </Table.Th>
-          <Table.Th tt="uppercase" fz="xs" c="dimmed" style={NARROW_COLUMN}>
+          <Table.Th {...COLUMN_HEADER}>{strings.admin.organos.columnOrgano}</Table.Th>
+          <Table.Th {...COLUMN_HEADER} style={NARROW_COLUMN}>
             {strings.admin.organos.columnState}
           </Table.Th>
-          <Table.Th tt="uppercase" fz="xs" c="dimmed" ta="right" style={NARROW_COLUMN}>
+          <Table.Th {...COLUMN_HEADER} ta="right" style={NARROW_COLUMN}>
             {strings.admin.organos.columnActions}
           </Table.Th>
         </Table.Tr>
