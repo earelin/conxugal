@@ -110,14 +110,14 @@ class OrganoReconciliationImportMarkIntegrationTest implements TestPropertyProvi
         .columnsToOrder(new Table.Order[] {Table.Order.asc("name")})
         .build();
     assertThat(organos).hasNumberOfRows(5);
-    assertMark(organos, 0, "Brand New", true, false);
-    assertMark(organos, 1, "Deactivated", false, true);
-    assertMark(organos, 2, "New Name", true, true);
-    assertMark(organos, 3, "Reactivated", true, true);
-    assertMark(organos, 4, "Unmarked", true, false);
+    assertOrgano(organos, 0, "Brand New", true, false);
+    assertOrgano(organos, 1, "Deactivated", false, true);
+    assertOrgano(organos, 2, "New Name", true, true);
+    assertOrgano(organos, 3, "Reactivated", true, true);
+    assertOrgano(organos, 4, "Unmarked", true, false);
   }
 
-  private static void assertMark(
+  private static void assertOrgano(
       Table organos, int index, String name, boolean active, boolean importable) {
     assertThat(organos).row(index).value("name").isEqualTo(name);
     assertThat(organos).row(index).value("active").isEqualTo(active);
