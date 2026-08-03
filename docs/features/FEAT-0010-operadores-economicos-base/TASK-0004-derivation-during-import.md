@@ -73,7 +73,7 @@ one lands **after** there is an import to derive from.
   the same on both rows, since neither contract keeps a spelling of its own and the published
   case is retained nowhere. Asserted with the lower-case contract imported **first**, so the
   result cannot come from arrival order.
-  ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #3, #5, #7)
+  ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #3, #7)
 - Importing two contracts whose identifiers differ in internal spacing, punctuation or a
   character yields **two** operadores. (SPEC-0006 #4)
 - Two contracts under the same identifier with different published names yield one operador

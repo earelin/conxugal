@@ -23,7 +23,7 @@ exists first.
 
 ## Scope
 - A migration (next free `V` number) creating `operador_economico`:
-  - `id UUID PRIMARY KEY` — a plain `uuid` column; `OperadorId` is the Java type an
+  - `id UUID PRIMARY KEY` — a plain `uuid` column; `OperadorEconomicoId` is the Java type an
     `AttributeConverter` maps onto it
     ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md));
   - `fiscal_id TEXT NOT NULL UNIQUE` — the identifier in R3's canonical form, trimmed and
@@ -38,11 +38,11 @@ exists first.
 - A second table, `operador_economico_nome_alternativo`, holding the names R15 retains beside the
   principal one:
   - `operador_economico_id UUID NOT NULL REFERENCES operador_economico(id)`;
-  - `nome TEXT NOT NULL`;
+  - `name TEXT NOT NULL` — the published name, stored as published;
   - `last_published_date DATE` (nullable, null ranks **last**) and
     `last_published_source_id BIGINT NOT NULL` — the same rank pair the operador row carries, so
     the principal name and the alternatives order under one rule;
-  - **`UNIQUE (operador_economico_id, nome)` — this is the requirement, not a hint.** Without it
+  - **`UNIQUE (operador_economico_id, name)` — this is the requirement, not a hint.** Without it
     the table grows one row per contract instead of one per distinct name, and the largest
     operador would hold tens of thousands of rows saying the same thing. It is also what makes
     the retention idempotent under re-import (#37) at the store rather than in the caller.
@@ -52,7 +52,7 @@ exists first.
   or a legal entity, deliberately and although the published identifier makes it inferable (R6).
 - The Micronaut Data JDBC implementation of `OperadorRepository`: find by fiscal id, insert, the
   combined name-and-rank update, and **retaining a name** as one
-  `INSERT … ON CONFLICT (operador_economico_id, nome) DO UPDATE` that advances the date and source
+  `INSERT … ON CONFLICT (operador_economico_id, name) DO UPDATE` that advances the date and source
   id. One statement, so a name already held is advanced rather than rejected, and no caller has to
   read first and race.
 - **No `contrato_menor` reference of any kind** — neither a column here nor an `ALTER` there.
@@ -68,8 +68,8 @@ exists first.
   (SPEC-0006 #3, #4)
 - A stored operador reads back with its identifier **upper-cased**, whatever case it was written
   from — the store holds no other spelling to return. (SPEC-0006 #7, #30 exception)
-- An operador inserted with a null id comes back carrying the generated `OperadorId`, and reads
-  back equal — the converter round-trips through `@GeneratedValue`, the mechanism
+- An operador inserted with a null id comes back carrying the generated `OperadorEconomicoId`,
+  and reads back equal — the converter round-trips through `@GeneratedValue`, the mechanism
   [FEAT-0009 TASK-0003](../FEAT-0009-contratos-menores-initial-import/TASK-0003-contrato-menor-domain-model.md)
   establishes and ADR-0019 rests on.
 - The name-and-rank update writes all three values or none; a row never carries a name from

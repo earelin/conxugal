@@ -19,7 +19,8 @@ Every field below is a value the source actually publishes, measured in
 
 **Prerequisite outside this feature:**
 [FEAT-0010 TASK-0002](../FEAT-0010-operadores-economicos-base/TASK-0002-operador-domain-model.md)
-declares `OperadorId`, the type the optional operador reference below carries. FEAT-0010's base
+declares `OperadorEconomico`, the aggregate the optional reference below associates to, and its
+`OperadorEconomicoId` identity. FEAT-0010's base
 lands before this aggregate exists so that the foreign key is **created with** `contrato_menor`
 rather than added to a table of millions later.
 

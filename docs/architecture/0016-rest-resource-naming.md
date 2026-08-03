@@ -1,15 +1,17 @@
 ---
-status: accepted
+status: superseded
 date: 2026-07-26
 spec: null
 supersedes: null
-superseded_by: null
+superseded_by: 0020
 ---
 
 # 0016. Plural resource paths for collections, singular for a single element
 
 ## Status
-Accepted
+Superseded by [ADR-0020](0020-actions-as-verbs-in-rest-paths.md), which keeps every
+rule below and adds one exception: the last path segment may be a verb when it names an action
+rather than a thing.
 
 ## Context
 [ADR-0006](0006-reserved-api-url-prefix.md) reserves `/api/` for every REST endpoint but
@@ -62,19 +64,6 @@ element**.
   turn — `GET /api/organos/taxonomia` (the taxonomy of all Órganos),
   `POST /api/admin/organos/taxonomia/termos`. This is safe precisely because the plural
   namespace carries no identifiers.
-- **The last segment may be a verb when it names an action rather than a thing** —
-  `POST /api/admin/organos/import` (already shipped),
-  `POST /api/admin/organo/{id}/contratos-menores/import`. Everything before it still obeys the
-  rules above, so the verb only ever appears at the end, and only where the request *asks for
-  something to happen* rather than reading or writing a piece of state.
-
-  The test is whether a noun would be a lie. `enabled` is a flag the user has, so
-  `POST /api/admin/user/{id}/enabled` stays a noun; `importable` is a property the Órgano has,
-  so `PUT /api/admin/organo/{id}/importable` stays one too, and the fact that setting it also
-  starts an import does not make the path an action — what is being written is the property.
-  An import **run** has no such state to address: nothing on the Órgano is being set, so
-  `import` it is. **Verbs are the exception and stay rare** — a path full of them is RPC with
-  HTTP verbs painted on, which is what the rest of this record exists to avoid.
 - **Multi-word nouns are kebab-case**, as they already are (`system-status`).
 - The domain noun is used **as the domain names it**: `organo` / `organos` where the
   aggregate is `OrganoDeContratacion`, `termo` / `termos` where it is
@@ -113,10 +102,6 @@ chosen — for day-to-day visibility, but this ADR is the governing record.
   the plural and must be pointed at this record.
 - Two spellings of every resource noun exist, and a typo between them produces a 404 that
   looks like a missing endpoint rather than a misspelling.
-- **The action exception is a judgement call, not a mechanical rule.** *Is a noun a lie here?*
-  is answerable in review but not by a linter, so the boundary between an action and a state
-  will be argued occasionally — and a contributor who reaches for a verb first will find the
-  rest of the record pulling the other way.
 - One shipped endpoint is knowingly non-conforming until its follow-up task lands, so the
   API is briefly inconsistent in exactly the way this ADR exists to prevent.
 - Nothing in Micronaut enforces it; like ADR-0006 it rests on review discipline.

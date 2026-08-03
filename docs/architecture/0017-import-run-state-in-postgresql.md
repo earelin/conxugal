@@ -78,7 +78,7 @@ leave the page lying. Reads apply that rule in one place so no query can forget 
 **The single-import guard of SPEC-0005 R22 is a read of this same state**, and so is correct
 across restarts: a trigger that finds any live run records a *refused* run (SPEC-0007 R4)
 instead of starting. An in-memory lock would have forgotten, after a restart, about the run
-still recorded as executing — and because R21's guard is system-wide, forgetting it would put a
+still recorded as executing — and because R22's guard is system-wide, forgetting it would put a
 second run against the source, which is the outcome that requirement exists to prevent.
 
 **PostgreSQL is what serialises that guard, not application code.** Reading *is there a live

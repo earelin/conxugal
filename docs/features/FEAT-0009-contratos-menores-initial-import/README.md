@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0005
-adrs: [0001, 0002, 0003, 0004, 0005, 0006, 0008, 0010, 0011, 0012, 0014, 0015, 0016, 0017, 0019]
+adrs: [0001, 0002, 0003, 0004, 0005, 0006, 0008, 0010, 0011, 0012, 0014, 0015, 0017, 0019, 0020]
 status: draft
 ---
 
@@ -38,7 +38,7 @@ self-throttling declarative client of
 what satisfies R25 without this feature choosing a rate. The run's durable state follows
 **[ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md)**. REST lives under the
 reserved `/api/` prefix (**[ADR-0006](../../architecture/0006-reserved-api-url-prefix.md)**),
-named per **[ADR-0016](../../architecture/0016-rest-resource-naming.md)**, carries the
+named per **[ADR-0020](../../architecture/0020-actions-as-verbs-in-rest-paths.md)**, carries the
 rate-limit contract of **[ADR-0012](../../architecture/0012-rate-limit-http-contract.md)**, is
 authored contract-first
 (**[ADR-0010](../../architecture/0010-design-first-openapi-contract.md)**) and guarded by
@@ -125,8 +125,9 @@ layout of
   that key — both [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s — are what
   make a contract's awardee knowable at all.
 
-  **That feature's base goes first, not after.** Its rules, aggregate and `operador_economico` table
-  are prerequisites of tasks 3 and 4 here, so `contrato_menor` is **created carrying** a nullable
+  **That feature's base goes first, not after.** Its aggregate and `operador_economico` table
+  are prerequisites of tasks 3 and 4 here — its matching rules are not, being needed only when an
+  award is resolved — so `contrato_menor` is **created carrying** a nullable
   `operador_economico_id` rather than having one added to a table of millions later — the same
   reasoning that creates the year index up front. This feature declares that column and that field
   and **never writes either**; FEAT-0010's derivation task, which does, is the one thing that still
@@ -357,7 +358,11 @@ stateDiagram-v2
   and a walk that reaches the floor without matching the count ends **incomplete** rather than
   silently complete.
 
-### API surface ([ADR-0016](../../architecture/0016-rest-resource-naming.md), [ADR-0010](../../architecture/0010-design-first-openapi-contract.md), [ADR-0012](../../architecture/0012-rate-limit-http-contract.md))
+### API surface
+
+Named per [ADR-0020](../../architecture/0020-actions-as-verbs-in-rest-paths.md), authored
+contract-first per [ADR-0010](../../architecture/0010-design-first-openapi-contract.md), carrying
+the rate-limit contract of [ADR-0012](../../architecture/0012-rate-limit-http-contract.md).
 
 | Method & path | Role | Purpose |
 | --- | --- | --- |

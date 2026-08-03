@@ -39,7 +39,7 @@ Every contrato menor names its awardee together with a fiscal identifier. The ca
 each one carries, are specified separately in
 [SPEC-0006](SPEC-0006-operadores-economicos.md): they are fed by every contract family, not
 only this one, so they outlive this spec. What this spec owes SPEC-0006 is the awardee data
-on each stored contract (R7) and the removal rule that keeps a derived operador honest
+each import supplies (R7) and the removal rule that keeps a derived operador honest
 (R13).
 
 This spec consumes the Órgano catalogue of SPEC-0004 — it is the first consumer of that
@@ -558,8 +558,9 @@ One decision remains outside this spec:
 
   One place where "reproduces what the source publishes" **stops being true** is named rather
   than glossed: R13 keeps a removed contract **remembered as removed**, so once the source
-  withdraws a publication the system still holds that award's awardee name and fiscal
-  identifier, indefinitely, after the source has stopped publishing them. That is deliberate —
+  withdraws a publication the system still holds that awardee's operador row — the name
+  SPEC-0006 R4 selects and the canonical identifier R3 holds — indefinitely, after the source has
+  stopped publishing them. That is deliberate —
   it is what makes a removal restorable and what stops a later import silently re-adding a
   withdrawn contract — and it is the same decision, at contract level, that
   [SPEC-0006](SPEC-0006-operadores-economicos.md) R12 records at operador level when it states
@@ -581,7 +582,8 @@ One decision remains outside this spec:
   its published text is not retained. This is a deliberate narrowing of "as published", taken
   because a second column per value earns its keep only where the two can differ meaningfully,
   and it is bounded to these two values — every other published value is stored as published,
-  byte for byte within its trimmed bounds.
+  byte for byte within its trimmed bounds and, for the stated duration alone, within the length
+  bound named below.
 
   **Surrounding whitespace is not a published value.** The source pads its text fields out to
   fixed widths, so a value arrives carrying spaces that carry no information: they are an
@@ -591,7 +593,8 @@ One decision remains outside this spec:
   touched. A value that is **only** whitespace published nothing and is stored as absent, on the
   same rule that stores an uninterpretable date as no date.
 
-  This is a narrowing of "as published" in the same sense as the two above, and a much smaller
+  This is a narrowing of "as published" in the same sense as the interpreted values above, and a
+  much smaller
   one: it discards only characters the source itself does not treat as content. It is bounded
   deliberately — trimming further, to collapse internal runs or fold case, would start merging
   values that genuinely differ, which is what R7's *store what is published* forbids and what
@@ -612,7 +615,8 @@ One decision remains outside this spec:
   operador — not the name that contract was published under — and that operador's fiscal
   identifier in the canonical form SPEC-0006 R3 holds it in.
 
-  Neither exception is a reason to **reject** a contract. A published amount or date that cannot
+  None of these narrowings is a reason to **reject** a contract. A published amount or date that
+  cannot
   be interpreted leaves that value absent, the contract is stored like any other, and it takes no
   part in the ordering it cannot support, being ordered last when sorting by the value it lacks.
   A contract with **no date** belongs to no year and is reached through R19's **undated**
@@ -769,13 +773,13 @@ One decision remains outside this spec:
     canonical one (SPEC-0006 R3), with nothing added that the source did not publish.
 40. **(R27)** Every value displayed matches what the official source publishes for that
     contract, with no value corrected, normalised, inferred, or enriched from elsewhere —
-    **except the three R27 names**: the publication date, which is displayed as the date it was
+    **except the four R27 names**: the publication date, which is displayed as the date it was
     interpreted to rather than as its published text; the awardee, whose stored name is its
     operador's rather than that contract's and whose fiscal identifier is canonical
-    (SPEC-0006 R3); and every text value's **surrounding whitespace**,
-    which is removed on the way in. A text value differing from its published form in any way
-    other than leading and trailing whitespace is a defect — save the stated duration, capped at
-    64 characters, which is the only bounded value and is never expected to reach its bound.
+    (SPEC-0006 R3); every text value's **surrounding whitespace**, which is removed on the way
+    in; and the **stated duration**, capped at 64 characters, the only bounded value and never
+    expected to reach its bound. A text value differing from its published form in any other way
+    is a defect.
 41. **(R27)** A displayed duration is accompanied by an indication that the source frequently
     publishes a per-Órgano default rather than a per-contract value.
 42. **(R27)** A contract whose published amount or publication date cannot be interpreted is

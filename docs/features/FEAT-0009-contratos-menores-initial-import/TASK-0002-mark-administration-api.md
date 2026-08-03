@@ -1,7 +1,7 @@
 ---
 feat: FEAT-0009
 domain: backend
-adrs: [0002, 0005, 0006, 0010, 0012, 0016]
+adrs: [0002, 0005, 0006, 0010, 0012, 0020]
 status: todo
 depends_on: [TASK-0001]
 ---
@@ -13,7 +13,7 @@ two write operations and the administrator's catalogue read. Authored contract-f
 [`docs/api/openapi.yaml`](../../api/openapi.yaml)
 ([ADR-0010](../../architecture/0010-design-first-openapi-contract.md)), under the reserved
 `/api/` prefix ([ADR-0006](../../architecture/0006-reserved-api-url-prefix.md)), named per
-[ADR-0016](../../architecture/0016-rest-resource-naming.md), secured per
+[ADR-0020](../../architecture/0020-actions-as-verbs-in-rest-paths.md), secured per
 [ADR-0005](../../architecture/0005-session-based-authentication.md) and carrying
 [ADR-0012](../../architecture/0012-rate-limit-http-contract.md)'s rate-limit contract.
 

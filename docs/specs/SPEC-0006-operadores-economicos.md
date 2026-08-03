@@ -107,14 +107,16 @@ optimised. R11 and R14 here follow that, as this spec said they must. The reason
 publication year and this spec's operadores list has no such scope, which is why R14 states
 its own dataset and reads the deferral as the larger bet of the two.
 
-One decision remains open:
+One decision has since been taken:
 
-- **Whether the catalogue is stored state or computed on read.** R2 says the catalogue is
-  derived; it does not say whether it is maintained as its own stored projection or assembled
-  from the contracts at query time. That choice decides whether R7's lifecycle happens
-  automatically or has to be driven, and whether R14's reads are viable at all over hundreds
-  of thousands of operadores. It is architecturally significant and should be an ADR before a
-  feature settles it.
+- **Whether the catalogue is stored state or computed on read**, which this spec left open as
+  architecturally significant, is settled by
+  [ADR-0018](../architecture/0018-operadores-as-a-stored-projection.md): the catalogue is
+  **stored state maintained by the import**, with each contract carrying a foreign key to its
+  operador. That record is `proposed`, so a feature building directly onto it should confirm its
+  status first. What the choice decides — whether R7's lifecycle happens automatically or has to
+  be driven, and whether R14's reads are viable over hundreds of thousands of operadores — is
+  argued there, not here.
 
 ## Requirements
 
@@ -172,8 +174,9 @@ One decision remains open:
   name, whatever its contracts' dates look like.
 - **R5** — An identifier is **unusable** when it is absent, or empty once surrounding
   whitespace is ignored. Such a contract yields **no** operador — never an invented or
-  placeholder one — while remaining stored, browsable and displaying its awardee's name as its
-  own family requires ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R7). Nothing
+  placeholder one — while remaining stored and browsable, showing **no awardee at all**, since
+  under [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R7 the awardee is held on the
+  operador that award did not produce (SPEC-0005 #11). Nothing
   beyond the emptiness test is validated: the source publishes irregular but genuine
   identifiers, and rejecting them would discard real awards.
 - **R6** — Awardees that are **natural persons** and those that are **legal entities** are
@@ -202,8 +205,9 @@ One decision remains open:
   names, creating that operador if no contract named it before; an operador left with no
   visible contracts becomes unreachable under R7, however that came about; and a contract that
   becomes visible again — newly imported, or restored after withdrawal — makes its operador
-  reachable again. R4's display name and identifier follow from whatever the contracts say
-  after the change, not from what they said when the operador first appeared.
+  reachable again. R4's name follows from whatever the contracts say after the change, not from
+  what they said when the operador first appeared; the canonical identifier of R3 is unchanged by
+  construction, being reached from every contract identically.
 
 - **R15** — The system retains **every name an operador has been published under**, not only
   the one R4 selects. The R4 winner is the operador's **principal name**; every other distinct
@@ -230,8 +234,9 @@ One decision remains open:
   be done from stored data today and names it as the projection's real price. With the names
   retained, the fallback is a choice among rows the system already holds rather than a re-read of
   every contract. **It does not restore per-contract spelling.** R13 shows an operador's history
-  under one spelling, and knowing that a name exists is not knowing which contract published it,
-  so #5 is unaffected: this retains the *set* of names an operador has borne, not a per-row
+  under one name, and knowing a name and the last contract to publish it is not knowing which of
+  the others carried it,
+  so #25 is unaffected: this retains the *set* of names an operador has borne, not a per-row
   record.
 
   **The fiscal identifier needs no equivalent.** R3 holds one canonical identifier per operador,
@@ -293,8 +298,10 @@ One decision remains open:
   contract's publication at the official source, so a row here is as verifiable as a row there.
   A row does **not** repeat the family it belongs to: the section it sits in already names it.
   It **does** state its awardee, even though every row on this page was awarded to the operador
-  the page is about, because R3 matches identifier spellings that R4 then declines to display —
-  so the row is the only place the published variance is visible, and R13 requires it to be.
+  the page is about, so that a row carries its own meaning: a row copied, cited or read out of
+  the surrounding page still says who was paid, exactly as it does on an Órgano's list. It is not
+  stating a per-contract variant — R3 holds one canonical identifier and R4 one name, and #25
+  requires every row to show those same two.
 
   Each row's **awarding Órgano is followable to that Órgano's own page**, under the routes
   [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R14 fixes — the mirror of the
@@ -401,8 +408,9 @@ One decision remains open:
   bulk export of a directory is a materially different risk from paging one.
 - **R13** — Every value displayed about an operador — its name, its fiscal identifier, and
   every contract attribute in its history — is exactly as the official source published it,
-  with no correction, normalisation, inference or enrichment from any other source. The
-  matching equivalence of R3 governs comparison only, never display.
+  with no correction, normalisation, inference or enrichment from any other source, save the two
+  exceptions below. R3's canonical form governs both the matching **and** the display of the
+  fiscal identifier; it governs nothing else.
 
   **Surrounding whitespace is not covered by "exactly".** The source pads its text
   fields out to fixed widths, and
@@ -509,7 +517,9 @@ One decision remains open:
    The canonical form is reached from every published spelling identically, so no contract's
    arrival can move it.
 8. **(R5)** A contract published with an absent or whitespace-only fiscal identifier is
-   stored, appears in its Órgano's list, and displays its awardee name — while creating no
+   stored and appears in its Órgano's list showing **no awardee** — the awardee is held on the
+   operador that award did not produce
+   ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) #11) — while creating no
    operador and appearing in no operador's history, and offering no awardee route that leads
    nowhere.
 9. **(R5)** A contract published with an irregular but non-empty identifier **is** attached

@@ -27,7 +27,7 @@ its rows — so a cursor stored on a run is prunable, leaving a half-loaded Órg
 resume from and a multi-day walk to redo at one request per second.
 
 ## Scope
-- A migration (next free `V` number) creating `contratos_menores_import_state`, keyed by
+- A migration (next free `V` number) creating `contrato_menor_import_state`, keyed by
   `organo_id` (primary key, FK to `organo_contratacion`):
   - `state TEXT NOT NULL` — `NEVER_STARTED` / `INCOMPLETE` / `COMPLETE`;
   - `cursor_date DATE` — the point a resumption continues from;

@@ -119,7 +119,9 @@ answer depends on measurements R14 has not taken:
   first operadores feature, and neither is R7's "unreachable when no visible contract remains".
   Maintaining a name forward is a comparison; maintaining it backward — when the winning
   contract is withdrawn or corrected out — needs either a recomputation for that one operador or
-  a visible-contract count on the row. Both are local to one operador and both remain open. The
+  a visible-contract count on the row. Both are local to one operador and both remain open.
+  SPEC-0006 R15 supplies the **data** a backward fix needs, by retaining every name an operador
+  has borne; it does not perform the fix, and nothing here does. The
   obligation this ADR does accept is that whatever drives them writes to **this** row rather
   than introducing a second, computed notion of an operador.
 - **Whether reachability is a stored count or a query.** R7 makes an operador reachable exactly
@@ -154,14 +156,14 @@ answer depends on measurements R14 has not taken:
   operadores feature does not build that something. This is the real price, and it is why the
   paragraph above names it as unsettled rather than silently deferring it.
 
-  **SPEC-0006 R15 narrows this to the identifier spelling.** The catalogue retains every name an
-  operador has been published under, each with the rank it was last seen at, so demoting a stale
-  **name** becomes a choice among rows already stored rather than a re-read of every contract.
-  Nothing yet performs that demotion — R7's lifecycle still owns it — but the data it needs is
-  written when it can be, during the import, rather than left to a backfill only a re-import
-  could supply. The identifier half of this cost **no longer exists**: R3 holds one canonical
-  identifier reached from every contract identically, so there is no published spelling that
-  could go stale. Between R15 and canonicalisation, this open question is closed.
+  **Two things narrow this cost without removing it.** The **identifier half no longer exists**:
+  R3 holds one canonical identifier reached from every contract identically, so there is no
+  published spelling that could go stale. And for the **name**, SPEC-0006 R15 retains every name
+  an operador has been published under, each with the rank it was last seen at, so demoting a
+  stale one becomes a choice among rows already stored rather than a re-read of every contract.
+  **The demotion itself is still not performed** — R7's lifecycle owns it, and the open question
+  above stands. What R15 buys is that the fix, when built, needs no backfill only a re-import
+  could supply.
 - **The import gets slower and more coupled.** Storing a contrato menor now also reads and
   possibly writes an operador row, so the batch commit grows and the hot path of a multi-day job
   acquires a second table. The contention is bounded by R22's one-import-at-a-time guard, but it

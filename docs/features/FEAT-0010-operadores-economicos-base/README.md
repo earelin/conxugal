@@ -20,6 +20,12 @@ It settles nothing about identity that
 the catalogue is **stored state maintained by the import**, keyed by the fiscal identifier in
 R3's canonical form, with each contract carrying a foreign key to its operador.
 
+> **ADR-0018 is `proposed`, not accepted**, and this feature builds directly onto it — the whole
+> of tasks 2 to 4 rests on the catalogue being stored rather than computed. Its status should be
+> settled before those tasks are picked up, on the same reasoning FEAT-0009 states for ADR-0017.
+> Nothing below hedges against the decision changing: if it does, this feature is rewritten
+> rather than adjusted.
+
 **No operador is readable yet.** R8's list and lookup, R9's cross-Órgano contract history, R10's
 filters and sorts and R11's paging are all later features — this one stops at the stored,
 correctly-matched catalogue those surfaces will read, exactly as FEAT-0006 stopped at the stored
@@ -49,11 +55,12 @@ import use case
 > features interleave without a cycle.
 
 ## Scope
-- **Domain (the operador):** an `OperadorEconomico` aggregate — a system-assigned `OperadorId`
+- **Domain (the operador):** an `OperadorEconomico` aggregate — a system-assigned
+  `OperadorEconomicoId`
   ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)), the **canonical fiscal
   identifier** it is both matched and displayed on (R3), and the **published name** with the rank
   it was taken from — plus an `OperadorRepository` port (find by fiscal identifier, insert, update
-  the name).
+  the name, retain a published name).
 - **Domain (the rules):** R3's canonicalisation, the R5 emptiness test, and the R4 ranking, as
   pure functions with no store and no framework, unit-tested against the over-merge and
   under-merge cases SPEC-0006 states as separate criteria.
@@ -71,7 +78,7 @@ import use case
   batch, creating the operador when no contract has named it before, advancing its name when the
   contract outranks the incumbent, and retaining the name it published.
 - **Infrastructure:** a migration creating `operador_economico` with a **unique** fiscal
-  identifier and `operador_economico_nome_alternativo` unique on (operador, name), and the
+  identifier and `operador_economico_nome_alternativo` unique on (operador, `name`), and the
   Micronaut Data JDBC implementation of the ports. The nullable `operador_economico_id` foreign
   key is **created with `contrato_menor` by FEAT-0009**, not added here — see the ordering note
   above.
@@ -200,13 +207,13 @@ erDiagram
     }
     NOME_ALTERNATIVO {
         uuid operador_economico_id FK
-        text nome UK "unique with the FK"
+        text name UK "unique with the FK"
         date last_published_date
         bigint last_published_source_id
     }
 ```
 
-- **One row per distinct name, not per award.** The table is unique on (operador, name), so an
+- **One row per distinct name, not per award.** The table is unique on (operador, `name`), so an
   operador with 10 000 contracts under one name holds **one** alternative-name row's worth of
   history, not 10 000. The retained fact is *this operador has been known by this name, most
   recently then* — which is why the write is an upsert that advances a date rather than an insert.
@@ -227,10 +234,11 @@ erDiagram
   every contract. **This feature does not build the fallback** — R7's lifecycle is still out of
   scope below — it makes it buildable without a backfill that only a re-import could supply.
 - **What it does not buy.** Knowing an operador has borne a name is not knowing *which contract*
-  published it, so SPEC-0006 #5's per-contract spelling stays amended: a history row still shows
+  published it, so SPEC-0006 #25's per-row name spelling stays amended: a history row still shows
   the operador's one name. The **fiscal identifier needs no equivalent** — R3 holds one canonical
   form reached from every contract identically, so there is no spelling that could go stale and
-  nothing to demote. Between this and canonicalisation, ADR-0018's open question is closed.
+  nothing to demote. **ADR-0018's open question is narrowed, not closed:** the data a backward fix
+  needs now exists, but nothing performs the demotion, and R7's lifecycle still owns it.
 
 ### The link, and where it is written
 - `contrato_menor.operador_economico_id` is a **nullable** foreign key — null exactly when R5 says
@@ -273,32 +281,35 @@ features that build views.
 
 ## Sequencing (tasks, one small change each)
 The numbering is the order the pieces make sense in, not a chain: **1 and 2 have no
-dependencies**, and 2 is the one FEAT-0009 waits on, so it can be taken first.
+dependencies**, and 2 and 3 are the ones FEAT-0009 waits on, so 2 can be taken first.
 
-1. **Matching, emptiness and ranking rules** — `OperadorMatchKey` (R3's equivalence and R5's
-   emptiness test) and the R4 rank comparison, as pure domain functions with no store and no
-   framework. Unit-tested from both sides: identifiers differing only in padding or case reduce
-   to one key; identifiers differing in internal spacing, punctuation or any character do not.
-   Needed by task 4, not by tasks 2 or 3. *(SPEC-0006 #3 matching half, #4, #9)*
-2. **`OperadorEconomico` domain model + repository port** — the aggregate (`OperadorId` identity,
+1. **Canonicalisation, emptiness and ranking rules** — the fiscal identifier's canonical form
+   (R3) and R5's emptiness test, plus the R4 rank comparison, as pure domain functions with no
+   store and no framework. Unit-tested from both sides: identifiers differing only in padding or
+   case canonicalise to one value; identifiers differing in internal spacing, punctuation or any
+   character do not.
+   Needed by task 4, not by tasks 2 or 3. *(SPEC-0006 #3 matching half, #4, #7, #9)*
+2. **`OperadorEconomico` domain model + repository port** — the aggregate
+   (`OperadorEconomicoId` identity,
    canonical fiscal identifier, published name, and the rank the name was taken from), the
    `NomeAlternativo` it holds many of (the published name plus the rank it was last seen at), and
    the `OperadorRepository` port: find by fiscal identifier, insert, update the name, retain a
    name. **The task that unblocks FEAT-0009**, whose contract aggregate declares
-   an association to this type. *(SPEC-0006 #2, #10 stored-attribute half, #35)*
+   an association to this type. *(SPEC-0006 #2, #3, #7, #10 stored-attribute half, #30, #33,
+   #35, #36)*
 3. **Operador store** — the migration creating `operador_economico` with a **unique** fiscal id
-   and `operador_economico_nome_alternativo` **unique on (operador, name)**, and the Micronaut
+   and `operador_economico_nome_alternativo` **unique on (operador, `name`)**, and the Micronaut
    Data JDBC implementation of the port, including the name upsert that advances a date rather
    than inserting a duplicate. It touches `contrato_menor` **not at all**: the nullable
    `operador_economico_id` foreign key and its index are created by FEAT-0009's store task, which
-   is why this one lands **before** it. *(SPEC-0006 #3 one-operador half, #4, #34)*
+   is why this one lands **before** it. *(SPEC-0006 #3 one-operador half, #4, #7, #30, #34,
+   #35, #37)*
 4. **Derivation during the contratos menores import** — resolve each stored contract to its
    operador inside the batch transaction: no operador for an unusable identifier, find-or-create
    otherwise, advance the name when the contract outranks the incumbent, **retain the
    name the contract published**, and repoint the reference when a re-import changes a contract's
    published identifier. *Depends on FEAT-0009's single-Órgano import task.* *(SPEC-0006 #2, #6
-   storage half, #7, #8 no-operador half, #9, #14 moves-and-creates half, #30 no-normalisation
-   half, #33, #36, #37)*
+   storage half, #7, #8 no-operador half, #9, #14 moves-and-creates half, #33, #34, #37)*
 
 **Criteria this feature deliberately leaves incomplete**, so no task claims what it cannot prove:
 every *displayed* and *reachable* half — criteria #1, #5, #6's display, #8's list appearance,
@@ -310,7 +321,7 @@ SPEC-0005 R13's withdrawal.
 - **The same identifier under three spellings** — ` B12345678 `, `b12345678`, `B12345678` — is
   one operador holding `B12345678`, whichever of the three arrives first. No contract keeps the
   variant it published and the canonical form is reached from all three identically, so no
-  arrival order changes it. *(SPEC-0006 #3, #5, #7)*
+  arrival order changes it. *(SPEC-0006 #3, #7)*
 - **Identifiers differing by one character, or by internal spacing or punctuation** — two
   operadores. Canonicalisation trims and upper-cases and does nothing else.
   *(SPEC-0006 #4)*
