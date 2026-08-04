@@ -78,11 +78,17 @@ what changed:
 Flyway is pointed at two locations — `db/migration`, which every environment runs, and
 `db/migration-local`, which only `MICRONAUT_ENVIRONMENTS=local` adds (a developer's compose
 stack and CI). They are **one numbered sequence with one history table**, so a version used
-in either is used in both: `db/migration` skips `V4` and `V12` because `migration-local`
-holds them. Take the next free number across *both* folders when adding a migration —
-reusing one fails every local and CI boot with `Found more than one migration with version N`,
-and the shared set is where the gap is easiest to miss, since its own files simply stop at
-`V11`.
+in either is used in both: `db/migration` skips `V4` because `migration-local` holds it. Take
+the next free number across *both* folders when adding a versioned migration — reusing one
+fails every local and CI boot with `Found more than one migration with version N`, and the
+gap is easiest to miss from the shared set, whose own files simply step over it.
+
+**Seed data belongs in a repeatable migration** (`R__…`), which takes no number and so cannot
+collide. `db/migration-local/R__seed_test_catalogue.sql` is the model: a `${flyway:timestamp}`
+placeholder on the first line rewrites its checksum on every run, which makes Flyway re-apply
+it at every start, and every statement upserts rather than inserts. Fixtures the contract test
+deletes or renames are therefore back in place next time the application comes up, without a
+volume wipe.
 
 ## Before committing
 

@@ -57,10 +57,14 @@ repository root.
   `GET /api/admin/users` hands it the id of the administrator the run authenticates as, which
   it then feeds to `POST /api/admin/users/{id}/enabled` — locking the rest of the run out.
   Deliberate state transitions belong to ADR-0007's suite.
-- `db/migration-local/V12__seed_test_catalogue.sql` seeds a catalogue, a taxonomy and a
+- `db/migration-local/R__seed_test_catalogue.sql` seeds a catalogue, a taxonomy and a
   throwaway account at **fixed identifiers**, so generated requests reach the operations'
   real logic instead of stopping at 404. It is a local-environment migration, which is the
-  set both a developer's compose stack and CI run.
+  set both a developer's compose stack and CI run. It is **repeatable, and carries a
+  `${flyway:timestamp}` placeholder so it runs on every start**: the run deletes and renames
+  these rows, and restoring them at start-up is what lets a second run locally begin from the
+  same place as the first, without a wipe. Being repeatable also keeps the fixtures out of the
+  versioned sequence the two migration folders share.
 
 Schemathesis is a Python tool and this repository has no Python. The Docker image keeps it
 that way: the same pinned image runs locally and in CI, and no toolchain is added to
@@ -85,7 +89,9 @@ contributor setup beyond the Docker daemon the acceptance suite already needs.
 ### Cons
 - **The run mutates the target's data** — it creates accounts and taxonomy terms, and deletes
   them. It is safe only against a disposable instance; pointed at a developer's own database it
-  will leave rows behind and disable seeded accounts. Nothing in the script prevents that.
+  will leave rows behind and disable seeded accounts. Nothing in the script prevents that. The
+  seed restores the rows it *owns* on the next start, but nothing collects the ones the run
+  invents.
 - The image tag is bumped by hand: `.github/dependabot.yml` covers npm, Gradle and GitHub
   Actions, and Dependabot does not read shell scripts.
 - `--network host` makes the script Linux-first.

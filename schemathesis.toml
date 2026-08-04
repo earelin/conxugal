@@ -42,7 +42,7 @@ enabled = false
 
 # Generated UUIDs never match a real row, so without these the operations below only ever
 # exercise their 404 branch. The values are seeded by
-# db/migration-local/V12__seed_test_catalogue.sql.
+# db/migration-local/R__seed_test_catalogue.sql, which restores them on every start.
 [[operations]]
 include-path = "/api/admin/organo/{id}/termo"
 parameters = { "path.id" = "cccccccc-cccc-7ccc-8ccc-cccccccccccc" }
