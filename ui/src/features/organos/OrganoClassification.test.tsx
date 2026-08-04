@@ -177,7 +177,7 @@ describe('órgano classification', () => {
 
     expect(rowNames()).toEqual([vivenda.name, turismo.name]);
     expect(
-      screen.getByText(`2 ${strings.admin.organos.countUnclassifiedOther}`),
+      screen.getByText(`2 ${strings.admin.organos.countUnclassified.plural}`),
     ).toBeInTheDocument();
     // The worklist is the null-termoId slice of the two reads above, not a third
     // request: `disableNetConnect` rejects any other call, and a rejected read

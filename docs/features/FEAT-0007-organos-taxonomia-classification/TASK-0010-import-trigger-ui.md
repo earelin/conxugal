@@ -2,7 +2,7 @@
 feat: FEAT-0007
 domain: frontend
 adrs: [0003, 0004, 0015]
-status: todo
+status: done
 depends_on: [TASK-0007]
 ---
 
@@ -40,6 +40,29 @@ annotated "already running" state.
   absent from `docs/api/openapi.yaml` and FEAT-0006's own TASK-0005 is `todo`, so the
   discriminator distinguishing the three outcomes does not exist yet. This task cannot be
   built against a shape that has not been decided; it waits rather than guessing one.
+
+  > **Superseded on landing.** The block lifted before this task was picked up:
+  > FEAT-0006's TASK-0005 is `done` and `POST /api/admin/organos/import` is contracted.
+  > The contract **resolved** the misreport above rather than leaving it to this screen.
+  > `ImportOutcome.status` enumerates `SUCCESS` and `ALREADY_RUNNING` only, and
+  > `ImportOrganosController` raises a `FAILURE` as a **500** carrying
+  > `urn:conxugal:problem-type:organo-import-failed`, so a zero-count success body is
+  > unreachable on the wire and the *"never a success banner with zero counts"* criterion
+  > is met structurally as well as in the rendering.
+  >
+  > What changes is where the fourth state comes from: a source failure and a transport
+  > failure share a status, so they are told apart by problem **`type`**, the rule
+  > `organoRefusal.ts` and `termoRefusal.ts` already follow — not by a `status` field, and
+  > not by an HTTP status. That is what keeps *"distinct from a `FAILURE` outcome"*
+  > meaningful: the source failure says the source is unreachable and the catalogue is
+  > untouched, a bare 5xx says only to try again.
+  >
+  > The type was shipped in the handler but documented as the shared generic
+  > `InternalServerError`, so the contract did not carry the thing the UI keys on. Under
+  > [ADR-0010](../../architecture/0010-design-first-openapi-contract.md) the contract is
+  > authoritative, so this task inlines that 500 in `docs/api/openapi.yaml` and names the
+  > type. No backend change — the behaviour already ships, proven by
+  > `ImportOrganosControllerIntegrationTest`.
 - Disable the button and show progress while a request is in flight, so the obvious
   double-click does not queue a second import.
 - Refresh the catalogue read afterwards and re-run the builder, so newly imported Órganos

@@ -1,6 +1,7 @@
 import { Box, Breadcrumbs, Card, Divider, Group, Stack, Text, Title } from '@mantine/core';
 import { useState } from 'react';
 
+import { singularOrPlural, type Word } from '../../shared/lib/plural';
 import { strings } from '../../shared/lib/strings';
 import { useClearOrgano } from './organoMutations';
 import { placementRefusal } from './organoRefusal';
@@ -26,8 +27,7 @@ interface Pane {
   trail: Crumb[];
   organos: Organo[];
   emptyMessage: string;
-  countOne: string;
-  countOther: string;
+  countWord: Word;
 }
 
 function unclassifiedPane(unclassified: Organo[]): Pane {
@@ -37,8 +37,7 @@ function unclassifiedPane(unclassified: Organo[]): Pane {
     trail: [{ key: 'sen-clasificar', label: strings.admin.organos.unclassified }],
     organos: unclassified,
     emptyMessage: strings.admin.organos.unclassifiedEmpty,
-    countOne: strings.admin.organos.countUnclassifiedOne,
-    countOther: strings.admin.organos.countUnclassifiedOther,
+    countWord: strings.admin.organos.countUnclassified,
   };
 }
 
@@ -50,8 +49,7 @@ function termoPane(path: TermoNode[]): Pane {
     trail: path.map((node) => ({ key: node.id, label: node.name })),
     organos: termo.organos,
     emptyMessage: strings.admin.organos.termEmpty,
-    countOne: strings.admin.organos.countInTermOne,
-    countOther: strings.admin.organos.countInTermOther,
+    countWord: strings.admin.organos.countInTerm,
   };
 }
 
@@ -144,7 +142,7 @@ export function TermoContentCard({
 
       {count > 0 && (
         <Text size="xs" c="dimmed" mt="sm">
-          {count} {count === 1 ? pane.countOne : pane.countOther}
+          {count} {singularOrPlural(count, pane.countWord)}
         </Text>
       )}
     </Card>
