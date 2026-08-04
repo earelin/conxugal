@@ -7,6 +7,7 @@ plugins {
 
 dependencies {
     implementation(project(":domain"))
+    implementation(project(":commons"))
 
     runtimeOnly(project(":infrastructure"))
 
@@ -27,6 +28,7 @@ dependencies {
     testImplementation(libs.micronaut.http.client)
     testImplementation(libs.micronaut.test.junit5)
     testImplementation(libs.mockito.junit.jupiter)
+    testImplementation(libs.micronaut.serde.support)
     testImplementation(libs.assertj.core)
 }
 

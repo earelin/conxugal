@@ -5,11 +5,17 @@ on:
     branches: [trunk]
     paths:
       - "server/**"
+      - "docs/api/openapi.yaml"
+      - "schemathesis.toml"
+      - "scripts/contract-test.sh"
       - ".github/workflows/server-ci.yml"
   push:
     branches: [trunk]
     paths:
       - "server/**"
+      - "docs/api/openapi.yaml"
+      - "schemathesis.toml"
+      - "scripts/contract-test.sh"
       - ".github/workflows/server-ci.yml"
 
 # Pushes to trunk are left uncancellable: they are the runs that populate the
@@ -119,6 +125,13 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
         run: ./gradlew acceptance -Dapp.baseUrl=http://localhost:8080
+
+      # Last, because it generates data against the same instance: run before the suite above
+      # and the rows it leaves behind would be there to be read, and only the teardown below
+      # discards them.
+      - name: Verify the API conforms to the OpenAPI contract
+        working-directory: ${{ github.workspace }}
+        run: scripts/contract-test.sh
 
       - name: Dump docker compose logs on failure
         if: failure()

@@ -1,0 +1,104 @@
+# Schemathesis configuration for the contract test of ADR-0010 / ADR-0021.
+#
+# Run it with scripts/contract-test.sh against a running instance.
+#
+# docs/api/openapi.yaml is the authoritative contract: a violation reported here is a
+# defect in the controllers, not a reason to loosen this file.
+
+# Report every violation in one run rather than stopping at the first, so a single
+# invocation shows the whole picture — same principle as scripts/docs-lint.sh.
+continue-on-failure = true
+
+
+# The contract declares no OpenAPI links, so the stateful phase can only guess at how
+# operations chain — and its one reliable discovery here is that GET /api/admin/users
+# hands it the id of the very administrator this run authenticates as, which it then
+# feeds to POST /api/admin/users/{id}/enabled. State-transition scenarios belong to the
+# acceptance suite (ADR-0007), which drives them deliberately.
+[phases.stateful]
+enabled = false
+
+[generation]
+max-examples = 50
+# Same inputs on every run, so a red CI build reproduces locally.
+deterministic = true
+
+# Bound to the SESSION cookie the contract declares as its security scheme rather than
+# sent as a raw Cookie header: the checks that probe authentication work by dropping the
+# security parameter, and a raw header would survive that and make every operation look
+# like it serves unauthenticated callers.
+[parameters]
+"cookie.SESSION" = "${CONTRACT_TEST_SESSION}"
+
+# Server-Sent Events: the response is an unbounded stream of frames, not a JSON body, and
+# the request never completes. openapi.yaml records the same limitation on the operation.
+[[operations]]
+include-path = "/api/admin/metrics"
+enabled = false
+
+# Generated UUIDs never match a real row, so without these the operations below only ever
+# exercise their 404 branch. The values are seeded by
+# db/migration-local/R__seed_test_catalogue.sql, which restores them on every start.
+[[operations]]
+include-path = "/api/admin/organo/{id}/termo"
+parameters = { "path.id" = "cccccccc-cccc-7ccc-8ccc-cccccccccccc" }
+
+# The delete gets a term of its own: pointed at the one the rename uses, the first delete to
+# run would leave every later rename with nothing but its 404 branch to exercise.
+# A move names its destination in the body, where no override reaches: most generated parents
+# are UUIDs of terms that do not exist, and 404 is what the contract declares for that. Neither
+# phase raises this alone — it needs the state a whole run builds up — and the operation is
+# covered deliberately by the acceptance suite and by TaxonomiaAdminValidationIntegrationTest.
+[[operations]]
+include-name = "PUT /api/admin/organos/taxonomia/termo/{id}/parent"
+warnings = false
+parameters = { "path.id" = "33333333-3333-7333-8333-333333333333" }
+
+[[operations]]
+include-name = "PATCH /api/admin/organos/taxonomia/termo/{id}"
+parameters = { "path.id" = "44444444-4444-7444-8444-444444444444" }
+
+# A delete consumes its target, so one pinned term would leave every later delete with
+# nothing but its 404 branch. Drawing from a pool of disposable terms keeps it reaching the
+# real thing.
+[dictionaries.disposable-termos]
+values = [
+  "66666666-6666-7666-8666-666666000001",
+  "66666666-6666-7666-8666-666666000002",
+  "66666666-6666-7666-8666-666666000003",
+  "66666666-6666-7666-8666-666666000004",
+  "66666666-6666-7666-8666-666666000005",
+  "66666666-6666-7666-8666-666666000006",
+  "66666666-6666-7666-8666-666666000007",
+  "66666666-6666-7666-8666-666666000008",
+  "66666666-6666-7666-8666-666666000009",
+  "66666666-6666-7666-8666-666666000010",
+  "66666666-6666-7666-8666-666666000011",
+  "66666666-6666-7666-8666-666666000012",
+  "66666666-6666-7666-8666-666666000013",
+  "66666666-6666-7666-8666-666666000014",
+  "66666666-6666-7666-8666-666666000015",
+  "66666666-6666-7666-8666-666666000016",
+  "66666666-6666-7666-8666-666666000017",
+  "66666666-6666-7666-8666-666666000018",
+  "66666666-6666-7666-8666-666666000019",
+  "66666666-6666-7666-8666-666666000020",
+  "66666666-6666-7666-8666-666666000021",
+  "66666666-6666-7666-8666-666666000022",
+  "66666666-6666-7666-8666-666666000023",
+  "66666666-6666-7666-8666-666666000024",
+  "66666666-6666-7666-8666-666666000025",
+  "66666666-6666-7666-8666-666666000026",
+  "66666666-6666-7666-8666-666666000027",
+  "66666666-6666-7666-8666-666666000028",
+  "66666666-6666-7666-8666-666666000029",
+  "66666666-6666-7666-8666-666666000030"
+]
+
+[[operations]]
+include-name = "DELETE /api/admin/organos/taxonomia/termo/{id}"
+parameters = { "path.id" = { dictionary = "disposable-termos" } }
+
+[[operations]]
+include-path = "/api/admin/users/{id}/enabled"
+parameters = { "path.id" = "55555555-5555-7555-8555-555555555555" }
