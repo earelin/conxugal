@@ -50,8 +50,13 @@ function outcome(status: ImportOutcome['status'], counts: Partial<ImportOutcome>
   return { status, added: 0, refreshed: 0, deactivated: 0, ...counts };
 }
 
+/** The one request this suite is about; every case answers it differently. */
+function postImport() {
+  return nock(BASE_URL).post(IMPORT_PATH);
+}
+
 function mockImport(body: ImportOutcome) {
-  return nock(BASE_URL).post(IMPORT_PATH).reply(200, body);
+  return postImport().reply(200, body);
 }
 
 /**
@@ -64,13 +69,11 @@ function heldImport(body: ImportOutcome) {
   const answered = new Promise<void>((resolve) => {
     release = resolve;
   });
-  nock(BASE_URL)
-    .post(IMPORT_PATH)
-    .reply(200, (_uri, _requestBody, respond) => {
-      void answered.then(() => {
-        respond(null, body);
-      });
+  postImport().reply(200, (_uri, _requestBody, respond) => {
+    void answered.then(() => {
+      respond(null, body);
     });
+  });
   return { release: () => release() };
 }
 
@@ -80,7 +83,7 @@ function heldImport(body: ImportOutcome) {
  * to the generic transport message.
  */
 function mockSourceFailure() {
-  return nock(BASE_URL).post(IMPORT_PATH).reply(
+  return postImport().reply(
     500,
     {
       type: 'urn:conxugal:problem-type:organo-import-failed',
@@ -227,7 +230,7 @@ describe('Órganos import trigger', () => {
     const user = userEvent.setup();
     await renderLoadedSection();
 
-    nock(BASE_URL).post(IMPORT_PATH).reply(500);
+    postImport().reply(500);
 
     await user.click(importButton());
 
@@ -272,7 +275,7 @@ describe('Órganos import trigger', () => {
     const user = userEvent.setup();
     await renderLoadedSection();
 
-    nock(BASE_URL).post(IMPORT_PATH).reply(403);
+    postImport().reply(403);
 
     await user.click(importButton());
 
@@ -284,9 +287,7 @@ describe('Órganos import trigger', () => {
     const user = userEvent.setup();
     await renderLoadedSection();
 
-    nock(BASE_URL)
-      .post(IMPORT_PATH)
-      .reply(200, { status: 'PARTIAL', added: 0, refreshed: 0, deactivated: 0 });
+    postImport().reply(200, { status: 'PARTIAL', added: 0, refreshed: 0, deactivated: 0 });
 
     await user.click(importButton());
 
@@ -300,7 +301,7 @@ describe('Órganos import trigger', () => {
 
     const held = heldImport(outcome('SUCCESS', { added: 1 }));
     mockCatalogue([...CATALOGUE, turismo]);
-    const second = nock(BASE_URL).post(IMPORT_PATH).reply(200, outcome('SUCCESS'));
+    const second = postImport().reply(200, outcome('SUCCESS'));
 
     await user.click(importButton());
 
