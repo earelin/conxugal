@@ -3,6 +3,7 @@ import { IconCircleCheck, IconDownload, IconInfoCircle } from '@tabler/icons-rea
 import { type ReactNode, useState } from 'react';
 
 import { isHttpStatus, isProblemType } from '../../shared/lib/httpError';
+import { singularOrPlural, type Word } from '../../shared/lib/plural';
 import { strings } from '../../shared/lib/strings';
 import { ErrorAlert } from '../../shared/ui/ErrorAlert';
 import { type ImportOutcome, useImportOrganos } from './importOrganos';
@@ -12,15 +13,15 @@ const copy = strings.admin.organos.import;
 /** The type the server gives a source failure, so it reads as more than a 500. */
 const SOURCE_FAILURE = 'urn:conxugal:problem-type:organo-import-failed';
 
-function plural(count: number, one: string, other: string): string {
-  return `${count} ${count === 1 ? one : other}`;
+function counted(count: number, word: Word): string {
+  return `${count} ${singularOrPlural(count, word)}`;
 }
 
 function outcomeCounts({ added, refreshed, deactivated }: ImportOutcome): string {
   return [
-    plural(added, copy.addedOne, copy.addedOther),
-    plural(refreshed, copy.refreshedOne, copy.refreshedOther),
-    plural(deactivated, copy.deactivatedOne, copy.deactivatedOther),
+    counted(added, copy.added),
+    counted(refreshed, copy.refreshed),
+    counted(deactivated, copy.deactivated),
   ].join(' · ');
 }
 

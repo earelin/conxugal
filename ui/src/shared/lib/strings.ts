@@ -195,12 +195,11 @@ export const strings = {
       stateInactive: 'Inactivo',
       termEmpty: 'Este termo aínda non ten órganos.',
       unclassifiedEmpty: 'Non hai órganos sen clasificar.',
-      // Split by plural category rather than built by a helper so the pieces
-      // lift into a translation catalogue as they stand.
-      countInTermOne: 'órgano neste termo',
-      countInTermOther: 'órganos neste termo',
-      countUnclassifiedOne: 'órgano sen clasificar',
-      countUnclassifiedOther: 'órganos sen clasificar',
+      // Both forms of a counted noun travel as one entry, chosen by
+      // `singularOrPlural`: a catalogue lifting this out keeps the pair
+      // together, and no call site can take one form and forget the other.
+      countInTerm: { singular: 'órgano neste termo', plural: 'órganos neste termo' },
+      countUnclassified: { singular: 'órgano sen clasificar', plural: 'órganos sen clasificar' },
       errorTitle: 'Non se puido cargar a sección de Órganos',
       errorForbidden: 'Non tes permisos para ver esta información.',
       errorGeneric: 'Téntao de novo máis tarde.',
@@ -209,14 +208,10 @@ export const strings = {
         running: 'Importando…',
 
         successTitle: 'Importación completada',
-        // The three counts of the outcome, split by plural category like the
-        // section counts above and joined by the component that reads them.
-        addedOne: 'engadido',
-        addedOther: 'engadidos',
-        refreshedOne: 'actualizado',
-        refreshedOther: 'actualizados',
-        deactivatedOne: 'desactivado',
-        deactivatedOther: 'desactivados',
+        // The three counts of the outcome, joined by the component that reads them.
+        added: { singular: 'engadido', plural: 'engadidos' },
+        refreshed: { singular: 'actualizado', plural: 'actualizados' },
+        deactivated: { singular: 'desactivado', plural: 'desactivados' },
 
         // A normal answer, not a refusal: the guard is system-wide, so the
         // scheduled run holds it just as a second administrator would.

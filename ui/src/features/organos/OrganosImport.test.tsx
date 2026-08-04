@@ -143,7 +143,7 @@ describe('Órganos import trigger', () => {
     expect(await screen.findByText(copy.successTitle)).toBeInTheDocument();
     expect(
       screen.getByText(
-        `5 ${copy.addedOther} · 2 ${copy.refreshedOther} · 0 ${copy.deactivatedOther}`,
+        `5 ${copy.added.plural} · 2 ${copy.refreshed.plural} · 0 ${copy.deactivated.plural}`,
       ),
     ).toBeInTheDocument();
     // Polite, not assertive: a confirmation of what was asked for has no
@@ -164,7 +164,7 @@ describe('Órganos import trigger', () => {
 
     expect(
       await screen.findByText(
-        `1 ${copy.addedOne} · 1 ${copy.refreshedOne} · 1 ${copy.deactivatedOne}`,
+        `1 ${copy.added.singular} · 1 ${copy.refreshed.singular} · 1 ${copy.deactivated.singular}`,
       ),
     ).toBeInTheDocument();
   });
@@ -220,7 +220,7 @@ describe('Órganos import trigger', () => {
     // The misreport this screen exists to prevent.
     expect(
       screen.queryByText(
-        `0 ${copy.addedOther} · 0 ${copy.refreshedOther} · 0 ${copy.deactivatedOther}`,
+        `0 ${copy.added.plural} · 0 ${copy.refreshed.plural} · 0 ${copy.deactivated.plural}`,
       ),
     ).not.toBeInTheDocument();
     // A failed import is not a failed section: what was already read stays up.
