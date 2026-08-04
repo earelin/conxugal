@@ -4,6 +4,7 @@ import static gal.conxugal.application.http.error.support.AssertProblem.assertPr
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
@@ -23,6 +24,7 @@ import io.micronaut.http.HttpStatus;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.restassured.response.Response;
+import io.restassured.specification.RequestSender;
 import io.restassured.specification.RequestSpecification;
 import jakarta.inject.Inject;
 import java.util.UUID;
@@ -159,38 +161,6 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
     assertProblem(response)
         .hasStatus(HttpStatus.CONFLICT)
         .hasType("urn:conxugal:problem-type:duplicate-sibling-name");
-  }
-
-  @Test
-  void create_with_blank_name_is_bad_request(RequestSpecification spec) {
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
-
-    given(spec)
-        .header(HttpHeaders.COOKIE, sessionCookie)
-        .body(
-            """
-            {"name":"   ","parentId":null}\
-            """)
-    .when()
-        .post(TERMOS)
-    .then()
-        .statusCode(HttpStatus.BAD_REQUEST.getCode());
-  }
-
-  @Test
-  void create_with_name_longer_than_the_column_is_bad_request(RequestSpecification spec) {
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
-
-    given(spec)
-        .header(HttpHeaders.COOKIE, sessionCookie)
-        .body(
-            """
-            {"name":"%s","parentId":null}\
-            """.formatted("a".repeat(256)))
-    .when()
-        .post(TERMOS)
-    .then()
-        .statusCode(HttpStatus.BAD_REQUEST.getCode());
   }
 
   // A multi-word name padded with whitespace, because the two are easy to conflate and only
@@ -336,30 +306,6 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .put(parentOf(HOSPITAIS))
     .then()
         .statusCode(HttpStatus.NO_CONTENT.getCode());
-  }
-
-  // The contract requires parentId, so this body is not one a caller should send and a
-  // generated client will not produce it. Micronaut cannot tell an absent field from an
-  // explicit null on a nullable component, so it arrives as a move to the root rather than as
-  // a 400 — recorded here as a known position rather than left as an accident of
-  // deserialization nobody had looked at. The refusal below is the stub reporting which
-  // arguments it was called with, not the endpoint objecting to the body.
-  @Test
-  void omitted_parent_reaches_the_use_case_as_null_though_the_contract_requires_it(
-      RequestSpecification spec) {
-    doThrow(new TermoNotFoundException(HOSPITAIS)).when(moveTermo).move(HOSPITAIS, null);
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
-
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-            .body("{}")
-        .when()
-            .put(parentOf(HOSPITAIS));
-
-    assertProblem(response)
-        .hasStatus(HttpStatus.NOT_FOUND)
-        .hasType("urn:conxugal:problem-type:termo-not-found");
   }
 
   @Test

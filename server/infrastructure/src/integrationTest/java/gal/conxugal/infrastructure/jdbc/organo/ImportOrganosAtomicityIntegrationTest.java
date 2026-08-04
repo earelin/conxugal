@@ -118,7 +118,6 @@ class ImportOrganosAtomicityIntegrationTest implements TestPropertyProvider {
   // Runs the given call on its own thread and returns the exception it threw, so a failure
   // that reaches the test thread as data does not silently mask the connection isolation this
   // test relies on (see the class javadoc).
-  @SuppressWarnings("PMD.AvoidCatchingGenericException")
   private static Exception runOnItsOwnThread(Runnable call) throws Exception {
     Callable<Exception> captureFailure =
         () -> {

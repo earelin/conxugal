@@ -16,6 +16,27 @@ services:
       timeout: 5s
       retries: 5
 
+  # Stands in for contratosdegalicia.gal, the one host this application calls out to. The
+  # acceptance suite and the contract test both drive endpoints that import from it, and
+  # neither may reach the real site: it is someone else's server, it is not ours to load, and
+  # a suite that depends on it fails whenever it is slow or down. It serves the front page
+  # whose static HTML embeds the Órganos list, in the ISO-8859-1 the source really uses.
+  contratosdegalicia:
+    image: wiremock/wiremock:3.13.2
+    command: ["--disable-banner"]
+    # Loopback-only: the admin API at /__admin reprograms the stub without authentication,
+    # and this container also runs on developer workstations.
+    ports:
+      - "127.0.0.1:8082:8080"
+    volumes:
+      - ./wiremock/mappings:/home/wiremock/mappings:ro
+      - ./wiremock/__files:/home/wiremock/__files:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/__admin/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
   app:
     image: conxugal-application:local
     pull_policy: never
@@ -23,11 +44,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      contratosdegalicia:
+        condition: service_healthy
     environment:
       MICRONAUT_ENVIRONMENTS: local
       JDBC_URL: jdbc:postgresql://postgres:5432/conxugal
       JDBC_USERNAME: conxugal
       JDBC_PASSWORD: conxugal
+      # Overrides micronaut.http.services.contratosdegalicia.url so the import reaches the
+      # stub above rather than the real source.
+      MICRONAUT_HTTP_SERVICES_CONTRATOSDEGALICIA_URL: http://contratosdegalicia:8080
     ports:
       - "8080:8080"
     healthcheck:

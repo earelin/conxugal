@@ -130,7 +130,6 @@ class SetUserEnabledConcurrencyIntegrationTest implements TestPropertyProvider {
   // Reports setEnabled's outcome instead of letting it escape: this runs inside a pooled
   // Callable, so a failure needs to reach the assertions on the test thread as data, not as
   // an uncaught exception on a worker thread.
-  @SuppressWarnings("PMD.AvoidCatchingGenericException")
   private Callable<Optional<Exception>> disableAndCaptureFailure(
       UserId id, CyclicBarrier barrier) {
     return () -> {

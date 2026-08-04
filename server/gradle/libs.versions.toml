@@ -17,7 +17,6 @@ micronautPlugin = "5.0.2"
 pitestGradlePlugin = "1.19.0"
 pitestJunit5Plugin = "1.2.2"
 playwright = "1.61.0"
-pmd = "7.13.0"
 postgresql = "42.7.13"
 resilience4j = "2.4.0"
 restAssured = "6.0.1"
@@ -59,6 +58,7 @@ micronaut-security-csrf = { module = "io.micronaut.security:micronaut-security-c
 micronaut-security-processor = { module = "io.micronaut.security:micronaut-security-processor" }
 micronaut-security-session = { module = "io.micronaut.security:micronaut-security-session" }
 micronaut-serde-jackson = { module = "io.micronaut.serde:micronaut-serde-jackson" }
+micronaut-serde-support = { module = "io.micronaut.serde:micronaut-serde-support" }
 micronaut-test-junit5 = { module = "io.micronaut.test:micronaut-test-junit5" }
 micronaut-test-rest-assured = { module = "io.micronaut.test:micronaut-test-rest-assured" }
 micronaut-validation = { module = "io.micronaut.validation:micronaut-validation" }

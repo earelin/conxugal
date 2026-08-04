@@ -62,7 +62,6 @@ public class Authenticate {
     return Optional.of(recordLogin(foundUser));
   }
 
-  @SuppressWarnings("PMD.AvoidCatchingGenericException")
   private User recordLogin(User user) {
     Instant loginInstant = clock.instant();
     try {

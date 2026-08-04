@@ -2,6 +2,7 @@ package gal.conxugal.application.http.auth.support;
 
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.annotation.Controller;
+import io.micronaut.http.annotation.Delete;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.security.annotation.Secured;
@@ -20,6 +21,12 @@ public class SecuredRoutesFixtureController {
   @Post("/data")
   HttpResponse<?> createData() {
     return HttpResponse.ok();
+  }
+
+  @Secured(SecurityRule.IS_AUTHENTICATED)
+  @Delete("/data")
+  HttpResponse<?> deleteData() {
+    return HttpResponse.noContent();
   }
 
   @Secured("ADMIN")
