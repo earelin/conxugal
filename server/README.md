@@ -35,6 +35,7 @@ Java 25, PostgreSQL), [ADR-0002](../docs/architecture/0002-hexagonal-architectur
 | `./gradlew :infrastructure:integrationTest` | Run `infrastructure`'s adapter tests against a real PostgreSQL (Testcontainers, needs Docker). Not part of `check`/`build`. |
 | `./gradlew acceptance` | Run the black-box acceptance suite against an **already-running** instance (see below). |
 | `docker compose --profile app up -d` | Run the packaged app (after `./gradlew :application:dockerBuild`) alongside Postgres, for a local `./gradlew acceptance` run. |
+| `../scripts/contract-test.sh` | Check the same already-running instance against [`docs/api/openapi.yaml`](../docs/api/openapi.yaml) with Schemathesis ([ADR-0021](../docs/architecture/0021-openapi-contract-testing-with-schemathesis.md)). Generates and deletes data, so point it only at a disposable instance. |
 
 ## Structure
 

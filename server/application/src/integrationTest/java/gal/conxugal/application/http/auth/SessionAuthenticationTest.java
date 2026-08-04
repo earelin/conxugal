@@ -17,6 +17,7 @@ import io.micronaut.runtime.server.EmbeddedServer;
 import io.micronaut.security.authentication.UsernamePasswordCredentials;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,6 +44,27 @@ class SessionAuthenticationTest extends AuthenticationTestSupport {
     assertThat(response.getHeaders().get(HttpHeaders.SET_COOKIE)).isNotBlank();
   }
 
+  /**
+   * The browser-side half of the defence the CSRF filter no longer provides over
+   * {@code /api/**}: a cross-site caller gets no session to spend. Lax rather than Strict, so
+   * a link followed into the application still arrives authenticated.
+   */
+  @Test
+  void session_cookie_is_withheld_from_cross_site_requests() {
+    HttpResponse<?> response = client.exchange(loginRequest("user@example.com", "user-password"));
+
+    List<String> sessionCookies = response.getHeaders()
+        .getAll(HttpHeaders.SET_COOKIE)
+        .stream()
+        .filter(setCookie -> setCookie.startsWith("SESSION="))
+        .toList();
+
+    assertThat(sessionCookies)
+        .singleElement()
+        .asString()
+        .contains("SameSite=Lax");
+  }
+
   @Test
   void authenticated_user_reaches_data_but_is_forbidden_from_admin() {
     String sessionCookie = login("user@example.com", "user-password");
@@ -66,6 +88,18 @@ class SessionAuthenticationTest extends AuthenticationTestSupport {
   @Test
   void unauthenticated_request_to_protected_route_is_rejected() {
     assertThat(statusOf(HttpRequest.GET("/api/data"))).isEqualTo(HttpStatus.UNAUTHORIZED.getCode());
+  }
+
+  /**
+   * A cookie value the session layer cannot read identifies nobody, which is the 401 the
+   * contract declares — not the 400 an unguarded decode of it would report.
+   */
+  @Test
+  void request_carrying_an_unreadable_session_cookie_is_rejected_as_unauthenticated() {
+    HttpRequest<?> request = HttpRequest.GET("/api/data")
+        .header(HttpHeaders.COOKIE, "SESSION=not-a-readable-session");
+
+    assertThat(statusOf(request)).isEqualTo(HttpStatus.UNAUTHORIZED.getCode());
   }
 
   private String login(String email, String password) {

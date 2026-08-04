@@ -67,6 +67,18 @@ micronaut:
     csrf:
       enabled: true
       signature-key: ${CSRF_SIGNATURE_KEY:conxugal-dev-only-csrf-signature-key}
+      filter:
+        # The token guards the server-rendered form flow. It buys /api/** nothing: those
+        # operations take a JSON body, which no cross-site form can produce and which is not
+        # a CORS-simple content type, so a cross-origin fetch is preflighted and this server
+        # answers no CORS. Meanwhile the filter refuses any request carrying no content type
+        # at all — it only steps aside for a content type that is set and unlisted — and that
+        # is every body-less DELETE the contract declares.
+        #
+        # What this does give up is the body-less POST: the import trigger needs no body, so a
+        # cross-site fetch could reach it as a simple, unpreflighted request. The SameSite
+        # attribute on the session cookie below is what withholds the credentials for it.
+        regex-pattern: "^(?!/api/).*$"
   server:
     port: 8080
     thread-selection: BLOCKING
@@ -74,6 +86,20 @@ micronaut:
     http:
       cookie: true
       header: false
+      # The id is a UUID and Base64 is no secret, so the encoding buys nothing — while
+      # decoding it is unguarded: a cookie value outside the Base64 alphabet raises, and the
+      # caller is answered 400 Bad Request instead of the 401 the contract declares for a
+      # session that identifies nobody.
+      base64-encode: false
+      # Withholds the session from any cross-site request that is not a top-level navigation
+      # by a safe method, which is what stands between a body-less state-changing POST — the
+      # import trigger — and a cross-site fetch, now that the CSRF filter above no longer
+      # covers /api/**. Lax rather than Strict so following a link into the application still
+      # arrives authenticated; Strict would land the caller on the login page having lost
+      # where they were going. Stated rather than left to the browser: the default is Lax in
+      # some and absent in others, and only an explicit value closes the window Chrome leaves
+      # open for a cookie that names none.
+      cookie-same-site: Lax
     max-inactive-interval: 30m
 
 datasources:

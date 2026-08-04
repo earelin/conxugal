@@ -1280,16 +1280,22 @@ components:
         name:
           type: string
           maxLength: 255
-          pattern: "^\\s*\\S[\\s\\S]*$"
+          pattern: "^(?![\\s\\S]*[\\u0000\\n\\r\\u000B\\u000C\\u0085\\u2028\\u2029])\\s*\\S[\\s\\S]*$"
           example: "Sanidade e Benestar"
           description: >-
-            Non-blank once stripped of surrounding whitespace, and stored stripped. Whitespace
-            *within* a name is ordinary — most terms are several words — and leading or trailing
-            whitespace is accepted here and does not survive, unlike the stored `Termo.name`,
-            which forbids surrounding whitespace outright because it never has any. The pattern
-            therefore rejects only an all-whitespace name, and is written so it means that whether
-            a validator anchors it or not. Must not collide case-insensitively with a sibling's
-            name.
+            A term's name is a single-line label. Horizontal whitespace *within* it is ordinary
+            — most terms are several words — and leading or trailing whitespace is accepted here
+            and does not survive, so the stored `Termo.name` never carries any. Whitespace is
+            read broadly, taking in the non-breaking spaces a narrower reading would leave at an
+            edge. Rejected outright, rather than stripped, are a line terminator anywhere in the
+            name, which a label has no use for and which the stored form does not admit, and a
+            NUL, which the datastore cannot hold in any text column. An all-whitespace name is
+            rejected too, and the pattern is written so it means that whether a validator
+            anchors it or not. Must not collide case-insensitively with a sibling's name. Note
+            that `\s` is read slightly differently by ECMA-262 than by the server, which follows
+            the Unicode whitespace set: a validator on the ECMA dialect accepts the separator
+            controls U+001C–U+001F, which the server refuses, and refuses U+FEFF, which it
+            accepts.
         parentId:
           type: [string, "null"]
           format: uuid
@@ -1306,13 +1312,15 @@ components:
         name:
           type: string
           maxLength: 255
-          pattern: "^\\s*\\S[\\s\\S]*$"
+          pattern: "^(?![\\s\\S]*[\\u0000\\n\\r\\u000B\\u000C\\u0085\\u2028\\u2029])\\s*\\S[\\s\\S]*$"
           example: "Sanidade e Benestar"
           description: >-
             The replacement name: non-blank once stripped of surrounding whitespace, stored
             stripped, and free among the names of the term's existing siblings, compared
-            case-insensitively. As on the create, whitespace within the name is ordinary and only
-            an all-whitespace name is rejected.
+            case-insensitively. As on the create it is a single-line label — horizontal
+            whitespace within it is ordinary, whitespace is read broadly enough to take in the
+            non-breaking spaces, and rejected rather than stripped are a line terminator
+            anywhere in the name and a NUL the datastore cannot hold.
 
     MoveTermoRequest:
       type: object

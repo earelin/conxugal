@@ -4,6 +4,7 @@ import static gal.conxugal.application.http.error.support.AssertProblem.assertPr
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
@@ -338,16 +339,12 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .statusCode(HttpStatus.NO_CONTENT.getCode());
   }
 
-  // The contract requires parentId, so this body is not one a caller should send and a
-  // generated client will not produce it. Micronaut cannot tell an absent field from an
-  // explicit null on a nullable component, so it arrives as a move to the root rather than as
-  // a 400 — recorded here as a known position rather than left as an accident of
-  // deserialization nobody had looked at. The refusal below is the stub reporting which
-  // arguments it was called with, not the endpoint objecting to the body.
+  // A move states where the term lands, and the explicit null above is how it says "the root",
+  // so a body leaving parentId out states nothing at all. The contract requires the field for
+  // exactly that reason, and the request is read strictly enough to tell an absent field from
+  // an explicit null rather than reading both as a move to the root.
   @Test
-  void omitted_parent_reaches_the_use_case_as_null_though_the_contract_requires_it(
-      RequestSpecification spec) {
-    doThrow(new TermoNotFoundException(HOSPITAIS)).when(moveTermo).move(HOSPITAIS, null);
+  void omitted_parent_is_refused_because_the_contract_requires_it(RequestSpecification spec) {
     String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
     Response response =
@@ -357,9 +354,8 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .when()
             .put(parentOf(HOSPITAIS));
 
-    assertProblem(response)
-        .hasStatus(HttpStatus.NOT_FOUND)
-        .hasType("urn:conxugal:problem-type:termo-not-found");
+    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
+    verifyNoInteractions(moveTermo);
   }
 
   @Test

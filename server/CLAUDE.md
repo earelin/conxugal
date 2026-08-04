@@ -73,6 +73,17 @@ what changed:
 | Any `build.gradle.kts`, `gradle/libs.versions.toml`, or `settings.gradle.kts` | `./gradlew build` (full multi-module build) |
 | Before committing, regardless of scope | `./gradlew build` (see below) |
 
+## Migrations share one version sequence
+
+Flyway is pointed at two locations — `db/migration`, which every environment runs, and
+`db/migration-local`, which only `MICRONAUT_ENVIRONMENTS=local` adds (a developer's compose
+stack and CI). They are **one numbered sequence with one history table**, so a version used
+in either is used in both: `db/migration` skips `V4` and `V12` because `migration-local`
+holds them. Take the next free number across *both* folders when adding a migration —
+reusing one fails every local and CI boot with `Found more than one migration with version N`,
+and the shared set is where the gap is easiest to miss, since its own files simply stop at
+`V11`.
+
 ## Before committing
 
 Run `./gradlew build` from `server/` and fix any failures before committing changes
