@@ -16,6 +16,9 @@ import { TermoContentCard } from './TermoContentCard';
 
 type TermoAction = 'rename' | 'move' | 'delete';
 
+/** A term-shape dialog and the term it was opened on, held as an id. */
+type TermoRequest = { termoId: string; action: TermoAction };
+
 /** Which half of the assign pair the entry point settled, held as an id. */
 type AssignRequest = { kind: 'organo'; organoId: string } | { kind: 'termo'; termoId: string };
 
@@ -35,7 +38,7 @@ export function OrganosPage() {
   // The three writes act on whichever term is open, so they are held here
   // rather than in either pane: the tree row and the content header are two
   // ways into the same dialog, not two dialogs.
-  const [action, setAction] = useState<TermoAction | null>(null);
+  const [request, setRequest] = useState<TermoRequest | null>(null);
   // Ids, not records: the dialog is about whatever the section currently holds
   // under them, and re-resolving each render is what keeps it honest.
   const [assigning, setAssigning] = useState<AssignRequest | null>(null);
@@ -51,19 +54,30 @@ export function OrganosPage() {
   const openTermoId = openPath.length > 0 ? selectedTermoId : null;
   const openTermo = openPath.at(-1) ?? null;
   const openParentId = openPath.at(-2)?.id ?? null;
-  // Derived, never held: a term can stop resolving under the section — a failed
-  // refetch, or another admin deleting it — and a held action would then re-open
-  // its dialog by itself the moment the next term was selected.
-  const openAction = openTermo === null ? null : action;
+  // Matched against the open term, never taken on its own: a term can stop
+  // resolving under the section — a failed refetch, or another admin deleting it
+  // — which unmounts its dialog without any of the close handlers running. An
+  // action held apart from its term would survive that and re-open its dialog on
+  // whichever term the administrator selected next.
+  const openAction = request !== null && request.termoId === openTermoId ? request.action : null;
   // Same rule for the assign dialog, and it earns it twice over: either record
   // can be deleted by another admin while the dialog is open, and an id that
   // stops resolving simply unmounts it.
   const assignTarget = view && assigning ? resolveAssignTarget(view, assigning) : null;
 
+  // Every entry point is a control the open term renders, so there is always one
+  // to name; the guard is what keeps the id out of the request rather than a
+  // case the interface can reach.
+  function open(action: TermoAction) {
+    if (openTermoId !== null) {
+      setRequest({ termoId: openTermoId, action });
+    }
+  }
+
   const termoActions = {
-    onRename: () => setAction('rename'),
-    onMove: () => setAction('move'),
-    onDelete: () => setAction('delete'),
+    onRename: () => open('rename'),
+    onMove: () => open('move'),
+    onDelete: () => open('delete'),
     onAssign: () => {
       if (openTermoId !== null) {
         setAssigning({ kind: 'termo', termoId: openTermoId });
@@ -72,7 +86,7 @@ export function OrganosPage() {
   };
 
   function closeAction() {
-    setAction(null);
+    setRequest(null);
   }
 
   /**
@@ -83,6 +97,7 @@ export function OrganosPage() {
    * purpose, so the two refreshes stay separate handlers.
    */
   function retrySection() {
+    setRequest(null);
     setAssigning(null);
     refetch();
   }
@@ -91,7 +106,7 @@ export function OrganosPage() {
     // The deleted term is gone from the next read; landing on its parent keeps
     // the administrator where they were working instead of at the worklist.
     setSelectedTermoId(openParentId);
-    setAction(null);
+    setRequest(null);
   }
 
   return (

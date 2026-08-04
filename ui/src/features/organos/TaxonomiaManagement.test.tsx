@@ -634,4 +634,62 @@ describe('taxonomía management', () => {
     expect(await screen.findByText(copy.nameRequired)).toBeVisible();
     expect(nock.pendingMocks()).toEqual([]);
   });
+
+  /**
+   * A term that stops resolving takes its open dialog off the screen without any
+   * of the dialog's own close handlers running. The two ways that happens are
+   * covered separately, because the action the administrator opened must not
+   * outlive its term either way: the next term they click is one they asked to
+   * read, not one they asked to delete.
+   */
+  it('drops the open action with the term another administrator deleted', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    await openTermo(user, sanidade.name);
+    await user.click(paneAction(copy.delete));
+    expect(await screen.findByText(copy.deleteConfirm(sanidade.name))).toBeInTheDocument();
+
+    // The refetch a window focus triggers brings back a taxonomía without the
+    // open term, which is how this browser learns of the other admin's delete.
+    mockCatalogue([{ ...sergas, termoId: null }, vivenda]);
+    mockTaxonomia([consellerias, concellos]);
+    window.dispatchEvent(new Event('visibilitychange'));
+    await waitFor(() => expect(within(tree()).queryByText(sanidade.name)).not.toBeInTheDocument());
+
+    await openTermo(user, concellos.name);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: concellos.name })).toBeInTheDocument();
+  });
+
+  it('drops the open action when a failed read replaces the section', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    await openTermo(user, sanidade.name);
+    await user.click(paneAction(copy.delete));
+    expect(await screen.findByText(copy.deleteConfirm(sanidade.name))).toBeInTheDocument();
+
+    nock(BASE_URL).get('/api/organos').reply(500);
+    nock(BASE_URL).get('/api/organos/taxonomia').reply(500);
+    window.dispatchEvent(new Event('visibilitychange'));
+    await screen.findByText(strings.admin.organos.errorTitle);
+
+    // The section comes back whole on the retry — including the term the dialog
+    // was about, which is still the open one and must not re-open it.
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    await user.click(screen.getByRole('button', { name: strings.retry }));
+
+    expect(await screen.findByRole('heading', { name: sanidade.name })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await openTermo(user, concellos.name);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
