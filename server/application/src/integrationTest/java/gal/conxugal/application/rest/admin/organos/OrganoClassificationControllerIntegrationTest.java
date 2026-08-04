@@ -4,6 +4,7 @@ import static gal.conxugal.application.http.error.support.AssertProblem.assertPr
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
@@ -206,6 +207,53 @@ class OrganoClassificationControllerIntegrationTest extends AuthenticationTestSu
         .delete(placementOf(SANIDADE))
     .then()
         .statusCode(HttpStatus.UNAUTHORIZED.getCode());
+  }
+
+  // --- What the edge refuses before a use case ever sees it -------------------
+  // A term id that is one, and one actually sent: unlike a term's parent, null is no value
+  // here — an Órgano is returned to the unclassified set by deleting the placement.
+
+  @Test
+  void assign_with_null_term_is_bad_request(RequestSpecification spec) {
+    Response response = putPlacement(spec,
+        """
+        {"termoId":null}\
+        """);
+
+    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
+    verifyNoInteractions(assignOrganoToTermo);
+  }
+
+  @Test
+  void assign_with_malformed_term_is_bad_request(RequestSpecification spec) {
+    Response response = putPlacement(spec,
+        """
+        {"termoId":"not-a-uuid"}\
+        """);
+
+    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
+    verifyNoInteractions(assignOrganoToTermo);
+  }
+
+  @Test
+  void assign_with_non_string_term_is_bad_request(RequestSpecification spec) {
+    Response response = putPlacement(spec,
+        """
+        {"termoId":7}\
+        """);
+
+    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
+    verifyNoInteractions(assignOrganoToTermo);
+  }
+
+  private Response putPlacement(RequestSpecification spec, String body) {
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+
+    return given(spec)
+        .header(HttpHeaders.COOKIE, sessionCookie)
+        .body(body)
+    .when()
+        .put(placementOf(SANIDADE));
   }
 
   private static String placementOf(OrganoId organoId) {

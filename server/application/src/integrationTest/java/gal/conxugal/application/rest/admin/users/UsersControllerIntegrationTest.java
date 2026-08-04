@@ -3,6 +3,7 @@ package gal.conxugal.application.rest.admin.users;
 import static gal.conxugal.application.http.error.support.AssertProblem.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
@@ -225,5 +226,90 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
         .post("/api/admin/users/" + UUID.randomUUID() + "/enabled")
     .then()
         .statusCode(HttpStatus.BAD_REQUEST.getCode());
+  }
+
+  // --- What the edge refuses before a use case ever sees it -------------------
+  // An email that is one, a role the enum names, and an enabled state that is a JSON boolean
+  // rather than something readable as one. Each asserts the use case was never reached: a
+  // request understood as something other than what it said would still have reached it.
+
+  @Test
+  void create_with_malformed_email_is_bad_request(RequestSpecification spec) {
+    Response response = postCreate(spec,
+        """
+        {"email":"not-an-email","role":"USER"}\
+        """);
+
+    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
+    verifyNoInteractions(createUser);
+  }
+
+  @Test
+  void create_with_non_string_email_is_bad_request(RequestSpecification spec) {
+    Response response = postCreate(spec,
+        """
+        {"email":42,"role":"USER"}\
+        """);
+
+    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
+    verifyNoInteractions(createUser);
+  }
+
+  @Test
+  void create_without_role_is_bad_request(RequestSpecification spec) {
+    Response response = postCreate(spec,
+        """
+        {"email":"new.admin@conxugal.gal"}\
+        """);
+
+    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
+    verifyNoInteractions(createUser);
+  }
+
+  @Test
+  void create_with_role_outside_the_enum_is_bad_request(RequestSpecification spec) {
+    Response response = postCreate(spec,
+        """
+        {"email":"new.admin@conxugal.gal","role":"WIZARD"}\
+        """);
+
+    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
+    verifyNoInteractions(createUser);
+  }
+
+  /**
+   * Read loosely this arrives as {@code false} — an account disabled by a request that never
+   * asked for it.
+   */
+  @Test
+  void setting_enabled_to_string_is_bad_request(RequestSpecification spec) {
+    User admin = TestUserFactory.adminUser();
+    seedUser(admin);
+    String sessionCookie = loginAs(spec, admin);
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+            .body(
+                """
+                {"enabled":"AAA"}\
+                """)
+        .when()
+            .post("/api/admin/users/" + UUID.randomUUID() + "/enabled");
+
+    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
+    verifyNoInteractions(setUserEnabled);
+  }
+
+  private Response postCreate(RequestSpecification spec, String body) {
+    User admin = TestUserFactory.adminUser();
+    seedUser(admin);
+    String sessionCookie = loginAs(spec, admin);
+
+    return given(spec)
+        .header(HttpHeaders.COOKIE, sessionCookie)
+        .body(body)
+    .when()
+        .post("/api/admin/users");
   }
 }

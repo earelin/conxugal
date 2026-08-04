@@ -24,6 +24,7 @@ import io.micronaut.http.HttpStatus;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.restassured.response.Response;
+import io.restassured.specification.RequestSender;
 import io.restassured.specification.RequestSpecification;
 import jakarta.inject.Inject;
 import java.util.UUID;
