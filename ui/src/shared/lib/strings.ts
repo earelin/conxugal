@@ -195,15 +195,44 @@ export const strings = {
       stateInactive: 'Inactivo',
       termEmpty: 'Este termo aínda non ten órganos.',
       unclassifiedEmpty: 'Non hai órganos sen clasificar.',
-      // Split by plural category rather than built by a helper so the pieces
-      // lift into a translation catalogue as they stand.
-      countInTermOne: 'órgano neste termo',
-      countInTermOther: 'órganos neste termo',
-      countUnclassifiedOne: 'órgano sen clasificar',
-      countUnclassifiedOther: 'órganos sen clasificar',
+      // Both forms of a counted noun travel as one entry, chosen by
+      // `singularOrPlural`: a catalogue lifting this out keeps the pair
+      // together, and no call site can take one form and forget the other.
+      countInTerm: { singular: 'órgano neste termo', plural: 'órganos neste termo' },
+      countUnclassified: { singular: 'órgano sen clasificar', plural: 'órganos sen clasificar' },
       errorTitle: 'Non se puido cargar a sección de Órganos',
       errorForbidden: 'Non tes permisos para ver esta información.',
       errorGeneric: 'Téntao de novo máis tarde.',
+      import: {
+        button: 'Importar catálogo',
+        running: 'Importando…',
+
+        successTitle: 'Importación completada',
+        // The three counts of the outcome, joined by the component that reads them.
+        added: { singular: 'engadido', plural: 'engadidos' },
+        refreshed: { singular: 'actualizado', plural: 'actualizados' },
+        deactivated: { singular: 'desactivado', plural: 'desactivados' },
+
+        // A normal answer, not a refusal: the guard is system-wide, so the
+        // scheduled run holds it just as a second administrator would.
+        alreadyRunningTitle: 'Importación en curso',
+        alreadyRunning: 'Xa se está a executar unha importación; agarda a que remate.',
+
+        dismiss: 'Pechar',
+
+        // Its own title, distinct from the section's failed-read one: an import
+        // that could not run is not a section that could not load.
+        errorTitle: 'Non se puido importar o catálogo',
+        // The source failure the server names with its own problem type. Saying
+        // what is *unchanged* is the point: the catalogue on screen is still the
+        // one that was there, not a half-written one.
+        errorSource:
+          'A fonte de datos non está dispoñible ou devolveu unha resposta inservible. ' +
+          'O catálogo, os seus estados e a taxonomía quedan como estaban.',
+        // Retrying is not the way out of a refusal, so it does not say to.
+        errorForbidden: 'Non tes permisos para lanzar unha importación.',
+        errorGeneric: 'Non se puido lanzar a importación. Téntao de novo máis tarde.',
+      },
       termo: {
         cancel: 'Cancelar',
         nameLabel: 'Nome',
@@ -262,6 +291,37 @@ export const strings = {
           'elimina antes os seus termos fillos; despois poderás eliminar este termo.',
         duplicateSiblingName: 'Xa existe un termo irmán con ese nome.',
         notFound: 'Outra persoa eliminou este termo. Actualiza a sección para velo ao día.',
+        genericError: 'Non se puido completar a acción. Téntao de novo máis tarde.',
+      },
+      assign: {
+        // The two ways into the same dialog, named for where they are read:
+        // from a worklist row it is the órgano that needs a termo, from a
+        // term's header it is the termo that needs an órgano.
+        fromWorklist: 'Asignar a termo',
+        fromTermo: 'Asignar órgano',
+        clear: 'Quitar do termo',
+
+        titleTermo: 'Asignar a un termo',
+        titleOrgano: 'Asignar órgano',
+        submit: 'Asignar',
+        organoLabel: 'Órgano',
+        termoLabel: 'Termo',
+        currently: (placement: string) => `Actualmente: ${placement}`,
+
+        searchLabel: 'Buscar termo',
+        searchPlaceholder: 'Buscar termo…',
+        noTermoMatches: (query: string) => `Ningún termo coincide con «${query}».`,
+        organoPlaceholder: 'Buscar órgano…',
+        noOrganoMatches: 'Ningún órgano coincide.',
+        inactive: 'Inactivo',
+
+        // Both refusals name what another administrator changed and offer the
+        // same way out, since neither is anything this browser can fix by
+        // retrying the same write.
+        refresh: 'Actualizar',
+        organoNotFound: 'Outra persoa eliminou este órgano. Actualiza a sección para velo ao día.',
+        termoNotFound:
+          'Outra persoa eliminou o termo de destino. Actualiza a sección e escolle outro.',
         genericError: 'Non se puido completar a acción. Téntao de novo máis tarde.',
       },
     },

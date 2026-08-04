@@ -1,18 +1,32 @@
-import { Grid, Group, Loader, Stack, Text, Title } from '@mantine/core';
+import { Grid, Loader, Stack, Text, Title } from '@mantine/core';
 import { useState } from 'react';
 
 import { isHttpStatus } from '../../shared/lib/httpError';
 import { strings } from '../../shared/lib/strings';
 import { ErrorAlert } from '../../shared/ui/ErrorAlert';
+import { AssignOrganoModal, type AssignTarget } from './AssignOrganoModal';
 import { DeleteTermoModal } from './DeleteTermoModal';
+import { ImportOrganosControl } from './ImportOrganosControl';
 import { MoveTermoModal } from './MoveTermoModal';
 import { useOrganosTaxonomia } from './organos';
 import { RenameTermoModal } from './RenameTermoModal';
-import { findTermoPath } from './taxonomiaTree';
+import { findTermoPath, type TaxonomiaView } from './taxonomiaTree';
 import { TaxonomiaTreeCard } from './TaxonomiaTreeCard';
 import { TermoContentCard } from './TermoContentCard';
 
 type TermoAction = 'rename' | 'move' | 'delete';
+
+/** Which half of the assign pair the entry point settled, held as an id. */
+type AssignRequest = { kind: 'organo'; organoId: string } | { kind: 'termo'; termoId: string };
+
+function resolveAssignTarget(view: TaxonomiaView, request: AssignRequest): AssignTarget | null {
+  if (request.kind === 'organo') {
+    const organo = view.catalogue.find((candidate) => candidate.id === request.organoId);
+    return organo ? { kind: 'organo', organo } : null;
+  }
+  const termo = findTermoPath(view.roots, request.termoId).at(-1);
+  return termo ? { kind: 'termo', termo } : null;
+}
 
 export function OrganosPage() {
   // null selects the pinned worklist, which is where a freshly imported
@@ -22,6 +36,9 @@ export function OrganosPage() {
   // rather than in either pane: the tree row and the content header are two
   // ways into the same dialog, not two dialogs.
   const [action, setAction] = useState<TermoAction | null>(null);
+  // Ids, not records: the dialog is about whatever the section currently holds
+  // under them, and re-resolving each render is what keeps it honest.
+  const [assigning, setAssigning] = useState<AssignRequest | null>(null);
   const { view, isPending, isFetching, isError, error, refetch } = useOrganosTaxonomia();
 
   // Resolved once, here, and handed to both panes so they cannot disagree about
@@ -38,15 +55,36 @@ export function OrganosPage() {
   // refetch, or another admin deleting it — and a held action would then re-open
   // its dialog by itself the moment the next term was selected.
   const openAction = openTermo === null ? null : action;
+  // Same rule for the assign dialog, and it earns it twice over: either record
+  // can be deleted by another admin while the dialog is open, and an id that
+  // stops resolving simply unmounts it.
+  const assignTarget = view && assigning ? resolveAssignTarget(view, assigning) : null;
 
   const termoActions = {
     onRename: () => setAction('rename'),
     onMove: () => setAction('move'),
     onDelete: () => setAction('delete'),
+    onAssign: () => {
+      if (openTermoId !== null) {
+        setAssigning({ kind: 'termo', termoId: openTermoId });
+      }
+    },
   };
 
   function closeAction() {
     setAction(null);
+  }
+
+  /**
+   * The section-level retry, which is not the dialog's own refresh: a failed
+   * read replaces the whole section, taking any open dialog with it, and
+   * bringing the reader back to a screen they never asked to return to would be
+   * a dialog re-opening by itself. The dialog's `Actualizar` keeps it open on
+   * purpose, so the two refreshes stay separate handlers.
+   */
+  function retrySection() {
+    setAssigning(null);
+    refetch();
   }
 
   function afterDelete() {
@@ -63,8 +101,7 @@ export function OrganosPage() {
         <Text c="dimmed">{strings.admin.organos.subtitle}</Text>
       </Stack>
 
-      {/* Section toolbar: the import trigger lands here. */}
-      <Group justify="flex-end" />
+      <ImportOrganosControl />
 
       {/* One read can fail while the other is still in flight; the failure is
           the thing to report, not a spinner alongside it. */}
@@ -73,7 +110,7 @@ export function OrganosPage() {
       {isError && (
         <ErrorAlert
           title={strings.admin.organos.errorTitle}
-          onRetry={refetch}
+          onRetry={retrySection}
           retrying={isFetching}
         >
           {isHttpStatus(error, 403)
@@ -95,12 +132,31 @@ export function OrganosPage() {
           </Grid.Col>
           <Grid.Col span={{ base: 12, md: 7 }}>
             <TermoContentCard
+              // A refused clear belongs to the pane it was attempted in, and
+              // this card is otherwise reused across every selection — without
+              // the key its alert would follow the reader to the next term.
+              key={openTermoId ?? 'worklist'}
               openPath={openPath}
               unclassified={view.unclassified}
               termoActions={termoActions}
+              onAssignOrgano={(organo) => setAssigning({ kind: 'organo', organoId: organo.id })}
+              onRefresh={refetch}
             />
           </Grid.Col>
         </Grid>
+      )}
+
+      {/* Mounted only while its target resolves, which is also what drops the
+          picker's search and pending choice between two openings. */}
+      {view && assignTarget && (
+        <AssignOrganoModal
+          opened
+          view={view}
+          target={assignTarget}
+          onAssigned={() => setAssigning(null)}
+          onCancel={() => setAssigning(null)}
+          onRefresh={refetch}
+        />
       )}
 
       {view && openTermo && (

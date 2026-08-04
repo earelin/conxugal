@@ -62,6 +62,39 @@
       }
     },
     {
+      "name": "Trigger an Órganos catalogue import",
+      "request": {
+        "method": "POST",
+        "urlPath": "/api/admin/organos/import"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "status": "SUCCESS",
+          "added": 3,
+          "refreshed": 12,
+          "deactivated": 1
+        }
+      }
+    },
+    {
+      "name": "File an Órgano in a term",
+      "request": {
+        "method": "PUT",
+        "urlPathPattern": "/api/admin/organo/[^/]+/termo"
+      },
+      "response": { "status": 204 }
+    },
+    {
+      "name": "Return an Órgano to the unclassified worklist",
+      "request": {
+        "method": "DELETE",
+        "urlPathPattern": "/api/admin/organo/[^/]+/termo"
+      },
+      "response": { "status": 204 }
+    },
+    {
       "name": "List every term of the Órganos taxonomía, in name order",
       "request": {
         "method": "GET",

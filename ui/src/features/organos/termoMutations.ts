@@ -1,7 +1,5 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-
 import { apiFetch } from '../../shared/lib/httpClient';
-import { SECTION_QUERY_KEY, TAXONOMIA_QUERY_KEY, type Termo } from './organos';
+import { SECTION_QUERY_KEY, TAXONOMIA_QUERY_KEY, type Termo, useOrganosMutation } from './organos';
 
 const TERMOS_PATH = '/api/admin/organos/taxonomia/termos';
 const TERMO_PATH = '/api/admin/organos/taxonomia/termo';
@@ -48,38 +46,20 @@ async function deleteTermo(id: string): Promise<void> {
   await apiFetch(`${TERMO_PATH}/${id}`, { method: 'DELETE' });
 }
 
-/**
- * Every write invalidates rather than patching the cache: the taxonomía read is
- * a flat list the client re-assembles into a tree, so a refetch plus the
- * existing builder is the whole update — there is no server-assembled shape to
- * keep in sync, and no move or delete that a local edit could describe more
- * cheaply than re-reading one small list.
- */
-function useTaxonomiaMutation<TInput, TResult>(
-  mutationFn: (input: TInput) => Promise<TResult>,
-  queryKey: readonly unknown[],
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
-  });
-}
-
 export function useCreateTermo() {
-  return useTaxonomiaMutation(createTermo, TAXONOMIA_QUERY_KEY);
+  return useOrganosMutation(createTermo, TAXONOMIA_QUERY_KEY);
 }
 
 export function useRenameTermo() {
-  return useTaxonomiaMutation(renameTermo, TAXONOMIA_QUERY_KEY);
+  return useOrganosMutation(renameTermo, TAXONOMIA_QUERY_KEY);
 }
 
 export function useMoveTermo() {
-  return useTaxonomiaMutation(moveTermo, TAXONOMIA_QUERY_KEY);
+  return useOrganosMutation(moveTermo, TAXONOMIA_QUERY_KEY);
 }
 
 export function useDeleteTermo() {
   // The prefix both reads share: a delete returns the term's Órganos to the
   // unclassified worklist, so the catalogue is as stale as the taxonomía.
-  return useTaxonomiaMutation(deleteTermo, SECTION_QUERY_KEY);
+  return useOrganosMutation(deleteTermo, SECTION_QUERY_KEY);
 }
