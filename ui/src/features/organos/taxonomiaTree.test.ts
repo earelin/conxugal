@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Organo, Termo } from './organos';
-import { buildTaxonomiaView, findTermoPath } from './taxonomiaTree';
+import { buildTaxonomiaView, findTermoPath, termoPathLabel } from './taxonomiaTree';
 
 function termo(id: string, name: string, parentId: string | null = null): Termo {
   return { id, name, parentId };
@@ -48,6 +48,15 @@ describe('buildTaxonomiaView', () => {
     expect(roots[0].children[0].organos).toEqual([sergas, urxencias, cunqueiro]);
     expect(roots[0].children[1].organos).toEqual([]);
     expect(roots[0].organos).toEqual([]);
+  });
+
+  it('keeps the whole catalogue in the order the server sent it', () => {
+    const { catalogue } = buildTaxonomiaView(
+      [consellerias, sanidade],
+      [vivenda, sergas, cunqueiro],
+    );
+
+    expect(catalogue).toEqual([vivenda, sergas, cunqueiro]);
   });
 
   it('returns every null-placement Organo as unclassified', () => {
@@ -123,5 +132,19 @@ describe('findTermoPath', () => {
     const { roots } = buildTaxonomiaView([consellerias, sanidade], []);
 
     expect(findTermoPath(roots, 't-deleted')).toEqual([]);
+  });
+});
+
+describe('termoPathLabel', () => {
+  it('reads a path as one line, root first', () => {
+    const { roots } = buildTaxonomiaView([consellerias, sanidade, educacion, innovacion], []);
+
+    expect(termoPathLabel(findTermoPath(roots, 't-4'))).toBe(
+      'Consellerías › Consellería de Educación › Axencia Galega de Innovación',
+    );
+  });
+
+  it('reads an empty path as nothing at all', () => {
+    expect(termoPathLabel([])).toBe('');
   });
 });
