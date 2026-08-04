@@ -1,6 +1,6 @@
-import { Alert, Button, Group, Stack } from '@mantine/core';
+import { Alert, Button, Group, type MantineColor, Stack } from '@mantine/core';
 import { IconCircleCheck, IconDownload, IconInfoCircle } from '@tabler/icons-react';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 
 import { isHttpStatus, isProblemType } from '../../shared/lib/httpError';
 import { strings } from '../../shared/lib/strings';
@@ -31,46 +31,69 @@ function failureMessage(error: unknown): string {
   return isHttpStatus(error, 403) ? copy.errorForbidden : copy.errorGeneric;
 }
 
+interface StatusAlertProps {
+  color: MantineColor;
+  icon: ReactNode;
+  title: string;
+  children: ReactNode;
+  onDismiss: () => void;
+}
+
+/**
+ * A report of what the last import did, announced politely and dismissible.
+ *
+ * `role="status"` rather than the assertive `role="alert"` Mantine defaults an
+ * `Alert` to: this says what an administrator asked to be told and has no
+ * business interrupting a screen reader mid-sentence. `ErrorAlert` keeps the
+ * assertive role, which is the one case here that earns it. The policy lives in
+ * one place because losing it is silent — an alert announced too forcefully
+ * looks identical on screen.
+ */
+function StatusAlert({ color, icon, title, children, onDismiss }: StatusAlertProps) {
+  return (
+    <Alert
+      color={color}
+      role="status"
+      title={title}
+      icon={icon}
+      withCloseButton
+      closeButtonLabel={copy.dismiss}
+      onClose={onDismiss}
+    >
+      {children}
+    </Alert>
+  );
+}
+
 interface OutcomeAlertProps {
   outcome: ImportOutcome;
   onDismiss: () => void;
   onRetry: () => void;
 }
 
-/**
- * Both alerts are `role="status"`: they report what an administrator asked for
- * and has no reason to be interrupted mid-sentence by, unlike the assertive
- * `role="alert"` Mantine gives an `Alert` by default and `ErrorAlert` keeps.
- */
 function OutcomeAlert({ outcome, onDismiss, onRetry }: OutcomeAlertProps) {
   switch (outcome.status) {
     case 'SUCCESS':
       return (
-        <Alert
+        <StatusAlert
           color="green"
-          role="status"
-          title={copy.successTitle}
           icon={<IconCircleCheck size={18} />}
-          withCloseButton
-          closeButtonLabel={copy.dismiss}
-          onClose={onDismiss}
+          title={copy.successTitle}
+          onDismiss={onDismiss}
         >
           {outcomeCounts(outcome)}
-        </Alert>
+        </StatusAlert>
       );
     case 'ALREADY_RUNNING':
       return (
-        <Alert
+        <StatusAlert
           color="blue"
-          role="status"
-          title={copy.alreadyRunningTitle}
           icon={<IconInfoCircle size={18} />}
-          withCloseButton
-          closeButtonLabel={copy.dismiss}
-          onClose={onDismiss}
+          title={copy.alreadyRunningTitle}
+          onDismiss={onDismiss}
         >
           {copy.alreadyRunning}
-        </Alert>
+        </StatusAlert>
       );
     // Unreachable against today's contract, and rendered rather than dropped
     // because the alternative failure mode is silent: a status this build does
