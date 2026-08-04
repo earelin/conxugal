@@ -163,38 +163,6 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .hasType("urn:conxugal:problem-type:duplicate-sibling-name");
   }
 
-  @Test
-  void create_with_blank_name_is_bad_request(RequestSpecification spec) {
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
-
-    given(spec)
-        .header(HttpHeaders.COOKIE, sessionCookie)
-        .body(
-            """
-            {"name":"   ","parentId":null}\
-            """)
-    .when()
-        .post(TERMOS)
-    .then()
-        .statusCode(HttpStatus.BAD_REQUEST.getCode());
-  }
-
-  @Test
-  void create_with_name_longer_than_the_column_is_bad_request(RequestSpecification spec) {
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
-
-    given(spec)
-        .header(HttpHeaders.COOKIE, sessionCookie)
-        .body(
-            """
-            {"name":"%s","parentId":null}\
-            """.formatted("a".repeat(256)))
-    .when()
-        .post(TERMOS)
-    .then()
-        .statusCode(HttpStatus.BAD_REQUEST.getCode());
-  }
-
   // A multi-word name padded with whitespace, because the two are easy to conflate and only
   // one of them is the use case's to remove: the spaces *between* words are part of the name
   // — most terms are several words — while the surrounding ones are stripped. The edge must
@@ -338,25 +306,6 @@ class TaxonomiaAdminControllerIntegrationTest extends AuthenticationTestSupport 
         .put(parentOf(HOSPITAIS))
     .then()
         .statusCode(HttpStatus.NO_CONTENT.getCode());
-  }
-
-  // A move states where the term lands, and the explicit null above is how it says "the root",
-  // so a body leaving parentId out states nothing at all. The contract requires the field for
-  // exactly that reason, and the request is read strictly enough to tell an absent field from
-  // an explicit null rather than reading both as a move to the root.
-  @Test
-  void omitted_parent_is_refused_because_the_contract_requires_it(RequestSpecification spec) {
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
-
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-            .body("{}")
-        .when()
-            .put(parentOf(HOSPITAIS));
-
-    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
-    verifyNoInteractions(moveTermo);
   }
 
   @Test

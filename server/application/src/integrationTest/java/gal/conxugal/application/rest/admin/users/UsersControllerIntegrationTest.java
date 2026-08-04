@@ -2,6 +2,7 @@ package gal.conxugal.application.rest.admin.users;
 
 import static gal.conxugal.application.http.error.support.AssertProblem.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -28,7 +29,11 @@ import jakarta.inject.Inject;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 // CreateUser and SetUserEnabled are both @Transactional and need a real datasource, which
 // application-test.yml deliberately disables (this suite mocks the repository and needs no
@@ -142,21 +147,6 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
   }
 
   @Test
-  void create_with_blank_email_is_bad_request(RequestSpecification spec) {
-    User admin = TestUserFactory.adminUser();
-    seedUser(admin);
-    String sessionCookie = loginAs(spec, admin);
-
-    given(spec)
-        .header(HttpHeaders.COOKIE, sessionCookie)
-        .body("{\"email\":\"\",\"role\":\"USER\"}")
-    .when()
-        .post("/api/admin/users")
-    .then()
-        .statusCode(HttpStatus.BAD_REQUEST.getCode());
-  }
-
-  @Test
   void admin_disables_user_account(RequestSpecification spec) {
     User admin = TestUserFactory.adminUser();
     seedUser(admin);
@@ -213,92 +203,60 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
         .statusCode(HttpStatus.NOT_FOUND.getCode());
   }
 
-  @Test
-  void missing_enabled_field_is_bad_request(RequestSpecification spec) {
-    User admin = TestUserFactory.adminUser();
-    seedUser(admin);
-    String sessionCookie = loginAs(spec, admin);
-
-    given(spec)
-        .header(HttpHeaders.COOKIE, sessionCookie)
-        .body("{}")
-    .when()
-        .post("/api/admin/users/" + UUID.randomUUID() + "/enabled")
-    .then()
-        .statusCode(HttpStatus.BAD_REQUEST.getCode());
-  }
+  // --- What the edge refuses before a use case ever sees it -------------------
+  // An email that is one, a role the enum names, and an enabled state that is a JSON boolean
+  // rather than something readable as one. Each asserts the use case was never reached: a
+  // request understood as something other than what it said would still have reached it.
 
   // --- What the edge refuses before a use case ever sees it -------------------
   // An email that is one, a role the enum names, and an enabled state that is a JSON boolean
   // rather than something readable as one. Each asserts the use case was never reached: a
   // request understood as something other than what it said would still have reached it.
 
-  @Test
-  void create_with_malformed_email_is_bad_request(RequestSpecification spec) {
-    Response response = postCreate(spec,
-        """
-        {"email":"not-an-email","role":"USER"}\
-        """);
-
-    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("refusedNewAccounts")
+  void create_is_refused(String reason, String body, RequestSpecification spec) {
+    assertProblem(postCreate(spec, body)).hasStatus(HttpStatus.BAD_REQUEST);
     verifyNoInteractions(createUser);
   }
 
-  @Test
-  void create_with_non_string_email_is_bad_request(RequestSpecification spec) {
-    Response response = postCreate(spec,
-        """
-        {"email":42,"role":"USER"}\
-        """);
-
-    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
-    verifyNoInteractions(createUser);
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("refusedEnabledStates")
+  void setting_enabled_is_refused(String reason, String body, RequestSpecification spec) {
+    assertProblem(postEnabled(spec, body)).hasStatus(HttpStatus.BAD_REQUEST);
+    verifyNoInteractions(setUserEnabled);
   }
 
-  @Test
-  void create_without_role_is_bad_request(RequestSpecification spec) {
-    Response response = postCreate(spec,
-        """
-        {"email":"new.admin@conxugal.gal"}\
-        """);
-
-    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
-    verifyNoInteractions(createUser);
+  private static Stream<Arguments> refusedNewAccounts() {
+    return Stream.of(
+        arguments("email is blank", "{\"email\":\"\",\"role\":\"USER\"}"),
+        arguments("email is not an address", "{\"email\":\"not-an-email\",\"role\":\"USER\"}"),
+        arguments("email is not a string", "{\"email\":42,\"role\":\"USER\"}"),
+        arguments("email is absent", "{\"role\":\"USER\"}"),
+        arguments("role is absent", "{\"email\":\"new.admin@conxugal.gal\"}"),
+        arguments("role is outside the enum",
+            "{\"email\":\"new.admin@conxugal.gal\",\"role\":\"WIZARD\"}"),
+        arguments("body is not an object", "[]"));
   }
 
-  @Test
-  void create_with_role_outside_the_enum_is_bad_request(RequestSpecification spec) {
-    Response response = postCreate(spec,
-        """
-        {"email":"new.admin@conxugal.gal","role":"WIZARD"}\
-        """);
-
-    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
-    verifyNoInteractions(createUser);
+  private static Stream<Arguments> refusedEnabledStates() {
+    return Stream.of(
+        arguments("enabled is absent", "{}"),
+        arguments("enabled is a string readable as a boolean", "{\"enabled\":\"AAA\"}"),
+        arguments("enabled is a number", "{\"enabled\":1}"),
+        arguments("enabled is null", "{\"enabled\":null}"));
   }
 
-  /**
-   * Read loosely this arrives as {@code false} — an account disabled by a request that never
-   * asked for it.
-   */
-  @Test
-  void setting_enabled_to_string_is_bad_request(RequestSpecification spec) {
+  private Response postEnabled(RequestSpecification spec, String body) {
     User admin = TestUserFactory.adminUser();
     seedUser(admin);
     String sessionCookie = loginAs(spec, admin);
 
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-            .body(
-                """
-                {"enabled":"AAA"}\
-                """)
-        .when()
-            .post("/api/admin/users/" + UUID.randomUUID() + "/enabled");
-
-    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
-    verifyNoInteractions(setUserEnabled);
+    return given(spec)
+        .header(HttpHeaders.COOKIE, sessionCookie)
+        .body(body)
+    .when()
+        .post("/api/admin/users/" + UUID.randomUUID() + "/enabled");
   }
 
   private Response postCreate(RequestSpecification spec, String body) {

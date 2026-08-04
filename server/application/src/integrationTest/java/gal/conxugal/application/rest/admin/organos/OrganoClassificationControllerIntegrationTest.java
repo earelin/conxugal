@@ -2,6 +2,7 @@ package gal.conxugal.application.rest.admin.organos;
 
 import static gal.conxugal.application.http.error.support.AssertProblem.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -22,7 +23,11 @@ import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import jakarta.inject.Inject;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 // These two hang off the Órgano's own path rather than a taxonomía one, so the ADMIN gate a
 // rule shaped around /api/admin/organos/taxonomia/** would miss is asserted here per
@@ -107,19 +112,6 @@ class OrganoClassificationControllerIntegrationTest extends AuthenticationTestSu
     assertProblem(response)
         .hasStatus(HttpStatus.NOT_FOUND)
         .hasType("urn:conxugal:problem-type:termo-not-found");
-  }
-
-  @Test
-  void assign_without_term_is_bad_request(RequestSpecification spec) {
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
-
-    given(spec)
-        .header(HttpHeaders.COOKIE, sessionCookie)
-        .body("{}")
-    .when()
-        .put(placementOf(SANIDADE))
-    .then()
-        .statusCode(HttpStatus.BAD_REQUEST.getCode());
   }
 
   // Called twice on purpose: clearing is idempotent, so an admin double-clicking a row must
@@ -213,37 +205,20 @@ class OrganoClassificationControllerIntegrationTest extends AuthenticationTestSu
   // A term id that is one, and one actually sent: unlike a term's parent, null is no value
   // here — an Órgano is returned to the unclassified set by deleting the placement.
 
-  @Test
-  void assign_with_null_term_is_bad_request(RequestSpecification spec) {
-    Response response = putPlacement(spec,
-        """
-        {"termoId":null}\
-        """);
-
-    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("refusedPlacements")
+  void assign_is_refused(String reason, String body, RequestSpecification spec) {
+    assertProblem(putPlacement(spec, body)).hasStatus(HttpStatus.BAD_REQUEST);
     verifyNoInteractions(assignOrganoToTermo);
   }
 
-  @Test
-  void assign_with_malformed_term_is_bad_request(RequestSpecification spec) {
-    Response response = putPlacement(spec,
-        """
-        {"termoId":"not-a-uuid"}\
-        """);
-
-    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
-    verifyNoInteractions(assignOrganoToTermo);
-  }
-
-  @Test
-  void assign_with_non_string_term_is_bad_request(RequestSpecification spec) {
-    Response response = putPlacement(spec,
-        """
-        {"termoId":7}\
-        """);
-
-    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
-    verifyNoInteractions(assignOrganoToTermo);
+  private static Stream<Arguments> refusedPlacements() {
+    return Stream.of(
+        arguments("term is absent", "{}"),
+        arguments("term is null, which is no value here", "{\"termoId\":null}"),
+        arguments("term is not a UUID", "{\"termoId\":\"not-a-uuid\"}"),
+        arguments("term is not a string", "{\"termoId\":7}"),
+        arguments("body is not an object", "[]"));
   }
 
   private Response putPlacement(RequestSpecification spec, String body) {
