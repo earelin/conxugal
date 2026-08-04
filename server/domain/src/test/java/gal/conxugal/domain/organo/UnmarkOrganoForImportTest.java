@@ -7,7 +7,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import gal.conxugal.domain.organo.taxonomia.TermoId;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,7 +67,6 @@ class UnmarkOrganoForImportTest {
   }
 
   private static OrganoDeContratacion organo(OrganoId organoId, boolean importable) {
-    return new OrganoDeContratacion(
-        organoId, "source-key", "Facenda", true, importable, new TermoId(UUID.randomUUID()));
+    return new OrganoDeContratacion(organoId, "source-key", "Facenda", true, importable, null);
   }
 }

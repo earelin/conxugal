@@ -262,8 +262,8 @@ paths:
       description: >-
         Every stored Órgano with the same id, name, active state and taxonomía placement `GET
         /api/organos` serves, **plus its contratos menores import mark**. A second serialisation
-        of an Órgano exists because the mark is an administrator's fact: SPEC-0005 puts seeing
-        which Órganos are marked behind `ADMIN`, so it cannot be added to the catalogue read any
+        of an Órgano exists because the mark is an administrator's fact: seeing which Órganos are
+        marked is an administration capability, so it cannot be added to the catalogue read any
         authenticated user may make. It carries the placement as well as the mark so the
         administration UI swaps one read for the other rather than issuing both.
       responses:
