@@ -24,10 +24,10 @@ public class CreateTermo {
     if (parentId != null && termoRepository.findById(parentId).isEmpty()) {
       throw new TermoNotFoundException(parentId);
     }
-    String storedName = Whitespace.strip(name);
-    if (storedName.isEmpty()) {
+    if (Whitespace.isBlank(name)) {
       throw new IllegalArgumentException("name must not be blank");
     }
+    String storedName = Whitespace.strip(name);
     SiblingNames.requireAvailable(
         termoRepository.findByParentId(parentId), storedName, null, parentId);
     return termoRepository.insert(new Termo(storedName, parentId));

@@ -34,6 +34,15 @@ public final class Whitespace {
     return value.substring(start, end);
   }
 
+  /**
+   * Whether {@code value} carries nothing that would survive {@link #strip} — it is blank when
+   * every character is, and when it is empty already. The programmatic twin of
+   * {@link #NON_BLANK_PATTERN}, which says the same thing where only a constant will do.
+   */
+  public static boolean isBlank(String value) {
+    return strip(value).isEmpty();
+  }
+
   private static boolean isBlank(char character) {
     return Character.isWhitespace(character)
         || Character.isSpaceChar(character)

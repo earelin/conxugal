@@ -21,10 +21,10 @@ public class RenameTermo {
   public Termo rename(TermoId termoId, String name) {
     Termo termo =
         termoRepository.findById(termoId).orElseThrow(() -> new TermoNotFoundException(termoId));
-    String storedName = Whitespace.strip(name);
-    if (storedName.isEmpty()) {
+    if (Whitespace.isBlank(name)) {
       throw new IllegalArgumentException("name must not be blank");
     }
+    String storedName = Whitespace.strip(name);
     SiblingNames.requireAvailable(
         termoRepository.findByParentId(termo.parentId()), storedName, termoId, termo.parentId());
     termoRepository.updateName(termoId, storedName);

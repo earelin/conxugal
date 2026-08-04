@@ -42,6 +42,34 @@ class WhitespaceTest {
   }
 
   @Test
+  void reads_an_entirely_blank_value_as_blank() {
+    assertThat(Whitespace.isBlank("  \t" + NON_BREAKING_SPACE + GROUP_SEPARATOR)).isTrue();
+  }
+
+  @Test
+  void reads_an_empty_value_as_blank() {
+    assertThat(Whitespace.isBlank("")).isTrue();
+  }
+
+  @Test
+  void reads_padded_name_as_not_blank() {
+    assertThat(Whitespace.isBlank(NON_BREAKING_SPACE + "Sanidade ")).isFalse();
+  }
+
+  /** The two say the same thing, and a caller may reach for either. */
+  @Test
+  void is_blank_agrees_with_the_non_blank_pattern() {
+    Pattern nonBlank = Pattern.compile(Whitespace.NON_BLANK_PATTERN);
+
+    for (char character = 0; character < Character.MAX_VALUE; character++) {
+      String value = String.valueOf(character);
+      assertThat(Whitespace.isBlank(value))
+          .as("blankness of U+%04X".formatted((int) character))
+          .isEqualTo(!nonBlank.matcher(value).matches());
+    }
+  }
+
+  @Test
   void non_blank_pattern_rejects_exactly_what_strip_empties() {
     Pattern nonBlank = Pattern.compile(Whitespace.NON_BLANK_PATTERN);
 
