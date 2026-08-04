@@ -265,7 +265,9 @@ paths:
         schedule), this returns the "already running" outcome rather than starting a second
         concurrent run on that instance (the guard is per-instance today — running more than one
         instance of the service is not yet supported). If the source is unreachable or returns an
-        unusable response, nothing is written and this is reported as a 500.
+        unusable response, nothing is written and this is reported as a 500 carrying the problem
+        type `urn:conxugal:problem-type:organo-import-failed` — never as a `SUCCESS` outcome with
+        zero counts, which a client could not tell from an import that found nothing to do.
       responses:
         "200":
           description: >-
@@ -291,7 +293,22 @@ paths:
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
-          $ref: "#/components/responses/InternalServerError"
+          description: >-
+            The source was unreachable or returned an unusable response; nothing was written and
+            the stored catalogue, its states and the taxonomía are unchanged. Carries the problem
+            type `urn:conxugal:problem-type:organo-import-failed`, which is what lets an
+            administrator be told the source failed rather than that the server did.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /api/admin/organos/taxonomia/termos:
     post:
