@@ -102,8 +102,8 @@ function renderOrganosPage() {
 }
 
 /** Renders the section on the worklist, with both reads already answered. */
-async function renderLoadedSection(catalogue: Organo[] = CATALOGUE) {
-  mockCatalogue(catalogue);
+async function renderLoadedSection() {
+  mockCatalogue(CATALOGUE);
   mockTaxonomia(TAXONOMIA);
   renderOrganosPage();
   await screen.findByText(vivenda.name);
