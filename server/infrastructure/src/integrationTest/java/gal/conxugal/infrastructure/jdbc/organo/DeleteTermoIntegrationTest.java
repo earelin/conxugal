@@ -126,7 +126,6 @@ class DeleteTermoIntegrationTest implements TestPropertyProvider {
 
   // Returns the exception the call threw, or null, so a failure reaching the test thread as
   // data does not silently mask the connection isolation this test relies on.
-  @SuppressWarnings("PMD.AvoidCatchingGenericException")
   private static Exception runOnItsOwnThread(Runnable call) throws Exception {
     Callable<Exception> captureFailure =
         () -> {
