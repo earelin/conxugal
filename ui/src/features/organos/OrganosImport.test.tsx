@@ -1,6 +1,6 @@
 import { MantineProvider } from '@mantine/core';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -52,6 +52,26 @@ function outcome(status: ImportOutcome['status'], counts: Partial<ImportOutcome>
 
 function mockImport(body: ImportOutcome) {
   return nock(BASE_URL).post(IMPORT_PATH).reply(200, body);
+}
+
+/**
+ * An import the test finishes on demand. A wall-clock `delay()` would be a race
+ * against user-event's own awaits: on a slow enough run the reply lands first
+ * and the in-flight state under assertion is never observed.
+ */
+function heldImport(body: ImportOutcome) {
+  let release = () => {};
+  const answered = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  nock(BASE_URL)
+    .post(IMPORT_PATH)
+    .reply(200, (_uri, _requestBody, respond) => {
+      void answered.then(() => {
+        respond(null, body);
+      });
+    });
+  return { release: () => release() };
 }
 
 /**
@@ -121,6 +141,9 @@ describe('Órganos import trigger', () => {
         `5 ${copy.addedOther} · 2 ${copy.refreshedOther} · 0 ${copy.deactivatedOther}`,
       ),
     ).toBeInTheDocument();
+    // Polite, not assertive: a confirmation of what was asked for has no
+    // business interrupting whatever a screen reader is part-way through.
+    expect(screen.getByRole('status')).toHaveTextContent(copy.successTitle);
     // The newly imported Órgano lands in the worklist with no manual reload.
     expect(await screen.findByText(turismo.name)).toBeInTheDocument();
   });
@@ -154,7 +177,28 @@ describe('Órganos import trigger', () => {
     expect(await screen.findByText(copy.alreadyRunning)).toBeInTheDocument();
     expect(screen.queryByText(copy.successTitle)).not.toBeInTheDocument();
     expect(screen.queryByText(copy.errorTitle)).not.toBeInTheDocument();
+    // Asserted only once the button is idle again: the invalidation this
+    // outcome must not trigger is issued while the mutation settles, so a
+    // check taken any earlier could pass without having ruled anything out.
+    await waitFor(() => {
+      expect(importButton()).toBeEnabled();
+    });
     expect(refetch.isDone()).toBe(false);
+    expect(nock.pendingMocks()).toHaveLength(1);
+  });
+
+  it('lets the administrator dismiss an outcome once it has been read', async () => {
+    const user = userEvent.setup();
+    await renderLoadedSection();
+
+    mockImport(outcome('ALREADY_RUNNING'));
+
+    await user.click(importButton());
+    await screen.findByText(copy.alreadyRunning);
+
+    await user.click(screen.getByRole('button', { name: copy.dismiss }));
+
+    expect(screen.queryByText(copy.alreadyRunning)).not.toBeInTheDocument();
   });
 
   it('shows a source failure as a failure, never as a success with three zeroes', async () => {
@@ -199,14 +243,62 @@ describe('Órganos import trigger', () => {
     expect(screen.queryByText(copy.errorTitle)).not.toBeInTheDocument();
   });
 
-  it('disables the button while the import is in flight, so a double click runs one import', async () => {
+  it('keeps the source-failure message and the alert in place across its own retry', async () => {
+    const user = userEvent.setup();
+    await renderLoadedSection();
+
+    mockSourceFailure();
+
+    await user.click(importButton());
+    await screen.findByText(copy.errorSource);
+
+    const held = heldImport(outcome('SUCCESS', { refreshed: 1 }));
+    mockCatalogue(CATALOGUE);
+
+    await user.click(screen.getByRole('button', { name: strings.retry }));
+
+    // The alert must survive the button that lives inside it: an attempt in
+    // flight is not an attempt that never happened, and the message must not
+    // degrade to the generic one while the second request runs.
+    expect(screen.getByText(copy.errorSource)).toBeInTheDocument();
+
+    held.release();
+
+    expect(await screen.findByText(copy.successTitle)).toBeInTheDocument();
+    expect(screen.queryByText(copy.errorSource)).not.toBeInTheDocument();
+  });
+
+  it('says a refused import is refused rather than telling the administrator to retry', async () => {
+    const user = userEvent.setup();
+    await renderLoadedSection();
+
+    nock(BASE_URL).post(IMPORT_PATH).reply(403);
+
+    await user.click(importButton());
+
+    expect(await screen.findByText(copy.errorForbidden)).toBeInTheDocument();
+    expect(screen.queryByText(copy.errorGeneric)).not.toBeInTheDocument();
+  });
+
+  it('reports an outcome it does not recognise instead of rendering nothing at all', async () => {
     const user = userEvent.setup();
     await renderLoadedSection();
 
     nock(BASE_URL)
       .post(IMPORT_PATH)
-      .delay(30)
-      .reply(200, outcome('SUCCESS', { added: 1 }));
+      .reply(200, { status: 'PARTIAL', added: 0, refreshed: 0, deactivated: 0 });
+
+    await user.click(importButton());
+
+    expect(await screen.findByText(copy.errorGeneric)).toBeInTheDocument();
+    expect(screen.queryByText(copy.successTitle)).not.toBeInTheDocument();
+  });
+
+  it('disables the button while the import is in flight, so a double click runs one import', async () => {
+    const user = userEvent.setup();
+    await renderLoadedSection();
+
+    const held = heldImport(outcome('SUCCESS', { added: 1 }));
     mockCatalogue([...CATALOGUE, turismo]);
     const second = nock(BASE_URL).post(IMPORT_PATH).reply(200, outcome('SUCCESS'));
 
@@ -215,7 +307,12 @@ describe('Órganos import trigger', () => {
     const running = await screen.findByRole('button', { name: copy.running });
     expect(running).toBeDisabled();
 
+    // The obvious double click. Being disabled is the mechanism that swallows
+    // it; that no second request left the browser is the property that matters.
     await user.click(running);
+    expect(second.isDone()).toBe(false);
+
+    held.release();
 
     expect(await screen.findByText(copy.successTitle)).toBeInTheDocument();
     expect(second.isDone()).toBe(false);

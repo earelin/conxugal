@@ -223,6 +223,8 @@ export const strings = {
         alreadyRunningTitle: 'Importación en curso',
         alreadyRunning: 'Xa se está a executar unha importación; agarda a que remate.',
 
+        dismiss: 'Pechar',
+
         // Its own title, distinct from the section's failed-read one: an import
         // that could not run is not a section that could not load.
         errorTitle: 'Non se puido importar o catálogo',
@@ -232,6 +234,8 @@ export const strings = {
         errorSource:
           'A fonte de datos non está dispoñible ou devolveu unha resposta inservible. ' +
           'O catálogo, os seus estados e a taxonomía quedan como estaban.',
+        // Retrying is not the way out of a refusal, so it does not say to.
+        errorForbidden: 'Non tes permisos para lanzar unha importación.',
         errorGeneric: 'Non se puido lanzar a importación. Téntao de novo máis tarde.',
       },
       termo: {

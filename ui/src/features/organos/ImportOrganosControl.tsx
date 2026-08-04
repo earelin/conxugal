@@ -1,7 +1,8 @@
 import { Alert, Button, Group, Stack } from '@mantine/core';
 import { IconCircleCheck, IconDownload, IconInfoCircle } from '@tabler/icons-react';
+import { useState } from 'react';
 
-import { isProblemType } from '../../shared/lib/httpError';
+import { isHttpStatus, isProblemType } from '../../shared/lib/httpError';
 import { strings } from '../../shared/lib/strings';
 import { ErrorAlert } from '../../shared/ui/ErrorAlert';
 import { type ImportOutcome, useImportOrganos } from './importOrganos';
@@ -23,6 +24,66 @@ function outcomeCounts({ added, refreshed, deactivated }: ImportOutcome): string
   ].join(' · ');
 }
 
+function failureMessage(error: unknown): string {
+  if (isProblemType(error, SOURCE_FAILURE)) {
+    return copy.errorSource;
+  }
+  return isHttpStatus(error, 403) ? copy.errorForbidden : copy.errorGeneric;
+}
+
+interface OutcomeAlertProps {
+  outcome: ImportOutcome;
+  onDismiss: () => void;
+  onRetry: () => void;
+}
+
+/**
+ * Both alerts are `role="status"`: they report what an administrator asked for
+ * and has no reason to be interrupted mid-sentence by, unlike the assertive
+ * `role="alert"` Mantine gives an `Alert` by default and `ErrorAlert` keeps.
+ */
+function OutcomeAlert({ outcome, onDismiss, onRetry }: OutcomeAlertProps) {
+  switch (outcome.status) {
+    case 'SUCCESS':
+      return (
+        <Alert
+          color="green"
+          role="status"
+          title={copy.successTitle}
+          icon={<IconCircleCheck size={18} />}
+          withCloseButton
+          closeButtonLabel={copy.dismiss}
+          onClose={onDismiss}
+        >
+          {outcomeCounts(outcome)}
+        </Alert>
+      );
+    case 'ALREADY_RUNNING':
+      return (
+        <Alert
+          color="blue"
+          role="status"
+          title={copy.alreadyRunningTitle}
+          icon={<IconInfoCircle size={18} />}
+          withCloseButton
+          closeButtonLabel={copy.dismiss}
+          onClose={onDismiss}
+        >
+          {copy.alreadyRunning}
+        </Alert>
+      );
+    // Unreachable against today's contract, and rendered rather than dropped
+    // because the alternative failure mode is silent: a status this build does
+    // not know would otherwise leave the button flickering and nothing said.
+    default:
+      return (
+        <ErrorAlert title={copy.errorTitle} onRetry={onRetry}>
+          {copy.errorGeneric}
+        </ErrorAlert>
+      );
+  }
+}
+
 /**
  * The import trigger and whatever the last one reported.
  *
@@ -37,10 +98,21 @@ function outcomeCounts({ added, refreshed, deactivated }: ImportOutcome): string
  */
 export function ImportOrganosControl() {
   const importOrganos = useImportOrganos();
+  /**
+   * The failure is mapped to its message once and held, rather than derived
+   * from the mutation each render. `mutate` clears the mutation's error, so a
+   * derived alert would unmount under the retry button being pressed — taking
+   * the focused element with it — and the message would degrade to the generic
+   * one for as long as the second attempt was in flight.
+   */
+  const [failure, setFailure] = useState<string | null>(null);
   const outcome = importOrganos.data;
 
   function runImport() {
-    importOrganos.mutate();
+    importOrganos.mutate(undefined, {
+      onSuccess: () => setFailure(null),
+      onError: (error) => setFailure(failureMessage(error)),
+    });
   }
 
   return (
@@ -49,31 +121,24 @@ export function ImportOrganosControl() {
         <Button
           leftSection={<IconDownload size={16} />}
           loading={importOrganos.isPending}
-          disabled={importOrganos.isPending}
           onClick={runImport}
         >
           {importOrganos.isPending ? copy.running : copy.button}
         </Button>
       </Group>
 
-      {importOrganos.isError && (
+      {failure !== null && (
         <ErrorAlert title={copy.errorTitle} onRetry={runImport} retrying={importOrganos.isPending}>
-          {isProblemType(importOrganos.error, SOURCE_FAILURE)
-            ? copy.errorSource
-            : copy.errorGeneric}
+          {failure}
         </ErrorAlert>
       )}
 
-      {outcome?.status === 'SUCCESS' && (
-        <Alert color="green" title={copy.successTitle} icon={<IconCircleCheck size={18} />}>
-          {outcomeCounts(outcome)}
-        </Alert>
-      )}
-
-      {outcome?.status === 'ALREADY_RUNNING' && (
-        <Alert color="blue" title={copy.alreadyRunningTitle} icon={<IconInfoCircle size={18} />}>
-          {copy.alreadyRunning}
-        </Alert>
+      {outcome && (
+        <OutcomeAlert
+          outcome={outcome}
+          onDismiss={() => importOrganos.reset()}
+          onRetry={runImport}
+        />
       )}
     </Stack>
   );

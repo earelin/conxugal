@@ -37,9 +37,13 @@ export function useImportOrganos() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: runImport,
-    onSuccess: async (outcome) => {
+    onSuccess: (outcome) => {
       if (outcome.status === 'SUCCESS') {
-        await queryClient.invalidateQueries({ queryKey: ORGANOS_QUERY_KEY });
+        // Deliberately not awaited. Returning the invalidation would hold the
+        // mutation pending until the catalogue re-read settled — including its
+        // retries — so the button would go on saying "Importando…" after the
+        // import had answered. The outcome is known; the list can catch up.
+        void queryClient.invalidateQueries({ queryKey: ORGANOS_QUERY_KEY });
       }
     },
   });
