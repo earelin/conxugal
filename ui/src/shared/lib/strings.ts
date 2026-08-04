@@ -204,6 +204,36 @@ export const strings = {
       errorTitle: 'Non se puido cargar a sección de Órganos',
       errorForbidden: 'Non tes permisos para ver esta información.',
       errorGeneric: 'Téntao de novo máis tarde.',
+      import: {
+        button: 'Importar catálogo',
+        running: 'Importando…',
+
+        successTitle: 'Importación completada',
+        // The three counts of the outcome, split by plural category like the
+        // section counts above and joined by the component that reads them.
+        addedOne: 'engadido',
+        addedOther: 'engadidos',
+        refreshedOne: 'actualizado',
+        refreshedOther: 'actualizados',
+        deactivatedOne: 'desactivado',
+        deactivatedOther: 'desactivados',
+
+        // A normal answer, not a refusal: the guard is system-wide, so the
+        // scheduled run holds it just as a second administrator would.
+        alreadyRunningTitle: 'Importación en curso',
+        alreadyRunning: 'Xa se está a executar unha importación; agarda a que remate.',
+
+        // Its own title, distinct from the section's failed-read one: an import
+        // that could not run is not a section that could not load.
+        errorTitle: 'Non se puido importar o catálogo',
+        // The source failure the server names with its own problem type. Saying
+        // what is *unchanged* is the point: the catalogue on screen is still the
+        // one that was there, not a half-written one.
+        errorSource:
+          'A fonte de datos non está dispoñible ou devolveu unha resposta inservible. ' +
+          'O catálogo, os seus estados e a taxonomía quedan como estaban.',
+        errorGeneric: 'Non se puido lanzar a importación. Téntao de novo máis tarde.',
+      },
       termo: {
         cancel: 'Cancelar',
         nameLabel: 'Nome',

@@ -1,4 +1,4 @@
-import { Grid, Group, Loader, Stack, Text, Title } from '@mantine/core';
+import { Grid, Loader, Stack, Text, Title } from '@mantine/core';
 import { useState } from 'react';
 
 import { isHttpStatus } from '../../shared/lib/httpError';
@@ -6,6 +6,7 @@ import { strings } from '../../shared/lib/strings';
 import { ErrorAlert } from '../../shared/ui/ErrorAlert';
 import { AssignOrganoModal, type AssignTarget } from './AssignOrganoModal';
 import { DeleteTermoModal } from './DeleteTermoModal';
+import { ImportOrganosControl } from './ImportOrganosControl';
 import { MoveTermoModal } from './MoveTermoModal';
 import { useOrganosTaxonomia } from './organos';
 import { RenameTermoModal } from './RenameTermoModal';
@@ -100,8 +101,7 @@ export function OrganosPage() {
         <Text c="dimmed">{strings.admin.organos.subtitle}</Text>
       </Stack>
 
-      {/* Section toolbar: the import trigger lands here. */}
-      <Group justify="flex-end" />
+      <ImportOrganosControl />
 
       {/* One read can fail while the other is still in flight; the failure is
           the thing to report, not a spinner alongside it. */}
