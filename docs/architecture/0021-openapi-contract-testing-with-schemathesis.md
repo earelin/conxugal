@@ -48,6 +48,16 @@ repository root.
   discards them.
 - **A violation is a defect in the implementation**, per ADR-0010. The contract is amended
   only when it states something the domain does not mean.
+- **A warning fails the build too.** Schemathesis exits zero on a run that only warns, and its
+  warnings are not advisory: each says the generated requests stopped short of an operation's
+  real logic, which is the difference between an operation that conformed and one that was
+  never properly reached. `scripts/contract-test.sh` fails on any that remain, so the fixtures
+  have to be good enough that none does. The one warning left off is *validation mismatch*,
+  which reports the share of generated bodies an operation refused: behind real validation and
+  a uniqueness constraint that share is high by construction and moves with whatever rows
+  earlier phases created, naming different operations on consecutive runs of one suite. Its
+  genuine form — an API refusing a body the contract calls valid — is the
+  `positive_data_acceptance` check's to raise, and that stays on.
 - **The instance under test has no real downstream.** `server/docker-compose.yml` runs a
   WireMock standing in for contratosdegalicia.gal, serving the front page whose static HTML
   embeds the Órganos list in the ISO-8859-1 the source really uses, and the application is
@@ -114,7 +124,10 @@ contributor setup beyond the Docker daemon the acceptance suite already needs.
   from a null one, with no configuration for either, so every request body is now read through
   a deserializer of its own. That is real code on a layer that used to be annotations alone,
   and each new request type has to remember it.
-- Generation reaches a little further than the seeded fixtures do: the operations behind a
-  `{id}` are pointed at fixed rows, but a body referring to another row still carries a
-  generated UUID, so some operations mostly exercise their 404 branch. The run reports it as a
-  warning rather than passing quietly.
+- A request body naming another row is the one place no fixture reaches. Path parameters are
+  pointed at seeded rows and a delete draws from a pool of disposable ones, but an override
+  cannot reach inside a body, so the terms a move names are generated and mostly do not exist.
+  The contract declares 404 for exactly that, so the answers conform; what suffers is how far
+  in the generation gets. Making the ids the contract's own examples carry into real rows
+  closes it for the operations whose examples name one — the rest is left, with the warning
+  turned off against those operations rather than tolerated in silence.

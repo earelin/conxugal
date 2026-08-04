@@ -5,11 +5,13 @@
 #
 # Schemathesis reads the contract, generates requests for every operation it describes,
 # and asserts the live responses match — status codes, content types, response schemas,
-# and the absence of 5xx. Configuration (auth header, generation budget, the two excluded
-# operations) lives in schemathesis.toml at the repository root.
+# and the absence of 5xx. A run that only warns fails too: see SCHEMATHESIS_WARNINGS below.
+# Configuration (auth header, generation budget, the excluded operation, the rows generated
+# requests are pointed at) lives in schemathesis.toml at the repository root.
 #
-# Expects the application already running and reachable, with its database migrated so
-# the seeded administrator exists. Bring one up with:
+# Expects the application already running and reachable, with its database migrated so the
+# seeded administrator exists. A run consumes the fixtures it deletes, so restart the
+# application between runs — the seed is repeatable and puts them back. Bring one up with:
 #
 #   cd server && ./gradlew :application:dockerBuild && docker compose --profile app up -d --wait
 #
@@ -29,6 +31,17 @@ CONFIG_FILE="schemathesis.toml"
 
 # Bumped by hand — Dependabot reads manifests, not shell scripts.
 SCHEMATHESIS_IMAGE="ghcr.io/schemathesis/schemathesis:4.24.3"
+
+# Every warning but one, because a warning fails this gate and so each has to mean something.
+# The omission is validation-mismatch, which reports the share of generated bodies an operation
+# refused: behind real validation and a uniqueness constraint that share is high by
+# construction, and it moves with whatever rows earlier phases created — it named a different
+# pair of operations on consecutive runs of the same suite. The genuine form of what it looks
+# for, an API refusing a body the contract calls valid, belongs to the positive-data-acceptance
+# check, which stays on.
+SCHEMATHESIS_WARNINGS="missing_auth,missing_test_data,missing_deserializer,unused_openapi_auth"
+SCHEMATHESIS_WARNINGS="${SCHEMATHESIS_WARNINGS},unsupported_regex,method_not_allowed"
+SCHEMATHESIS_WARNINGS="${SCHEMATHESIS_WARNINGS},constants_extraction"
 
 BASE_URL="${CONTRACT_TEST_BASE_URL:-http://localhost:8080}"
 ADMIN_EMAIL="${CONTRACT_TEST_ADMIN_EMAIL:-root@local}"
@@ -95,18 +108,37 @@ run_schemathesis() {
 
   # --network host so the container reaches an instance published on the host's
   # localhost, which is where both a local compose stack and the CI runner put it.
-  if docker run --rm --network host \
+  #
+  # Output is teed rather than left to the terminal: schemathesis exits 0 on a run that only
+  # warns, and a warning here is not advisory. Each one says the generated requests stopped
+  # short of an operation's real logic, which is the difference between an operation that
+  # conformed and one that was never properly reached — a green run that proves less than it
+  # appears to. Where a warning is inherent to an operation rather than a gap in the fixtures
+  # it is turned off against that operation in schemathesis.toml, with the reason written
+  # down, so anything left here is new.
+  local output
+  output=$(mktemp)
+  local status=0
+  docker run --rm --network host \
     --env CONTRACT_TEST_SESSION \
     --volume "${ROOT}/${OPENAPI_DOC}:/spec/openapi.yaml:ro" \
     --volume "${ROOT}/${CONFIG_FILE}:/spec/schemathesis.toml:ro" \
     "$SCHEMATHESIS_IMAGE" \
     --config-file /spec/schemathesis.toml \
-    run /spec/openapi.yaml --url "$BASE_URL"; then
-    printf '%sOK%s contract conformance\n' "$green" "$reset"
-  else
+    run /spec/openapi.yaml --url "$BASE_URL" --warnings "$SCHEMATHESIS_WARNINGS" \
+    2>&1 | tee "$output" || status=1
+
+  if [[ $status -ne 0 ]]; then
     printf '%sFAIL%s contract conformance\n' "$red" "$reset"
     FAILED+=("contract-test")
+  elif grep -qE '^ *⚠️|[0-9]+ warnings? in ' "$output"; then
+    printf '%sFAIL%s contract conformance warned, which this gate treats as a failure\n' \
+      "$red" "$reset"
+    FAILED+=("contract-test (warnings)")
+  else
+    printf '%sOK%s contract conformance\n' "$green" "$reset"
   fi
+  rm -f "$output"
 }
 
 if log_in; then
