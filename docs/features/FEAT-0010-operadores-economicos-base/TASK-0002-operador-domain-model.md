@@ -77,6 +77,12 @@ path into FEAT-0009 and the two can be built in either order.
   TASK-0001's emptiness test (R6).
 
 ## Acceptance criteria
+
+> **One criterion below moved to [TASK-0001](TASK-0001-matching-emptiness-and-ranking-rules.md).**
+> Ordering a `NomeAlternativo` against the aggregate's own rank needs the rank comparison, and
+> this task deliberately ships none — the pair is carried as a value, and nothing orders it yet.
+> The criterion is unproved here and is TASK-0001's to prove; everything else in the list is
+> covered by `OperadorEconomicoTest` and `NomeAlternativoTest`.
 - The aggregate carries **one** fiscal identifier, and the identity is an `OperadorId` distinct
   from it. There is no second representation of the identifier to pick between.
   ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #2)

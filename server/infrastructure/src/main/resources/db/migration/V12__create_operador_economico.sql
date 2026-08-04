@@ -1,8 +1,8 @@
 CREATE TABLE operador_economico (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
     -- Held canonical — trimmed and upper-cased — so that two published spellings differing
-    -- only in padding or case cannot become two operadores. Uncollated: it is compared for
-    -- equality, never ordered as Galician text.
+    -- only in padding or case cannot become two operadores. Uncollated: where it is ordered it
+    -- is ordered as an opaque key, not as Galician text.
     fiscal_id TEXT NOT NULL UNIQUE,
     -- Collated on the column like termo.name, so every ORDER BY name a repository derives
     -- inherits it rather than each query having to remember an explicit COLLATE.
@@ -18,8 +18,9 @@ CREATE TABLE operador_economico_nome_alternativo (
     name TEXT COLLATE "galician" NOT NULL,
     last_published_date DATE,
     last_published_source_id BIGINT NOT NULL,
-    -- One row per distinct name rather than per award: retention upserts on this key, so the
-    -- largest operador holds one row per spelling instead of one per contract.
-    CONSTRAINT operador_economico_nome_alternativo_key
-        UNIQUE (operador_economico_id, name)
+    -- The operador and the name are the whole key: one row per distinct name rather than per
+    -- award, so the largest operador holds one row per spelling instead of one per contract,
+    -- and retention upserts on it rather than inserting a duplicate.
+    CONSTRAINT operador_economico_nome_alternativo_pkey
+        PRIMARY KEY (operador_economico_id, name)
 );

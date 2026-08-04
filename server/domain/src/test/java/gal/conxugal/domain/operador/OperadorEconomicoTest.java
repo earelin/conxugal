@@ -3,6 +3,7 @@ package gal.conxugal.domain.operador;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDate;
 import java.util.Set;
@@ -12,6 +13,8 @@ import org.junit.jupiter.api.Test;
 class OperadorEconomicoTest {
 
   private static final NomeRank RANK = new NomeRank(LocalDate.of(2026, 3, 14), 4242L);
+  private static final NomeRank NEWER = new NomeRank(LocalDate.of(2026, 7, 1), 5100L);
+  private static final NomeRank OLDER = new NomeRank(LocalDate.of(2025, 1, 9), 900L);
 
   @Test
   void holds_the_canonical_identifier_whatever_padding_and_case_it_was_built_from() {
@@ -22,13 +25,11 @@ class OperadorEconomicoTest {
   }
 
   @Test
-  void keeps_no_accessor_returning_the_identifier_spelling_it_was_built_from() {
-    OperadorEconomico operador =
-        new OperadorEconomico(" b12345678 ", "Obradoiro Naval", RANK);
+  void canonicalising_an_already_canonical_identifier_leaves_it_unchanged() {
+    OperadorEconomico once = new OperadorEconomico(" b12345678 ", "Obradoiro Naval", RANK);
+    OperadorEconomico twice = new OperadorEconomico(once.fiscalId(), "Obradoiro Naval", RANK);
 
-    assertThat(operador.fiscalId())
-        .isNotEqualTo(" b12345678 ")
-        .isNotEqualTo("b12345678");
+    assertThat(twice.fiscalId()).isEqualTo(once.fiscalId());
   }
 
   @Test
@@ -38,6 +39,18 @@ class OperadorEconomicoTest {
 
     assertThat(spaced.fiscalId()).isEqualTo("B1234 5678");
     assertThat(punctuated.fiscalId()).isEqualTo("B-12345678");
+  }
+
+  @Test
+  void rejects_an_identifier_that_is_empty_once_trimmed() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> new OperadorEconomico("   ", "Obradoiro Naval", RANK));
+  }
+
+  @Test
+  void rejects_an_empty_identifier() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> new OperadorEconomico("", "Obradoiro Naval", RANK));
   }
 
   @Test
@@ -53,9 +66,9 @@ class OperadorEconomicoTest {
   @Test
   void keeps_the_name_exactly_as_published() {
     OperadorEconomico operador =
-        new OperadorEconomico("B12345678", "obradoiro   Naval, S.L.", RANK);
+        new OperadorEconomico("B12345678", "  obradoiro   Naval, S.L. ", RANK);
 
-    assertThat(operador.name()).isEqualTo("obradoiro   Naval, S.L.");
+    assertThat(operador.name()).isEqualTo("  obradoiro   Naval, S.L. ");
   }
 
   @Test
@@ -80,6 +93,23 @@ class OperadorEconomicoTest {
   }
 
   @Test
+  void retains_every_distinct_name_its_contracts_have_published() {
+    OperadorEconomico operador =
+        new OperadorEconomico(
+            null,
+            "B12345678",
+            "Obradoiro Naval",
+            RANK,
+            Set.of(
+                new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER),
+                new NomeAlternativo(null, "Obradoiro Naval SL", NEWER)));
+
+    assertThat(operador.nomesAlternativos())
+        .extracting(NomeAlternativo::name)
+        .containsExactlyInAnyOrder("Obradoiro Naval, S.L.", "Obradoiro Naval SL");
+  }
+
+  @Test
   void rejects_null_fiscal_id() {
     assertThatNullPointerException()
         .isThrownBy(() -> new OperadorEconomico(null, "Obradoiro Naval", RANK));
@@ -98,8 +128,30 @@ class OperadorEconomicoTest {
   }
 
   @Test
+  void rejects_null_nomes_alternativos() {
+    assertThatNullPointerException()
+        .isThrownBy(
+            () -> new OperadorEconomico(null, "B12345678", "Obradoiro Naval", RANK, null));
+  }
+
+  @Test
   void rejects_an_alternative_equal_to_the_principal_name() {
-    Set<NomeAlternativo> alternativos = Set.of(new NomeAlternativo("Obradoiro Naval", RANK));
+    Set<NomeAlternativo> alternativos =
+        Set.of(new NomeAlternativo(null, "Obradoiro Naval", RANK));
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(
+            () ->
+                new OperadorEconomico(
+                    null, "B12345678", "Obradoiro Naval", RANK, alternativos));
+  }
+
+  @Test
+  void rejects_two_alternatives_bearing_the_same_name() {
+    Set<NomeAlternativo> alternativos =
+        Set.of(
+            new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER),
+            new NomeAlternativo(null, "Obradoiro Naval, S.L.", NEWER));
 
     assertThatIllegalArgumentException()
         .isThrownBy(
@@ -116,46 +168,69 @@ class OperadorEconomicoTest {
             "B12345678",
             "Obradoiro Naval",
             RANK,
-            Set.of(new NomeAlternativo("OBRADOIRO NAVAL", RANK)));
+            Set.of(new NomeAlternativo(null, "OBRADOIRO NAVAL", RANK)));
 
     assertThat(operador.nomesAlternativos()).hasSize(1);
   }
 
   @Test
-  void advancing_the_display_moves_the_name_and_the_rank_together() {
-    OperadorEconomico operador = new OperadorEconomico("B12345678", "Obradoiro Naval", RANK);
-    NomeRank newer = new NomeRank(LocalDate.of(2026, 7, 1), 5100L);
-
-    OperadorEconomico advanced = operador.displaying("Obradoiro Naval, S.L.", newer);
-
-    assertThat(advanced.name()).isEqualTo("Obradoiro Naval, S.L.");
-    assertThat(advanced.nameRank()).isEqualTo(newer);
-  }
-
-  @Test
-  void advancing_the_display_retains_the_name_it_displaced_under_the_rank_it_won_with() {
-    OperadorEconomico operador = new OperadorEconomico("B12345678", "Obradoiro Naval", RANK);
-
-    OperadorEconomico advanced =
-        operador.displaying("Obradoiro Naval, S.L.", new NomeRank(LocalDate.of(2026, 7, 1), 5100L));
-
-    assertThat(advanced.nomesAlternativos())
-        .containsExactly(new NomeAlternativo(null, "Obradoiro Naval", RANK));
-  }
-
-  @Test
-  void advancing_the_display_leaves_the_new_name_absent_from_the_alternatives() {
-    NomeRank older = new NomeRank(LocalDate.of(2025, 1, 9), 900L);
+  void hands_out_the_retained_names_as_an_unmodifiable_set() {
     OperadorEconomico operador =
         new OperadorEconomico(
             null,
             "B12345678",
             "Obradoiro Naval",
             RANK,
-            Set.of(new NomeAlternativo("Obradoiro Naval, S.L.", older)));
+            Set.of(new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER)));
 
-    OperadorEconomico advanced =
-        operador.displaying("Obradoiro Naval, S.L.", new NomeRank(LocalDate.of(2026, 7, 1), 5100L));
+    assertThatThrownBy(() -> operador.nomesAlternativos().clear())
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  void advancing_the_display_moves_the_name_and_the_rank_together() {
+    OperadorEconomico operador = new OperadorEconomico("B12345678", "Obradoiro Naval", RANK);
+
+    OperadorEconomico advanced = operador.displaying("Obradoiro Naval, S.L.", NEWER);
+
+    assertThat(advanced.name()).isEqualTo("Obradoiro Naval, S.L.");
+    assertThat(advanced.nameRank()).isEqualTo(NEWER);
+  }
+
+  @Test
+  void advancing_the_display_retains_the_name_it_displaced_under_the_rank_it_won_with() {
+    OperadorEconomico operador = new OperadorEconomico("B12345678", "Obradoiro Naval", RANK);
+
+    OperadorEconomico advanced = operador.displaying("Obradoiro Naval, S.L.", NEWER);
+
+    assertThat(advanced.nomesAlternativos())
+        .containsExactlyInAnyOrder(new NomeAlternativo(null, "Obradoiro Naval", RANK));
+  }
+
+  @Test
+  void the_name_it_displaced_is_retained_against_the_operador_it_belongs_to() {
+    OperadorId id = new OperadorId(UUID.randomUUID());
+    OperadorEconomico operador =
+        new OperadorEconomico(id, "B12345678", "Obradoiro Naval", RANK, Set.of());
+
+    OperadorEconomico advanced = operador.displaying("Obradoiro Naval, S.L.", NEWER);
+
+    assertThat(advanced.nomesAlternativos())
+        .extracting(NomeAlternativo::operadorEconomicoId)
+        .containsExactly(id);
+  }
+
+  @Test
+  void advancing_the_display_leaves_the_new_name_absent_from_the_alternatives() {
+    OperadorEconomico operador =
+        new OperadorEconomico(
+            null,
+            "B12345678",
+            "Obradoiro Naval",
+            RANK,
+            Set.of(new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER)));
+
+    OperadorEconomico advanced = operador.displaying("Obradoiro Naval, S.L.", NEWER);
 
     assertThat(advanced.nomesAlternativos())
         .extracting(NomeAlternativo::name)
@@ -163,25 +238,37 @@ class OperadorEconomicoTest {
   }
 
   @Test
+  void advancing_the_display_keeps_the_identity_and_the_fiscal_identifier() {
+    OperadorId id = new OperadorId(UUID.randomUUID());
+    OperadorEconomico operador =
+        new OperadorEconomico(id, "B12345678", "Obradoiro Naval", RANK, Set.of());
+
+    OperadorEconomico advanced = operador.displaying("Obradoiro Naval, S.L.", NEWER);
+
+    assertThat(advanced.id()).isEqualTo(id);
+    assertThat(advanced.fiscalId()).isEqualTo("B12345678");
+  }
+
+  @Test
   void republishing_the_displayed_name_advances_the_rank_and_retains_nothing() {
     OperadorEconomico operador = new OperadorEconomico("B12345678", "Obradoiro Naval", RANK);
-    NomeRank newer = new NomeRank(LocalDate.of(2026, 7, 1), 5100L);
 
-    OperadorEconomico advanced = operador.displaying("Obradoiro Naval", newer);
+    OperadorEconomico advanced = operador.displaying("Obradoiro Naval", NEWER);
 
-    assertThat(advanced.nameRank()).isEqualTo(newer);
+    assertThat(advanced.nameRank()).isEqualTo(NEWER);
     assertThat(advanced.nomesAlternativos()).isEmpty();
   }
 
   @Test
-  void advancing_the_display_never_leaves_an_alternative_equal_to_the_principal() {
-    OperadorEconomico operador = new OperadorEconomico("B12345678", "Obradoiro Naval", RANK);
+  void republishing_the_displayed_name_under_the_same_rank_changes_nothing() {
+    OperadorEconomico operador =
+        new OperadorEconomico(
+            null,
+            "B12345678",
+            "Obradoiro Naval",
+            RANK,
+            Set.of(new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER)));
 
-    OperadorEconomico advanced =
-        operador.displaying("Obradoiro Naval, S.L.", new NomeRank(LocalDate.of(2026, 7, 1), 5100L));
-
-    assertThat(advanced.nomesAlternativos())
-        .extracting(NomeAlternativo::name)
-        .doesNotContain(advanced.name());
+    assertThat(operador.displaying("Obradoiro Naval", RANK)).isEqualTo(operador);
   }
 }

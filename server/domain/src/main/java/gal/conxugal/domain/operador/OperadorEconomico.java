@@ -5,7 +5,7 @@ import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
 import io.micronaut.data.annotation.MappedProperty;
 import io.micronaut.data.annotation.Relation;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
@@ -47,11 +47,19 @@ public record OperadorEconomico(
     Objects.requireNonNull(nameRank, "nameRank must not be null");
     Objects.requireNonNull(nomesAlternativos, "nomesAlternativos must not be null");
     fiscalId = fiscalId.strip().toUpperCase(Locale.ROOT);
+    if (fiscalId.isEmpty()) {
+      throw new IllegalArgumentException("fiscalId must not be empty once trimmed");
+    }
     nomesAlternativos = Set.copyOf(nomesAlternativos);
+    Set<String> seen = HashSet.newHashSet(nomesAlternativos.size());
     for (NomeAlternativo alternativo : nomesAlternativos) {
       if (alternativo.name().equals(name)) {
         throw new IllegalArgumentException(
             "nomesAlternativos must not hold the principal name: %s".formatted(name));
+      }
+      if (!seen.add(alternativo.name())) {
+        throw new IllegalArgumentException(
+            "nomesAlternativos must hold each name once: %s".formatted(alternativo.name()));
       }
     }
   }
@@ -75,7 +83,7 @@ public record OperadorEconomico(
     if (name.equals(newName)) {
       return new OperadorEconomico(id, fiscalId, name, newRank, nomesAlternativos);
     }
-    Set<NomeAlternativo> retained = new LinkedHashSet<>();
+    Set<NomeAlternativo> retained = new HashSet<>();
     for (NomeAlternativo alternativo : nomesAlternativos) {
       if (!alternativo.name().equals(newName)) {
         retained.add(alternativo);

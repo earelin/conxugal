@@ -23,8 +23,22 @@ exists first.
 
 > **The migration landed with [TASK-0002](TASK-0002-operador-domain-model.md)**, as
 > `V12__create_operador_economico.sql`, so that its mapped entities were not left pointing at
-> tables that did not exist. Both tables below are already created, with the constraints stated.
-> What remains here is the **JDBC adapter** and the integration tests that prove it.
+> tables that did not exist. Both tables below are already created. What remains here is the
+> **JDBC adapter** and the integration tests that prove it. Three things it settled that change
+> the work below:
+>
+> - The retained-names table's `UNIQUE (operador_economico_id, name)` is its **primary key**,
+>   because Micronaut Data needs an identity to read the association back. Without one the join
+>   is generated correctly and then returns an **empty set** rather than failing — proved by
+>   removing the key and watching the read come back empty. `ON CONFLICT (operador_economico_id,
+>   name)` targets it either way.
+> - `promoteName` replaces the plain name-and-rank update. It writes both **and** drops the name
+>   from the retained set, because nothing else could: the aggregate refuses to be built holding
+>   its own displayed name as an alternative, so a store that left that row behind would write a
+>   state no later read could load.
+> - Neither `promoteName` nor `retainName` derives from its name — `retain` is not a Micronaut
+>   Data prefix, and `promoteName` spans two tables. Both need explicit queries, so this adapter
+>   will **not** be an empty interface like `JdbcOrganoRepository`.
 
 ## Scope
 - A migration (next free `V` number) creating `operador_economico`:
