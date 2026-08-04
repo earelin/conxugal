@@ -35,11 +35,6 @@ deterministic = true
 include-path = "/api/admin/metrics"
 enabled = false
 
-# Every call reaches contratosdegalicia.gal over the real network.
-[[operations]]
-include-path = "/api/admin/organos/import"
-enabled = false
-
 # Generated UUIDs never match a real row, so without these the operations below only ever
 # exercise their 404 branch. The values are seeded by
 # db/migration-local/R__seed_test_catalogue.sql, which restores them on every start.

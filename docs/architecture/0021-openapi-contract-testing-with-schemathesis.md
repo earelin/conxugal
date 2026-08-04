@@ -48,10 +48,16 @@ repository root.
   discards them.
 - **A violation is a defect in the implementation**, per ADR-0010. The contract is amended
   only when it states something the domain does not mean.
-- Two operations are excluded, for reasons inherent to them rather than to the tool:
-  `GET /api/admin/metrics` is an unbounded SSE stream, not a JSON body — the contract records
-  the same limitation on the operation itself — and `POST /api/admin/organos/import` reaches
-  contratosdegalicia.gal over the real network on every call.
+- **The instance under test has no real downstream.** `server/docker-compose.yml` runs a
+  WireMock standing in for contratosdegalicia.gal, serving the front page whose static HTML
+  embeds the Órganos list in the ISO-8859-1 the source really uses, and the application is
+  pointed at it. This is [ADR-0007](0007-acceptance-testing-module.md)'s rule — external
+  dependencies replaced by mocks — applied to the same instance both suites drive. The import
+  is therefore an operation like any other here: it is generated against, it reconciles a real
+  catalogue into a real database, and the site is never called.
+- **One operation is excluded**, for a reason inherent to it rather than to the tool:
+  `GET /api/admin/metrics` is an unbounded SSE stream, not a JSON body, and the contract
+  records the same limitation on the operation itself.
 - The **stateful phase is disabled**. The contract declares no OpenAPI links, so that phase
   can only guess how operations chain, and the one relationship it reliably discovers is that
   `GET /api/admin/users` hands it the id of the administrator the run authenticates as, which
@@ -95,8 +101,14 @@ contributor setup beyond the Docker daemon the acceptance suite already needs.
 - The image tag is bumped by hand: `.github/dependabot.yml` covers npm, Gradle and GitHub
   Actions, and Dependabot does not read shell scripts.
 - `--network host` makes the script Linux-first.
-- The excluded operations and the disabled stateful phase are real gaps, and the exclusions
-  are configuration a future contributor must remember to revisit.
+- The excluded operation and the disabled stateful phase are real gaps, and the exclusion is
+  configuration a future contributor must remember to revisit.
+- The stub is hand-written, so it can drift from what contratosdegalicia.gal actually serves —
+  the same weakness [ADR-0018](0018-frontend-acceptance-tests-against-a-stubbed-api.md) records
+  of the SPA's stubs, and one this document cannot close for a source that publishes no
+  contract. What it does buy is that the shape is stated in one place, next to the adapter's
+  own account of it, rather than assumed. `FEAT-0009`'s `design/source-contract.md` measures
+  the real site, and is what the fixture should be checked against when it is revised.
 - Keeping it green cost strictness the framework does not offer. Micronaut Serde coerces
   scalars — `{"enabled": "AAA"}` deserializes to `false` — and cannot tell an absent property
   from a null one, with no configuration for either, so every request body is now read through
