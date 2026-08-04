@@ -298,6 +298,19 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(organoRepository.findById(id).orElseThrow().importable()).isTrue();
   }
 
+  // findById carrying the mark is not enough for the administrator's catalogue: that read is
+  // this one, and a column reaching the record through the member read alone would leave every
+  // row on screen showing an Órgano as unmarked.
+  @Test
+  void findAllOrderByName_reports_the_mark_of_every_organo() throws Exception {
+    insertOrgano("axencia-y", "Axencia Y", true, true, null);
+    insertOrgano("consorcio-x", "Consorcio X", true, false, null);
+
+    assertThat(organoRepository.findAllOrderByName())
+        .extracting(OrganoDeContratacion::name, OrganoDeContratacion::importable)
+        .containsExactly(tuple("Axencia Y", true), tuple("Consorcio X", false));
+  }
+
   // Asserted over the table rather than through a read-back, because the claim is about the
   // columns the statement did *not* write: an UPDATE that also reset the name, the active
   // state or the placement — or that reached the second Órgano — still satisfies a findById.

@@ -2,7 +2,7 @@
 feat: FEAT-0009
 domain: backend
 adrs: [0002, 0005, 0006, 0010, 0012, 0020]
-status: todo
+status: done
 depends_on: [TASK-0001]
 ---
 
@@ -17,13 +17,13 @@ two write operations and the administrator's catalogue read. Authored contract-f
 [ADR-0005](../../architecture/0005-session-based-authentication.md) and carrying
 [ADR-0012](../../architecture/0012-rate-limit-http-contract.md)'s rate-limit contract.
 
-**Prerequisites outside this feature.** Two FEAT-0007 tasks this one builds on are still
-`todo`, and neither artefact exists in `openapi.yaml` today:
+**Prerequisites outside this feature — both landed.** Two FEAT-0007 tasks this one builds on
+are `done`, and both artefacts are in `openapi.yaml`:
 [TASK-0005](../FEAT-0007-organos-taxonomia-classification/TASK-0005-taxonomia-read-endpoints.md)
 defines `GET /api/organos` and the Órgano shape this read mirrors, and
 [TASK-0006](../FEAT-0007-organos-taxonomia-classification/TASK-0006-taxonomia-admin-endpoints.md)
-introduces the `urn:conxugal:problem-type:organo-not-found` type reused below. Build this after
-them, or the shape and the problem type are being invented twice.
+introduces the `urn:conxugal:problem-type:organo-not-found` type reused below. Both are reused
+rather than invented a second time.
 
 **Marking triggers nothing yet.** There is no importer until
 [TASK-0010](TASK-0010-multi-organo-orchestration.md), so the `PUT` here only writes the mark;
