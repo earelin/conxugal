@@ -64,6 +64,6 @@ class ClearOrganoTermoTest {
   }
 
   private static OrganoDeContratacion placedIn(OrganoId organoId, TermoId termoId) {
-    return new OrganoDeContratacion(organoId, "source-key", "Facenda", true, termoId);
+    return new OrganoDeContratacion(organoId, "source-key", "Facenda", true, false, termoId);
   }
 }

@@ -19,6 +19,7 @@ public record OrganoDeContratacion(
     String sourceKey,
     String name,
     boolean active,
+    boolean importable,
     @Nullable TermoId termoId) {
 
   public OrganoDeContratacion {
@@ -26,8 +27,11 @@ public record OrganoDeContratacion(
     Objects.requireNonNull(name, "name must not be null");
   }
 
-  /** A newly discovered Órgano: active and unclassified until later touched. */
+  /**
+   * A newly discovered Órgano: active, unclassified and not imported until later touched.
+   * Importing contratos menores is opted into deliberately, never by discovery.
+   */
   public OrganoDeContratacion(String sourceKey, String name) {
-    this(null, sourceKey, name, true, null);
+    this(null, sourceKey, name, true, false, null);
   }
 }
