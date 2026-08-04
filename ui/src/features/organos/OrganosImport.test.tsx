@@ -74,7 +74,9 @@ function heldImport(body: ImportOutcome) {
       respond(null, body);
     });
   });
-  return { release: () => release() };
+  // Safe to hand out directly: a Promise executor runs synchronously, so the
+  // binding is the resolver rather than the placeholder by the time we return.
+  return { release };
 }
 
 /**
