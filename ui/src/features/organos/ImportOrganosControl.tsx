@@ -157,11 +157,7 @@ export function ImportOrganosControl() {
       )}
 
       {outcome && (
-        <OutcomeAlert
-          outcome={outcome}
-          onDismiss={() => importOrganos.reset()}
-          onRetry={runImport}
-        />
+        <OutcomeAlert outcome={outcome} onDismiss={importOrganos.reset} onRetry={runImport} />
       )}
     </Stack>
   );
