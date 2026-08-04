@@ -21,6 +21,11 @@ reach millions of rows, which is the operation this project avoids by creating t
 are empty. Nothing here references `contrato_menor`, so there is no cycle: this table simply
 exists first.
 
+> **The migration landed with [TASK-0002](TASK-0002-operador-domain-model.md)**, as
+> `V12__create_operador_economico.sql`, so that its mapped entities were not left pointing at
+> tables that did not exist. Both tables below are already created, with the constraints stated.
+> What remains here is the **JDBC adapter** and the integration tests that prove it.
+
 ## Scope
 - A migration (next free `V` number) creating `operador_economico`:
   - `id UUID PRIMARY KEY` — a plain `uuid` column; `OperadorId` is the Java type an
