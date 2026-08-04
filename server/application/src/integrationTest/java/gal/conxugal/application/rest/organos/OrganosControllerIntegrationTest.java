@@ -75,6 +75,22 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
     assertThat(response.jsonPath().getMap("[0]")).containsEntry("termoId", null);
   }
 
+  // Asserted on the absence of a key rather than left to the response record's shape, because
+  // every other assertion here names the keys it wants and so cannot see an extra one. Which
+  // Órganos are marked is an administration capability: folding importable into this read —
+  // the obvious "why two records?" refactor — would hand it to a USER, and nothing else in the
+  // suite would fail.
+  @Test
+  void catalogue_read_withholds_the_import_mark_from_users(RequestSpecification spec) {
+    when(listOrganos.list()).thenReturn(
+        List.of(new OrganoDeContratacion(new OrganoId(UUID.randomUUID()), "mar",
+            "Consellería do Mar", true, true, null)));
+
+    Response response = readAs(spec, TestUserFactory.normalUser(), "/api/organos");
+
+    assertThat(response.jsonPath().getMap("[0]")).doesNotContainKey("importable");
+  }
+
   @Test
   void user_reads_every_term_with_its_parent_edge(RequestSpecification spec) {
     when(listTermos.list()).thenReturn(
