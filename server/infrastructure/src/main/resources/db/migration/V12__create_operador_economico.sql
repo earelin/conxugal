@@ -3,7 +3,7 @@ CREATE TABLE operador_economico (
     -- Held canonical — trimmed and upper-cased — so that two published spellings differing
     -- only in padding or case cannot become two operadores. Uncollated: where it is ordered it
     -- is ordered as an opaque key, not as Galician text.
-    fiscal_id TEXT NOT NULL UNIQUE,
+    fiscal_id VARCHAR(16) NOT NULL UNIQUE,
     -- Collated on the column like termo.name, so every ORDER BY name a repository derives
     -- inherits it rather than each query having to remember an explicit COLLATE.
     name TEXT COLLATE "galician" NOT NULL,
