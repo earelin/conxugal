@@ -576,6 +576,110 @@ describe('órgano classification', () => {
     );
   });
 
+  it('filters the Órgano picker without accents, and on the name alone', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+    await showSection();
+
+    await openTermo(user, educacion.name);
+    await user.click(screen.getByRole('button', { name: copy.fromTermo }));
+    const field = within(await dialog()).getByRole('combobox', { name: copy.organoLabel });
+    await user.click(field);
+
+    // Mantine's own filter compares the raw label, so «saude» would miss
+    // «Servizo Galego de Saúde» entirely.
+    await user.type(field, 'saude');
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: new RegExp(`^${sergas.name}`) })).toBeVisible();
+    });
+    expect(
+      screen.queryByRole('option', { name: new RegExp(`^${vivenda.name}`) }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not match an Órgano on the term it happens to sit in', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+    await showSection();
+
+    await openTermo(user, educacion.name);
+    await user.click(screen.getByRole('button', { name: copy.fromTermo }));
+    const field = within(await dialog()).getByRole('combobox', { name: copy.organoLabel });
+    await user.click(field);
+
+    // Every option states its placement, and SERGAS sits under a Consellería.
+    // Matching on that would bury the Órgano actually being typed.
+    await user.type(field, 'consellería');
+
+    await waitFor(() => {
+      expect(screen.getByText(copy.noOrganoMatches)).toBeVisible();
+    });
+  });
+
+  it('closes the dialog when the Órgano it is about is deleted under it', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+    await showSection();
+
+    await assignFromRow(user, vivenda);
+    await chooseTermo(user, sanidade.name);
+    nock(BASE_URL)
+      .put(`${ORGANO_PATH}/${vivenda.id}/termo`)
+      .reply(...refuses(404, 'organo-not-found'));
+    await confirmAssign(user);
+    await within(await dialog()).findByText(copy.organoNotFound);
+
+    // The refusal was the truth: the Órgano really is gone from the catalogue.
+    mockCatalogue(CATALOGUE.filter((organo) => organo.id !== vivenda.id));
+    mockTaxonomia(TAXONOMIA);
+
+    await user.click(within(await dialog()).getByRole('button', { name: copy.refresh }));
+
+    // Nothing to file any more, so the dialog has nothing to be about.
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(rowNames()).toEqual([turismo.name]);
+  });
+
+  it('closes the dialog when the term it is filing into is deleted under it', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+    await showSection();
+
+    await openTermo(user, educacion.name);
+    await user.click(screen.getByRole('button', { name: copy.fromTermo }));
+    await chooseOrgano(user, vivenda.name);
+    nock(BASE_URL)
+      .put(`${ORGANO_PATH}/${vivenda.id}/termo`)
+      .reply(...refuses(404, 'termo-not-found'));
+    await confirmAssign(user);
+    await within(await dialog()).findByText(copy.termoNotFound);
+
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA.filter((termo) => termo.id !== educacion.id));
+
+    await user.click(within(await dialog()).getByRole('button', { name: copy.refresh }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    // The pane it was opened from falls back to the worklist rather than
+    // showing a term that no longer exists.
+    expect(
+      await screen.findByRole('heading', { name: strings.admin.organos.unclassified }),
+    ).toBeVisible();
+  });
+
   it('states an inactive Órgano as such in the picker, and still offers it', async () => {
     const user = userEvent.setup();
     mockCatalogue(CATALOGUE);
