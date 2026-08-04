@@ -29,11 +29,11 @@ class ListOrganosTest {
   void returns_every_organo_classified_and_unclassified() {
     OrganoDeContratacion classified =
         new OrganoDeContratacion(
-            new OrganoId(UUID.randomUUID()), "facenda", "Facenda", true,
+            new OrganoId(UUID.randomUUID()), "facenda", "Facenda", true, false,
             new TermoId(UUID.randomUUID()));
     OrganoDeContratacion unclassified =
         new OrganoDeContratacion(
-            new OrganoId(UUID.randomUUID()), "sanidade", "Sanidade", false, null);
+            new OrganoId(UUID.randomUUID()), "sanidade", "Sanidade", false, false, null);
     when(organoRepository.findAllOrderByName()).thenReturn(List.of(classified, unclassified));
 
     List<OrganoDeContratacion> result = listOrganos.list();

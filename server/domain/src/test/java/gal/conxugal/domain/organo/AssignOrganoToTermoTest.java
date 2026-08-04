@@ -96,6 +96,6 @@ class AssignOrganoToTermoTest {
   }
 
   private static OrganoDeContratacion unclassified(OrganoId organoId) {
-    return new OrganoDeContratacion(organoId, "source-key", "Facenda", true, null);
+    return new OrganoDeContratacion(organoId, "source-key", "Facenda", true, false, null);
   }
 }

@@ -131,7 +131,8 @@ class OrganoReconcilerTest {
   void redeactivating_an_already_inactive_absentee_reports_zero_deactivated() {
     OrganoDeContratacion active = organo("consorcio-x", "Consorcio X", true);
     OrganoDeContratacion nowInactive =
-        new OrganoDeContratacion(active.id(), active.sourceKey(), active.name(), false, null);
+        new OrganoDeContratacion(
+            active.id(), active.sourceKey(), active.name(), false, false, null);
     when(organoRepository.findAllOrderByName())
         .thenReturn(List.of(active))
         .thenReturn(List.of(nowInactive));
@@ -180,8 +181,32 @@ class OrganoReconcilerTest {
     assertThat(outcome.deactivated()).isEqualTo(1);
   }
 
+  // The mark is an administrator's decision, so reconciliation must have no way of touching
+  // it: the only proof a mocked repository can give is that the write is never reached.
+  @Test
+  void reconciling_never_writes_the_import_mark() {
+    OrganoDeContratacion markedAndRefreshed = organo("refreshed", "Old Name", true, true);
+    OrganoDeContratacion markedAndAbsent = organo("absent", "Absent", true, true);
+    OrganoDeContratacion markedAndInactive = organo("reactivated", "Reactivated", false, true);
+    when(organoRepository.findAllOrderByName())
+        .thenReturn(List.of(markedAndRefreshed, markedAndAbsent, markedAndInactive));
+
+    reconciler.reconcile(
+        List.of(
+            new OrganoSourceEntry("refreshed", "New Name"),
+            new OrganoSourceEntry("reactivated", "Reactivated"),
+            new OrganoSourceEntry("brand-new", "Brand New")));
+
+    verify(organoRepository, never()).updateImportable(any(), anyBoolean());
+  }
+
   private static OrganoDeContratacion organo(String sourceKey, String name, boolean active) {
+    return organo(sourceKey, name, active, false);
+  }
+
+  private static OrganoDeContratacion organo(
+      String sourceKey, String name, boolean active, boolean importable) {
     return new OrganoDeContratacion(
-        new OrganoId(UUID.randomUUID()), sourceKey, name, active, null);
+        new OrganoId(UUID.randomUUID()), sourceKey, name, active, importable, null);
   }
 }

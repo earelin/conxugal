@@ -282,6 +282,86 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
         tuple("Axencia Y", secondTermo), tuple("Consorcio X", null));
   }
 
+  @Test
+  void inserted_organo_is_unmarked_by_default() {
+    organoRepository.insert(new OrganoDeContratacion("consorcio-x", "Consorcio X"));
+
+    assertCatalogue(row("Consorcio X", true, false, null));
+  }
+
+  // The eligibility read filters in SQL, so it would still pass if the column never reached
+  // the record. This is the read the administrator's catalogue and the importer both build on.
+  @Test
+  void findById_reports_the_mark_of_marked_organo() throws Exception {
+    OrganoId id = insertOrgano("consorcio-x", "Consorcio X", true, true, null);
+
+    assertThat(organoRepository.findById(id).orElseThrow().importable()).isTrue();
+  }
+
+  // Asserted over the table rather than through a read-back, because the claim is about the
+  // columns the statement did *not* write: an UPDATE that also reset the name, the active
+  // state or the placement — or that reached the second Órgano — still satisfies a findById.
+  @Test
+  void updateImportable_sets_then_clears_the_mark_and_writes_nothing_else() throws Exception {
+    TermoId termoId = insertTermo("Deportes", null);
+    OrganoId id = insertOrgano("consorcio-x", "Consorcio X", true, false, termoId);
+    insertOrgano("axencia-y", "Axencia Y", false, true, null);
+
+    organoRepository.updateImportable(id, true);
+    assertCatalogue(
+        row("Axencia Y", false, true, null),
+        row("Consorcio X", true, true, termoId));
+
+    organoRepository.updateImportable(id, false);
+    assertCatalogue(
+        row("Axencia Y", false, true, null),
+        row("Consorcio X", true, false, termoId));
+  }
+
+  @Test
+  void eligible_organos_are_the_active_and_marked_ones_only() throws Exception {
+    insertOrgano("eligible", "Eligible", true, true, null);
+    insertOrgano("marked-but-inactive", "Marked But Inactive", false, true, null);
+    insertOrgano("active-but-unmarked", "Active But Unmarked", true, false, null);
+    insertOrgano("neither", "Neither", false, false, null);
+
+    List<OrganoDeContratacion> eligible = organoRepository.findAllByActiveTrueAndImportableTrue();
+
+    assertThat(eligible)
+        .extracting(OrganoDeContratacion::sourceKey)
+        .containsExactly("eligible");
+  }
+
+  private void assertCatalogue(CatalogueRow... expected) {
+    Table organos = AssertDbConnectionFactory.of(dataSource)
+        .create()
+        .table("organo_contratacion")
+        .columnsToOrder(new Table.Order[] {Table.Order.asc("name")})
+        .build();
+    assertThat(organos).hasNumberOfRows(expected.length);
+    for (int index = 0; index < expected.length; index++) {
+      CatalogueRow row = expected[index];
+      assertThat(organos).row(index).value("name").isEqualTo(row.name());
+      assertThat(organos).row(index).value("active").isEqualTo(row.active());
+      assertThat(organos).row(index).value("importable").isEqualTo(row.importable());
+      UUID expectedTermoId = row.termoId();
+      if (expectedTermoId == null) {
+        assertThat(organos).row(index).value("termo_id").isNull();
+      } else {
+        assertThat(organos).row(index).value("termo_id").isEqualTo(expectedTermoId);
+      }
+    }
+  }
+
+  private static CatalogueRow row(
+      String name, boolean active, boolean importable, @Nullable TermoId termoId) {
+    return new CatalogueRow(
+        name, active, importable, termoId == null ? null : termoId.value());
+  }
+
+  private record CatalogueRow(
+      String name, boolean active, boolean importable, @Nullable UUID termoId) {}
+
   private List<Tuple> placementsByName() {
     return organoRepository.findAllOrderByName()
         .stream()
@@ -300,15 +380,21 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
 
   private OrganoId insertOrgano(String sourceKey, String name, boolean active,
       @Nullable TermoId termoId) throws Exception {
+    return insertOrgano(sourceKey, name, active, false, termoId);
+  }
+
+  private OrganoId insertOrgano(String sourceKey, String name, boolean active, boolean importable,
+      @Nullable TermoId termoId) throws Exception {
     String sql =
-        "INSERT INTO organo_contratacion (id, source_key, name, active, termo_id) "
-            + "VALUES (uuidv7(), ?, ?, ?, ?) RETURNING id";
+        "INSERT INTO organo_contratacion (id, source_key, name, active, importable, termo_id) "
+            + "VALUES (uuidv7(), ?, ?, ?, ?, ?) RETURNING id";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, sourceKey);
       statement.setString(2, name);
       statement.setBoolean(3, active);
-      statement.setObject(4, termoId == null ? null : termoId.value());
+      statement.setBoolean(4, importable);
+      statement.setObject(5, termoId == null ? null : termoId.value());
       try (ResultSet resultSet = statement.executeQuery()) {
         if (!resultSet.next()) {
           throw new IllegalStateException("Insert did not return a generated id");
