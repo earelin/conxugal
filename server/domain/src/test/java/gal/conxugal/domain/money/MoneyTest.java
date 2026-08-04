@@ -78,6 +78,20 @@ class MoneyTest {
   }
 
   @Test
+  void starts_the_sum_from_nothing_without_disturbing_what_is_added_to_it() {
+    Money total = Money.ZERO.plus(new Money(new BigDecimal("3630.00")));
+
+    assertThat(total.value())
+        .hasToString("3630.00");
+  }
+
+  @Test
+  void sums_no_amounts_at_all_into_money_rather_than_into_nothing() {
+    assertThat(Money.ZERO.value())
+        .isEqualByComparingTo(BigDecimal.ZERO);
+  }
+
+  @Test
   void rejects_adding_null() {
     assertThatNullPointerException()
         .isThrownBy(() -> new Money(BigDecimal.ONE).plus(null));

@@ -23,6 +23,13 @@ import java.util.Objects;
 @TypeDef(type = DataType.BIGDECIMAL, converter = MoneyConverter.class)
 public record Money(BigDecimal value) {
 
+  /**
+   * Nothing, as an amount — the identity a sum starts from, so that summing no amounts at all
+   * answers with money rather than with a null or a bare zero. It carries no scale of its own, so
+   * adding it to a published figure leaves that figure's scale exactly as published.
+   */
+  public static final Money ZERO = new Money(BigDecimal.ZERO);
+
   public Money {
     Objects.requireNonNull(value, "value must not be null");
   }

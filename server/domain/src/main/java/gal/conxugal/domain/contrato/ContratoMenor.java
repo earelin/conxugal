@@ -3,6 +3,7 @@ package gal.conxugal.domain.contrato;
 import gal.conxugal.commons.text.Whitespace;
 import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.operador.OperadorEconomico;
+import gal.conxugal.domain.organo.OrganoId;
 import io.micronaut.data.annotation.GeneratedValue;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
@@ -10,7 +11,6 @@ import io.micronaut.data.annotation.MappedProperty;
 import io.micronaut.data.annotation.Relation;
 import java.time.LocalDate;
 import java.util.Objects;
-import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -50,7 +50,7 @@ import org.jspecify.annotations.Nullable;
 public record ContratoMenor(
     @Id @GeneratedValue @Nullable ContratoMenorId id,
     long sourceId,
-    UUID organoId,
+    OrganoId organoId,
     @Nullable LocalDate publicationDate,
     @Nullable String obxecto,
     @Nullable Money amount,
@@ -67,7 +67,7 @@ public record ContratoMenor(
   /** A contract as it is first read from the source: the database assigns its id on insert. */
   public ContratoMenor(
       long sourceId,
-      UUID organoId,
+      OrganoId organoId,
       @Nullable LocalDate publicationDate,
       @Nullable String obxecto,
       @Nullable Money amount,
@@ -82,6 +82,31 @@ public record ContratoMenor(
         amount,
         duration,
         operadorEconomico);
+  }
+
+  /**
+   * Identity, not contents: two instances are the same contract when they carry the same assigned
+   * {@link ContratoMenorId}. The record's own equality would compare the awardee too, and through
+   * it the operador's name and every name it has been published under — so the same stored row,
+   * read twice with a rename in between, would compare unequal to itself, and two reads at
+   * different join depths would as well.
+   *
+   * <p>A contract the database has not assigned an identity to is equal only to itself. There is
+   * nothing to match it on: {@code sourceId} identifies it at the source, but two aggregates
+   * holding one are two readings of the same publication, and deciding they are interchangeable
+   * is the store's job at upsert, not this record's.
+   */
+  @Override
+  public boolean equals(@Nullable Object other) {
+    if (this == other) {
+      return true;
+    }
+    return other instanceof ContratoMenor contrato && id != null && id.equals(contrato.id);
+  }
+
+  @Override
+  public int hashCode() {
+    return id == null ? System.identityHashCode(this) : id.hashCode();
   }
 
   private static @Nullable String nullIfBlank(@Nullable String value) {

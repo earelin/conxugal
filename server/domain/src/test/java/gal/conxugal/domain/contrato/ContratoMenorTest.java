@@ -6,17 +6,21 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.operador.NomeRank;
 import gal.conxugal.domain.operador.OperadorEconomico;
+import gal.conxugal.domain.organo.OrganoId;
 import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class ContratoMenorTest {
 
   private static final long SOURCE_ID = 2001090L;
-  private static final UUID ORGANO_ID = UUID.fromString("0198c0de-0000-7000-8000-00000000002a");
+  private static final OrganoId ORGANO_ID =
+      new OrganoId(UUID.fromString("0198c0de-0000-7000-8000-00000000002a"));
   private static final LocalDate PUBLISHED_ON = LocalDate.of(2026, 5, 5);
   private static final Money AMOUNT = new Money(new BigDecimal("3630.00"));
   private static final OperadorEconomico OPERADOR =
@@ -159,6 +163,95 @@ class ContratoMenorTest {
             "amount",
             "duration",
             "operadorEconomico");
+  }
+
+  @Test
+  void treats_two_readings_of_one_stored_contract_as_the_same_contract() {
+    ContratoMenorId id = new ContratoMenorId(UUID.randomUUID());
+
+    ContratoMenor read =
+        new ContratoMenor(id, SOURCE_ID, ORGANO_ID, PUBLISHED_ON, "Obras", AMOUNT, "1 mes", null);
+    ContratoMenor reread =
+        new ContratoMenor(id, SOURCE_ID, ORGANO_ID, PUBLISHED_ON, "Obras", AMOUNT, "1 mes", null);
+
+    assertThat(read)
+        .isEqualTo(reread)
+        .hasSameHashCodeAs(reread);
+  }
+
+  @Test
+  void stays_the_same_contract_when_its_operador_row_changes_underneath() {
+    ContratoMenorId id = new ContratoMenorId(UUID.randomUUID());
+    OperadorEconomico renamed =
+        OPERADOR.displaying("Obradoiro Naval, Sociedade Limitada", new NomeRank(null, 2001110L));
+
+    ContratoMenor beforeRename =
+        new ContratoMenor(
+            id, SOURCE_ID, ORGANO_ID, PUBLISHED_ON, "Obras", AMOUNT, "1 mes", OPERADOR);
+    ContratoMenor afterRename =
+        new ContratoMenor(
+            id, SOURCE_ID, ORGANO_ID, PUBLISHED_ON, "Obras", AMOUNT, "1 mes", renamed);
+
+    // Contents-based equality would compare the awardee, and through it every name the operador
+    // has been published under, so the same row would stop being equal to itself.
+    assertThat(beforeRename)
+        .isEqualTo(afterRename)
+        .hasSameHashCodeAs(afterRename);
+  }
+
+  @Test
+  void separates_contracts_carrying_different_identities() {
+    ContratoMenor first =
+        new ContratoMenor(
+            new ContratoMenorId(UUID.randomUUID()),
+            SOURCE_ID,
+            ORGANO_ID,
+            PUBLISHED_ON,
+            "Obras",
+            AMOUNT,
+            "1 mes",
+            null);
+    ContratoMenor second =
+        new ContratoMenor(
+            new ContratoMenorId(UUID.randomUUID()),
+            SOURCE_ID,
+            ORGANO_ID,
+            PUBLISHED_ON,
+            "Obras",
+            AMOUNT,
+            "1 mes",
+            null);
+
+    assertThat(first).isNotEqualTo(second);
+  }
+
+  @Test
+  void treats_contracts_the_database_has_not_identified_as_distinct() {
+    ContratoMenor first = published("Obras", "1 mes");
+    ContratoMenor second = published("Obras", "1 mes");
+
+    assertThat(first)
+        .isNotEqualTo(second);
+    // Two readings of the same publication, neither stored yet: each is only itself, so the same
+    // instance twice collapses and the two distinct ones do not.
+    assertThat(new HashSet<>(List.of(first, second, first)))
+        .hasSize(2);
+  }
+
+  @Test
+  void separates_an_identified_contract_from_one_not_yet_stored() {
+    ContratoMenor stored =
+        new ContratoMenor(
+            new ContratoMenorId(UUID.randomUUID()),
+            SOURCE_ID,
+            ORGANO_ID,
+            PUBLISHED_ON,
+            "Obras",
+            AMOUNT,
+            "1 mes",
+            OPERADOR);
+
+    assertThat(stored).isNotEqualTo(published("Obras", "1 mes"));
   }
 
   private static ContratoMenor published(String obxecto, String duration) {

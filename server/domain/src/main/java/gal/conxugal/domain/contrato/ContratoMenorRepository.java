@@ -1,7 +1,7 @@
 package gal.conxugal.domain.contrato;
 
+import gal.conxugal.domain.organo.OrganoId;
 import java.util.Collection;
-import java.util.UUID;
 
 /**
  * Port for storing contratos menores. Implemented by the {@code infrastructure} module.
@@ -32,5 +32,5 @@ public interface ContratoMenorRepository {
    * How many of the Órgano's contracts are stored. The walk tests this against the count the
    * source reports for that Órgano, which is what tells it the history is fully loaded.
    */
-  long countByOrganoId(UUID organoId);
+  long countByOrganoId(OrganoId organoId);
 }
