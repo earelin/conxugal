@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { apiFetch } from '../../shared/lib/httpClient';
@@ -84,4 +84,25 @@ export function useOrganosTaxonomia(): OrganosTaxonomia {
       void taxonomia.refetch();
     },
   };
+}
+
+/**
+ * Every write in the section invalidates rather than patching the cache: both
+ * reads are flat lists the client re-assembles, so a refetch plus the existing
+ * builder is the whole update — there is no server-assembled shape to keep in
+ * sync, and no write a local edit could describe more cheaply than re-reading
+ * one small list.
+ *
+ * It lives here, beside the keys, because the taxonomía and the placements are
+ * written by two modules against the same two reads.
+ */
+export function useOrganosMutation<TInput, TResult>(
+  mutationFn: (input: TInput) => Promise<TResult>,
+  queryKey: readonly unknown[],
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+  });
 }

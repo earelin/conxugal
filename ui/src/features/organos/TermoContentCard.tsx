@@ -1,10 +1,15 @@
-import { Breadcrumbs, Card, Divider, Group, Stack, Text, Title } from '@mantine/core';
+import { Box, Breadcrumbs, Card, Divider, Group, Stack, Text, Title } from '@mantine/core';
+import { useState } from 'react';
 
 import { strings } from '../../shared/lib/strings';
+import { useClearOrgano } from './organoMutations';
+import { placementRefusal } from './organoRefusal';
 import type { Organo } from './organos';
 import { OrganosTable } from './OrganosTable';
 import type { TermoNode } from './taxonomiaTree';
 import { TermoActionButtons, type TermoActionHandlers } from './TermoActionControls';
+import type { Refusal } from './termoRefusal';
+import { TermoRefusalAlert } from './TermoRefusalAlert';
 
 // Term names repeat across levels — nothing stops a term carrying its
 // ancestor's name — so each crumb keeps the id it came from as its key.
@@ -55,11 +60,46 @@ interface TermoContentCardProps {
   openPath: TermoNode[];
   unclassified: Organo[];
   termoActions: TermoActionHandlers;
+  onAssignOrgano: (organo: Organo) => void;
+  /** Re-reads the section, which is the only way past a stale-record refusal. */
+  onRefresh: () => void;
 }
 
-export function TermoContentCard({ openPath, unclassified, termoActions }: TermoContentCardProps) {
+export function TermoContentCard({
+  openPath,
+  unclassified,
+  termoActions,
+  onAssignOrgano,
+  onRefresh,
+}: TermoContentCardProps) {
   const pane = openPath.length > 0 ? termoPane(openPath) : unclassifiedPane(unclassified);
   const count = pane.organos.length;
+  const clearOrgano = useClearOrgano();
+  const [clearRefusal, setClearRefusal] = useState<Refusal | null>(null);
+
+  function refresh() {
+    // The refusal asked for a re-read; leaving it up afterwards would keep
+    // asking for one that has already happened, with no other way to dismiss it.
+    setClearRefusal(null);
+    onRefresh();
+  }
+
+  // A clear needs no dialog: there is nothing to choose and nothing to confirm,
+  // since the Órgano returns to the worklist rather than being deleted. So it
+  // runs from the row and reports here, above the table it changes.
+  const rowActions = {
+    onAssign: onAssignOrgano,
+    onClear:
+      openPath.length > 0
+        ? (organo: Organo) => {
+            setClearRefusal(null);
+            clearOrgano.mutate(organo.id, {
+              onError: (error) => setClearRefusal(placementRefusal(error)),
+            });
+          }
+        : undefined,
+    clearingId: clearOrgano.isPending ? clearOrgano.variables : undefined,
+  };
 
   return (
     <Card withBorder radius="md" padding="md">
@@ -71,7 +111,7 @@ export function TermoContentCard({ openPath, unclassified, termoActions }: Termo
         ))}
       </Breadcrumbs>
 
-      {/* Wraps rather than holding one line: at 360 px the three term actions
+      {/* Wraps rather than holding one line: at 360 px the four term actions
           do not fit beside a term name, and they drop under it instead of
           pushing the card into a horizontal scroll. */}
       <Group justify="space-between" align="flex-start">
@@ -84,12 +124,23 @@ export function TermoContentCard({ openPath, unclassified, termoActions }: Termo
           )}
         </Stack>
         {/* The worklist is not a term: it has no name to change, no place in the
-            tree and nothing to delete. Assign lands here alongside them. */}
-        <Group gap="xs">{openPath.length > 0 && <TermoActionButtons {...termoActions} />}</Group>
+            tree and nothing to delete. Assign sits alongside them. */}
+        {openPath.length > 0 && <TermoActionButtons {...termoActions} />}
       </Group>
       <Divider my="sm" />
 
-      <OrganosTable organos={pane.organos} emptyMessage={pane.emptyMessage} label={pane.title} />
+      {clearRefusal && (
+        <Box mb="sm">
+          <TermoRefusalAlert refusal={clearRefusal} onRefresh={refresh} />
+        </Box>
+      )}
+
+      <OrganosTable
+        organos={pane.organos}
+        emptyMessage={pane.emptyMessage}
+        label={pane.title}
+        actions={rowActions}
+      />
 
       {count > 0 && (
         <Text size="xs" c="dimmed" mt="sm">
