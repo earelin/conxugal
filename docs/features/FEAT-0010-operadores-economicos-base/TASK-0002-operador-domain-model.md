@@ -58,6 +58,12 @@ path into FEAT-0009 and the two can be built in either order.
   - The principal name is **not** repeated here. `name` holds the R4 winner and this set
     holds the rest, so the invariant is *no alternative equals the principal*, and promoting one
     means moving a value between the two rather than choosing among a set that contains both.
+  - **One value per distinct name is enforced by `NomeAlternativo`'s identity, not by the
+    aggregate.** The type compares by its `@Id` pair `(operadorEconomicoId, name)` and ignores
+    `lastPublished`, so a `Set` cannot hold the same name twice and the aggregate needs no
+    duplicate check of its own. The consequence a caller must respect: building a set from the
+    same name at two ranks silently keeps one of them, and **which rank survives is undefined** —
+    resolve the rank before the set is built, never after.
 
 - **Storing the rank is what makes R4 deterministic across runs** (#7). Without it, *is this
   contract newer than whatever won last time?* has no answer once the winning contract is out of

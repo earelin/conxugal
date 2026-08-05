@@ -37,6 +37,21 @@ public record User(
     this(id, email, passwordHash, role, enabled, createdAt, null);
   }
 
+  /**
+   * Identity, not value: a user who has changed password, role or enabled state is still the same
+   * user, and the hash stays out of every comparison. One the database has not yet assigned an id
+   * to is equal to nothing but itself.
+   */
+  @Override
+  public boolean equals(Object o) {
+    return this == o || (o instanceof User other && id != null && id.equals(other.id));
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(id);
+  }
+
   @Override
   public String toString() {
     return ("User[id=%s, email=%s, passwordHash=REDACTED, role=%s, enabled=%s, "

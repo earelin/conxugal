@@ -29,15 +29,30 @@ class CreateTermoTest {
     createTermo = new CreateTermo(termoRepository);
   }
 
+  /**
+   * Stands in for the database assigning the id, echoing back what was handed to it — the id
+   * apart, the returned term is the inserted one, so asserting on it asserts on the insert.
+   */
+  private void insertAssigningAnId() {
+    when(termoRepository.insert(any(Termo.class)))
+        .thenAnswer(
+            invocation -> {
+              Termo inserted = invocation.getArgument(0);
+              return new Termo(
+                  new TermoId(UUID.randomUUID()), inserted.name(), inserted.parentId());
+            });
+  }
+
   @Test
   void creates_term_at_the_root() {
     when(termoRepository.findByParentId(null)).thenReturn(List.of());
-    Termo stored = new Termo(new TermoId(UUID.randomUUID()), "Deportes", null);
-    when(termoRepository.insert(new Termo("Deportes", null))).thenReturn(stored);
+    insertAssigningAnId();
 
     Termo created = createTermo.create("Deportes", null);
 
-    assertThat(created).isEqualTo(stored);
+    assertThat(created)
+        .extracting(Termo::name, Termo::parentId)
+        .containsExactly("Deportes", null);
   }
 
   @Test
@@ -46,12 +61,13 @@ class CreateTermoTest {
     when(termoRepository.findById(parentId))
         .thenReturn(Optional.of(new Termo(parentId, "Deportes", null)));
     when(termoRepository.findByParentId(parentId)).thenReturn(List.of());
-    Termo stored = new Termo(new TermoId(UUID.randomUUID()), "Fútbol", parentId);
-    when(termoRepository.insert(new Termo("Fútbol", parentId))).thenReturn(stored);
+    insertAssigningAnId();
 
     Termo created = createTermo.create("Fútbol", parentId);
 
-    assertThat(created).isEqualTo(stored);
+    assertThat(created)
+        .extracting(Termo::name, Termo::parentId)
+        .containsExactly("Fútbol", parentId);
   }
 
   @Test
@@ -103,19 +119,19 @@ class CreateTermoTest {
     when(termoRepository.findById(parentId))
         .thenReturn(Optional.of(new Termo(parentId, "Cultura", null)));
     when(termoRepository.findByParentId(parentId)).thenReturn(List.of());
-    Termo stored = new Termo(new TermoId(UUID.randomUUID()), "Fútbol", parentId);
-    when(termoRepository.insert(new Termo("Fútbol", parentId))).thenReturn(stored);
+    insertAssigningAnId();
 
     Termo created = createTermo.create("Fútbol", parentId);
 
-    assertThat(created).isEqualTo(stored);
+    assertThat(created)
+        .extracting(Termo::name, Termo::parentId)
+        .containsExactly("Fútbol", parentId);
   }
 
   @Test
   void stores_the_name_stripped() {
     when(termoRepository.findByParentId(null)).thenReturn(List.of());
-    Termo stored = new Termo(new TermoId(UUID.randomUUID()), "Deportes", null);
-    when(termoRepository.insert(new Termo("Deportes", null))).thenReturn(stored);
+    insertAssigningAnId();
 
     Termo created = createTermo.create("  Deportes  ", null);
 

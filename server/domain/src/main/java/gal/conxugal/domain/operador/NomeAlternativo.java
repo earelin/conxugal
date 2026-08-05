@@ -30,4 +30,26 @@ public record NomeAlternativo(
     Objects.requireNonNull(name, "name must not be null");
     Objects.requireNonNull(lastPublished, "lastPublished must not be null");
   }
+
+  /**
+   * Identity, not value: the operador and the name decide it, so the same name published again by
+   * a later contract is the same retained name at a new rank, and a {@code Set} holds it once —
+   * which one's rank survives the collapse is the caller's to decide before building the set.
+   *
+   * <p>Unlike the aggregates, this needs no null-id guard: the name half of the identity is always
+   * assigned, so the pair identifies the value even before the operador has an id, which is the
+   * state {@link OperadorEconomico#displaying} builds these in.
+   */
+  @Override
+  public boolean equals(Object o) {
+    return this == o
+        || (o instanceof NomeAlternativo other
+            && Objects.equals(operadorEconomicoId, other.operadorEconomicoId)
+            && name.equals(other.name));
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(operadorEconomicoId, name);
+  }
 }

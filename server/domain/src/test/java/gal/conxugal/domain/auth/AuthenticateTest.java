@@ -67,7 +67,8 @@ class AuthenticateTest {
 
     Optional<User> result = authenticate.authenticate("ana@example.com", "correct-password");
 
-    assertThat(result).contains(user);
+    assertThat(result).isPresent();
+    assertThat(result.get().lastLoginAt()).isNull();
   }
 
   @Test

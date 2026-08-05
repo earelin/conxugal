@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import gal.conxugal.domain.organo.taxonomia.TermoId;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -87,5 +88,59 @@ class OrganoDeContratacionTest {
         new OrganoDeContratacion("xunta-consorcio-galego", "Consorcio Galego");
 
     assertThat(organo.importable()).isFalse();
+  }
+
+  @Test
+  void an_organo_renamed_deactivated_and_reclassified_is_still_the_same_organo() {
+    OrganoId id = new OrganoId(UUID.randomUUID());
+    OrganoDeContratacion before =
+        new OrganoDeContratacion(id, "xunta-consorcio-galego", "Consorcio Galego", true, false,
+            null);
+    OrganoDeContratacion after =
+        new OrganoDeContratacion(id, "xunta-consorcio-galego", "Consorcio Galego de Benestar",
+            false, true, new TermoId(UUID.randomUUID()));
+
+    assertThat(before).isEqualTo(after);
+    assertThat(before).hasSameHashCodeAs(after);
+  }
+
+  @Test
+  void organos_under_different_ids_are_different_organos_whatever_their_source_key() {
+    OrganoDeContratacion one =
+        new OrganoDeContratacion(
+            new OrganoId(UUID.randomUUID()), "xunta-consorcio-galego", "Consorcio Galego", true,
+            false, null);
+    OrganoDeContratacion other =
+        new OrganoDeContratacion(
+            new OrganoId(UUID.randomUUID()), "xunta-consorcio-galego", "Consorcio Galego", true,
+            false, null);
+
+    assertThat(one).isNotEqualTo(other);
+  }
+
+  @Test
+  void undiscovered_organos_are_equal_to_nothing_but_themselves() {
+    OrganoDeContratacion one =
+        new OrganoDeContratacion("xunta-consorcio-galego", "Consorcio Galego");
+    OrganoDeContratacion other =
+        new OrganoDeContratacion("xunta-consorcio-galego", "Consorcio Galego");
+
+    assertThat(one).isNotEqualTo(other);
+    assertThat(Set.of(one, other))
+        .hasSize(2)
+        .contains(one, other);
+  }
+
+  @Test
+  void an_undiscovered_organo_matches_no_catalogued_one_in_either_direction() {
+    OrganoDeContratacion undiscovered =
+        new OrganoDeContratacion("xunta-consorcio-galego", "Consorcio Galego");
+    OrganoDeContratacion catalogued =
+        new OrganoDeContratacion(
+            new OrganoId(UUID.randomUUID()), "xunta-consorcio-galego", "Consorcio Galego", true,
+            false, null);
+
+    assertThat(undiscovered).isNotEqualTo(catalogued);
+    assertThat(catalogued).isNotEqualTo(undiscovered);
   }
 }

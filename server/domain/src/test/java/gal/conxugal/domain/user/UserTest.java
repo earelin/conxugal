@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -102,5 +103,52 @@ class UserTest {
     assertThat(user.toString())
         .contains("ana@example.com", "ADMIN")
         .doesNotContain("stored-hash");
+  }
+
+  @Test
+  void changing_password_role_and_enabled_state_leaves_the_same_user() {
+    UserId id = new UserId(UUID.randomUUID());
+    User before = new User(id, "ana@example.com", "stored-hash", Role.USER, true, CREATED_AT);
+    User after =
+        new User(id, "ana@example.com", "rotated-hash", Role.ADMIN, false, CREATED_AT,
+            Instant.parse("2026-07-11T10:15:30Z"));
+
+    assertThat(before).isEqualTo(after);
+    assertThat(before).hasSameHashCodeAs(after);
+  }
+
+  @Test
+  void users_under_different_ids_are_different_users_whatever_their_email() {
+    User one =
+        new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.USER, true,
+            CREATED_AT);
+    User other =
+        new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.USER, true,
+            CREATED_AT);
+
+    assertThat(one).isNotEqualTo(other);
+  }
+
+  @Test
+  void unpersisted_users_are_equal_to_nothing_but_themselves() {
+    User one = new User(null, "ana@example.com", "stored-hash", Role.USER, true, CREATED_AT);
+    User other = new User(null, "ana@example.com", "stored-hash", Role.USER, true, CREATED_AT);
+
+    assertThat(one).isNotEqualTo(other);
+    assertThat(Set.of(one, other))
+        .hasSize(2)
+        .contains(one, other);
+  }
+
+  @Test
+  void an_unpersisted_user_matches_no_persisted_one_in_either_direction() {
+    User unpersisted =
+        new User(null, "ana@example.com", "stored-hash", Role.USER, true, CREATED_AT);
+    User persisted =
+        new User(new UserId(UUID.randomUUID()), "ana@example.com", "stored-hash", Role.USER, true,
+            CREATED_AT);
+
+    assertThat(unpersisted).isNotEqualTo(persisted);
+    assertThat(persisted).isNotEqualTo(unpersisted);
   }
 }
