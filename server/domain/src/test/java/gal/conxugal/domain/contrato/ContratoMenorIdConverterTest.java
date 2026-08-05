@@ -25,9 +25,9 @@ class ContratoMenorIdConverterTest {
   @Test
   void persists_the_identity_as_the_bare_uuid_the_column_holds() {
     UUID value = UUID.randomUUID();
+    ContratoMenorId id = new ContratoMenorId(value);
 
-    assertThat(converter.convertToPersistedValue(new ContratoMenorId(value),
-        ConversionContext.DEFAULT))
+    assertThat(converter.convertToPersistedValue(id, ConversionContext.DEFAULT))
         .isEqualTo(value);
   }
 
