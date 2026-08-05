@@ -73,15 +73,7 @@ public record ContratoMenor(
       @Nullable Money amount,
       @Nullable String duration,
       @Nullable OperadorEconomico operadorEconomico) {
-    this(
-        null,
-        sourceId,
-        organoId,
-        publicationDate,
-        obxecto,
-        amount,
-        duration,
-        operadorEconomico);
+    this(null, sourceId, organoId, publicationDate, obxecto, amount, duration, operadorEconomico);
   }
 
   /**
