@@ -37,15 +37,10 @@ class MoneyConverterTest {
   void round_trips_the_figure_carrying_more_decimals_than_two() {
     Money amount = new Money(new BigDecimal("1234.5678"));
 
-    Money restored =
-        converter.convertToEntityValue(
-            converter.convertToPersistedValue(amount, ConversionContext.DEFAULT),
-            ConversionContext.DEFAULT);
+    Money restored = roundTrip(amount);
 
     assertThat(restored)
         .isEqualTo(amount);
-    assertThat(restored)
-        .isNotNull();
     assertThat(restored.value().scale())
         .isEqualTo(4);
   }
@@ -54,12 +49,17 @@ class MoneyConverterTest {
   void round_trips_the_figure_carrying_no_decimals() {
     Money amount = new Money(new BigDecimal("42"));
 
+    assertThat(roundTrip(amount))
+        .isEqualTo(amount);
+  }
+
+  /** Through the column and back, the way an entity property reaches the store and returns. */
+  private Money roundTrip(Money amount) {
     Money restored =
         converter.convertToEntityValue(
             converter.convertToPersistedValue(amount, ConversionContext.DEFAULT),
             ConversionContext.DEFAULT);
-
-    assertThat(restored)
-        .isEqualTo(amount);
+    assertThat(restored).isNotNull();
+    return restored;
   }
 }
