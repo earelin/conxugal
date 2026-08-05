@@ -42,7 +42,9 @@ class RenameTermoTest {
     Termo renamed = renameTermo.rename(termoId, "Fútbol Sala");
 
     verify(termoRepository).updateName(termoId, "Fútbol Sala");
-    assertThat(renamed).isEqualTo(new Termo(termoId, "Fútbol Sala", parentId));
+    assertThat(renamed)
+        .extracting(Termo::id, Termo::name, Termo::parentId)
+        .containsExactly(termoId, "Fútbol Sala", parentId);
   }
 
   @Test

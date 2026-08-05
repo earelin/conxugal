@@ -24,4 +24,18 @@ public record Termo(
   public Termo(String name, @Nullable TermoId parentId) {
     this(null, name, parentId);
   }
+
+  /**
+   * Identity, not value: a renamed or moved term is still the same term. One the database has not
+   * yet assigned an id to is equal to nothing but itself.
+   */
+  @Override
+  public boolean equals(Object o) {
+    return this == o || (o instanceof Termo other && id != null && id.equals(other.id));
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(id);
+  }
 }
