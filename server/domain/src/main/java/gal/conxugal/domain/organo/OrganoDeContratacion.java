@@ -34,4 +34,19 @@ public record OrganoDeContratacion(
   public OrganoDeContratacion(String sourceKey, String name) {
     this(null, sourceKey, name, true, false, null);
   }
+
+  /**
+   * Identity, not value: an Órgano renamed, deactivated or reclassified is still the same Órgano.
+   * One the database has not yet assigned an id to is equal to nothing but itself.
+   */
+  @Override
+  public boolean equals(Object o) {
+    return this == o
+        || (o instanceof OrganoDeContratacion other && id != null && id.equals(other.id));
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(id);
+  }
 }

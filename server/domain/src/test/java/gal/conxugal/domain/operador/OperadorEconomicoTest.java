@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -146,18 +149,25 @@ class OperadorEconomicoTest {
                     null, "B12345678", "Obradoiro Naval", RANK, alternativos));
   }
 
+  /**
+   * Which of the two ranks survives is not pinned here because it is not decided here: the names
+   * are one value, so whichever is built second never enters the set. Deciding the rank is the
+   * caller's, before it builds the set.
+   */
   @Test
-  void rejects_two_alternatives_bearing_the_same_name() {
+  void the_same_name_at_two_ranks_is_retained_once() {
     Set<NomeAlternativo> alternativos =
-        Set.of(
-            new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER),
-            new NomeAlternativo(null, "Obradoiro Naval, S.L.", NEWER));
+        new HashSet<>(
+            List.of(
+                new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER),
+                new NomeAlternativo(null, "Obradoiro Naval, S.L.", NEWER)));
 
-    assertThatIllegalArgumentException()
-        .isThrownBy(
-            () ->
-                new OperadorEconomico(
-                    null, "B12345678", "Obradoiro Naval", RANK, alternativos));
+    OperadorEconomico operador =
+        new OperadorEconomico(null, "B12345678", "Obradoiro Naval", RANK, alternativos);
+
+    assertThat(operador.nomesAlternativos())
+        .extracting(NomeAlternativo::name)
+        .containsExactly("Obradoiro Naval, S.L.");
   }
 
   @Test
@@ -204,7 +214,8 @@ class OperadorEconomicoTest {
     OperadorEconomico advanced = operador.displaying("Obradoiro Naval, S.L.", NEWER);
 
     assertThat(advanced.nomesAlternativos())
-        .containsExactlyInAnyOrder(new NomeAlternativo(null, "Obradoiro Naval", RANK));
+        .extracting(NomeAlternativo::name, NomeAlternativo::lastPublished)
+        .containsExactlyInAnyOrder(tuple("Obradoiro Naval", RANK));
   }
 
   @Test
@@ -269,6 +280,57 @@ class OperadorEconomicoTest {
             RANK,
             Set.of(new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER)));
 
-    assertThat(operador.displaying("Obradoiro Naval", RANK)).isEqualTo(operador);
+    OperadorEconomico republished = operador.displaying("Obradoiro Naval", RANK);
+
+    assertThat(republished.name()).isEqualTo("Obradoiro Naval");
+    assertThat(republished.nameRank()).isEqualTo(RANK);
+    assertThat(republished.nomesAlternativos())
+        .extracting(NomeAlternativo::name, NomeAlternativo::lastPublished)
+        .containsExactlyInAnyOrder(tuple("Obradoiro Naval, S.L.", OLDER));
+  }
+
+  @Test
+  void an_operador_displayed_under_another_name_is_still_the_same_operador() {
+    OperadorId id = new OperadorId(UUID.randomUUID());
+    OperadorEconomico before =
+        new OperadorEconomico(id, "B12345678", "Obradoiro Naval", RANK, Set.of());
+    OperadorEconomico after = before.displaying("Obradoiro Naval, S.L.", NEWER);
+
+    assertThat(before).isEqualTo(after);
+    assertThat(before).hasSameHashCodeAs(after);
+  }
+
+  @Test
+  void operadores_under_different_ids_are_different_operadores_whatever_their_fiscal_identifier() {
+    OperadorEconomico one =
+        new OperadorEconomico(
+            new OperadorId(UUID.randomUUID()), "B12345678", "Obradoiro Naval", RANK, Set.of());
+    OperadorEconomico other =
+        new OperadorEconomico(
+            new OperadorId(UUID.randomUUID()), "B12345678", "Obradoiro Naval", RANK, Set.of());
+
+    assertThat(one).isNotEqualTo(other);
+  }
+
+  @Test
+  void uncatalogued_operadores_are_equal_to_nothing_but_themselves() {
+    OperadorEconomico one = new OperadorEconomico("B12345678", "Obradoiro Naval", RANK);
+    OperadorEconomico other = new OperadorEconomico("B12345678", "Obradoiro Naval", RANK);
+
+    assertThat(one).isNotEqualTo(other);
+    assertThat(Set.of(one, other))
+        .hasSize(2)
+        .contains(one, other);
+  }
+
+  @Test
+  void an_uncatalogued_operador_matches_no_catalogued_one_in_either_direction() {
+    OperadorEconomico uncatalogued = new OperadorEconomico("B12345678", "Obradoiro Naval", RANK);
+    OperadorEconomico catalogued =
+        new OperadorEconomico(
+            new OperadorId(UUID.randomUUID()), "B12345678", "Obradoiro Naval", RANK, Set.of());
+
+    assertThat(uncatalogued).isNotEqualTo(catalogued);
+    assertThat(catalogued).isNotEqualTo(uncatalogued);
   }
 }

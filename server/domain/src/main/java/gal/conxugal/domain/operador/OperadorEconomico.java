@@ -51,15 +51,10 @@ public record OperadorEconomico(
       throw new IllegalArgumentException("fiscalId must not be empty once trimmed");
     }
     nomesAlternativos = Set.copyOf(nomesAlternativos);
-    Set<String> seen = HashSet.newHashSet(nomesAlternativos.size());
     for (NomeAlternativo alternativo : nomesAlternativos) {
       if (alternativo.name().equals(name)) {
         throw new IllegalArgumentException(
             "nomesAlternativos must not hold the principal name: %s".formatted(name));
-      }
-      if (!seen.add(alternativo.name())) {
-        throw new IllegalArgumentException(
-            "nomesAlternativos must hold each name once: %s".formatted(alternativo.name()));
       }
     }
   }
@@ -91,5 +86,19 @@ public record OperadorEconomico(
     }
     retained.add(new NomeAlternativo(id, name, nameRank));
     return new OperadorEconomico(id, fiscalId, newName, newRank, retained);
+  }
+
+  /**
+   * Identity, not value, so equality never walks the retained names. An operador the database has
+   * not yet assigned an id to is equal to nothing but itself.
+   */
+  @Override
+  public boolean equals(Object o) {
+    return this == o || (o instanceof OperadorEconomico other && id != null && id.equals(other.id));
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(id);
   }
 }

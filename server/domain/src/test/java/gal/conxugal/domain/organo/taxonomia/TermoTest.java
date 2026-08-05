@@ -3,6 +3,7 @@ package gal.conxugal.domain.organo.taxonomia;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -53,5 +54,43 @@ class TermoTest {
     Termo greatGrandchild = new Termo(new TermoId(UUID.randomUUID()), "Nivel 4", grandchild.id());
 
     assertThat(greatGrandchild.parentId()).isEqualTo(grandchild.id());
+  }
+
+  @Test
+  void renaming_and_moving_leaves_the_same_term() {
+    TermoId termoId = new TermoId(UUID.randomUUID());
+    Termo before = new Termo(termoId, "Fútbol", null);
+    Termo after = new Termo(termoId, "Fútbol Sala", new TermoId(UUID.randomUUID()));
+
+    assertThat(before).isEqualTo(after);
+    assertThat(before).hasSameHashCodeAs(after);
+  }
+
+  @Test
+  void terms_under_different_ids_are_different_terms() {
+    Termo one = new Termo(new TermoId(UUID.randomUUID()), "Deportes", null);
+    Termo other = new Termo(new TermoId(UUID.randomUUID()), "Deportes", null);
+
+    assertThat(one).isNotEqualTo(other);
+  }
+
+  @Test
+  void unpersisted_terms_are_equal_to_nothing_but_themselves() {
+    Termo one = new Termo("Deportes", null);
+    Termo other = new Termo("Deportes", null);
+
+    assertThat(one).isNotEqualTo(other);
+    assertThat(Set.of(one, other))
+        .hasSize(2)
+        .contains(one, other);
+  }
+
+  @Test
+  void an_unpersisted_term_matches_no_persisted_one_in_either_direction() {
+    Termo unpersisted = new Termo("Deportes", null);
+    Termo persisted = new Termo(new TermoId(UUID.randomUUID()), "Deportes", null);
+
+    assertThat(unpersisted).isNotEqualTo(persisted);
+    assertThat(persisted).isNotEqualTo(unpersisted);
   }
 }
