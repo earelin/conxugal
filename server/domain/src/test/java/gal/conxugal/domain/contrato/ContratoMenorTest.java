@@ -38,8 +38,7 @@ class ContratoMenorTest {
   void carries_an_identity_distinct_from_the_source_identifier() {
     ContratoMenorId id = new ContratoMenorId(UUID.randomUUID());
 
-    ContratoMenor contrato =
-        new ContratoMenor(id, SOURCE_ID, ORGANO_ID, PUBLISHED_ON, "Obras", AMOUNT, "1 mes", null);
+    ContratoMenor contrato = stored(id, null);
 
     assertThat(contrato.id()).isEqualTo(id);
     assertThat(contrato.sourceId()).isEqualTo(SOURCE_ID);
@@ -169,10 +168,8 @@ class ContratoMenorTest {
   void treats_two_readings_of_one_stored_contract_as_the_same_contract() {
     ContratoMenorId id = new ContratoMenorId(UUID.randomUUID());
 
-    ContratoMenor read =
-        new ContratoMenor(id, SOURCE_ID, ORGANO_ID, PUBLISHED_ON, "Obras", AMOUNT, "1 mes", null);
-    ContratoMenor reread =
-        new ContratoMenor(id, SOURCE_ID, ORGANO_ID, PUBLISHED_ON, "Obras", AMOUNT, "1 mes", null);
+    ContratoMenor read = stored(id, null);
+    ContratoMenor reread = stored(id, null);
 
     assertThat(read)
         .isEqualTo(reread)
@@ -185,12 +182,8 @@ class ContratoMenorTest {
     OperadorEconomico renamed =
         OPERADOR.displaying("Obradoiro Naval, Sociedade Limitada", new NomeRank(null, 2001110L));
 
-    ContratoMenor beforeRename =
-        new ContratoMenor(
-            id, SOURCE_ID, ORGANO_ID, PUBLISHED_ON, "Obras", AMOUNT, "1 mes", OPERADOR);
-    ContratoMenor afterRename =
-        new ContratoMenor(
-            id, SOURCE_ID, ORGANO_ID, PUBLISHED_ON, "Obras", AMOUNT, "1 mes", renamed);
+    ContratoMenor beforeRename = stored(id, OPERADOR);
+    ContratoMenor afterRename = stored(id, renamed);
 
     // Contents-based equality would compare the awardee, and through it every name the operador
     // has been published under, so the same row would stop being equal to itself.
@@ -201,26 +194,8 @@ class ContratoMenorTest {
 
   @Test
   void separates_contracts_carrying_different_identities() {
-    ContratoMenor first =
-        new ContratoMenor(
-            new ContratoMenorId(UUID.randomUUID()),
-            SOURCE_ID,
-            ORGANO_ID,
-            PUBLISHED_ON,
-            "Obras",
-            AMOUNT,
-            "1 mes",
-            null);
-    ContratoMenor second =
-        new ContratoMenor(
-            new ContratoMenorId(UUID.randomUUID()),
-            SOURCE_ID,
-            ORGANO_ID,
-            PUBLISHED_ON,
-            "Obras",
-            AMOUNT,
-            "1 mes",
-            null);
+    ContratoMenor first = stored(new ContratoMenorId(UUID.randomUUID()), null);
+    ContratoMenor second = stored(new ContratoMenorId(UUID.randomUUID()), null);
 
     assertThat(first).isNotEqualTo(second);
   }
@@ -240,22 +215,18 @@ class ContratoMenorTest {
 
   @Test
   void separates_an_identified_contract_from_one_not_yet_stored() {
-    ContratoMenor stored =
-        new ContratoMenor(
-            new ContratoMenorId(UUID.randomUUID()),
-            SOURCE_ID,
-            ORGANO_ID,
-            PUBLISHED_ON,
-            "Obras",
-            AMOUNT,
-            "1 mes",
-            OPERADOR);
+    ContratoMenor identified = stored(new ContratoMenorId(UUID.randomUUID()), OPERADOR);
 
-    assertThat(stored).isNotEqualTo(published("Obras", "1 mes"));
+    assertThat(identified).isNotEqualTo(published("Obras", "1 mes"));
   }
 
   private static ContratoMenor published(String obxecto, String duration) {
     return new ContratoMenor(
         SOURCE_ID, ORGANO_ID, PUBLISHED_ON, obxecto, AMOUNT, duration, OPERADOR);
+  }
+
+  private static ContratoMenor stored(ContratoMenorId id, OperadorEconomico operador) {
+    return new ContratoMenor(
+        id, SOURCE_ID, ORGANO_ID, PUBLISHED_ON, "Obras", AMOUNT, "1 mes", operador);
   }
 }
