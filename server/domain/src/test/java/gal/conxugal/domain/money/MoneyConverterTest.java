@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.micronaut.core.convert.ConversionContext;
 import java.math.BigDecimal;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class MoneyConverterTest {
@@ -41,6 +42,8 @@ class MoneyConverterTest {
 
     assertThat(restored)
         .isEqualTo(amount);
+    assertThat(restored)
+        .isNotNull();
     assertThat(restored.value().scale())
         .isEqualTo(4);
   }
@@ -54,12 +57,9 @@ class MoneyConverterTest {
   }
 
   /** Through the column and back, the way an entity property reaches the store and returns. */
-  private Money roundTrip(Money amount) {
-    Money restored =
-        converter.convertToEntityValue(
-            converter.convertToPersistedValue(amount, ConversionContext.DEFAULT),
-            ConversionContext.DEFAULT);
-    assertThat(restored).isNotNull();
-    return restored;
+  private @Nullable Money roundTrip(Money amount) {
+    return converter.convertToEntityValue(
+        converter.convertToPersistedValue(amount, ConversionContext.DEFAULT),
+        ConversionContext.DEFAULT);
   }
 }
