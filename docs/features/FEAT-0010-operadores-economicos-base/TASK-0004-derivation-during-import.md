@@ -56,7 +56,14 @@ one lands **after** there is an import to derive from.
   records **no awardee at all**, the cost the feature README states.
 - **Resolution happens on every upsert, not only on insert.** That is what makes a correction
   changing a contract's published identifier repoint its foreign key, creating the operador the
-  corrected identifier names if no contract named it before.
+  corrected identifier names if no contract named it before. **This task has to widen the batch
+  upsert to allow it.** As shipped by
+  [FEAT-0009 TASK-0004](../FEAT-0009-contratos-menores-initial-import/TASK-0004-contratos-menores-store.md),
+  the statement writes `operador_economico_id` on insert but leaves it out of the
+  `DO UPDATE SET` — correct while nothing derives an awardee, since a re-import carried none, but
+  it means a conflicting row keeps whatever it already had. Adding
+  `operador_economico_id = EXCLUDED.operador_economico_id` to that update is what repoints the
+  key, and without it the criterion below cannot pass.
 - **Idempotent on both tables**: the contract upserts by source identifier, the operador by
   canonical fiscal identifier, and the rank comparison is a strict win — so replaying a batch
   after a crash produces no duplicate operador and no name flapping. Canonicalising is itself

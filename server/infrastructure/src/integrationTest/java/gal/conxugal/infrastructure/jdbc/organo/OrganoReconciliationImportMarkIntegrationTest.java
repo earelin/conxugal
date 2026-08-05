@@ -9,6 +9,7 @@ import gal.conxugal.domain.organo.ImportOrganos;
 import gal.conxugal.domain.organo.ImportOutcome;
 import gal.conxugal.domain.organo.OrganoSource;
 import gal.conxugal.domain.organo.OrganoSourceEntry;
+import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -17,7 +18,6 @@ import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import javax.sql.DataSource;
@@ -81,9 +81,8 @@ class OrganoReconciliationImportMarkIntegrationTest implements TestPropertyProvi
 
   @AfterEach
   void cleanUp() throws Exception {
-    try (Connection connection = rawConnection();
-        Statement statement = connection.createStatement()) {
-      statement.execute("TRUNCATE TABLE organo_contratacion");
+    try (Connection connection = rawConnection()) {
+      DatabaseCleanup.truncateAllTables(connection);
     }
   }
 

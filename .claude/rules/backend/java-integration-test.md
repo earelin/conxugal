@@ -45,7 +45,10 @@ needs a Docker daemon; `application`'s only needs a JVM.
   (`never()`, `verifyNoInteractions`), which stubbing cannot express.
 - **Name test methods in snake_case**, describing the interaction — e.g.
   `persists_organo_and_assigns_generated_id`, `returns_404_when_organo_is_unknown`.
-- **Clean state per test** so the class stays order-independent — truncate the tables
-  the test touched in `@AfterEach`, reset WireMock stubs in `@BeforeEach`. A `static`
-  `@Container` is already per-class; `@TestInstance(PER_CLASS)` is for sharing setup
-  across the class, not for container lifecycle.
+- **Clean state per test** so the class stays order-independent — call
+  `DatabaseCleanup.truncateAllTables(dataSource)` in `@AfterEach`, reset WireMock stubs in
+  `@BeforeEach`. A `static` `@Container` is already per-class; `@TestInstance(PER_CLASS)`
+  is for sharing setup across the class, not for container lifecycle.
+- **Never list the tables to truncate** — `DatabaseCleanup` discovers them. A per-class list
+  breaks unrelated suites the moment a new table takes a foreign key to one of them. It also
+  takes a raw `Connection`, for tests that drive one off the container directly.

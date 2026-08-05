@@ -2,16 +2,20 @@
 feat: FEAT-0009
 domain: backend
 adrs: [0002, 0008, 0019]
-status: todo
+status: done
 depends_on: [TASK-0003]
 ---
 
 # Contratos menores store: migration + JDBC repository
 
 The schema and driven adapter behind [TASK-0003](TASK-0003-contrato-menor-domain-model.md)'s
-port. **Prerequisite outside this feature:**
+port. **The prerequisite outside this feature was already met:** this called for
 [FEAT-0010 TASK-0003](../FEAT-0010-operadores-economicos-base/TASK-0003-operador-store.md)
-creates the `operador_economico` table this one's foreign key points at. Governed by
+to create the `operador_economico` table this one's foreign key points at, but that migration
+landed early with
+[FEAT-0010 TASK-0002](../FEAT-0010-operadores-economicos-base/TASK-0002-operador-domain-model.md)
+(`733b98e`), so that the operador entities were not left pointing at tables that did not exist.
+Only the operador *adapter* is still outstanding there, and nothing here needs it. Governed by
 [ADR-0002](../../architecture/0002-hexagonal-architecture.md) and
 [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md);
 JDBC and SQL stay entirely in `infrastructure`.
@@ -28,13 +32,15 @@ JDBC and SQL stay entirely in `infrastructure`.
   - `publication_date DATE` — nullable, and the **only** date column: the source's `DD-MM-YYYY`
     text is interpreted at the adapter and not stored (TASK-0003 records what that costs against
     R27);
-  - `obxecto TEXT`, `amount NUMERIC`, `duration VARCHAR(64)` — **nullable**. `obxecto` is `TEXT`
-    and carries no length bound, deliberately: the source publishes no maximum for it. `duration`
-    is the one bounded column — the source publishes short phrases there (`"1 mes"`), so 64
-    characters is generous, and the bound is **never reached by an insert**: the adapter caps the
-    value in Java first ([TASK-0005](TASK-0005-source-port-and-adapter.md)), so an unexpectedly
-    long duration loses its tail rather than failing a batch and rejecting a real award (#42).
-    The constraint is the backstop that keeps that cap honest, not the thing enforcing it.
+  - `obxecto TEXT`, `amount NUMERIC`, `duration TEXT` — **nullable**, and none of them bounded:
+    the source publishes no maximum for the object, and the duration's 64-character cap is
+    applied in Java at the adapter ([TASK-0005](TASK-0005-source-port-and-adapter.md)), where an
+    over-long value loses its tail rather than failing a batch and rejecting a real award (#42).
+    This task originally mirrored that cap as a `VARCHAR(64)` backstop. The column is `TEXT`
+    instead, because a bound here can only ever produce the outcome the cap exists to avoid — an
+    uncapped value reaching the store aborts the whole batch — and a backstop whose failure mode
+    is the thing it guards against is not a backstop. **R27's cap is unchanged and still owed by
+    TASK-0005**; what is gone is the schema's redundant second copy of it.
     `amount` stays a plain `NUMERIC`; `Money` is a Java type an `AttributeConverter` maps onto it,
     so the schema knows
     nothing about the wrapper and no currency column exists. The three mirror the aggregate's
@@ -59,7 +65,20 @@ JDBC and SQL stay entirely in `infrastructure`.
   never delete-and-reinsert, so a re-imported contract keeps its UUID and its row. It must
   **distinguish inserted rows from updated ones** in what it returns (PostgreSQL exposes this
   as `xmax = 0` on the returned row); without that the added/refreshed counts R20 reports
-  cannot be produced without a second read of the whole batch.
+  cannot be produced without a second read of the whole batch. The rows travel into it as
+  parallel arrays through `unnest` rather than as a `VALUES` list assembled per batch, which
+  keeps the statement a constant — one prepared form whatever the batch size, and no SQL built
+  around a placeholder count. A page repeating a publication is collapsed to its last reading
+  before the statement runs, because PostgreSQL refuses an `ON CONFLICT DO UPDATE` that would
+  touch one row twice and that refusal is deterministic — one repeated row would fail identically
+  on every retry and block that Órgano's history for good.
+  `operador_economico_id` is written on insert and absent from the `DO UPDATE SET` **because
+  nothing derives an awardee yet**, so a re-import carries none and the update has nothing
+  truthful to write there. That is a consequence of the ordering, not a rule:
+  [FEAT-0010 TASK-0004](../FEAT-0010-operadores-economicos-base/TASK-0004-derivation-during-import.md)
+  resolves the awardee on *every* upsert precisely so a corrected fiscal identifier repoints the
+  foreign key, and adding `operador_economico_id = EXCLUDED.operador_economico_id` to the update
+  is that task's to make.
 - `countByOrganoId` — a plain count on the indexed column.
 - No delete path exists, in the port or the adapter.
 
@@ -91,8 +110,8 @@ JDBC and SQL stay entirely in `infrastructure`.
   like any other. (SPEC-0006 #8, no-operador half)
 - `countByOrganoId` returns the stored count for one Órgano and is unaffected by another
   Órgano's contracts.
-- A duration at exactly the column's 64 characters stores and reads back whole — the boundary is
-  asserted, so the cap and the column cannot drift apart and turn a legal value into a failed
-  batch.
+- A duration longer than the adapter's 64-character cap stores and reads back whole rather than
+  failing — the column bounds nothing, so a value that slipped past the cap cannot abort a batch
+  and reject a real award.
 - Integration-tested against PostgreSQL (Testcontainers), including the unique-constraint and
   the mixed-batch count cases.

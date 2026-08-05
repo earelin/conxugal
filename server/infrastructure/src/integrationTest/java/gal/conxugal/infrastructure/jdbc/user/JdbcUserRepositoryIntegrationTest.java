@@ -11,13 +11,13 @@ import gal.conxugal.domain.user.User;
 import gal.conxugal.domain.user.UserId;
 import gal.conxugal.domain.user.UserRepository;
 import gal.conxugal.infrastructure.crypto.Argon2idPasswordEncoder;
+import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
 import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -65,10 +65,7 @@ class JdbcUserRepositoryIntegrationTest implements TestPropertyProvider {
 
   @AfterEach
   void cleanUp() throws Exception {
-    try (Connection connection = dataSource.getConnection();
-        Statement statement = connection.createStatement()) {
-      statement.execute("TRUNCATE TABLE users");
-    }
+    DatabaseCleanup.truncateAllTables(dataSource);
   }
 
   @Test

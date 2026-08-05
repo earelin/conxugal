@@ -5,6 +5,7 @@ import static org.assertj.db.api.Assertions.assertThat;
 
 import gal.conxugal.domain.organo.taxonomia.DeleteTermo;
 import gal.conxugal.domain.organo.taxonomia.TermoId;
+import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -13,7 +14,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -70,9 +70,8 @@ class DeleteTermoIntegrationTest implements TestPropertyProvider {
 
   @AfterEach
   void cleanUp() throws Exception {
-    try (Connection connection = rawConnection();
-        Statement statement = connection.createStatement()) {
-      statement.execute("TRUNCATE TABLE organo_contratacion, termo");
+    try (Connection connection = rawConnection()) {
+      DatabaseCleanup.truncateAllTables(connection);
     }
   }
 

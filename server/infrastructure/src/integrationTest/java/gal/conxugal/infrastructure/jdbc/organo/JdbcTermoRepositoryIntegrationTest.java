@@ -7,6 +7,7 @@ import static org.assertj.db.api.Assertions.assertThat;
 import gal.conxugal.domain.organo.taxonomia.Termo;
 import gal.conxugal.domain.organo.taxonomia.TermoId;
 import gal.conxugal.domain.organo.taxonomia.TermoRepository;
+import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -14,7 +15,6 @@ import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -60,10 +60,7 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
 
   @AfterEach
   void cleanUp() throws Exception {
-    try (Connection connection = dataSource.getConnection();
-        Statement statement = connection.createStatement()) {
-      statement.execute("TRUNCATE TABLE organo_contratacion, termo");
-    }
+    DatabaseCleanup.truncateAllTables(dataSource);
   }
 
   @Test
