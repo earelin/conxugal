@@ -16,6 +16,9 @@ import { TermoContentCard } from './TermoContentCard';
 
 type TermoAction = 'rename' | 'move' | 'delete';
 
+/** A term-shape dialog and the term it was opened on, held as an id. */
+type TermoRequest = { termoId: string; action: TermoAction };
+
 /** Which half of the assign pair the entry point settled, held as an id. */
 type AssignRequest = { kind: 'organo'; organoId: string } | { kind: 'termo'; termoId: string };
 
@@ -35,7 +38,7 @@ export function OrganosPage() {
   // The three writes act on whichever term is open, so they are held here
   // rather than in either pane: the tree row and the content header are two
   // ways into the same dialog, not two dialogs.
-  const [action, setAction] = useState<TermoAction | null>(null);
+  const [request, setRequest] = useState<TermoRequest | null>(null);
   // Ids, not records: the dialog is about whatever the section currently holds
   // under them, and re-resolving each render is what keeps it honest.
   const [assigning, setAssigning] = useState<AssignRequest | null>(null);
@@ -51,47 +54,53 @@ export function OrganosPage() {
   const openTermoId = openPath.length > 0 ? selectedTermoId : null;
   const openTermo = openPath.at(-1) ?? null;
   const openParentId = openPath.at(-2)?.id ?? null;
-  // Derived, never held: a term can stop resolving under the section — a failed
-  // refetch, or another admin deleting it — and a held action would then re-open
-  // its dialog by itself the moment the next term was selected.
-  const openAction = openTermo === null ? null : action;
-  // Same rule for the assign dialog, and it earns it twice over: either record
-  // can be deleted by another admin while the dialog is open, and an id that
-  // stops resolving simply unmounts it.
+  // Matched against the open term, never taken on its own: an action held apart
+  // from the term it was opened on would open its dialog on whichever term the
+  // administrator selected next.
+  const openAction = request !== null && request.termoId === openTermoId ? request.action : null;
+  // Ids, not records, for the same reason: either record can be deleted by
+  // another admin while the dialog is open, and one that stops resolving simply
+  // unmounts it.
   const assignTarget = view && assigning ? resolveAssignTarget(view, assigning) : null;
 
-  const termoActions = {
-    onRename: () => setAction('rename'),
-    onMove: () => setAction('move'),
-    onDelete: () => setAction('delete'),
-    onAssign: () => {
+  // What the section takes off the screen stays off it. Neither dialog closes
+  // through its own handlers when what it is about stops resolving — a failed
+  // read, or another admin's delete — it simply unmounts, and the read that
+  // brings the record back is usually one nobody asked for: react-query refetches
+  // both lists on every window focus. Dropping the request there is what keeps
+  // that recovery from re-opening a dialog with no click behind it.
+  if (request !== null && openAction === null) {
+    setRequest(null);
+  }
+  if (assigning !== null && assignTarget === null) {
+    setAssigning(null);
+  }
+
+  // Every one of these is a control only the open term renders, so the id is
+  // taken once here rather than re-checked in each handler.
+  function forOpenTermo(use: (termoId: string) => void) {
+    return () => {
       if (openTermoId !== null) {
-        setAssigning({ kind: 'termo', termoId: openTermoId });
+        use(openTermoId);
       }
-    },
+    };
+  }
+
+  const termoActions = {
+    onRename: forOpenTermo((termoId) => setRequest({ termoId, action: 'rename' })),
+    onMove: forOpenTermo((termoId) => setRequest({ termoId, action: 'move' })),
+    onDelete: forOpenTermo((termoId) => setRequest({ termoId, action: 'delete' })),
+    onAssign: forOpenTermo((termoId) => setAssigning({ kind: 'termo', termoId })),
   };
 
   function closeAction() {
-    setAction(null);
-  }
-
-  /**
-   * The section-level retry, which is not the dialog's own refresh: a failed
-   * read replaces the whole section, taking any open dialog with it, and
-   * bringing the reader back to a screen they never asked to return to would be
-   * a dialog re-opening by itself. The dialog's `Actualizar` keeps it open on
-   * purpose, so the two refreshes stay separate handlers.
-   */
-  function retrySection() {
-    setAssigning(null);
-    refetch();
+    setRequest(null);
   }
 
   function afterDelete() {
     // The deleted term is gone from the next read; landing on its parent keeps
     // the administrator where they were working instead of at the worklist.
     setSelectedTermoId(openParentId);
-    setAction(null);
   }
 
   return (
@@ -110,7 +119,7 @@ export function OrganosPage() {
       {isError && (
         <ErrorAlert
           title={strings.admin.organos.errorTitle}
-          onRetry={retrySection}
+          onRetry={refetch}
           retrying={isFetching}
         >
           {isHttpStatus(error, 403)
