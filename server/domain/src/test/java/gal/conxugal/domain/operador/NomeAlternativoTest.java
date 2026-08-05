@@ -76,25 +76,19 @@ class NomeAlternativoTest {
     assertThat(new HashSet<>(List.of(older, newer))).hasSize(1);
   }
 
+  /**
+   * The operador column files the row, it does not identify the value — so two values never meet
+   * unless they are already inside the same aggregate, and comparing across operadores is not a
+   * question this type answers.
+   */
   @Test
-  void the_same_name_against_two_operadores_is_two_retained_names() {
-    NomeAlternativo mine =
-        new NomeAlternativo(new OperadorId(UUID.randomUUID()), "Obradoiro Naval", RANK);
-    NomeAlternativo yours =
-        new NomeAlternativo(new OperadorId(UUID.randomUUID()), "Obradoiro Naval", RANK);
-
-    assertThat(mine).isNotEqualTo(yours);
-    assertThat(new HashSet<>(List.of(mine, yours))).hasSize(2);
-  }
-
-  @Test
-  void names_held_against_no_operador_match_none_held_against_one() {
+  void the_operador_the_name_is_filed_under_does_not_enter_into_the_comparison() {
     NomeAlternativo unattached = new NomeAlternativo(null, "Obradoiro Naval", RANK);
     NomeAlternativo attached =
         new NomeAlternativo(new OperadorId(UUID.randomUUID()), "Obradoiro Naval", RANK);
 
-    assertThat(unattached).isNotEqualTo(attached);
-    assertThat(attached).isNotEqualTo(unattached);
+    assertThat(unattached).isEqualTo(attached);
+    assertThat(unattached).hasSameHashCodeAs(attached);
   }
 
   @Test

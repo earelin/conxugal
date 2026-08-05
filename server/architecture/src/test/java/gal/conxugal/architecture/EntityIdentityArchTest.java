@@ -50,13 +50,16 @@ class EntityIdentityArchTest {
         }
         Set<String> idFields = idFieldNames(javaClass);
         Set<String> read = fieldsReadBy(equals.get());
-        boolean satisfied = read.containsAll(idFields);
+        // Any one @Id is enough: an aggregate has a single one, and a value held inside an
+        // aggregate keys on the natural part of a composite key, ignoring the column that
+        // files its row under its owner.
+        boolean satisfied = idFields.stream().anyMatch(read::contains);
         events.add(
             new SimpleConditionEvent(
                 javaClass,
                 satisfied,
-                "%s declares equals but never reads %s, so it cannot be comparing by identity"
-                    .formatted(javaClass.getFullName(), difference(idFields, read))));
+                "%s declares equals but reads none of %s, so it cannot be comparing by identity"
+                    .formatted(javaClass.getFullName(), idFields)));
       }
     };
   }
@@ -84,7 +87,4 @@ class EntityIdentityArchTest {
         .collect(Collectors.toSet());
   }
 
-  private static Set<String> difference(Set<String> expected, Set<String> actual) {
-    return expected.stream().filter(name -> !actual.contains(name)).collect(Collectors.toSet());
-  }
 }

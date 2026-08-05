@@ -56,13 +56,6 @@ public record OperadorEconomico(
         throw new IllegalArgumentException(
             "nomesAlternativos must not hold the principal name: %s".formatted(name));
       }
-      // The operador half of a retained name is half its identity, so a name filed against
-      // another operador — or against none once this one has an id — is not this one's to hold.
-      if (!Objects.equals(alternativo.operadorEconomicoId(), id)) {
-        throw new IllegalArgumentException(
-            "nomesAlternativos must be held against this operador: %s is held against %s"
-                .formatted(alternativo.name(), alternativo.operadorEconomicoId()));
-      }
     }
   }
 

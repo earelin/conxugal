@@ -171,34 +171,6 @@ class OperadorEconomicoTest {
   }
 
   @Test
-  void rejects_an_alternative_held_against_another_operador() {
-    Set<NomeAlternativo> alternativos =
-        Set.of(
-            new NomeAlternativo(
-                new OperadorId(UUID.randomUUID()), "Obradoiro Naval, S.L.", OLDER));
-
-    assertThatIllegalArgumentException()
-        .isThrownBy(
-            () ->
-                new OperadorEconomico(
-                    new OperadorId(UUID.randomUUID()), "B12345678", "Obradoiro Naval", RANK,
-                    alternativos));
-  }
-
-  @Test
-  void rejects_an_alternative_held_against_no_operador_once_this_one_has_an_identity() {
-    Set<NomeAlternativo> alternativos =
-        Set.of(new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER));
-
-    assertThatIllegalArgumentException()
-        .isThrownBy(
-            () ->
-                new OperadorEconomico(
-                    new OperadorId(UUID.randomUUID()), "B12345678", "Obradoiro Naval", RANK,
-                    alternativos));
-  }
-
-  @Test
   void an_alternative_differing_from_the_principal_only_in_case_is_allowed() {
     OperadorEconomico operador =
         new OperadorEconomico(

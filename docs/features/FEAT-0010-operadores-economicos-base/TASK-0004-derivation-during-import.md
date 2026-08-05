@@ -37,13 +37,13 @@ one lands **after** there is an import to derive from.
   - A contract republishing the **principal name itself** advances the operador's rank and
     retains nothing — there is no alternative to add, and adding one would break the invariant.
   - **Never accumulate `NomeAlternativo` values in a set and resolve their ranks afterwards.**
-    The type's identity is `(operadorEconomicoId, name)` and excludes `lastPublished`, so
-    collecting the same name at two ranks into a `Set` discards one of them arbitrarily —
-    a `.collect(toSet())` over a run's contracts would silently keep a rank that is not the most
-    recent, which is exactly the determinism R4 depends on. Resolve the rank per name first, or
-    go through TASK-0003's upsert, which decides it in the store. For the same reason, a set
-    accumulated **across operadores** before ids are assigned collapses two companies sharing a
-    trading name into one value — keep retentions scoped to the operador they belong to.
+    The name is the whole of its identity, so collecting the same name at two ranks into a `Set`
+    discards one of them arbitrarily — a `.collect(toSet())` over a run's contracts would
+    silently keep a rank that is not the most recent, which is exactly the determinism R4 depends
+    on. Resolve the rank per name first, or go through TASK-0003's upsert, which decides it in
+    the store. **And keep every such set scoped to one operador**: since the operador column is
+    not part of the identity, a set accumulated across operadores collapses two companies sharing
+    a trading name into a single value.
 - **The published awardee comes from the source row, not from the stored contract.** The schema
   is normalised: `contrato_menor` keeps no awardee name or identifier, so the values this task
   matches on and copies into the operador's name are only in hand **while the batch is

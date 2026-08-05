@@ -77,12 +77,11 @@ exists first.
 - **No `contrato_menor` reference of any kind** — neither a column here nor an `ALTER` there.
   FEAT-0009's store task owns that column;
   [TASK-0004](TASK-0004-derivation-during-import.md) is what populates it.
-- **Prove the hydrated alternatives carry their operador's id.** `OperadorEconomico` rejects a
-  retained name whose `operadorEconomicoId` does not match the aggregate's own, because that half
-  is half the child's identity. Reading an operador back with its alternatives must therefore
-  populate the column from the row; if the `@Relation(ONE_TO_MANY)` hydration leaves it null, the
-  read fails loudly rather than silently returning children keyed on nothing — decide there
-  whether to map it explicitly or to relax the check.
+- **The `UNIQUE (operador_economico_id, name)` constraint is what scopes a name to its operador,
+  and it is the only thing that does.** `NomeAlternativo` is a value inside the aggregate and
+  compares on its name alone, so nothing in the domain stops a name filed under one operador from
+  being compared with a name filed under another — reads must not assemble alternatives from more
+  than one operador into a single set.
 
 ## Acceptance criteria
 - Inserting a second operador with an existing fiscal identifier fails at the unique constraint

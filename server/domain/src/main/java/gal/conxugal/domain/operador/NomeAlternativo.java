@@ -16,9 +16,11 @@ import org.jspecify.annotations.Nullable;
  * internal spacing are two names. Nothing here reduces a name the way an operador's fiscal
  * identifier is reduced — that reduction exists for identifiers and never for names.
  *
- * <p>The operador and the name are jointly the identity, which is what makes a name retained
- * once: there is no surrogate key that would let the same name be held twice. The operador half
- * is {@code null} only until the operador it belongs to has been assigned an identity.
+ * <p>This is a value inside the {@link OperadorEconomico} aggregate, not an entity of its own:
+ * <b>the name is the identity</b>, which is what makes a name retained once. {@code
+ * operadorEconomicoId} is the column that files the row under its operador — it completes the
+ * table's key, not the value's, and is {@code null} until the operador has been assigned an
+ * identity.
  */
 @MappedEntity("operador_economico_nome_alternativo")
 public record NomeAlternativo(
@@ -32,24 +34,19 @@ public record NomeAlternativo(
   }
 
   /**
-   * Identity, not value: the operador and the name decide it, so the same name published again by
-   * a later contract is the same retained name at a new rank, and a {@code Set} holds it once —
-   * which one's rank survives the collapse is the caller's to decide before building the set.
-   *
-   * <p>Unlike the aggregates, this needs no null-id guard: the name half of the identity is always
-   * assigned, so the pair identifies the value even before the operador has an id, which is the
-   * state {@link OperadorEconomico#displaying} builds these in.
+   * The name alone, so the same name published again by a later contract is the same retained
+   * name at a new rank and a {@code Set} holds it once — which one's rank survives the collapse
+   * is the caller's to decide before building the set. Neither the rank nor the operador column
+   * enters into it: the aggregate a value sits in is already the operador it belongs to, and
+   * nothing compares values across two of them.
    */
   @Override
   public boolean equals(Object o) {
-    return this == o
-        || (o instanceof NomeAlternativo other
-            && Objects.equals(operadorEconomicoId, other.operadorEconomicoId)
-            && name.equals(other.name));
+    return this == o || (o instanceof NomeAlternativo other && name.equals(other.name));
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(operadorEconomicoId, name);
+    return name.hashCode();
   }
 }
