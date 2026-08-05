@@ -7,6 +7,7 @@ plugins {
 
 dependencies {
     implementation(project(":domain"))
+    implementation(project(":commons"))
 
     implementation(libs.micronaut.jdbc.hikari)
     implementation(libs.micronaut.data.jdbc)
@@ -14,6 +15,7 @@ dependencies {
     runtimeOnly(libs.postgresql)
 
     implementation(libs.micronaut.http.client)
+    implementation(libs.micronaut.serde.jackson)
     implementation(libs.jsoup)
 
     implementation(platform(libs.resilience4j.bom))
