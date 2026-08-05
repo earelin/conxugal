@@ -72,7 +72,7 @@ class DeleteTermoIntegrationTest implements TestPropertyProvider {
   void cleanUp() throws Exception {
     try (Connection connection = rawConnection();
         Statement statement = connection.createStatement()) {
-      statement.execute("TRUNCATE TABLE organo_contratacion, termo");
+      statement.execute("TRUNCATE TABLE contrato_menor, organo_contratacion, termo");
     }
   }
 

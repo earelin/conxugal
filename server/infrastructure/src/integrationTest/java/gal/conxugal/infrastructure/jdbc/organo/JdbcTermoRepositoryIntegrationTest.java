@@ -62,7 +62,7 @@ class JdbcTermoRepositoryIntegrationTest implements TestPropertyProvider {
   void cleanUp() throws Exception {
     try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement()) {
-      statement.execute("TRUNCATE TABLE organo_contratacion, termo");
+      statement.execute("TRUNCATE TABLE contrato_menor, organo_contratacion, termo");
     }
   }
 

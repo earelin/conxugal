@@ -2,16 +2,20 @@
 feat: FEAT-0009
 domain: backend
 adrs: [0002, 0008, 0019]
-status: todo
+status: done
 depends_on: [TASK-0003]
 ---
 
 # Contratos menores store: migration + JDBC repository
 
 The schema and driven adapter behind [TASK-0003](TASK-0003-contrato-menor-domain-model.md)'s
-port. **Prerequisite outside this feature:**
+port. **The prerequisite outside this feature was already met:** this called for
 [FEAT-0010 TASK-0003](../FEAT-0010-operadores-economicos-base/TASK-0003-operador-store.md)
-creates the `operador_economico` table this one's foreign key points at. Governed by
+to create the `operador_economico` table this one's foreign key points at, but that migration
+landed early with
+[FEAT-0010 TASK-0002](../FEAT-0010-operadores-economicos-base/TASK-0002-operador-domain-model.md)
+(`733b98e`), so that the operador entities were not left pointing at tables that did not exist.
+Only the operador *adapter* is still outstanding there, and nothing here needs it. Governed by
 [ADR-0002](../../architecture/0002-hexagonal-architecture.md) and
 [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md);
 JDBC and SQL stay entirely in `infrastructure`.
@@ -59,7 +63,12 @@ JDBC and SQL stay entirely in `infrastructure`.
   never delete-and-reinsert, so a re-imported contract keeps its UUID and its row. It must
   **distinguish inserted rows from updated ones** in what it returns (PostgreSQL exposes this
   as `xmax = 0` on the returned row); without that the added/refreshed counts R20 reports
-  cannot be produced without a second read of the whole batch.
+  cannot be produced without a second read of the whole batch. The rows travel into it as
+  parallel arrays through `unnest` rather than as a `VALUES` list assembled per batch, which
+  keeps the statement a constant — one prepared form whatever the batch size, and no SQL built
+  around a placeholder count. `operador_economico_id` is written on insert and deliberately
+  absent from the `DO UPDATE SET`: it is not a source-derived column, so a re-import — which
+  carries no awardee — must leave whatever the derivation wrote there alone.
 - `countByOrganoId` — a plain count on the indexed column.
 - No delete path exists, in the port or the adapter.
 

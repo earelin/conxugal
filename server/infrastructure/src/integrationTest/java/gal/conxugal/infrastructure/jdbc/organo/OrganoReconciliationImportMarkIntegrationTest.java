@@ -83,7 +83,7 @@ class OrganoReconciliationImportMarkIntegrationTest implements TestPropertyProvi
   void cleanUp() throws Exception {
     try (Connection connection = rawConnection();
         Statement statement = connection.createStatement()) {
-      statement.execute("TRUNCATE TABLE organo_contratacion");
+      statement.execute("TRUNCATE TABLE contrato_menor, organo_contratacion");
     }
   }
 
