@@ -49,9 +49,6 @@ needs a Docker daemon; `application`'s only needs a JVM.
   `DatabaseCleanup.truncateAllTables(dataSource)` in `@AfterEach`, reset WireMock stubs in
   `@BeforeEach`. A `static` `@Container` is already per-class; `@TestInstance(PER_CLASS)`
   is for sharing setup across the class, not for container lifecycle.
-- **Never list the tables to truncate.** `DatabaseCleanup` asks the database which tables
-  exist and empties all of them but Flyway's history; it takes a raw `Connection` too, for
-  the tests that drive one off the container directly. A per-class list is only correct
-  until someone adds a foreign key to one of those tables — a referenced table can no
-  longer be truncated on its own, so the stale list surfaces as unrelated suites failing
-  rather than as the new table's own test.
+- **Never list the tables to truncate** — `DatabaseCleanup` discovers them. A per-class list
+  breaks unrelated suites the moment a new table takes a foreign key to one of them. It also
+  takes a raw `Connection`, for tests that drive one off the container directly.

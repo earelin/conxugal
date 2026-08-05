@@ -65,7 +65,7 @@ public abstract class JdbcContratoMenorRepository
           source_id, organo_id, publication_date, obxecto, amount, duration,
           operador_economico_id)
       SELECT * FROM unnest(
-          ?::bigint[], ?::uuid[], ?::date[], ?::text[], ?::numeric[], ?::varchar[], ?::uuid[])
+          ?::bigint[], ?::uuid[], ?::date[], ?::text[], ?::numeric[], ?::text[], ?::uuid[])
       ON CONFLICT (source_id) DO UPDATE SET
           organo_id = EXCLUDED.organo_id,
           publication_date = EXCLUDED.publication_date,
@@ -131,7 +131,7 @@ public abstract class JdbcContratoMenorRepository
     statement.setArray(3, connection.createArrayOf("date", publicationDates));
     statement.setArray(4, connection.createArrayOf("text", obxectos));
     statement.setArray(5, connection.createArrayOf("numeric", amounts));
-    statement.setArray(6, connection.createArrayOf("varchar", durations));
+    statement.setArray(6, connection.createArrayOf("text", durations));
     statement.setArray(7, connection.createArrayOf("uuid", operadorIds));
   }
 

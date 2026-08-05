@@ -130,30 +130,18 @@ class ContratoMenorMigrationIntegrationTest implements TestPropertyProvider {
         });
   }
 
-  // The adapter caps the duration at 64 in Java, so a value of exactly 64 is legal and must
-  // store whole. Asserting the boundary is what keeps the cap and the column from drifting
-  // apart and turning a legal value into a failed batch.
+  // The column bounds nothing, so a duration longer than the adapter's cap is stored rather
+  // than refused. Capping is the adapter's job precisely so an unexpectedly long value loses
+  // its tail instead of failing a batch and rejecting a real award; a bound here could only
+  // reintroduce that failure.
   @Test
-  void duration_at_exactly_the_column_bound_stores_and_reads_back_whole() throws Exception {
+  void duration_past_the_adapters_cap_is_stored_rather_than_refused() throws Exception {
     UUID organoId = insertOrgano("consorcio-x");
-    String duration = "d".repeat(64);
+    String duration = "d".repeat(500);
 
     insertContratoLasting(4711L, organoId, duration);
 
     assertThat(storedDuration(4711L)).isEqualTo(duration);
-  }
-
-  // The other edge, so the bound is pinned exactly rather than only from below: widening the
-  // column would leave the cap in Java capping to something the column no longer requires.
-  @Test
-  void duration_one_character_past_the_column_bound_is_refused() throws Exception {
-    UUID organoId = insertOrgano("consorcio-x");
-
-    assertThatThrownBy(() -> insertContratoLasting(4712L, organoId, "d".repeat(65)))
-        .isInstanceOfSatisfying(
-            SQLException.class,
-            // SQLSTATE 22001 is string_data_right_truncation.
-            exception -> assertThat(exception.getSQLState()).isEqualTo("22001"));
   }
 
   @Test

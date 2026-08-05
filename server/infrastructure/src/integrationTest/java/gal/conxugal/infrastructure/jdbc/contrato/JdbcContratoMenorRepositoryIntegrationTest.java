@@ -370,7 +370,8 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
   void published_text_date_and_amount_round_trip_through_the_store_unchanged() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     String obxecto = "Subministración de material de oficina ".repeat(200);
-    String duration = "d".repeat(64);
+    // Longer than the cap the adapter applies, so the store is shown not to bound it either.
+    String duration = "d".repeat(200);
     contratoMenorRepository.upsertAll(
         List.of(
             new ContratoMenor(

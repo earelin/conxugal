@@ -10,10 +10,10 @@ CREATE TABLE contrato_menor (
     publication_date DATE,
     obxecto TEXT,
     amount NUMERIC,
-    -- The adapter caps the duration in Java first, so an unexpectedly long one loses its tail
-    -- rather than failing a batch and rejecting a real award. This bound is the backstop that
-    -- keeps that cap honest, not the thing enforcing it.
-    duration VARCHAR(64),
+    -- Unbounded like obxecto: the adapter caps the duration in Java, and a column bound here
+    -- could only turn an uncapped value into a failed batch that rejects a real award — the one
+    -- outcome the cap exists to avoid.
+    duration TEXT,
     -- This column is the awardee: the name and fiscal identifier live once on operador_economico
     -- and no contract row repeats them. Nullable because an award whose identifier is unusable
     -- records no awardee at all, and because nothing writes it until the operador derivation

@@ -32,13 +32,15 @@ JDBC and SQL stay entirely in `infrastructure`.
   - `publication_date DATE` — nullable, and the **only** date column: the source's `DD-MM-YYYY`
     text is interpreted at the adapter and not stored (TASK-0003 records what that costs against
     R27);
-  - `obxecto TEXT`, `amount NUMERIC`, `duration VARCHAR(64)` — **nullable**. `obxecto` is `TEXT`
-    and carries no length bound, deliberately: the source publishes no maximum for it. `duration`
-    is the one bounded column — the source publishes short phrases there (`"1 mes"`), so 64
-    characters is generous, and the bound is **never reached by an insert**: the adapter caps the
-    value in Java first ([TASK-0005](TASK-0005-source-port-and-adapter.md)), so an unexpectedly
-    long duration loses its tail rather than failing a batch and rejecting a real award (#42).
-    The constraint is the backstop that keeps that cap honest, not the thing enforcing it.
+  - `obxecto TEXT`, `amount NUMERIC`, `duration TEXT` — **nullable**, and none of them bounded:
+    the source publishes no maximum for the object, and the duration's 64-character cap is
+    applied in Java at the adapter ([TASK-0005](TASK-0005-source-port-and-adapter.md)), where an
+    over-long value loses its tail rather than failing a batch and rejecting a real award (#42).
+    This task originally mirrored that cap as a `VARCHAR(64)` backstop. The column is `TEXT`
+    instead, because a bound here can only ever produce the outcome the cap exists to avoid — an
+    uncapped value reaching the store aborts the whole batch — and a backstop whose failure mode
+    is the thing it guards against is not a backstop. **R27's cap is unchanged and still owed by
+    TASK-0005**; what is gone is the schema's redundant second copy of it.
     `amount` stays a plain `NUMERIC`; `Money` is a Java type an `AttributeConverter` maps onto it,
     so the schema knows
     nothing about the wrapper and no currency column exists. The three mirror the aggregate's
@@ -108,8 +110,8 @@ JDBC and SQL stay entirely in `infrastructure`.
   like any other. (SPEC-0006 #8, no-operador half)
 - `countByOrganoId` returns the stored count for one Órgano and is unaffected by another
   Órgano's contracts.
-- A duration at exactly the column's 64 characters stores and reads back whole — the boundary is
-  asserted, so the cap and the column cannot drift apart and turn a legal value into a failed
-  batch.
+- A duration longer than the adapter's 64-character cap stores and reads back whole rather than
+  failing — the column bounds nothing, so a value that slipped past the cap cannot abort a batch
+  and reject a real award.
 - Integration-tested against PostgreSQL (Testcontainers), including the unique-constraint and
   the mixed-batch count cases.
