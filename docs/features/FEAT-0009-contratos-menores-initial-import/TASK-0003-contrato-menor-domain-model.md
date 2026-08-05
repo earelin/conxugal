@@ -2,7 +2,7 @@
 feat: FEAT-0009
 domain: backend
 adrs: [0002, 0008, 0019]
-status: todo
+status: done
 depends_on: []
 ---
 
@@ -42,7 +42,7 @@ rather than added to a table of millions later.
   | --- | --- | --- |
   | `id` | `ContratoMenorId` | System-assigned identity, `null` only until the database assigns it |
   | `sourceId` | `long` | The source's own `id`. **The stable identity across imports** (R11) and what the uniqueness of R12 is enforced on |
-  | `organoId` | `UUID` | The awarding Órgano's **UUID**, never its source key |
+  | `organoId` | `OrganoId` | The awarding Órgano's **identity**, never its source key |
   | `publicationDate` | `LocalDate`, nullable | Interpreted at the adapter from the source's `DD-MM-YYYY` text. **One field, not a pair** — the published text is not retained |
   | `obxecto` | `String`, nullable | As published, at whatever length the source publishes it — no cap of our own |
   | `amount` | `Money`, nullable | Published as a JSON **number**, VAT-inclusive — see below |
@@ -139,11 +139,18 @@ rather than added to a table of millions later.
   awardee is stored at all in the meantime**, since the contract keeps none of its own. That is a
   consequence of normalising, and it is the reason FEAT-0010's derivation should not lag far behind
   the first import.
-- **The awarding Órgano is referenced by a raw `UUID`, not an `OrganoId`.** ADR-0019 converts a
-  shipped aggregate only when a feature has reason to touch its identity, and typing the
-  catalogue is not this feature's work — so the reference stays untyped until it is, and the
-  asymmetry is deliberate rather than an oversight. `sourceId` stays a `long`: it is the
-  source's natural key, not an identity this system assigns.
+- **The awarding Órgano is referenced by an `OrganoId`.** This bullet previously called for a raw
+  `UUID`, on ADR-0019's rule that a shipped aggregate converts only when a feature has reason to
+  touch its identity — but the catalogue **was already converted** before that ADR was written
+  (`a092908`, 2026-08-01, two days ahead of it), and `OrganoDeContratacion`, `OrganoRepository`
+  and this feature's own shipped mark task all carry `OrganoId` today. The rule's condition is
+  therefore met, not pending: a raw `UUID` here would be the lone untyped Órgano reference in the
+  codebase, and `countByOrganoId` is exactly the signature ADR-0019 says the risk binds hardest
+  on, the walk threading a contract's, an operador's and an Órgano's identity through one loop.
+  **ADR-0019's own text is stale on this point** — its decision section still says FEAT-0009
+  "refers to an Órgano by a raw `UUID`, because converting the catalogue is not that feature's
+  work" — and correcting it is a change to that record, not to this task. `sourceId` stays a
+  `long`: it is the source's natural key, not an identity this system assigns.
 - **No column addresses the publication at the source.** R16's per-row link is
   `licitacion?N={sourceId}` — derivable from a field the row already carries.
 - `ContratoMenorRepository` port in `domain`:

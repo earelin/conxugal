@@ -41,12 +41,19 @@
 
   <!-- fb-contrib detectors we do not adopt, project-wide. -->
 
-  <!-- Reports the mutual reference between a value object and its converter, which is inherent to
-       that pairing. Named so a genuine class-level tangle elsewhere still reports — :architecture's
+  <!-- Reports the mutual reference between a value object and its converter — the value names its
+       converter in @TypeDef, the converter constructs the value — which is inherent to that
+       pairing. Either side can be the reported class depending on which the analysis reaches
+       first, so both are named rather than only the converter. Scoped to the domain's converted
+       value types so a genuine class-level tangle elsewhere still reports — :architecture's
        ArchUnit rules only police the direction between modules, not within one. -->
   <Match>
-    <Class name="~gal\.conxugal\..*IdConverter"/>
     <Bug pattern="FCCD_FIND_CLASS_CIRCULAR_DEPENDENCY"/>
+    <Or>
+      <Class name="~gal\.conxugal\.domain\..*Converter"/>
+      <Class name="~gal\.conxugal\.domain\..*Id"/>
+      <Class name="gal.conxugal.domain.money.Money"/>
+    </Or>
   </Match>
 
   <!-- Wants checked exceptions propagated rather than wrapped. Adapters deliberately soften them:
