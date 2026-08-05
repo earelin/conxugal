@@ -1,6 +1,7 @@
 package gal.conxugal.infrastructure.jdbc.contrato;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.db.api.Assertions.assertThat;
 
 import gal.conxugal.domain.contrato.ContratoMenor;
@@ -111,10 +112,15 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
     assertThat(contratos).row(1).value("source_id").isEqualTo(4712L);
   }
 
+  // Every source-derived column is refreshed, the awarding Órgano included: a contract
+  // re-published under another Órgano that kept its old organo_id would leave countByOrganoId
+  // disagreeing with the source for both of them, and that count is what tells the walk the
+  // history is fully loaded. Same id throughout, so the row moved rather than being re-inserted.
   @Test
   void upserting_stored_source_id_refreshes_that_row_in_place_and_adds_no_second()
       throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
+    OrganoId reassignedTo = insertOrgano("axencia-y");
     contratoMenorRepository.upsertAll(List.of(contrato(4711L, organoId, "As published")));
     UUID idBefore = storedId(4711L);
 
@@ -122,7 +128,7 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
         List.of(
             new ContratoMenor(
                 4711L,
-                organoId,
+                reassignedTo,
                 LocalDate.of(2026, 4, 1),
                 "Corrected at the source",
                 new Money(new BigDecimal("999.99")),
@@ -135,10 +141,33 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
     assertThat(contratos)
         .row(0)
             .value("id").isEqualTo(idBefore)
+            .value("organo_id").isEqualTo(reassignedTo.value())
             .value("publication_date").isEqualTo(LocalDate.of(2026, 4, 1))
             .value("obxecto").isEqualTo("Corrected at the source")
             .value("amount").isEqualTo(new BigDecimal("999.99"))
             .value("duration").isEqualTo("2 meses");
+    assertThat(contratoMenorRepository.countByOrganoId(organoId)).isZero();
+    assertThat(contratoMenorRepository.countByOrganoId(reassignedTo)).isEqualTo(1L);
+  }
+
+  // The source blanking a field it previously published is a change like any other: EXCLUDED
+  // carries the null through, so the stored value is cleared rather than kept.
+  @Test
+  void refreshing_clears_values_the_source_stopped_publishing() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    contratoMenorRepository.upsertAll(List.of(contrato(4711L, organoId, "As published")));
+
+    contratoMenorRepository.upsertAll(
+        List.of(new ContratoMenor(4711L, organoId, null, null, null, null, null)));
+
+    Table contratos = contratoTable();
+    assertThat(contratos).hasNumberOfRows(1);
+    assertThat(contratos)
+        .row(0)
+            .value("publication_date").isNull()
+            .value("obxecto").isNull()
+            .value("amount").isNull()
+            .value("duration").isNull();
   }
 
   @Test
@@ -180,15 +209,32 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
     OrganoId organoId = insertOrgano("consorcio-x");
     contratoMenorRepository.upsertAll(
         List.of(contrato(4711L, organoId, "First"), contrato(4712L, organoId, "Second")));
+    UUID untouchedId = storedId(4711L);
+    UUID refreshedId = storedId(4712L);
 
     UpsertCounts counts = contratoMenorRepository.upsertAll(
         List.of(
-            contrato(4712L, organoId, "Second"),
+            contrato(4712L, organoId, "Second, re-read"),
             contrato(4713L, organoId, "Third"),
             contrato(4714L, organoId, "Fourth")));
 
     assertThat(counts).isEqualTo(new UpsertCounts(2, 1));
-    assertThat(contratoTable()).hasNumberOfRows(4);
+    Table contratos = contratoTable();
+    assertThat(contratos).hasNumberOfRows(4);
+    // The refreshed row kept its identity rather than being deleted and re-inserted, and the
+    // one absent from the second batch was left alone entirely.
+    assertThat(contratos)
+        .row(0)
+            .value("source_id").isEqualTo(4711L)
+            .value("id").isEqualTo(untouchedId)
+            .value("obxecto").isEqualTo("First");
+    assertThat(contratos)
+        .row(1)
+            .value("source_id").isEqualTo(4712L)
+            .value("id").isEqualTo(refreshedId)
+            .value("obxecto").isEqualTo("Second, re-read");
+    assertThat(contratos).row(2).value("source_id").isEqualTo(4713L);
+    assertThat(contratos).row(3).value("source_id").isEqualTo(4714L);
   }
 
   // Absence at the source means nothing, so nothing here removes what an earlier batch stored.
@@ -211,11 +257,77 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
   }
 
   @Test
-  void an_empty_batch_stores_nothing_and_reports_no_counts() {
+  void an_empty_batch_stores_nothing_and_leaves_what_is_stored_alone() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    contratoMenorRepository.upsertAll(List.of(contrato(4711L, organoId, "Already stored")));
+
     UpsertCounts counts = contratoMenorRepository.upsertAll(List.of());
 
     assertThat(counts).isEqualTo(new UpsertCounts(0, 0));
-    assertThat(contratoTable()).hasNumberOfRows(0);
+    Table contratos = contratoTable();
+    assertThat(contratos).hasNumberOfRows(1);
+    assertThat(contratos).row(0).value("obxecto").isEqualTo("Already stored");
+  }
+
+  // PostgreSQL refuses an ON CONFLICT DO UPDATE that would touch one row twice, and that
+  // refusal is deterministic — a page repeating a publication would fail identically on every
+  // retry and block the Órgano's history for good. The last reading wins, as it does across
+  // batches, and the row is counted once because one row is what was written.
+  @Test
+  void batch_repeating_one_source_id_stores_the_last_reading_once() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+
+    UpsertCounts counts = contratoMenorRepository.upsertAll(
+        List.of(
+            contrato(4711L, organoId, "First reading"),
+            contrato(4712L, organoId, "Another publication"),
+            contrato(4711L, organoId, "Same publication, read again")));
+
+    assertThat(counts).isEqualTo(new UpsertCounts(2, 0));
+    Table contratos = contratoTable();
+    assertThat(contratos).hasNumberOfRows(2);
+    assertThat(contratos)
+        .row(0)
+            .value("source_id").isEqualTo(4711L)
+            .value("obxecto").isEqualTo("Same publication, read again");
+    assertThat(contratos).row(1).value("source_id").isEqualTo(4712L);
+  }
+
+  @Test
+  void batch_repeating_stored_source_id_refreshes_it_once() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    contratoMenorRepository.upsertAll(List.of(contrato(4711L, organoId, "As published")));
+
+    UpsertCounts counts = contratoMenorRepository.upsertAll(
+        List.of(
+            contrato(4711L, organoId, "Read again"),
+            contrato(4711L, organoId, "Read once more")));
+
+    assertThat(counts).isEqualTo(new UpsertCounts(0, 1));
+    Table contratos = contratoTable();
+    assertThat(contratos).hasNumberOfRows(1);
+    assertThat(contratos).row(0).value("obxecto").isEqualTo("Read once more");
+  }
+
+  // Storing null for an operador that has no identity yet would record the award as having no
+  // awardee at all, which is what an unusable fiscal identifier means — and it would do it
+  // silently. The caller's mistake is refused instead.
+  @Test
+  void refuses_contract_awarded_to_an_operador_that_has_not_been_stored() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    ContratoMenor awardedToUnsaved =
+        new ContratoMenor(
+            4711L,
+            organoId,
+            PUBLISHED_ON,
+            "Adxudicado",
+            null,
+            null,
+            new OperadorEconomico("B12345678", "Servizos Galegos SL", new NomeRank(null, 4711L)));
+
+    assertThatThrownBy(() -> contratoMenorRepository.upsertAll(List.of(awardedToUnsaved)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("B12345678");
   }
 
   @Test
@@ -239,9 +351,10 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
     assertThat(contratoMenorRepository.countByOrganoId(empty)).isZero();
   }
 
-  // ADR-0019 rests on Micronaut Data populating an identifier that travels through an
-  // AttributeConverter, which its documentation does not demonstrate. Everything above relies
-  // on it, so it is asserted rather than assumed.
+  // Typed aggregate identifiers rest on Micronaut Data populating an id that travels through an
+  // AttributeConverter, which its documentation does not demonstrate. Everything above relies on
+  // it, so it is asserted rather than assumed. The id is checked against the table rather than
+  // against the row findById was asked for, which would hold by construction.
   @Test
   void save_assigns_generated_identity_that_reads_back_as_the_same_value() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
@@ -250,7 +363,12 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
 
     ContratoMenorId savedId = saved.id();
     assertThat(savedId).isNotNull();
-    assertThat(testRepository.findById(savedId).orElseThrow().id()).isEqualTo(savedId);
+    assertThat(contratoTable())
+        .row(0)
+            .value("id").isEqualTo(savedId.value())
+            .value("source_id").isEqualTo(4711L);
+    assertThat(testRepository.findById(savedId).orElseThrow().obxecto())
+        .isEqualTo("Subministración");
   }
 
   @Test
@@ -335,10 +453,11 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
     assertThat(awardee.name()).isEqualTo("Servizos Galegos SL");
   }
 
-  // Nothing in this feature derives an awardee, so a re-import carries none. The upsert must
-  // leave whatever the derivation wrote in place rather than clearing it.
+  // Nothing derives an awardee yet, so a re-import carries none and the update leaves the column
+  // alone rather than clearing it. Pinned as the behaviour it is, not as a rule: the derivation
+  // task widens the update to repoint this key, and that is where this expectation changes.
   @Test
-  void refreshing_contract_leaves_previously_derived_awardee_in_place() throws Exception {
+  void refreshing_contract_leaves_the_awardee_column_untouched() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     OperadorId operadorId = insertOperador("B12345678", "Servizos Galegos SL");
     contratoMenorRepository.upsertAll(List.of(contrato(4711L, organoId, "As published")));

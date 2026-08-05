@@ -21,7 +21,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
@@ -40,9 +42,18 @@ import org.jspecify.annotations.Nullable;
  * list built per batch, which keeps the statement a constant: one prepared form whatever the
  * batch size, rather than a string assembled around a placeholder count.
  *
- * <p>{@code operador_economico_id} is written on insert and deliberately absent from the update:
- * the awardee is not a source-derived value but a derived one, so a re-import — which carries no
- * awardee — must leave whatever the derivation put there alone.
+ * <p>A page repeating a publication is absorbed before the statement runs: PostgreSQL refuses an
+ * {@code ON CONFLICT DO UPDATE} that would touch one row twice, and that refusal is deterministic,
+ * so a single repeated row on one page would fail the same way on every retry and block that
+ * Órgano's history for good. The last reading of a source identifier wins, which is the rule the
+ * upsert already applies across batches, applied within one.
+ *
+ * <p>{@code operador_economico_id} is written on insert and absent from the update <em>because
+ * nothing derives an awardee yet</em>, so a re-import carries none and the update has nothing
+ * truthful to write there. This is a consequence of the ordering, not a rule: the derivation task
+ * resolves the awardee on every upsert precisely so that a corrected fiscal identifier repoints
+ * the foreign key, and adding {@code operador_economico_id = EXCLUDED.operador_economico_id} to
+ * the update is that task's to make.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public abstract class JdbcContratoMenorRepository
@@ -76,7 +87,7 @@ public abstract class JdbcContratoMenorRepository
     if (contratos.isEmpty()) {
       return new UpsertCounts(0, 0);
     }
-    List<ContratoMenor> batch = List.copyOf(contratos);
+    List<ContratoMenor> batch = lastReadingPerSourceId(contratos);
     return jdbcOperations.prepareStatement(UPSERT_SQL, statement -> {
       bindBatch(statement, batch);
       return countBranches(statement);
@@ -85,6 +96,14 @@ public abstract class JdbcContratoMenorRepository
 
   @Override
   public abstract long countByOrganoId(OrganoId organoId);
+
+  private static List<ContratoMenor> lastReadingPerSourceId(Collection<ContratoMenor> contratos) {
+    Map<Long, ContratoMenor> bySourceId = new LinkedHashMap<>();
+    for (ContratoMenor contrato : contratos) {
+      bySourceId.put(contrato.sourceId(), contrato);
+    }
+    return List.copyOf(bySourceId.values());
+  }
 
   private static void bindBatch(PreparedStatement statement, List<ContratoMenor> batch)
       throws SQLException {
@@ -139,11 +158,22 @@ public abstract class JdbcContratoMenorRepository
     return amount == null ? null : amount.value();
   }
 
+  /**
+   * No awardee is a null operador, and nothing else. An operador the database has not assigned an
+   * identity to cannot be referenced, and storing null for it would record the contract as having
+   * no awardee at all — indistinguishable from an award whose fiscal identifier was unusable, and
+   * silent. It is a caller's mistake rather than a published value, so it is refused.
+   */
   private static @Nullable UUID toOperadorUuid(@Nullable OperadorEconomico operadorEconomico) {
     if (operadorEconomico == null) {
       return null;
     }
     OperadorId operadorId = operadorEconomico.id();
-    return operadorId == null ? null : operadorId.value();
+    if (operadorId == null) {
+      throw new IllegalArgumentException(
+          "operadorEconomico must be stored before the contract awarded to it: %s"
+              .formatted(operadorEconomico.fiscalId()));
+    }
+    return operadorId.value();
   }
 }

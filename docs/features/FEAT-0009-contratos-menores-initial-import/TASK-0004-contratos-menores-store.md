@@ -66,9 +66,17 @@ JDBC and SQL stay entirely in `infrastructure`.
   cannot be produced without a second read of the whole batch. The rows travel into it as
   parallel arrays through `unnest` rather than as a `VALUES` list assembled per batch, which
   keeps the statement a constant — one prepared form whatever the batch size, and no SQL built
-  around a placeholder count. `operador_economico_id` is written on insert and deliberately
-  absent from the `DO UPDATE SET`: it is not a source-derived column, so a re-import — which
-  carries no awardee — must leave whatever the derivation wrote there alone.
+  around a placeholder count. A page repeating a publication is collapsed to its last reading
+  before the statement runs, because PostgreSQL refuses an `ON CONFLICT DO UPDATE` that would
+  touch one row twice and that refusal is deterministic — one repeated row would fail identically
+  on every retry and block that Órgano's history for good.
+  `operador_economico_id` is written on insert and absent from the `DO UPDATE SET` **because
+  nothing derives an awardee yet**, so a re-import carries none and the update has nothing
+  truthful to write there. That is a consequence of the ordering, not a rule:
+  [FEAT-0010 TASK-0004](../FEAT-0010-operadores-economicos-base/TASK-0004-derivation-during-import.md)
+  resolves the awardee on *every* upsert precisely so a corrected fiscal identifier repoints the
+  foreign key, and adding `operador_economico_id = EXCLUDED.operador_economico_id` to the update
+  is that task's to make.
 - `countByOrganoId` — a plain count on the indexed column.
 - No delete path exists, in the port or the adapter.
 

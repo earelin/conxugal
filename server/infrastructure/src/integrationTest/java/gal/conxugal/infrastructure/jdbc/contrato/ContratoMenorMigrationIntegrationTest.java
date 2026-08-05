@@ -148,6 +148,19 @@ class ContratoMenorMigrationIntegrationTest implements TestPropertyProvider {
     assertThat(storedDuration(4711L)).isEqualTo(duration);
   }
 
+  // The other edge, so the bound is pinned exactly rather than only from below: widening the
+  // column would leave the cap in Java capping to something the column no longer requires.
+  @Test
+  void duration_one_character_past_the_column_bound_is_refused() throws Exception {
+    UUID organoId = insertOrgano("consorcio-x");
+
+    assertThatThrownBy(() -> insertContratoLasting(4712L, organoId, "d".repeat(65)))
+        .isInstanceOfSatisfying(
+            SQLException.class,
+            // SQLSTATE 22001 is string_data_right_truncation.
+            exception -> assertThat(exception.getSQLState()).isEqualTo("22001"));
+  }
+
   @Test
   void both_indexes_the_browsing_reads_will_need_are_created_with_the_table() throws Exception {
     assertThat(indexNames())

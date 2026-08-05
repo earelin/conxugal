@@ -22,6 +22,10 @@ CREATE TABLE contrato_menor (
         CONSTRAINT contrato_menor_operador_economico_id_fkey REFERENCES operador_economico (id)
 );
 
+-- Whole rather than partial, though the column holds only nulls until the operador derivation
+-- lands and a partial index would serve every read that ever matches. Kept whole because the
+-- foreign key's own checks are what run against it in the meantime, and narrowing it later costs
+-- one index rebuild rather than the backfill that adding the column later would have cost.
 CREATE INDEX contrato_menor_operador_economico_id_idx ON contrato_menor (operador_economico_id);
 
 -- Created here, empty, because adding it later to a table of millions is a different operation
