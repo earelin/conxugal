@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { theme } from '../../app/theme';
 import { createQueryClient } from '../../shared/lib/queryClient';
 import { strings } from '../../shared/lib/strings';
+import { refocusWindow } from '../../test/windowFocus';
 import type { Organo, Termo } from './organos';
 import { OrganosPage } from './OrganosPage';
 import { MAX_TERMO_NAME_LENGTH } from './termoName';
@@ -632,6 +633,91 @@ describe('taxonomía management', () => {
     await submit(user, copy.createSubmit);
 
     expect(await screen.findByText(copy.nameRequired)).toBeVisible();
+    expect(nock.pendingMocks()).toEqual([]);
+  });
+
+  it('opens no dialog on the next term after the open one disappears', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    await openTermo(user, sanidade.name);
+    await user.click(paneAction(copy.delete));
+    expect(await screen.findByText(copy.deleteConfirm(sanidade.name))).toBeInTheDocument();
+
+    // Another administrator removed the term, which this browser learns of on a
+    // read nobody asked for. The dialog goes with it, unmounted rather than
+    // closed, so none of its own close handlers run.
+    mockCatalogue([{ ...sergas, termoId: null }, vivenda]);
+    mockTaxonomia([consellerias, concellos]);
+    refocusWindow();
+    await waitFor(() => expect(within(tree()).queryByText(sanidade.name)).not.toBeInTheDocument());
+
+    // The next term is one the administrator asked to read, not to delete.
+    await openTermo(user, concellos.name);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: concellos.name })).toBeInTheDocument();
+    expect(nock.pendingMocks()).toEqual([]);
+  });
+
+  it('opens no dialog on the next term after a failed read replaces the section', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    // Driven from the tree row rather than the content header, and on a rename
+    // rather than a delete: the three actions share the one held request, so the
+    // other entry point and a second action are exercised here.
+    await openTermo(user, sanidade.name);
+    await user.click(treeAction(copy.rename));
+    expect(await nameField()).toHaveValue(sanidade.name);
+
+    nock(BASE_URL).get('/api/organos').reply(500);
+    nock(BASE_URL).get('/api/organos/taxonomia').reply(500);
+    refocusWindow();
+    await screen.findByText(strings.admin.organos.errorTitle);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    await user.click(screen.getByRole('button', { name: strings.retry }));
+
+    // The term the dialog was about is back and still the open one, which must
+    // not be enough to put its dialog back on the screen.
+    expect(await screen.findByRole('heading', { name: sanidade.name })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await openTermo(user, concellos.name);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(nock.pendingMocks()).toEqual([]);
+  });
+
+  it('opens no dialog when the section recovers on its own, with no retry clicked', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    await openTermo(user, sanidade.name);
+    await user.click(paneAction(copy.delete));
+    expect(await screen.findByText(copy.deleteConfirm(sanidade.name))).toBeInTheDocument();
+
+    nock(BASE_URL).get('/api/organos').reply(500);
+    nock(BASE_URL).get('/api/organos/taxonomia').reply(500);
+    refocusWindow();
+    await screen.findByText(strings.admin.organos.errorTitle);
+
+    // An errored read is stale, so the next focus retries it with nothing asked
+    // of the administrator — the recovery the retry button is not part of.
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    refocusWindow();
+
+    expect(await screen.findByRole('heading', { name: sanidade.name })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(nock.pendingMocks()).toEqual([]);
   });
 });

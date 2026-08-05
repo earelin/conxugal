@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { theme } from '../../app/theme';
 import { createQueryClient } from '../../shared/lib/queryClient';
 import { strings } from '../../shared/lib/strings';
+import { refocusWindow } from '../../test/windowFocus';
 import type { Organo, Termo } from './organos';
 import { OrganosPage } from './OrganosPage';
 
@@ -720,5 +721,36 @@ describe('órgano classification', () => {
 
     expect(put.isDone()).toBe(false);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('stays closed when the section recovers from a failed read on its own', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+    await showSection();
+
+    await openTermo(user, educacion.name);
+    await user.click(screen.getByRole('button', { name: copy.fromTermo }));
+    await dialog();
+
+    // A failed read replaces the whole section, which unmounts the dialog
+    // without any of its own close handlers running.
+    nock(BASE_URL).get('/api/organos').reply(500);
+    nock(BASE_URL).get('/api/organos/taxonomia').reply(500);
+    refocusWindow();
+    await screen.findByText(strings.admin.organos.errorTitle);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    // An errored read is stale, so the next window focus retries it with
+    // nothing asked of the administrator. Both records resolve again, and that
+    // must not be enough to put the dialog back.
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    refocusWindow();
+
+    expect(await screen.findByRole('heading', { name: educacion.name })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(nock.pendingMocks()).toEqual([]);
   });
 });

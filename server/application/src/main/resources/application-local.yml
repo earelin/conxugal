@@ -1,7 +1,6 @@
 logger:
   levels:
     gal.conxugal: DEBUG
-    io.micronaut.security: DEBUG
 
 # Local dev runs over plain HTTP, but the CSRF cookie defaults to the __Host- prefix,
 # which browsers only accept over HTTPS — so the cookie is never stored and every
