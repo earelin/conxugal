@@ -6,7 +6,6 @@ import io.micronaut.data.annotation.MappedEntity;
 import io.micronaut.data.annotation.MappedProperty;
 import io.micronaut.data.annotation.Relation;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
@@ -46,10 +45,10 @@ public record OperadorEconomico(
     Objects.requireNonNull(name, "name must not be null");
     Objects.requireNonNull(nameRank, "nameRank must not be null");
     Objects.requireNonNull(nomesAlternativos, "nomesAlternativos must not be null");
-    fiscalId = fiscalId.strip().toUpperCase(Locale.ROOT);
-    if (fiscalId.isEmpty()) {
-      throw new IllegalArgumentException("fiscalId must not be empty once trimmed");
-    }
+    fiscalId =
+        FiscalIdentifier.canonical(fiscalId)
+            .orElseThrow(
+                () -> new IllegalArgumentException("fiscalId must not be empty once trimmed"));
     nomesAlternativos = Set.copyOf(nomesAlternativos);
     for (NomeAlternativo alternativo : nomesAlternativos) {
       if (alternativo.name().equals(name)) {

@@ -15,6 +15,9 @@ import org.junit.jupiter.api.Test;
 
 class OperadorEconomicoTest {
 
+  private static final String NON_BREAKING_SPACE = "\u00a0";
+  private static final String GROUP_SEPARATOR = "\u001d";
+
   private static final NomeRank RANK = new NomeRank(LocalDate.of(2026, 3, 14), 4242L);
   private static final NomeRank NEWER = new NomeRank(LocalDate.of(2026, 7, 1), 5100L);
   private static final NomeRank OLDER = new NomeRank(LocalDate.of(2025, 1, 9), 900L);
@@ -42,6 +45,16 @@ class OperadorEconomicoTest {
 
     assertThat(spaced.fiscalId()).isEqualTo("B1234 5678");
     assertThat(punctuated.fiscalId()).isEqualTo("B-12345678");
+  }
+
+  /** The aggregate reduces through the one rule rather than restating it, padding included. */
+  @Test
+  void holds_the_canonical_identifier_whatever_kind_of_padding_it_was_built_from() {
+    OperadorEconomico operador =
+        new OperadorEconomico(
+            NON_BREAKING_SPACE + " b12345678" + GROUP_SEPARATOR, "Obradoiro Naval", RANK);
+
+    assertThat(operador.fiscalId()).isEqualTo("B12345678");
   }
 
   @Test

@@ -2,7 +2,7 @@
 feat: FEAT-0010
 domain: backend
 adrs: [0002]
-status: todo
+status: done
 depends_on: []
 ---
 
@@ -17,6 +17,24 @@ These are decided first because everything else is downstream of them: the store
 canonical fiscal identifier, and the aggregate carries the rank. Getting them wrong is not a bug
 that shows up as an error — SPEC-0006 is blunt that a mismatch "fails silently, and a quiet
 undercount is worse than an error".
+
+> **Four notes from the implementation.**
+>
+> - **[TASK-0002](TASK-0002-operador-domain-model.md) landed ahead of this task**, so
+>   `OperadorEconomico` already carried the canonicalisation inline. Its compact constructor now
+>   delegates to the function added here, rather than the one rule being stated in two places —
+>   which is the divergence this task exists to prevent. "No entity yet" below therefore describes
+>   the order the pieces were written in, not the order they landed.
+> - **Trimming uses the codebase's one definition of surrounding whitespace**, which is broader
+>   than `String.strip`: it also counts a non-breaking space and the separator controls as padding.
+>   The identifier is what the catalogue is unique on, so the broader rule is the safer one, and it
+>   is already the definition every other stored text value uses.
+> - **The rank is exposed as "does this contract outrank the incumbent", not as a comparator.**
+>   The ordering is what the pair is, but a caller reading it backwards would silently pick the
+>   wrong name, and nothing today needs to sort. A read surface that does can widen it then.
+> - **The criterion TASK-0002 deferred here is proved**: a retained name orders against the
+>   aggregate's own rank through this same comparison, so the two cannot disagree.
+>   ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #36)
 
 ## Scope
 - **Canonicalising a fiscal identifier** — trim surrounding whitespace, upper-case the letters,
