@@ -10,6 +10,7 @@ import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoRepository;
 import gal.conxugal.domain.organo.OrganoSource;
 import gal.conxugal.domain.organo.OrganoSourceEntry;
+import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -19,7 +20,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -85,9 +85,8 @@ class ImportOrganosAtomicityIntegrationTest implements TestPropertyProvider {
 
   @AfterEach
   void cleanUp() throws Exception {
-    try (Connection connection = rawConnection();
-        Statement statement = connection.createStatement()) {
-      statement.execute("TRUNCATE TABLE contrato_menor, organo_contratacion");
+    try (Connection connection = rawConnection()) {
+      DatabaseCleanup.truncateAllTables(connection);
     }
   }
 

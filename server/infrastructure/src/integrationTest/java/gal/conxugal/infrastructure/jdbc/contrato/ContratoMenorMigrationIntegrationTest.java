@@ -3,6 +3,7 @@ package gal.conxugal.infrastructure.jdbc.contrato;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -59,13 +60,7 @@ class ContratoMenorMigrationIntegrationTest implements TestPropertyProvider {
 
   @AfterEach
   void cleanUp() throws Exception {
-    try (Connection connection = dataSource.getConnection();
-        Statement statement = connection.createStatement()) {
-      statement.execute(
-          "TRUNCATE TABLE contrato_menor, organo_contratacion,"
-              + " operador_economico_nome_alternativo, operador_economico");
-      connection.commit();
-    }
+    DatabaseCleanup.truncateAllTables(dataSource);
   }
 
   @Test

@@ -13,6 +13,7 @@ import gal.conxugal.domain.operador.NomeRank;
 import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.OperadorId;
 import gal.conxugal.domain.organo.OrganoId;
+import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -22,7 +23,6 @@ import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -80,12 +80,7 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
 
   @AfterEach
   void cleanUp() throws Exception {
-    try (Connection connection = dataSource.getConnection();
-        Statement statement = connection.createStatement()) {
-      statement.execute(
-          "TRUNCATE TABLE contrato_menor, organo_contratacion,"
-              + " operador_economico_nome_alternativo, operador_economico");
-    }
+    DatabaseCleanup.truncateAllTables(dataSource);
   }
 
   @Test
