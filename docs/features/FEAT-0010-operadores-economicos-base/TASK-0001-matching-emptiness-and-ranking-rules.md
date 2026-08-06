@@ -2,7 +2,7 @@
 feat: FEAT-0010
 domain: backend
 adrs: [0002]
-status: todo
+status: done
 depends_on: []
 ---
 
@@ -17,6 +17,43 @@ These are decided first because everything else is downstream of them: the store
 canonical fiscal identifier, and the aggregate carries the rank. Getting them wrong is not a bug
 that shows up as an error — SPEC-0006 is blunt that a mismatch "fails silently, and a quiet
 undercount is worse than an error".
+
+> **Five notes from the implementation.**
+>
+> - **The canonical form is a type, not a function's return value.** `FiscalIdentifier` is a value
+>   object that is canonical by construction, so every way of building one reduces and no instance
+>   can hold a published spelling. `OperadorEconomico` holds that type and `OperadorRepository`
+>   looks up by it, which is what makes "the store is unique on the canonical form" unstateable in
+>   any other form rather than merely remembered.
+> - **This costs the "no annotation, no bean" line in the Scope below.** Being an aggregate's
+>   column, the type carries a `@TypeDef` and needs an `AttributeConverter` — the pattern
+>   `Money` and every typed identifier already follow
+>   ([ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md),
+>   [ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)). The rules themselves stay
+>   pure and are still tested on values alone; the annotation is the price of the encapsulation
+>   being real at the boundary rather than only in the middle.
+> - **[TASK-0002](TASK-0002-operador-domain-model.md) landed ahead of this task**, so
+>   `OperadorEconomico` already carried the canonicalisation inline. It no longer canonicalises or
+>   rejects anything: the type does, so the rule is stated once rather than in two places kept in
+>   step by hand. "No entity yet" below describes the order the pieces were written in, not the
+>   order they landed.
+> - **Trimming uses the codebase's one definition of surrounding whitespace**, which is broader
+>   than `String.strip`: it also counts a non-breaking space and the separator controls as padding.
+>   The identifier is what the catalogue is unique on, so the broader rule is the safer one, and it
+>   is already the definition every other stored text value uses.
+> - **The rank comparison sits on `NomeRank` itself**: the pair is `Comparable`, and
+>   `candidate.outranks(incumbent)` is the predicate the import asks. TASK-0002 shipped a javadoc
+>   line saying the comparison would live outside the pair; it reads better on it, since the pair
+>   is the only thing the rule is about and is ranked no other way, so that line is corrected
+>   rather than left standing. R4's order being the type's *natural* order is what lets a later
+>   read surface sort retained names with no comparator of its own — and it is consistent with
+>   `equals`, so a sorted set holds what the record's own equality says it does. `outranks` stays
+>   because **an undated rank sorts first**: the name to display is the `max` of a collection and
+>   never the first element of a sorted one, and a predicate cannot be read in the wrong
+>   direction.
+> - **The criterion TASK-0002 deferred here is proved**: a retained name orders against the
+>   aggregate's own rank through this same comparison, so the two cannot disagree.
+>   ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #36)
 
 ## Scope
 - **Canonicalising a fiscal identifier** — trim surrounding whitespace, upper-case the letters,

@@ -2,6 +2,7 @@ package gal.conxugal.domain.operador;
 
 import io.micronaut.data.annotation.Embeddable;
 import java.time.LocalDate;
+import java.util.Comparator;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -12,10 +13,54 @@ import org.jspecify.annotations.Nullable;
  * chosen by publication date and settled on the higher source identifier when two contracts
  * share one, so a name holding only a date could not be ordered against a name sharing it, and
  * two names seen only on undated contracts could not be ordered at all. The principal name and
- * the retained ones carry this same pair so one comparison orders both.
- *
- * <p>That comparison lives outside this type, with the other rules over published values.
+ * the retained ones carry this same pair, and {@link #outranks} is the one comparison that orders
+ * both — so the name an operador displays and the names it has retained beside it cannot disagree
+ * about which should be showing.
  */
 @Embeddable
-public record NomeRank(@Nullable LocalDate date, long sourceId) {
+public record NomeRank(@Nullable LocalDate date, long sourceId)
+    implements Comparable<NomeRank> {
+
+  private static final Comparator<NomeRank> ORDER =
+      Comparator.comparing(
+              NomeRank::date, Comparator.nullsFirst(Comparator.<LocalDate>naturalOrder()))
+          .thenComparingLong(NomeRank::sourceId);
+
+  /**
+   * R4's order, and the only order this pair has — which is what makes it the natural one: the
+   * pair exists so that a name can be ranked, and it is ranked no other way.
+   *
+   * <p><b>Ascending, so the greater rank is the winner.</b> An undated rank sorts <em>first</em>
+   * because <em>ranked last</em> means it loses to every dated one, however high its source
+   * identifier and however late it arrives — so the name to display is the {@code max} of a
+   * collection, never the first element of a sorted one. {@link #outranks} says that without
+   * having to be read in the right direction.
+   *
+   * <p>Consistent with {@code equals}: two ranks compare equal exactly when they carry the same
+   * date and the same source identifier, so a sorted set holds what the record's own equality
+   * says it does.
+   */
+  @Override
+  public int compareTo(NomeRank other) {
+    return ORDER.compare(this, other);
+  }
+
+  /**
+   * Whether this rank supplies the displayed name in place of {@code incumbent}: it is the more
+   * recently published of the two, settled on the higher source identifier when both share a
+   * publication date, and behind every dated rank when it has no date of its own.
+   *
+   * <p>Taking both values is what makes the choice <b>total</b> — an operador all of whose
+   * contracts are undated still has exactly one name — and <b>deterministic</b>: two imports over
+   * the same data reach the same answer whatever order the contracts arrive in.
+   *
+   * <p>A strict win: a rank does not outrank itself, so re-reading a contract already held
+   * changes nothing and a replayed batch cannot make a name flap.
+   *
+   * <p>This orders <b>names only</b>. The fiscal identifier is canonical and reached from every
+   * contract identically, so there is no spelling to choose between and nothing about it to rank.
+   */
+  public boolean outranks(NomeRank incumbent) {
+    return compareTo(incumbent) > 0;
+  }
 }
