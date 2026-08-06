@@ -2,7 +2,7 @@
 feat: FEAT-0009
 domain: backend
 adrs: [0002, 0011, 0014]
-status: todo
+status: done
 depends_on: []
 ---
 
@@ -19,12 +19,11 @@ self-throttling declarative client).
 The contract it is written against is measured, not assumed:
 [`design/source-contract.md`](design/source-contract.md).
 
-**Prerequisite outside this feature:**
+**Prerequisite outside this feature, already met:**
 [FEAT-0006 TASK-0008](../FEAT-0006-organos-catalogue-import/TASK-0008-adopt-resilient-client-in-source-adapter.md)
-moves the Órganos adapter onto the declarative client. Until it lands, that adapter still
-injects a programmatic `@Named` client and the `RateLimiter`, `CircuitBreaker` and `Retry` this
-adapter binds are **not actually shared** between the two — which is the whole basis for this
-feature configuring no new rate. Build this task after it, or the sharing is aspirational.
+has moved the Órganos adapter onto the declarative client, so the `RateLimiter`, `CircuitBreaker`
+and `Retry` this adapter binds are shared with it in fact and not only on paper — which is the
+whole basis for this feature configuring no new rate.
 
 ## Scope
 - `ContratoMenorSource` port in `domain`, answering **one slice per call**: given an Órgano's
@@ -35,7 +34,7 @@ feature configuring no new rate. Build this task after it, or the sharing is asp
   the awardee name and fiscal identifier**, which the contract no longer stores but
   [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s derivation needs from the
   source row to match on and to fill the operador's name:
-  source id, publication date text, object, amount, duration, awardee name, awardee fiscal
+  source id, publication date, object, amount, duration, awardee name, awardee fiscal
   identifier. The amount arrives as a JSON number and is carried as a `Money` (TASK-0003), at
   the scale the source published and with no rounding.
 - **Every text field is trimmed of leading and trailing whitespace here, and nowhere else.** The
@@ -54,8 +53,12 @@ feature configuring no new rate. Build this task after it, or the sharing is asp
   database's. The cap applies to the duration and to nothing else — `obxecto` has no bound
   anywhere.
 - **Nothing else about the text is touched:** no case folding, no collapsing of internal runs of
-  spaces, no punctuation stripped, no date parsing. Trimming and the duration cap are the
-  narrowings R27 allows; interpretation still happens above the port.
+  spaces, no punctuation stripped. Trimming and the duration cap are the narrowings R27 allows.
+- **The publication date is the one value interpreted here**, because it is the one the aggregate
+  does not store as text: the source's `DD-MM-YYYY` is parsed to a date and the text it arrived
+  as is not retained, as the aggregate already records. Text that cannot be read as a date is
+  carried as **absent** rather than failing the row — a real award is not refused over a date
+  nobody can use.
 - The adapter **declares a client interface** carrying `@ResilientClient` and
   `@Client(id = "contratosdegalicia")` — **the same id the Órganos adapter binds** — so both go
   through the one set of policies `ContratosDeGaliciaResilienceFactory` publishes per source.
@@ -80,10 +83,12 @@ feature configuring no new rate. Build this task after it, or the sharing is asp
 
 ## Acceptance criteria
 - Given a stubbed source, the adapter returns one window-page's rows with every published value
-  intact — the object at its published length however long, the date as `DD-MM-YYYY` text, the
-  amount as a `Money` at its published scale — and accented text decoded from **UTF-8** without
-  mojibake.
+  intact — the object at its published length however long, the `DD-MM-YYYY` publication date
+  read as that date, the amount as a `Money` at its published scale — and accented text decoded
+  from **UTF-8** without mojibake.
   ([SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) #40 as-published half)
+- A publication date that cannot be read as `DD-MM-YYYY` is surfaced as **absent**, and the row
+  is returned rather than refused.
 - A row whose `nif` and `adjudicatario` arrive **space-padded** yields those values with the
   padding gone and **everything between the first and last non-space character untouched** —
   internal spacing, casing and punctuation all preserved. Asserted on a value with internal
