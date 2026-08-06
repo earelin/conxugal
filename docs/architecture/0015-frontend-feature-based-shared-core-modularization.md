@@ -102,7 +102,12 @@ flowchart TB
 ```
 
 Illustrative target layout (folder/file tree; not a migration mandate — moving
-existing files into it is follow-up task work):
+existing files into it is follow-up task work). One placement has since moved:
+`AdminRoute.tsx` now lives in `app/`, because the router imports it statically
+and a static import of a feature barrel pulls that whole slice into the eager
+chunk, defeating route-level code splitting. The layering rule is unchanged —
+the guard reads only `shared/entities/currentUser` and takes its fallback as a
+prop, so it remains a composition-root concern.
 
 ```
 ui/src/

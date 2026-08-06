@@ -38,7 +38,10 @@ failures before committing changes to this module.
 - **Module layout** (ADR-0015): `src/` is organized as feature slices with a
   shared core, dependencies pointing only downward —
   `app → features → shared/entities → shared/ui + shared/lib`. `app/` is the
-  composition root (router, nav, theme, layout, standalone pages);
+  composition root (router, nav, theme, layout, standalone pages, and the
+  `AdminRoute` route guard — it sits here rather than in the administration
+  feature because the router imports it statically, and a static import of a
+  feature barrel would drag that whole slice into the eager chunk);
   `features/<name>/` owns one buildable feature and exposes only an `index.ts`
   barrel outward — it may group its internals into sub-folders (e.g.
   `administration/{monitoring,users}/`) for readability, but these are
@@ -54,6 +57,22 @@ failures before committing changes to this module.
   via `<Outlet/>`. `routes` (the `RouteObject[]`) is exported separately from
   `router` so tests can mount the same tree with `createMemoryRouter` instead of
   a real browser router — see `src/App.test.tsx`.
+- **Code splitting** (`src/app/router.tsx`): only the shell and the three
+  standalone pages ship in the eager chunk. Feature sections are split with the
+  local `section()` helper, which pairs a `React.lazy` component with its own
+  `Suspense` boundary. The boundary must live *inside* the route element:
+  React Router commits navigations in a transition, so a boundary mounted higher
+  up (e.g. around `AppLayout`'s `<Outlet/>`) never shows its fallback and the
+  address bar changes while the previous page stays on screen. Each `import()`
+  names a feature **barrel**, which is both what `eslint-plugin-boundaries`
+  permits and what decides the chunk split — pages sharing a barrel share a
+  chunk. `AdminRoute` takes a `warm` callback and fires it on mount: without it
+  the guard withholds `<Outlet/>` until `/api/me` answers, queueing the
+  section's chunk behind that request on every direct load of an admin URL.
+  A section that fails to download (a stale hashed chunk after a redeploy — the
+  server 404s those rather than serving the shell) is caught by the
+  `errorElement` on its parent route; `RouteErrorPage` inspects the error so it
+  only blames a redeployment when that is actually the cause.
 - **Entry** (`src/main.tsx`): wraps the tree in `MantineProvider` (theme from
   `src/app/theme.ts`) and `RouterProvider`. History-API routing (not hash) — in
   production the server must serve `index.html` as the SPA fallback for non-API
@@ -71,7 +90,11 @@ failures before committing changes to this module.
   `createMemoryRouter` and assert against rendered text from `strings`, not
   hardcoded literals, so assertions stay in sync with `strings.ts` changes.
   Vitest's `include` is scoped to `src/**` so it doesn't collect the Playwright
-  specs in `acceptance/`.
+  specs in `acceptance/`. Note that routes under `/administracion` are
+  code-split, so a test rendering one must `findBy*`/`waitFor` — and an
+  assertion that such a page is *absent* proves nothing until its module has
+  loaded, since it would otherwise pass by outrunning the import (see
+  `src/app/AdminRoute.test.tsx`).
 - **Local API / acceptance tests** (ADR-0018): the app calls same-origin `/api`
   paths, and Vite proxies them (dev *and* preview) to a WireMock container in
   `docker-compose.yml`, so the admin area runs with no backend. Stub state lives
