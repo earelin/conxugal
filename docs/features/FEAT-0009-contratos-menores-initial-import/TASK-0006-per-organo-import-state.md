@@ -2,7 +2,7 @@
 feat: FEAT-0009
 domain: backend
 adrs: [0002, 0005, 0006, 0008, 0010, 0012, 0016, 0017]
-status: todo
+status: done
 depends_on: [TASK-0002]
 ---
 
@@ -33,11 +33,17 @@ resume from and a multi-day walk to redo at one request per second.
   - `cursor_date DATE` — the point a resumption continues from;
   - `covered_through TIMESTAMPTZ` — **T₀**, when the initial import's *first* window was taken.
 
-  Its identity **is** the Órgano's, so it introduces no identifier type of its own and keys on a
-  raw `UUID` — the catalogue is not converted by this feature
-  ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)), and inventing a
-  `ContratosMenoresImportStateId` distinct from the Órgano it belongs to would assert an identity
-  this row does not have.
+  Its identity **is** the Órgano's, so it introduces **no identifier type of its own**: inventing
+  a `ContratosMenoresImportStateId` distinct from the Órgano it belongs to would assert an
+  identity this row does not have. It keys on `OrganoId`, the Órgano's own type. This task was
+  written expecting a raw `UUID` there, on
+  [ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)'s statement that the
+  catalogue is not converted by this feature; the catalogue has since been converted anyway, so
+  `OrganoId` exists and the sibling `ContratoMenor` already carries one. A raw `UUID` here would
+  now be the only place in the feature that refers to an Órgano untyped. **ADR-0019's adoption
+  paragraph is stale on this point** and wants a follow-up amendment; the rule it states — a new
+  aggregate introduces no borrowed identity — is honoured either way, and the column is `UUID`
+  regardless.
 - **Its own table, not three more columns on `organo_contratacion`.** The catalogue row is
   update-in-place territory for reconciliation and is read by every catalogue read; this row is
   rewritten after every batch for days. Separating them keeps that churn off the row the mark
