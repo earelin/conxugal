@@ -11,10 +11,11 @@ import java.util.Optional;
 public interface OperadorRepository {
 
   /**
-   * The operador holding the given fiscal identifier, which is already in its canonical form:
-   * the store holds no other spelling to match against.
+   * The operador holding the given fiscal identifier. The type is canonical, and the store holds
+   * no other spelling to match against, so there is no query a caller could ask in the wrong
+   * form.
    */
-  Optional<OperadorEconomico> findByFiscalId(String fiscalId);
+  Optional<OperadorEconomico> findByFiscalId(FiscalIdentifier fiscalId);
 
   @Insert
   OperadorEconomico insert(OperadorEconomico operador);
