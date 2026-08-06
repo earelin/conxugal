@@ -15,11 +15,11 @@ import org.jspecify.annotations.Nullable;
  * published. {@code id} is a separate system-assigned identity, {@code null} only until the
  * database assigns it on insert.
  *
- * <p>The identifier is held canonical — surrounding whitespace removed, letters upper-cased —
- * and that is the only value here reduced in any way. It is what the catalogue is matched on and
- * what is displayed, so an operador published as {@code b12345678} is held as {@code B12345678}
- * and the published case is retained nowhere. Everything else about it survives: internal
- * spacing and punctuation make a different identifier and therefore a different operador.
+ * <p>The identifier is a {@link FiscalIdentifier}, which is canonical by construction and the
+ * only value here reduced in any way. It is what the catalogue is matched on and what is
+ * displayed, so an operador published as {@code b12345678} is held as {@code B12345678} and the
+ * published case is retained nowhere. Whether an award yields an operador at all is asked of that
+ * type before one is built, not of this record.
  *
  * <p>The {@code name}, by contrast, is exactly as the winning contract published it. Nothing
  * folds a name and nothing preserves an identifier's published case; the asymmetry is the point.
@@ -34,7 +34,7 @@ import org.jspecify.annotations.Nullable;
 @MappedEntity("operador_economico")
 public record OperadorEconomico(
     @Id @GeneratedValue @Nullable OperadorId id,
-    String fiscalId,
+    FiscalIdentifier fiscalId,
     String name,
     @Relation(Relation.Kind.EMBEDDED) @MappedProperty("name_rank") NomeRank nameRank,
     @Relation(value = Relation.Kind.ONE_TO_MANY, mappedBy = "operadorEconomicoId")
@@ -45,10 +45,6 @@ public record OperadorEconomico(
     Objects.requireNonNull(name, "name must not be null");
     Objects.requireNonNull(nameRank, "nameRank must not be null");
     Objects.requireNonNull(nomesAlternativos, "nomesAlternativos must not be null");
-    fiscalId =
-        FiscalIdentifier.canonical(fiscalId)
-            .orElseThrow(
-                () -> new IllegalArgumentException("fiscalId must not be empty once trimmed"));
     nomesAlternativos = Set.copyOf(nomesAlternativos);
     for (NomeAlternativo alternativo : nomesAlternativos) {
       if (alternativo.name().equals(name)) {
@@ -59,7 +55,7 @@ public record OperadorEconomico(
   }
 
   /** An operador no contract has named before: the database assigns its id on insert. */
-  public OperadorEconomico(String fiscalId, String name, NomeRank nameRank) {
+  public OperadorEconomico(FiscalIdentifier fiscalId, String name, NomeRank nameRank) {
     this(null, fiscalId, name, nameRank, Set.of());
   }
 

@@ -9,6 +9,7 @@ import gal.conxugal.domain.contrato.ContratoMenorId;
 import gal.conxugal.domain.contrato.ContratoMenorRepository;
 import gal.conxugal.domain.contrato.UpsertCounts;
 import gal.conxugal.domain.money.Money;
+import gal.conxugal.domain.operador.FiscalIdentifier;
 import gal.conxugal.domain.operador.NomeRank;
 import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.OperadorId;
@@ -318,7 +319,10 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
             "Adxudicado",
             null,
             null,
-            new OperadorEconomico("B12345678", "Servizos Galegos SL", new NomeRank(null, 4711L)));
+            new OperadorEconomico(
+                new FiscalIdentifier("B12345678"),
+                "Servizos Galegos SL",
+                new NomeRank(null, 4711L)));
 
     assertThatThrownBy(() -> contratoMenorRepository.upsertAll(List.of(awardedToUnsaved)))
         .isInstanceOf(IllegalArgumentException.class)
@@ -435,7 +439,7 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
                 null,
                 new OperadorEconomico(
                     operadorId,
-                    "B12345678",
+                    new FiscalIdentifier("B12345678"),
                     "Servizos Galegos SL",
                     new NomeRank(PUBLISHED_ON, 4711L),
                     Set.of()))));
@@ -445,7 +449,7 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
     OperadorEconomico awardee = stored.operadorEconomico();
     assertThat(awardee).isNotNull();
     assertThat(awardee.id()).isEqualTo(operadorId);
-    assertThat(awardee.fiscalId()).isEqualTo("B12345678");
+    assertThat(awardee.fiscalId()).isEqualTo(new FiscalIdentifier("B12345678"));
     assertThat(awardee.name()).isEqualTo("Servizos Galegos SL");
   }
 

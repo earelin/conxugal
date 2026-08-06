@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 
 class NomeRankingTest {
 
+  private static final FiscalIdentifier FISCAL_ID = new FiscalIdentifier("B12345678");
+
   private static final NomeRank EARLIER = new NomeRank(LocalDate.of(2025, 1, 9), 900L);
   private static final NomeRank LATER = new NomeRank(LocalDate.of(2026, 3, 14), 4242L);
 
@@ -71,7 +73,7 @@ class NomeRankingTest {
     OperadorEconomico operador =
         new OperadorEconomico(
             null,
-            "B12345678",
+            FISCAL_ID,
             "Obradoiro Naval",
             new NomeRank(LocalDate.of(2026, 3, 14), 5100L),
             Set.of(
@@ -87,7 +89,7 @@ class NomeRankingTest {
     OperadorEconomico operador =
         new OperadorEconomico(
             null,
-            "B12345678",
+            FISCAL_ID,
             "Obradoiro Naval",
             EARLIER,
             Set.of(

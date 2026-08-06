@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import gal.conxugal.domain.money.Money;
+import gal.conxugal.domain.operador.FiscalIdentifier;
 import gal.conxugal.domain.operador.NomeRank;
 import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.organo.OrganoId;
@@ -25,7 +26,9 @@ class ContratoMenorTest {
   private static final Money AMOUNT = new Money(new BigDecimal("3630.00"));
   private static final OperadorEconomico OPERADOR =
       new OperadorEconomico(
-          "B12345678", "Obradoiro Naval, S.L.", new NomeRank(PUBLISHED_ON, SOURCE_ID));
+          new FiscalIdentifier("B12345678"),
+          "Obradoiro Naval, S.L.",
+          new NomeRank(PUBLISHED_ON, SOURCE_ID));
 
   @Test
   void carries_no_identity_until_the_database_assigns_one() {

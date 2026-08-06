@@ -53,6 +53,7 @@
       <Class name="~gal\.conxugal\.domain\..*Converter"/>
       <Class name="~gal\.conxugal\.domain\..*Id"/>
       <Class name="gal.conxugal.domain.money.Money"/>
+      <Class name="gal.conxugal.domain.operador.FiscalIdentifier"/>
     </Or>
   </Match>
 

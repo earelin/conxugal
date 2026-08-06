@@ -18,13 +18,25 @@ canonical fiscal identifier, and the aggregate carries the rank. Getting them wr
 that shows up as an error — SPEC-0006 is blunt that a mismatch "fails silently, and a quiet
 undercount is worse than an error".
 
-> **Four notes from the implementation.**
+> **Five notes from the implementation.**
 >
+> - **The canonical form is a type, not a function's return value.** `FiscalIdentifier` is a value
+>   object that is canonical by construction, so every way of building one reduces and no instance
+>   can hold a published spelling. `OperadorEconomico` holds that type and `OperadorRepository`
+>   looks up by it, which is what makes "the store is unique on the canonical form" unstateable in
+>   any other form rather than merely remembered.
+> - **This costs the "no annotation, no bean" line in the Scope below.** Being an aggregate's
+>   column, the type carries a `@TypeDef` and needs an `AttributeConverter` — the pattern
+>   `Money` and every typed identifier already follow
+>   ([ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md),
+>   [ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)). The rules themselves stay
+>   pure and are still tested on values alone; the annotation is the price of the encapsulation
+>   being real at the boundary rather than only in the middle.
 > - **[TASK-0002](TASK-0002-operador-domain-model.md) landed ahead of this task**, so
->   `OperadorEconomico` already carried the canonicalisation inline. Its compact constructor now
->   delegates to the function added here, rather than the one rule being stated in two places —
->   which is the divergence this task exists to prevent. "No entity yet" below therefore describes
->   the order the pieces were written in, not the order they landed.
+>   `OperadorEconomico` already carried the canonicalisation inline. It no longer canonicalises or
+>   rejects anything: the type does, so the rule is stated once rather than in two places kept in
+>   step by hand. "No entity yet" below describes the order the pieces were written in, not the
+>   order they landed.
 > - **Trimming uses the codebase's one definition of surrounding whitespace**, which is broader
 >   than `String.strip`: it also counts a non-breaking space and the separator controls as padding.
 >   The identifier is what the catalogue is unique on, so the broader rule is the safer one, and it
