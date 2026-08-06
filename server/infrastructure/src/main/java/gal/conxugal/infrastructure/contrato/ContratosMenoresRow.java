@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -38,8 +39,13 @@ record ContratosMenoresRow(
    */
   static final int MAX_DURATION_LENGTH = 64;
 
+  /**
+   * Strict, because the default resolver does not reject an impossible day of the month — it
+   * clamps it, turning a published {@code 31-02} into the 28th and storing a date nobody
+   * published. A date that cannot be read is meant to be absent, never invented.
+   */
   private static final DateTimeFormatter PUBLISHED_DATE =
-      DateTimeFormatter.ofPattern("dd-MM-uuuu");
+      DateTimeFormatter.ofPattern("dd-MM-uuuu").withResolverStyle(ResolverStyle.STRICT);
 
   /**
    * This row as the port's value, and the only place the system narrows what the source published.
@@ -81,11 +87,22 @@ record ContratosMenoresRow(
     return stripped.isEmpty() ? null : stripped;
   }
 
+  /**
+   * The cut backs off a character rather than land between a surrogate pair, which would leave a
+   * lone surrogate that PostgreSQL refuses as an invalid byte sequence — the failed batch this cap
+   * exists to avoid. What the cut leaves is stripped again for the same reason it was stripped
+   * before: a cut landing on a space would otherwise put back trailing whitespace that nothing
+   * published.
+   */
   private static @Nullable String capped(@Nullable String duration) {
     if (duration == null || duration.length() <= MAX_DURATION_LENGTH) {
       return duration;
     }
-    return duration.substring(0, MAX_DURATION_LENGTH);
+    int end = MAX_DURATION_LENGTH;
+    if (Character.isHighSurrogate(duration.charAt(end - 1))) {
+      end--;
+    }
+    return published(duration.substring(0, end));
   }
 
   private static @Nullable LocalDate publicationDate(@Nullable String value) {

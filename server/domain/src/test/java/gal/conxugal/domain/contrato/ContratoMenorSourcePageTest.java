@@ -65,10 +65,15 @@ class ContratoMenorSourcePageTest {
     assertThat(page.entries()).containsExactly(entry(2001090L));
   }
 
+  /**
+   * Built from a mutable list on purpose: {@code List.copyOf} hands an already-immutable argument
+   * straight back, so passing {@code List.of} here would assert a property of the argument and
+   * stay green with the defensive copy deleted.
+   */
   @Test
   void hands_out_the_entries_as_an_unmodifiable_list() {
     ContratoMenorSourcePage page =
-        new ContratoMenorSourcePage(List.of(entry(2001090L)), RECORDS_TOTAL);
+        new ContratoMenorSourcePage(new ArrayList<>(List.of(entry(2001090L))), RECORDS_TOTAL);
 
     assertThatThrownBy(() -> page.entries().clear())
         .isInstanceOf(UnsupportedOperationException.class);

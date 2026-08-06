@@ -19,9 +19,13 @@ public interface ContratoMenorSource {
   /**
    * One page of the contratos menores an Órgano published within a window.
    *
+   * <p>Whether the source counts the end date itself as within the window has not been measured,
+   * so a walk chaining windows should overlap them by a day rather than assume. Re-reading a
+   * publication costs nothing: it is matched on the source's own identifier and updated in place.
+   *
    * @param sourceKey the Órgano's key as the catalogue stores it
-   * @param from the first day of the window, inclusive
-   * @param to the last day of the window, inclusive
+   * @param from the window's start date
+   * @param to the window's end date
    * @param offset how many rows of the window to skip, zero-based
    * @param pageSize how many rows to ask for
    * @throws ContratoMenorSourceUnavailableException if the source is unreachable or its response

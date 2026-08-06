@@ -157,6 +157,21 @@ class ContratosDeGaliciaContratoMenorSourceAdapterTest {
         .hasNoCause();
   }
 
+  /**
+   * Typed, not an {@link IllegalArgumentException}: the page's own constructor would refuse a
+   * negative count that way, and this port reserves that for a slice we asked for wrongly. A count
+   * the source published cannot be our mistake, and a caller that retries one but not the other
+   * would abandon the import over it.
+   */
+  @Test
+  void throws_when_the_response_carries_negative_records_total() {
+    stubTable().thenReturn(HttpResponse.ok(new ContratosMenoresTable(-1L, List.of())));
+
+    assertThatThrownBy(this::fetchPage)
+        .isInstanceOf(ContratoMenorSourceUnavailableException.class)
+        .hasNoCause();
+  }
+
   @Test
   void throws_when_the_response_carries_no_rows_array() {
     stubTable().thenReturn(HttpResponse.ok(new ContratosMenoresTable(RECORDS_TOTAL, null)));

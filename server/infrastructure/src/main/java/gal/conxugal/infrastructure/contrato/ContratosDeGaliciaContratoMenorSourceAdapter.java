@@ -50,9 +50,13 @@ public class ContratosDeGaliciaContratoMenorSourceAdapter implements ContratoMen
     ContratosMenoresTable table = fetchTable(sourceKey, from, to, offset, pageSize);
     Long recordsTotal = table.recordsTotal();
     List<ContratosMenoresRow> rows = table.data();
-    if (recordsTotal == null || rows == null) {
+    // recordsTotal is range-checked here rather than left to the page's own constructor: that
+    // would refuse it as an IllegalArgumentException, which this port reserves for a slice we
+    // asked for wrongly. A count the source published cannot be our mistake.
+    if (recordsTotal == null || recordsTotal < 0 || rows == null) {
       throw new ContratoMenorSourceUnavailableException(
-          "Source response is not the documented shape: recordsTotal or data is missing");
+          "Source response is not the documented shape: recordsTotal is missing or negative, or "
+              + "data is missing");
     }
 
     List<ContratoMenorSourceEntry> entries = new ArrayList<>(rows.size());
@@ -116,7 +120,10 @@ public class ContratosDeGaliciaContratoMenorSourceAdapter implements ContratoMen
       }
       ContratosMenoresTable table = response.body();
       if (table == null) {
-        throw new ContratoMenorSourceUnavailableException("Source returned an empty response body");
+        // Both the empty body and the undecodable one arrive here, and nothing distinguishes them
+        // by this point, so the message says so rather than send a reader looking for one of them.
+        throw new ContratoMenorSourceUnavailableException(
+            "Source response carried no readable body: it was empty or could not be decoded");
       }
       return table;
     } catch (HttpClientResponseException e) {

@@ -146,6 +146,12 @@ the row carries the object in full, so the detail page holds nothing this system
 - Measured on **one Órgano**. The limits are almost certainly global (they are enforced by the
   shared endpoint and mirrored in the shared UI script), but the field shapes of a much larger
   publisher have not been checked.
+- **Whether `dateend` counts its own day was not measured.** Every window above was requested and
+  read whole; none isolated a publication on the boundary day itself, which is what would settle
+  it. A walk chaining windows must therefore **overlap them by a day** rather than assume the
+  bound is inclusive: assuming wrongly drops one day of publications per window, invisibly against
+  a stub, and surfaces only as an import whose count never converges. The overlap costs nothing —
+  `source_id` is unique at the store and a re-read updates in place.
 - **Ordering parameters were not made to work.** DataTables' `order[0][column]` / `order[0][dir]`
   produced `500` or `204` in every combination tried, so the adapter should rely on the default
   ordering (`publicado` ascending) and not on sorting the source. This costs nothing: the walk's

@@ -70,6 +70,29 @@ class ContratosMenoresRowTest {
     assertThat(entry.duration()).isEqualTo(duracion);
   }
 
+  /** The cap must not put back the trailing whitespace the strip took off. */
+  @Test
+  void leaves_no_trailing_whitespace_when_the_cap_lands_on_space() {
+    String duracion = "z".repeat(MAX_DURATION_LENGTH - 1) + " meses e algo máis";
+
+    ContratoMenorSourceEntry entry = rowLasting(duracion).toSourceEntry();
+
+    assertThat(entry.duration()).isEqualTo("z".repeat(MAX_DURATION_LENGTH - 1));
+  }
+
+  /**
+   * A cut through a surrogate pair yields a lone surrogate, which PostgreSQL refuses as an invalid
+   * byte sequence — the failed batch the cap exists to avoid, arrived at by the cap itself.
+   */
+  @Test
+  void backs_the_cap_off_rather_than_split_surrogate_pair() {
+    String duracion = "z".repeat(MAX_DURATION_LENGTH - 1) + "😀 e algo máis";
+
+    ContratoMenorSourceEntry entry = rowLasting(duracion).toSourceEntry();
+
+    assertThat(entry.duration()).isEqualTo("z".repeat(MAX_DURATION_LENGTH - 1));
+  }
+
   /** {@link Money} equality is scale-sensitive, so this fails if anything rescales the figure. */
   @Test
   void carries_the_amount_at_the_scale_the_source_published() {
@@ -98,6 +121,17 @@ class ContratosMenoresRowTest {
   @Test
   void carries_an_uninterpretable_publication_date_as_absent() {
     ContratoMenorSourceEntry entry = rowPublishedOn("dunha vez").toSourceEntry();
+
+    assertThat(entry.publicationDate()).isNull();
+  }
+
+  /**
+   * The case the pattern alone cannot catch: a lenient resolver reads this as the 28th, storing a
+   * date nobody published. Absent is the only honest answer.
+   */
+  @Test
+  void carries_an_impossible_calendar_date_as_absent() {
+    ContratoMenorSourceEntry entry = rowPublishedOn("31-02-2026").toSourceEntry();
 
     assertThat(entry.publicationDate()).isNull();
   }

@@ -58,15 +58,24 @@ class ContratosDeGaliciaContratoMenorSourceAdapterIntegrationTest implements Tes
    */
   private static final int RETRY_MAX_ATTEMPTS = 3;
 
-  /** The sample row of the measured source contract, padding and all. */
+  /** 91 characters, so a 60-character cap anywhere in the binding would show as a short string. */
+  private static final String SAMPLE_OBJETO =
+      "SERVIZOS TÉCNICOS DE ELECTRICIDADE PARA A CELEBRACIÓN DA FESTA DO ALBARIÑO DE CAMBADOS 2026";
+
+  /**
+   * The sample row of the measured source contract, padding and all — except that its object runs
+   * past the 60 characters the contract once mistook for a cap, so every test using this row
+   * exercises the response binding at a length a reintroduced cap would cut.
+   */
   private static final String SAMPLE_ROW =
       """
       {"id":2001090,"publicado":"05-05-2026",\
-      "objeto":"SERVIZOS TÉCNICOS DE ELECTRICIDADE PARA A CELEBRACIÓN DA FES",\
+      "objeto":"%s",\
       "importe":3630.00,"nif":"33545498K           ",\
       "adjudicatario":"ANGEL CABARCOS ABADIN                             ",\
       "duracion":"1 mes"}\
-      """;
+      """
+          .formatted(SAMPLE_OBJETO);
 
   @Container
   static WireMockContainer wireMock = new WireMockContainer(WireMockContainer.OFFICIAL_IMAGE_NAME);
@@ -114,7 +123,7 @@ class ContratosDeGaliciaContratoMenorSourceAdapterIntegrationTest implements Tes
             new ContratoMenorSourceEntry(
                 2001090L,
                 LocalDate.of(2026, 5, 5),
-                "SERVIZOS TÉCNICOS DE ELECTRICIDADE PARA A CELEBRACIÓN DA FES",
+                SAMPLE_OBJETO,
                 new Money(new BigDecimal("3630.00")),
                 "1 mes",
                 "ANGEL CABARCOS ABADIN",
@@ -201,6 +210,16 @@ class ContratosDeGaliciaContratoMenorSourceAdapterIntegrationTest implements Tes
 
     assertThatThrownBy(
             () -> contratoMenorSource.fetchPage(SOURCE_KEY, FROM, TO.plusDays(1), 0, PAGE_SIZE))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(tableRequests()).isEmpty();
+  }
+
+  @Test
+  void refuses_over_large_page_without_reaching_the_stubbed_source() {
+    stubTable(tableResponse(table(RECORDS_TOTAL, SAMPLE_ROW)));
+
+    assertThatThrownBy(
+            () -> contratoMenorSource.fetchPage(SOURCE_KEY, FROM, TO, 0, PAGE_SIZE + 1))
         .isInstanceOf(IllegalArgumentException.class);
     assertThat(tableRequests()).isEmpty();
   }
