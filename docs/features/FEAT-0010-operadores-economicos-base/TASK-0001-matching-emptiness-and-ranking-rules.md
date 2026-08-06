@@ -41,13 +41,16 @@ undercount is worse than an error".
 >   than `String.strip`: it also counts a non-breaking space and the separator controls as padding.
 >   The identifier is what the catalogue is unique on, so the broader rule is the safer one, and it
 >   is already the definition every other stored text value uses.
-> - **The rank comparison sits on `NomeRank` itself**, as `candidate.outranks(incumbent)` — not as
->   a comparator and not as a function beside the type. TASK-0002 shipped a javadoc line saying the
->   comparison would live outside the pair; it reads better on it, since the pair is the only thing
->   the rule is about, and that line is corrected rather than left standing. The predicate is what
->   is public: the ordering is what the pair *is*, but a caller reading a comparator backwards
->   would silently pick the wrong name, and nothing today needs to sort. A read surface that does
->   can widen it then.
+> - **The rank comparison sits on `NomeRank` itself**: the pair is `Comparable`, and
+>   `candidate.outranks(incumbent)` is the predicate the import asks. TASK-0002 shipped a javadoc
+>   line saying the comparison would live outside the pair; it reads better on it, since the pair
+>   is the only thing the rule is about and is ranked no other way, so that line is corrected
+>   rather than left standing. R4's order being the type's *natural* order is what lets a later
+>   read surface sort retained names with no comparator of its own — and it is consistent with
+>   `equals`, so a sorted set holds what the record's own equality says it does. `outranks` stays
+>   because **an undated rank sorts first**: the name to display is the `max` of a collection and
+>   never the first element of a sorted one, and a predicate cannot be read in the wrong
+>   direction.
 > - **The criterion TASK-0002 deferred here is proved**: a retained name orders against the
 >   aggregate's own rank through this same comparison, so the two cannot disagree.
 >   ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #36)

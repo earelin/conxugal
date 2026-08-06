@@ -18,17 +18,32 @@ import org.jspecify.annotations.Nullable;
  * about which should be showing.
  */
 @Embeddable
-public record NomeRank(@Nullable LocalDate date, long sourceId) {
+public record NomeRank(@Nullable LocalDate date, long sourceId)
+    implements Comparable<NomeRank> {
 
-  /**
-   * Ascending, so the greater rank is the one that wins. A null date sorts first because
-   * <em>ranked last</em> means an undated contract loses to every dated one, however high its
-   * source identifier and however late it arrives.
-   */
   private static final Comparator<NomeRank> ORDER =
       Comparator.comparing(
               NomeRank::date, Comparator.nullsFirst(Comparator.<LocalDate>naturalOrder()))
           .thenComparingLong(NomeRank::sourceId);
+
+  /**
+   * R4's order, and the only order this pair has — which is what makes it the natural one: the
+   * pair exists so that a name can be ranked, and it is ranked no other way.
+   *
+   * <p><b>Ascending, so the greater rank is the winner.</b> An undated rank sorts <em>first</em>
+   * because <em>ranked last</em> means it loses to every dated one, however high its source
+   * identifier and however late it arrives — so the name to display is the {@code max} of a
+   * collection, never the first element of a sorted one. {@link #outranks} says that without
+   * having to be read in the right direction.
+   *
+   * <p>Consistent with {@code equals}: two ranks compare equal exactly when they carry the same
+   * date and the same source identifier, so a sorted set holds what the record's own equality
+   * says it does.
+   */
+  @Override
+  public int compareTo(NomeRank other) {
+    return ORDER.compare(this, other);
+  }
 
   /**
    * Whether this rank supplies the displayed name in place of {@code incumbent}: it is the more
@@ -46,6 +61,6 @@ public record NomeRank(@Nullable LocalDate date, long sourceId) {
    * contract identically, so there is no spelling to choose between and nothing about it to rank.
    */
   public boolean outranks(NomeRank incumbent) {
-    return ORDER.compare(this, incumbent) > 0;
+    return compareTo(incumbent) > 0;
   }
 }

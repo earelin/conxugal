@@ -3,6 +3,9 @@ package gal.conxugal.domain.operador;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -65,6 +68,34 @@ class NomeRankTest {
 
     assertThat(read.outranks(reread)).isFalse();
     assertThat(reread.outranks(read)).isFalse();
+  }
+
+  /** The winner is the greatest, not the first — undated sorts ahead of everything it loses to. */
+  @Test
+  void sorting_puts_the_undated_rank_first_and_the_winner_last() {
+    NomeRank undated = new NomeRank(null, Long.MAX_VALUE);
+    List<NomeRank> ranks = new ArrayList<>(List.of(LATER, undated, EARLIER));
+
+    Collections.sort(ranks);
+
+    assertThat(ranks).containsExactly(undated, EARLIER, LATER);
+    assertThat(Collections.max(ranks)).isEqualTo(LATER);
+  }
+
+  @Test
+  void ranks_that_compare_equal_are_equal() {
+    NomeRank read = new NomeRank(LocalDate.of(2026, 3, 14), 4242L);
+    NomeRank reread = new NomeRank(LocalDate.of(2026, 3, 14), 4242L);
+
+    assertThat(read.compareTo(reread)).isZero();
+    assertThat(read).isEqualTo(reread);
+  }
+
+  @Test
+  void ranks_that_differ_never_compare_equal() {
+    assertThat(LATER.compareTo(EARLIER)).isPositive();
+    assertThat(EARLIER.compareTo(LATER)).isNegative();
+    assertThat(LATER).isNotEqualTo(EARLIER);
   }
 
   @Test
