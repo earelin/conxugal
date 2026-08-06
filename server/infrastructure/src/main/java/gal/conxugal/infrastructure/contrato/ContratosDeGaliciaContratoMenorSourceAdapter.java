@@ -1,7 +1,6 @@
 package gal.conxugal.infrastructure.contrato;
 
 import gal.conxugal.domain.contrato.ContratoMenorSource;
-import gal.conxugal.domain.contrato.ContratoMenorSourceEntry;
 import gal.conxugal.domain.contrato.ContratoMenorSourcePage;
 import gal.conxugal.domain.contrato.ContratoMenorSourceUnavailableException;
 import io.micronaut.http.HttpResponse;
@@ -11,8 +10,6 @@ import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import jakarta.inject.Singleton;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -20,9 +17,10 @@ import java.util.Objects;
  * feature's source contract. The {@code organismo} path segment is the {@code sourceKey} the
  * catalogue already stores, so nothing here maps one identifier to another.
  *
- * <p>This class owns the request and the judgement of whether an answer is usable at all; what one
- * published row means is {@link ContratosMenoresRow}'s, which is where the values the source
- * publishes are narrowed to the ones the port answers with.
+ * <p>This class owns the slice it is willing to ask for and the exchange that fetches it. What an
+ * answer means is the response's own: {@link ContratosMenoresTable} turns itself into the page and
+ * {@link ContratosMenoresRow} into one entry, which is where the values the source publishes are
+ * narrowed to the ones the port answers with.
  */
 @Singleton
 public class ContratosDeGaliciaContratoMenorSourceAdapter implements ContratoMenorSource {
@@ -47,27 +45,7 @@ public class ContratosDeGaliciaContratoMenorSourceAdapter implements ContratoMen
       String sourceKey, LocalDate from, LocalDate to, int offset, int pageSize) {
     requireSliceWithinSourceLimits(sourceKey, from, to, offset, pageSize);
 
-    ContratosMenoresTable table = fetchTable(sourceKey, from, to, offset, pageSize);
-    Long recordsTotal = table.recordsTotal();
-    List<ContratosMenoresRow> rows = table.data();
-    // recordsTotal is range-checked here rather than left to the page's own constructor: that
-    // would refuse it as an IllegalArgumentException, which this port reserves for a slice we
-    // asked for wrongly. A count the source published cannot be our mistake.
-    if (recordsTotal == null || recordsTotal < 0 || rows == null) {
-      throw new ContratoMenorSourceUnavailableException(
-          "Source response is not the documented shape: recordsTotal is missing or negative, or "
-              + "data is missing");
-    }
-
-    List<ContratoMenorSourceEntry> entries = new ArrayList<>(rows.size());
-    for (ContratosMenoresRow row : rows) {
-      if (row == null) {
-        throw new ContratoMenorSourceUnavailableException(
-            "Source response is not the documented shape: a row is missing");
-      }
-      entries.add(row.toSourceEntry());
-    }
-    return new ContratoMenorSourcePage(entries, recordsTotal);
+    return fetchTable(sourceKey, from, to, offset, pageSize).toSourcePage();
   }
 
   /**
