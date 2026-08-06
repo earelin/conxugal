@@ -2,8 +2,8 @@ import { screen, waitFor } from '@testing-library/react';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { strings } from '../../shared/lib/strings';
-import { BASE_URL, mockCurrentUser, renderApp } from '../../test/renderApp';
+import { strings } from '../shared/lib/strings';
+import { BASE_URL, mockCurrentUser, renderApp } from '../test/renderApp';
 
 function mockSystemStatus() {
   return nock(BASE_URL)
@@ -50,6 +50,10 @@ describe('AdminRoute', () => {
     await waitFor(() => expect(scope.isDone()).toBe(true));
 
     expect(await screen.findByText(strings.notFound.title)).toBeInTheDocument();
+    // The section is code-split, so without waiting for its module the negative
+    // below would pass simply by outrunning the import — proving nothing about
+    // the guard. The guard itself is what starts that fetch, role or no role.
+    await import('../features/administration');
     expect(screen.queryByText(strings.admin.dashboard.title)).not.toBeInTheDocument();
   });
 
@@ -60,6 +64,7 @@ describe('AdminRoute', () => {
     await waitFor(() => expect(scope.isDone()).toBe(true));
 
     expect(await screen.findByText(strings.notFound.title)).toBeInTheDocument();
+    await import('../features/administration');
     expect(screen.queryByText(strings.admin.users.title)).not.toBeInTheDocument();
   });
 });

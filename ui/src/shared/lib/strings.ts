@@ -44,6 +44,14 @@ export const strings = {
     description: 'A páxina que buscas non existe ou foi movida.',
     back: 'Volver ao inicio',
   },
+  loading: 'Cargando…',
+  routeError: {
+    title: 'Non foi posible cargar esta sección',
+    staleDeployment:
+      'Pode que a aplicación se actualizase mentres a tiñas aberta. Téntao de novo para ' +
+      'obter a versión máis recente.',
+    unexpected: 'Produciuse un erro inesperado nesta sección. Téntao de novo.',
+  },
   admin: {
     dashboard: {
       title: 'Panel do sistema',
