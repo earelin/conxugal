@@ -142,6 +142,15 @@ decision own that, and this record only guarantees there is a durable thing to r
   one place" a property to test rather than one the schema guarantees.
 - **"When it reached abandoned" is computed, not observed** — last advance plus the bound — so
   it is an inference where every other terminal timestamp in SPEC-0007 R3 is a fact.
+- **A run read as abandoned is not actually stopped**, because deriving liveness says nothing to
+  the process behind it. A run that goes quiet past the bound — a long GC pause, a stalled source
+  connection, a paused container — releases the guard, and the next trigger claims; if the first
+  one then wakes and advances, both are live and both are reading the source, which is exactly
+  what R22 exists to prevent. A stored abandoned state would not fix this either, since nothing
+  can stop a remote process by writing a row; what closes it is the importer checking its own run
+  still holds the guard before each batch, which its own task owes. The bound's generosity — an
+  order of magnitude over the longest legitimate gap — is what makes the window narrow enough to
+  accept in the meantime.
 - **Recording is best-effort by construction.** Because a progress write may fail without
   failing the import, a run can complete correctly while its record understates it; that is
   SPEC-0007 R20's explicit ordering, but it means the record is evidence about the import rather

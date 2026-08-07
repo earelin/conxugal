@@ -20,6 +20,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
 import jakarta.inject.Inject;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -31,8 +32,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.sql.DataSource;
 import org.assertj.core.api.SoftAssertions;
+import org.assertj.db.type.AssertDbConnection;
 import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
 import org.junit.jupiter.api.AfterEach;
@@ -47,11 +48,19 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * The guard, the derived-abandoned read and the run record, single-threaded. The race two claims
  * run is {@link ImportRunClaimConcurrencyIntegrationTest}'s.
  *
+ * <p><strong>{@code transactional = false}</strong>, because every method of this adapter opens a
+ * transaction of its own and an importer calls it with none in scope. The default would wrap each
+ * test in a transaction that quietly supplied the connection each statement needs and joined the
+ * writes into one — so the suite would pass for a reason production does not have, and a claim
+ * that could only work inside somebody else's transaction would look correct. Fixtures and
+ * assertions therefore go through raw connections off the container: what the adapter writes is
+ * really committed.
+ *
  * <p>Time is moved rather than back-dated: the clock the adapter reads is a mutable reference here,
  * so a run becomes stale because the world moved on, not because a test rewrote its row. That is
  * what makes "the stale row is untouched" provable rather than circular.
  */
-@MicronautTest(startApplication = false)
+@MicronautTest(startApplication = false, transactional = false)
 @Testcontainers(disabledWithoutDocker = true)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
@@ -87,9 +96,6 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   @Inject
   ImportRunRepository importRunRepository;
 
-  @Inject
-  DataSource dataSource;
-
   @BeforeEach
   void resetTheClock() {
     now.set(CLAIMED_AT);
@@ -97,7 +103,9 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
 
   @AfterEach
   void cleanUp() throws Exception {
-    DatabaseCleanup.truncateAllTables(dataSource);
+    try (Connection connection = rawConnection()) {
+      DatabaseCleanup.truncateAllTables(connection);
+    }
   }
 
   @Test
@@ -117,7 +125,6 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
 
     Table coverage = coverageTable();
     assertThat(coverage).hasNumberOfRows(2);
-    assertThat(coverage).column("state").hasOnlyNotNullValues();
     assertThat(coverage).row(0).value("state").isEqualTo("PENDING");
     assertThat(coverage).row(1).value("state").isEqualTo("PENDING");
   }
@@ -148,6 +155,20 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
     assertThat(report.coveredOrganos()).isEmpty();
     assertThat(report.importer()).isEqualTo(Importer.ORGANOS);
+  }
+
+  // Naming one twice is a caller's slip, not a run that covers it twice — and the composite key
+  // would answer it by rolling the whole claim back, losing the guard with it.
+  @Test
+  void claim_naming_the_same_organo_twice_covers_it_once() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+
+    ImportRunId runId =
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, List.of(organoId, organoId))
+            .orElseThrow();
+
+    assertThat(importRunRepository.findRun(runId).orElseThrow().coveredOrganos()).hasSize(1);
   }
 
   @Test
@@ -209,7 +230,7 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
-  void stale_runs_row_is_left_exactly_as_it_stood() throws Exception {
+  void stale_runs_row_and_its_coverage_are_left_exactly_as_they_stood() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     final ImportRunId stale =
         importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
@@ -227,7 +248,17 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(runs).row(0).value("finished_at").isNull();
     assertThat(runs).row(0).value("added").isEqualTo(0);
     assertThat(runs).row(0).value("refreshed").isEqualTo(0);
+    assertThat(storedStartedAt(stale)).isEqualTo(CLAIMED_AT);
     assertThat(storedLastAdvancedAt(stale)).isEqualTo(CLAIMED_AT);
+
+    // The coverage row is what a mis-scoped update from the second claim would reach, and the
+    // second claim covers no Órgano at all, so it must still read exactly as it was enumerated.
+    Table coverage = coverageTable();
+    assertThat(coverage).hasNumberOfRows(1);
+    assertThat(coverage).row(0).value("state").isEqualTo("PENDING");
+    assertThat(coverage).row(0).value("added").isEqualTo(0);
+    assertThat(coverage).row(0).value("refreshed").isEqualTo(0);
+    assertThat(coverage).row(0).value("failure_reason").isNull();
   }
 
   @Test
@@ -267,6 +298,48 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     });
   }
 
+  // The run's counts are the sum of its coverage rows', so a batch no covered Órgano accepted must
+  // not reach them — otherwise the outcome reports contracts against nothing that imported them.
+  @Test
+  void advance_against_organo_the_run_does_not_cover_counts_nothing() throws Exception {
+    OrganoId covered = insertOrgano("consorcio-x");
+    OrganoId uncovered = insertOrgano("axencia-y");
+    ImportRunId runId =
+        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(covered)).orElseThrow();
+
+    importRunRepository.advance(runId, uncovered, 100, 4);
+
+    ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
+    SoftAssertions.assertSoftly(softly -> {
+      softly.assertThat(report.added()).isZero();
+      softly.assertThat(report.refreshed()).isZero();
+      softly.assertThat(report.coveredOrganos())
+          .containsExactly(new ImportRunOrganoCoverage(
+              covered, ImportRunOrganoState.PENDING, 0, 0, null));
+    });
+  }
+
+  // A late batch must not un-fail an Órgano the outcome has to report as failed, nor leave it in
+  // progress while its reason stays behind.
+  @Test
+  void advance_after_the_organo_has_been_settled_leaves_it_settled() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    ImportRunId runId =
+        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+    importRunRepository.finishOrgano(
+        runId, organoId, ImportRunOrganoState.FAILED, "the source stopped answering");
+
+    importRunRepository.advance(runId, organoId, 100, 4);
+
+    ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
+    SoftAssertions.assertSoftly(softly -> {
+      softly.assertThat(report.added()).isZero();
+      softly.assertThat(coverageFor(report, organoId))
+          .isEqualTo(new ImportRunOrganoCoverage(
+              organoId, ImportRunOrganoState.FAILED, 0, 0, "the source stopped answering"));
+    });
+  }
+
   @Test
   void finishing_an_organo_records_its_state_and_its_reason() throws Exception {
     OrganoId failed = insertOrgano("consorcio-x");
@@ -292,6 +365,21 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
+  void settling_organo_the_run_does_not_cover_records_nothing() throws Exception {
+    OrganoId covered = insertOrgano("consorcio-x");
+    OrganoId uncovered = insertOrgano("axencia-y");
+    ImportRunId runId =
+        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(covered)).orElseThrow();
+
+    importRunRepository.finishOrgano(runId, uncovered, ImportRunOrganoState.FAILED, "nowhere");
+
+    assertThat(coverageTable()).hasNumberOfRows(1);
+    assertThat(importRunRepository.findRun(runId).orElseThrow().coveredOrganos())
+        .containsExactly(
+            new ImportRunOrganoCoverage(covered, ImportRunOrganoState.PENDING, 0, 0, null));
+  }
+
+  @Test
   void completing_run_records_its_verdict_its_finish_time_and_its_counts() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId runId =
@@ -313,15 +401,67 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     });
   }
 
-  // A finished run cannot become abandoned however long ago it finished, so completing one has to
-  // release the guard for good rather than for fifteen minutes.
+  // A run cannot be completed as abandoned: that state is derived on read and stored nowhere, and
+  // a caller completing with a state it just read has one in hand.
   @Test
-  void completed_run_holds_the_guard_no_longer() throws Exception {
+  void completing_run_as_abandoned_is_refused_and_writes_nothing() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId runId =
         importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
 
+    assertThat(catching(() -> importRunRepository.complete(runId, ImportRunState.ABANDONED)))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    Table runs = runTable();
+    assertThat(runs).row(0).value("state").isEqualTo("IN_PROGRESS");
+    assertThat(runs).row(0).value("finished_at").isNull();
+  }
+
+  // Re-completing is a caller's mistake with no requirement attached; what matters is that it
+  // rewrites nothing but the verdict it was given.
+  @Test
+  void completing_run_that_is_already_complete_leaves_its_counts_and_coverage_alone()
+      throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    ImportRunId runId =
+        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+    importRunRepository.advance(runId, organoId, 100, 4);
+    importRunRepository.finishOrgano(runId, organoId, ImportRunOrganoState.SUCCEEDED, null);
     importRunRepository.complete(runId, ImportRunState.SUCCEEDED);
+
+    importRunRepository.complete(runId, ImportRunState.FAILED);
+
+    ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
+    SoftAssertions.assertSoftly(softly -> {
+      softly.assertThat(report.state()).isEqualTo(ImportRunState.FAILED);
+      softly.assertThat(report.added()).isEqualTo(100);
+      softly.assertThat(coverageFor(report, organoId).state())
+          .isEqualTo(ImportRunOrganoState.SUCCEEDED);
+    });
+  }
+
+  @Test
+  void completing_unknown_run_records_nothing() {
+    importRunRepository.complete(new ImportRunId(UUID.randomUUID()), ImportRunState.SUCCEEDED);
+
+    assertThat(runTable()).hasNumberOfRows(0);
+  }
+
+  // Every verdict releases the guard for good — a finished run cannot become abandoned, so the
+  // next claim must not have to wait out the bound first.
+  @Test
+  void completed_run_holds_the_guard_no_longer_whatever_its_verdict() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    ImportRunId succeeded =
+        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+    importRunRepository.complete(succeeded, ImportRunState.SUCCEEDED);
+
+    ImportRunId failed = importRunRepository.claim(Importer.ORGANOS, List.of()).orElseThrow();
+    importRunRepository.complete(failed, ImportRunState.FAILED);
+
+    ImportRunId partial =
+        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of()).orElseThrow();
+    importRunRepository.complete(partial, ImportRunState.PARTIALLY_SUCCEEDED);
 
     assertThat(importRunRepository.claim(Importer.ORGANOS, List.of())).isPresent();
   }
@@ -338,34 +478,57 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
         .orElseThrow(() -> new AssertionError("Órgano %s is not covered".formatted(organoId)));
   }
 
+  private static Throwable catching(Runnable call) {
+    try {
+      call.run();
+      throw new AssertionError("The call was expected to be refused");
+    } catch (RuntimeException refusal) {
+      return refusal;
+    }
+  }
+
   private Table runTable() {
-    return AssertDbConnectionFactory.of(dataSource)
-        .create()
+    return assertDb()
         .table("import_run")
         .columnsToOrder(new Table.Order[] {Table.Order.asc("started_at")})
         .build();
   }
 
   private Table coverageTable() {
-    return AssertDbConnectionFactory.of(dataSource)
-        .create()
+    return assertDb()
         .table("import_run_organo")
         .columnsToOrder(new Table.Order[] {Table.Order.asc("organo_id")})
         .build();
   }
 
+  // Off the container rather than the injected DataSource: with no ambient transaction the adapter
+  // really commits, and these assertions are about what it committed.
+  private static AssertDbConnection assertDb() {
+    return AssertDbConnectionFactory.of(
+            postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
+        .create();
+  }
+
   // Read through JDBC rather than asserted on the table, because AssertJ DB compares a timestamptz
-  // against the session time zone and the claim here is about the instant.
+  // against the session time zone and the claims here are about the instant.
+  private Instant storedStartedAt(ImportRunId runId) throws SQLException {
+    return storedInstant(runId, "SELECT started_at FROM import_run WHERE id = ?", "started_at");
+  }
+
   private Instant storedLastAdvancedAt(ImportRunId runId) throws SQLException {
-    String sql = "SELECT last_advanced_at FROM import_run WHERE id = ?";
-    try (Connection connection = dataSource.getConnection();
+    return storedInstant(
+        runId, "SELECT last_advanced_at FROM import_run WHERE id = ?", "last_advanced_at");
+  }
+
+  private Instant storedInstant(ImportRunId runId, String sql, String column) throws SQLException {
+    try (Connection connection = rawConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setObject(1, runId.value());
       try (ResultSet resultSet = statement.executeQuery()) {
         if (!resultSet.next()) {
           throw new IllegalStateException("No run stored under %s".formatted(runId));
         }
-        return resultSet.getObject("last_advanced_at", OffsetDateTime.class).toInstant();
+        return resultSet.getObject(column, OffsetDateTime.class).toInstant();
       }
     }
   }
@@ -374,7 +537,7 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     String sql =
         "INSERT INTO organo_contratacion (id, source_key, name, active)"
             + " VALUES (uuidv7(), ?, ?, TRUE) RETURNING id";
-    try (Connection connection = dataSource.getConnection();
+    try (Connection connection = rawConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, sourceKey);
       statement.setString(2, sourceKey);
@@ -385,5 +548,10 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
         return new OrganoId(resultSet.getObject("id", UUID.class));
       }
     }
+  }
+
+  private static Connection rawConnection() throws SQLException {
+    return DriverManager.getConnection(
+        postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
   }
 }

@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -42,11 +41,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * The race the guard exists for: two triggers claiming at once must yield one run, with the loser
  * waiting on the lock and then finding the winner's row rather than passing the same check.
  *
- * <p>The first test holds the guard from outside before either claim starts, so the outcome does
- * not depend on how the two threads happen to interleave. A barrier alone would not do: it lets
- * one claim finish before the other begins, and would pass just as happily against an
- * implementation that takes no lock at all. Waiting until both claims are <em>blocked on the
- * advisory lock</em> — read out of {@code pg_locks} — is what makes this test mean what it says.
+ * <p>The guard is held from outside before either claim starts, so the outcome does not depend on
+ * how the two threads happen to interleave. A barrier alone would not do: it lets one claim finish
+ * before the other begins, so it passes just as happily against an implementation that takes no
+ * lock at all — a test that is right only sometimes proves nothing the rest of the time. Waiting
+ * until both claims are <em>blocked on the advisory lock</em>, read out of {@code pg_locks}, is
+ * what makes this one mean what it says.
  *
  * <p>Everything the workers must see is written on a raw connection off the container, and their
  * results are read back the same way: the injected {@code DataSource} is Micronaut Data's
@@ -126,37 +126,6 @@ class ImportRunClaimConcurrencyIntegrationTest implements TestPropertyProvider {
 
     assertThat(claimed).hasSize(1);
     assertThat(countRuns()).isEqualTo(1);
-  }
-
-  // The same race without the guard pre-held: non-deterministic on its own, but it exercises the
-  // real timing rather than a staged one, and it costs almost nothing to run alongside.
-  @Test
-  void two_claims_racing_at_the_same_moment_yield_exactly_one_run() throws Exception {
-    OrganoId organoId = insertOrgano("consorcio-x");
-    CyclicBarrier startTogether = new CyclicBarrier(2);
-
-    List<ImportRunId> claimed = new ArrayList<>();
-    try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
-      List<Future<Optional<ImportRunId>>> claims =
-          List.of(
-              executor.submit(() -> claimOnceReleased(
-                  startTogether, Importer.CONTRATOS_MENORES, List.of(organoId))),
-              executor.submit(() -> claimOnceReleased(
-                  startTogether, Importer.ORGANOS, List.of())));
-
-      for (Future<Optional<ImportRunId>> claim : claims) {
-        claim.get(POLL_DEADLINE.toSeconds(), TimeUnit.SECONDS).ifPresent(claimed::add);
-      }
-    }
-
-    assertThat(claimed).hasSize(1);
-    assertThat(countRuns()).isEqualTo(1);
-  }
-
-  private Optional<ImportRunId> claimOnceReleased(
-      CyclicBarrier startTogether, Importer importer, List<OrganoId> covered) throws Exception {
-    startTogether.await(POLL_DEADLINE.toSeconds(), TimeUnit.SECONDS);
-    return importRunRepository.claim(importer, covered);
   }
 
   private static void takeTheGuard(Connection connection) throws SQLException {

@@ -14,8 +14,13 @@ import org.jspecify.annotations.Nullable;
  * claim, not a constraint on the table, so a second way to write a run row would step past it
  * silently — no error, just two imports hammering one source at once.
  *
- * <p>There is no delete and no way to write an abandoned state: a run past the abandonment bound
- * is read as abandoned and its row left exactly as the dead process left it.
+ * <p>There is no delete, and an abandoned state cannot be written: a run past the abandonment
+ * bound is read as abandoned and its row left exactly as the dead process left it.
+ *
+ * <p>Every method here records the run in a transaction of its own, whatever the caller is inside.
+ * An import's own transaction and the record of it are deliberately not the same act — progress
+ * has to be visible before a batch commits, and a bookkeeping failure must not roll imported
+ * contracts back.
  */
 public interface ImportRunRepository {
 
@@ -28,10 +33,6 @@ public interface ImportRunRepository {
    * so a run that dies partway can still name the list it was going to cover. A claim covering
    * none is a run that covers none, which is the catalogue import's shape.
    *
-   * <p><strong>Call it outside any longer transaction.</strong> It takes a database lock that
-   * releases on commit, so a caller holding it open holds the whole system's guard for that long.
-   * It also relies on read-committed isolation: the loser's transaction begins before the winner
-   * commits and sees the winner's row only because each statement takes a fresh snapshot.
    */
   Optional<ImportRunId> claim(Importer importer, Collection<OrganoId> coveredOrganos);
 
@@ -49,7 +50,11 @@ public interface ImportRunRepository {
       ImportRunOrganoState state,
       @Nullable String failureReason);
 
-  /** Settles the run: its verdict and the moment it finished. */
+  /**
+   * Settles the run: its verdict and the moment it finished.
+   *
+   * @throws IllegalArgumentException if {@code verdict} is not one a run can be completed with
+   */
   void complete(ImportRunId runId, ImportRunState verdict);
 
   /** The run and every Órgano it covers, with the run's state already read for abandonment. */

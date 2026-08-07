@@ -40,4 +40,22 @@ public enum ImportRunState {
     }
     return lastAdvancedAt.isBefore(now.minus(abandonmentBound)) ? ABANDONED : IN_PROGRESS;
   }
+
+  /**
+   * This state if a run may be completed with it, and an exception otherwise. Storing
+   * {@link #ABANDONED} would freeze a run in a state no resumption can tell from a live one, and
+   * the value reaches a writer easily enough — a caller passing back a state it read has one in
+   * hand. Completing a run as {@link #IN_PROGRESS} is refused with it: it would stamp a finish time
+   * on a run that has not finished, and hold the guard until the bound expired.
+   *
+   * <p>The check lives here because this is the one type allowed to name the value, which is what
+   * lets the rule be enforced rather than merely asserted.
+   */
+  public ImportRunState requireStorableVerdict() {
+    if (this == ABANDONED || this == IN_PROGRESS) {
+      throw new IllegalArgumentException(
+          "%s is not a verdict a run can be completed with".formatted(this));
+    }
+    return this;
+  }
 }

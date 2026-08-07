@@ -15,6 +15,7 @@ import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.GenericRepository;
+import io.micronaut.transaction.TransactionDefinition;
 import io.micronaut.transaction.annotation.Transactional;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -26,11 +27,15 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Stores import runs and serialises the guard that admits one of them at a time.
@@ -40,9 +45,17 @@ import org.jspecify.annotations.Nullable;
  * either refuses or inserts — all inside one transaction, so the lock releases on commit. The
  * check and the write cannot be two acts: two triggers would both find no live run and both start.
  *
- * <p>It relies on read-committed isolation, PostgreSQL's default. The loser's transaction begins
+ * <p>It asks for read-committed isolation rather than assuming it: the loser's transaction begins
  * before the winner commits and sees the winner's row only because each statement takes a fresh
- * snapshot; under repeatable read it would find nothing and start a second import.
+ * snapshot, so under repeatable read the guard would let a second import start.
+ *
+ * <p><strong>Every method starts a transaction of its own</strong>, rather than joining a caller's.
+ * A claim that joined one would return the identity of a row the caller could still roll back —
+ * leaving an importer that believes it holds the guard while nothing records it — and would hold a
+ * system-wide lock for as long as the caller's work took. An advance that joined one would tie the
+ * run record to the transaction writing contracts, which is the coupling the decision behind this
+ * table rules out: progress has to be visible before a batch commits, and a failed progress write
+ * must not roll imported contracts back.
  *
  * <p>The guarantee a partial unique index would have given is asserted rather than enforced, so
  * {@link #insert} is deliberately package-private and {@link #claim} is the only caller — a second
@@ -52,10 +65,17 @@ import org.jspecify.annotations.Nullable;
  * to its counts rather than replacing them, and no derived method expresses an increment. They
  * travel as one array through {@code unnest}, so the statement is a constant whatever the number
  * of covered Órganos rather than a string assembled around a placeholder count.
+ *
+ * <p>A write that matches no row is logged and let go rather than thrown. The record is evidence
+ * about an import, not a participant in it, and failing the import because its bookkeeping missed
+ * would be the wrong trade — but drifting silently would be worse, because the run's counts would
+ * stop adding up with nothing to say why.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public abstract class JdbcImportRunRepository
     implements ImportRunRepository, GenericRepository<ImportRun, ImportRunId> {
+
+  private static final Logger LOG = LoggerFactory.getLogger(JdbcImportRunRepository.class);
 
   /**
    * The one key every importer's claim takes, so the guard is system-wide rather than one guard
@@ -90,11 +110,14 @@ public abstract class JdbcImportRunRepository
        WHERE id = ?
       """;
 
+  // Only an Órgano the run has not settled advances. Without the state filter a batch arriving
+  // after a failure would set the row back to in progress while its reason stayed behind, turning
+  // an Órgano the outcome must report as failed into one that merely looks busy.
   private static final String ADVANCE_ORGANO =
       """
       UPDATE import_run_organo
          SET state = ?, added = added + ?, refreshed = refreshed + ?
-       WHERE run_id = ? AND organo_id = ?
+       WHERE run_id = ? AND organo_id = ? AND state IN (?, ?)
       """;
 
   private static final String FINISH_ORGANO =
@@ -131,10 +154,15 @@ public abstract class JdbcImportRunRepository
   }
 
   @Override
-  @Transactional
+  @Transactional(
+      propagation = TransactionDefinition.Propagation.REQUIRES_NEW,
+      isolation = TransactionDefinition.Isolation.READ_COMMITTED)
   public Optional<ImportRunId> claim(Importer importer, Collection<OrganoId> coveredOrganos) {
     Objects.requireNonNull(importer, "importer must not be null");
-    List<OrganoId> covered = List.copyOf(coveredOrganos);
+    Objects.requireNonNull(coveredOrganos, "coveredOrganos must not be null");
+    // A Set, because naming an Órgano twice is a caller's slip rather than a run that covers it
+    // twice, and the composite key would answer it by rolling the whole claim back.
+    Set<OrganoId> covered = new LinkedHashSet<>(coveredOrganos);
     takeTheGuard();
     Instant now = clock.instant();
     if (theGuardIsHeld(now)) {
@@ -147,9 +175,30 @@ public abstract class JdbcImportRunRepository
     return Optional.of(runId);
   }
 
+  /**
+   * The Órgano's row moves first, and the run's counts only follow it. Bumping the run for a batch
+   * no covered Órgano accepted would leave the run's totals larger than the sum of the rows they
+   * are supposed to total, with nothing in the record to say which.
+   */
   @Override
-  @Transactional
+  @Transactional(propagation = TransactionDefinition.Propagation.REQUIRES_NEW)
   public void advance(ImportRunId runId, OrganoId organoId, int added, int refreshed) {
+    int organosAdvanced = executeUpdate(ADVANCE_ORGANO, statement -> {
+      statement.setString(1, ImportRunOrganoState.IN_PROGRESS.name());
+      statement.setInt(2, added);
+      statement.setInt(3, refreshed);
+      statement.setObject(4, runId.value());
+      statement.setObject(5, organoId.value());
+      statement.setString(6, ImportRunOrganoState.PENDING.name());
+      statement.setString(7, ImportRunOrganoState.IN_PROGRESS.name());
+    });
+    if (organosAdvanced == 0) {
+      LOG.warn(
+          "Run {} advanced against Órgano {}, which it does not cover or has already settled;"
+              + " the batch is not counted",
+          runId, organoId);
+      return;
+    }
     Instant now = clock.instant();
     executeUpdate(ADVANCE_RUN, statement -> {
       statement.setObject(1, atUtc(now));
@@ -157,39 +206,42 @@ public abstract class JdbcImportRunRepository
       statement.setInt(3, refreshed);
       statement.setObject(4, runId.value());
     });
-    executeUpdate(ADVANCE_ORGANO, statement -> {
-      statement.setString(1, ImportRunOrganoState.IN_PROGRESS.name());
-      statement.setInt(2, added);
-      statement.setInt(3, refreshed);
-      statement.setObject(4, runId.value());
-      statement.setObject(5, organoId.value());
-    });
   }
 
   @Override
+  @Transactional(propagation = TransactionDefinition.Propagation.REQUIRES_NEW)
   public void finishOrgano(
       ImportRunId runId,
       OrganoId organoId,
       ImportRunOrganoState state,
       @Nullable String failureReason) {
-    executeUpdate(FINISH_ORGANO, statement -> {
+    int settled = executeUpdate(FINISH_ORGANO, statement -> {
       statement.setString(1, state.name());
       statement.setString(2, failureReason);
       statement.setObject(3, runId.value());
       statement.setObject(4, organoId.value());
     });
+    if (settled == 0) {
+      LOG.warn("Run {} settled Órgano {}, which it does not cover", runId, organoId);
+    }
   }
 
   @Override
+  @Transactional(propagation = TransactionDefinition.Propagation.REQUIRES_NEW)
   public void complete(ImportRunId runId, ImportRunState verdict) {
-    executeUpdate(COMPLETE_RUN, statement -> {
-      statement.setString(1, verdict.name());
+    String storable = verdict.requireStorableVerdict().name();
+    int completed = executeUpdate(COMPLETE_RUN, statement -> {
+      statement.setString(1, storable);
       statement.setObject(2, atUtc(clock.instant()));
       statement.setObject(3, runId.value());
     });
+    if (completed == 0) {
+      LOG.warn("Run {} was completed but is not recorded", runId);
+    }
   }
 
   @Override
+  @Transactional
   public Optional<ImportRunReport> findRun(ImportRunId runId) {
     Instant now = clock.instant();
     return findById(runId).map(run -> reportOf(run, now));
@@ -230,7 +282,7 @@ public abstract class JdbcImportRunRepository
             == ImportRunState.IN_PROGRESS;
   }
 
-  private void enumerateCoverage(ImportRunId runId, List<OrganoId> covered) {
+  private void enumerateCoverage(ImportRunId runId, Set<OrganoId> covered) {
     if (covered.isEmpty()) {
       return;
     }
@@ -279,14 +331,14 @@ public abstract class JdbcImportRunRepository
     return guard.abandonmentBound();
   }
 
-  private void executeUpdate(String sql, Binding binding) {
-    jdbcOperations.prepareStatement(sql, statement -> {
+  private int executeUpdate(String sql, Binding binding) {
+    return jdbcOperations.prepareStatement(sql, statement -> {
       binding.bind(statement);
       return statement.executeUpdate();
     });
   }
 
-  /** An offset date-time, so a {@code timestamptz} never routes through the JVM's default zone. */
+  /** An offset date-time, so these writes do not route a {@code timestamptz} through a zone. */
   private static OffsetDateTime atUtc(Instant instant) {
     return instant.atOffset(ZoneOffset.UTC);
   }
