@@ -315,16 +315,20 @@ public abstract class JdbcImportRunRepository
       try (ResultSet rows = statement.executeQuery()) {
         List<ImportRunOrganoCoverage> covered = new ArrayList<>();
         while (rows.next()) {
-          covered.add(new ImportRunOrganoCoverage(
-              new OrganoId(rows.getObject("organo_id", UUID.class)),
-              ImportRunOrganoState.valueOf(rows.getString("state")),
-              rows.getInt("added"),
-              rows.getInt("refreshed"),
-              rows.getString("failure_reason")));
+          covered.add(coverageAt(rows));
         }
         return covered;
       }
     });
+  }
+
+  private static ImportRunOrganoCoverage coverageAt(ResultSet rows) throws SQLException {
+    return new ImportRunOrganoCoverage(
+        new OrganoId(rows.getObject("organo_id", UUID.class)),
+        ImportRunOrganoState.valueOf(rows.getString("state")),
+        rows.getInt("added"),
+        rows.getInt("refreshed"),
+        rows.getString("failure_reason"));
   }
 
   private Duration bound() {
