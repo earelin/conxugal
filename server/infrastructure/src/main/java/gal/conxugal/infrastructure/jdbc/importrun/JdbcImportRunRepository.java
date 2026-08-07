@@ -17,6 +17,7 @@ import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.GenericRepository;
 import io.micronaut.transaction.TransactionDefinition;
 import io.micronaut.transaction.annotation.Transactional;
+import java.sql.Array;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -117,8 +118,12 @@ public abstract class JdbcImportRunRepository
       """
       UPDATE import_run_organo
          SET state = ?, added = added + ?, refreshed = refreshed + ?
-       WHERE run_id = ? AND organo_id = ? AND state IN (?, ?)
+       WHERE run_id = ? AND organo_id = ? AND state = ANY(?::text[])
       """;
+
+  /** The states an Órgano can still be advanced out of; every other one is its last. */
+  private static final List<ImportRunOrganoState> UNSETTLED =
+      List.of(ImportRunOrganoState.PENDING, ImportRunOrganoState.IN_PROGRESS);
 
   private static final String FINISH_ORGANO =
       """
@@ -189,8 +194,7 @@ public abstract class JdbcImportRunRepository
       statement.setInt(3, refreshed);
       statement.setObject(4, runId.value());
       statement.setObject(5, organoId.value());
-      statement.setString(6, ImportRunOrganoState.PENDING.name());
-      statement.setString(7, ImportRunOrganoState.IN_PROGRESS.name());
+      statement.setArray(6, namesOf(statement.getConnection(), UNSETTLED));
     });
     if (organosAdvanced == 0) {
       LOG.warn(
@@ -345,6 +349,12 @@ public abstract class JdbcImportRunRepository
   /** An offset date-time, so these writes do not route a {@code timestamptz} through a zone. */
   private static OffsetDateTime atUtc(Instant instant) {
     return instant.atOffset(ZoneOffset.UTC);
+  }
+
+  private static Array namesOf(Connection connection, List<ImportRunOrganoState> states)
+      throws SQLException {
+    return connection.createArrayOf(
+        "text", states.stream().map(ImportRunOrganoState::name).toArray(String[]::new));
   }
 
   private static Instant instantAt(ResultSet rows, String column) throws SQLException {
