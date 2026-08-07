@@ -1,9 +1,8 @@
-package gal.conxugal.domain.contrato;
+package gal.conxugal.domain.organo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import gal.conxugal.domain.organo.OrganoId;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -44,18 +43,27 @@ class ContratosMenoresImportStateTest {
     assertThat(state.mode()).isEqualTo(ContratosMenoresImportMode.INCREMENTAL);
   }
 
-  // Identity, not contents: advancing the cursor is the write this row exists to take, so a state
-  // that stopped equalling itself across one would break every read-modify-write that uses it.
+  // Contents, not identity: this is a value inside the Órgano aggregate, so advancing it yields a
+  // different value. Comparing by the owner column instead would make a state equal to itself
+  // across the very write that changes it, and no test of an advance could then fail.
   @Test
-  void the_same_organo_state_is_equal_across_an_advance() {
+  void advancing_an_organos_state_yields_another_value() {
     ContratosMenoresImportState started =
         ContratosMenoresImportState.startedAt(ORGANO_ID, T_ZERO);
     ContratosMenoresImportState advanced = new ContratosMenoresImportState(
         ORGANO_ID, ContratosMenoresImportStatus.COMPLETE, LocalDate.of(2019, 3, 31), T_ZERO);
 
+    assertThat(started).isNotEqualTo(advanced);
+  }
+
+  @Test
+  void two_readings_of_the_same_unchanged_state_are_equal() {
+    ContratosMenoresImportState one = ContratosMenoresImportState.startedAt(ORGANO_ID, T_ZERO);
+    ContratosMenoresImportState other = ContratosMenoresImportState.startedAt(ORGANO_ID, T_ZERO);
+
     SoftAssertions.assertSoftly(softly -> {
-      softly.assertThat(started).isEqualTo(advanced);
-      softly.assertThat(started).hasSameHashCodeAs(advanced);
+      softly.assertThat(one).isEqualTo(other);
+      softly.assertThat(one).hasSameHashCodeAs(other);
     });
   }
 

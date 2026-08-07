@@ -1,4 +1,4 @@
-package gal.conxugal.domain.contrato;
+package gal.conxugal.domain.organo;
 
 /**
  * How far an Órgano's contratos menores history has been loaded.

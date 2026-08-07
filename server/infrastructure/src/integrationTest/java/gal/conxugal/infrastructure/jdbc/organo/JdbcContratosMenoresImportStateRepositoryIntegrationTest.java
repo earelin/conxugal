@@ -1,12 +1,11 @@
-package gal.conxugal.infrastructure.jdbc.contrato;
+package gal.conxugal.infrastructure.jdbc.organo;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.db.api.Assertions.assertThat;
 
-import gal.conxugal.domain.contrato.ContratosMenoresImportState;
-import gal.conxugal.domain.contrato.ContratosMenoresImportStateRepository;
-import gal.conxugal.domain.contrato.ContratosMenoresImportStatus;
+import gal.conxugal.domain.organo.ContratosMenoresImportState;
+import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
+import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import io.micronaut.core.annotation.NonNull;
@@ -20,7 +19,6 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -165,24 +163,6 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
       softly.assertThat(other.cursorDate()).isNull();
       softly.assertThat(other.coveredThrough()).isEqualTo(T_ZERO);
     });
-  }
-
-  @Test
-  void reads_every_stored_state_for_the_catalogue() throws Exception {
-    OrganoId halfLoaded = insertOrgano("consorcio-x");
-    OrganoId loaded = insertOrgano("axencia-y");
-    insertOrgano("nunca-importada");
-    importStateRepository.insert(ContratosMenoresImportState.startedAt(halfLoaded, T_ZERO));
-    importStateRepository.insert(ContratosMenoresImportState.startedAt(loaded, T_ZERO));
-    importStateRepository.updateState(loaded, ContratosMenoresImportStatus.COMPLETE);
-
-    List<ContratosMenoresImportState> states = importStateRepository.findAll();
-
-    assertThat(states)
-        .extracting(ContratosMenoresImportState::organoId, ContratosMenoresImportState::state)
-        .containsExactlyInAnyOrder(
-            tuple(halfLoaded, ContratosMenoresImportStatus.INCOMPLETE),
-            tuple(loaded, ContratosMenoresImportStatus.COMPLETE));
   }
 
   private Table importStateTable() {

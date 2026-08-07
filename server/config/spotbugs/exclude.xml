@@ -31,14 +31,6 @@
     <Field name="~(organo|termo)Repository"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
-  <!-- And again for the contratos menores import-state read: the heuristic reads
-       ContratosMenoresImportStateRepository as mutable because it declares insert and update
-       methods, exactly as it does the two above. -->
-  <Match>
-    <Class name="gal.conxugal.domain.contrato.ListContratosMenoresImportState"/>
-    <Field name="importStateRepository"/>
-    <Bug pattern="EI_EXPOSE_REP2"/>
-  </Match>
 
   <!-- Micronaut Serde's generated (de)serializers. The @Generated match above cannot reach them:
        they carry javax.annotation.processing.Generated, which is SOURCE-retention and so absent

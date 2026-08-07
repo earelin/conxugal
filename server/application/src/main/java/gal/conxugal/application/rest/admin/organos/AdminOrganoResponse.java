@@ -3,7 +3,7 @@ package gal.conxugal.application.rest.admin.organos;
 import static java.util.Objects.requireNonNull;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import gal.conxugal.domain.contrato.ContratosMenoresImportStatus;
+import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.taxonomia.TermoId;
 import io.micronaut.core.annotation.Nullable;
@@ -34,11 +34,10 @@ public record AdminOrganoResponse(
     boolean importable,
     ContratosMenoresImportStatus importState) {
 
-  static AdminOrganoResponse of(
-      OrganoDeContratacion organo, ContratosMenoresImportStatus importState) {
+  static AdminOrganoResponse of(OrganoDeContratacion organo) {
     return new AdminOrganoResponse(
         requireNonNull(organo.id(), "a stored Órgano must carry an id").value(), organo.name(),
-        organo.active(), idOf(organo.termoId()), organo.importable(), importState);
+        organo.active(), idOf(organo.termoId()), organo.importable(), organo.importStatus());
   }
 
   private static @Nullable UUID idOf(@Nullable TermoId termoId) {

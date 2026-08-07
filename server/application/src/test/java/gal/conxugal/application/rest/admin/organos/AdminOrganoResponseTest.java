@@ -3,13 +3,15 @@ package gal.conxugal.application.rest.admin.organos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import gal.conxugal.domain.contrato.ContratosMenoresImportStatus;
+import gal.conxugal.domain.organo.ContratosMenoresImportState;
+import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.taxonomia.TermoId;
 import io.micronaut.core.type.Argument;
 import io.micronaut.serde.ObjectMapper;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import org.assertj.core.api.SoftAssertions;
@@ -19,13 +21,13 @@ class AdminOrganoResponseTest {
 
   private static final OrganoId ORGANO_ID = new OrganoId(UUID.randomUUID());
   private static final TermoId TERMO_ID = new TermoId(UUID.randomUUID());
+  private static final Instant T_ZERO = Instant.parse("2026-08-06T09:00:00Z");
 
   @Test
   void carries_the_placement_alongside_the_import_mark() {
     AdminOrganoResponse response = AdminOrganoResponse.of(
         new OrganoDeContratacion(ORGANO_ID, "sanidade", "Consellería de Sanidade", true, true,
-            TERMO_ID),
-        ContratosMenoresImportStatus.INCOMPLETE);
+            TERMO_ID, halfLoaded()));
 
     SoftAssertions.assertSoftly(softly -> {
       softly.assertThat(response.id()).isEqualTo(ORGANO_ID.value());
@@ -43,8 +45,7 @@ class AdminOrganoResponseTest {
   @Test
   void carries_the_import_state_independently_of_the_mark() {
     AdminOrganoResponse response = AdminOrganoResponse.of(
-        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, true, null),
-        ContratosMenoresImportStatus.NEVER_STARTED);
+        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, true, null));
 
     SoftAssertions.assertSoftly(softly -> {
       softly.assertThat(response.importable()).isTrue();
@@ -57,8 +58,8 @@ class AdminOrganoResponseTest {
   void serialises_the_import_state_by_name() throws IOException {
     ObjectMapper objectMapper = ObjectMapper.getDefault();
     AdminOrganoResponse response = AdminOrganoResponse.of(
-        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, true, null),
-        ContratosMenoresImportStatus.COMPLETE);
+        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, true, null,
+            loaded()));
 
     String json = objectMapper.writeValueAsString(response);
 
@@ -69,8 +70,7 @@ class AdminOrganoResponseTest {
   @Test
   void reads_an_organo_that_was_never_marked_as_unmarked() {
     AdminOrganoResponse response = AdminOrganoResponse.of(
-        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, false, null),
-        ContratosMenoresImportStatus.NEVER_STARTED);
+        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, false, null));
 
     assertThat(response.importable()).isFalse();
   }
@@ -78,8 +78,7 @@ class AdminOrganoResponseTest {
   @Test
   void maps_unclassified_organo_to_null_termo_id() {
     AdminOrganoResponse response = AdminOrganoResponse.of(
-        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, false, null),
-        ContratosMenoresImportStatus.NEVER_STARTED);
+        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, false, null));
 
     assertThat(response.termoId()).isNull();
   }
@@ -90,8 +89,7 @@ class AdminOrganoResponseTest {
   @Test
   void carries_the_mark_of_an_inactive_organo() {
     AdminOrganoResponse response = AdminOrganoResponse.of(
-        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", false, true, null),
-        ContratosMenoresImportStatus.NEVER_STARTED);
+        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", false, true, null));
 
     SoftAssertions.assertSoftly(softly -> {
       softly.assertThat(response.active()).isFalse();
@@ -106,8 +104,7 @@ class AdminOrganoResponseTest {
   void serialises_unclassified_organo_with_an_explicit_null_termo_id() throws IOException {
     ObjectMapper objectMapper = ObjectMapper.getDefault();
     AdminOrganoResponse response = AdminOrganoResponse.of(
-        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, false, null),
-        ContratosMenoresImportStatus.NEVER_STARTED);
+        new OrganoDeContratacion(ORGANO_ID, "mar", "Consellería do Mar", true, false, null));
 
     String json = objectMapper.writeValueAsString(response);
 
@@ -119,9 +116,17 @@ class AdminOrganoResponseTest {
   void refuses_organo_that_was_never_persisted() {
     OrganoDeContratacion unsaved = new OrganoDeContratacion("mar", "Consellería do Mar");
 
-    assertThatThrownBy(
-        () -> AdminOrganoResponse.of(unsaved, ContratosMenoresImportStatus.NEVER_STARTED))
+    assertThatThrownBy(() -> AdminOrganoResponse.of(unsaved))
         .isInstanceOf(NullPointerException.class)
         .hasMessageContaining("must carry an id");
+  }
+
+  private static ContratosMenoresImportState halfLoaded() {
+    return ContratosMenoresImportState.startedAt(ORGANO_ID, T_ZERO);
+  }
+
+  private static ContratosMenoresImportState loaded() {
+    return new ContratosMenoresImportState(
+        ORGANO_ID, ContratosMenoresImportStatus.COMPLETE, null, T_ZERO);
   }
 }

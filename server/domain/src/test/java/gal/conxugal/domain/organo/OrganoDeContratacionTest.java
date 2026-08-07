@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import gal.conxugal.domain.organo.taxonomia.TermoId;
+import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,29 @@ class OrganoDeContratacionTest {
     assertThat(organo.name()).isEqualTo("Consorcio Galego");
     assertThat(organo.active()).isTrue();
     assertThat(organo.importable()).isFalse();
+  }
+
+  // The absence of a state row is read here rather than at each call site, so a half-loaded
+  // Órgano can never be mistaken for one that is up to date by a caller that forgot the rule.
+  @Test
+  void an_organo_carrying_no_import_state_has_never_started_importing() {
+    OrganoDeContratacion organo =
+        new OrganoDeContratacion(
+            new OrganoId(UUID.randomUUID()), "consorcio", "Consorcio Galego", true, true, null);
+
+    assertThat(organo.importState()).isNull();
+    assertThat(organo.importStatus()).isEqualTo(ContratosMenoresImportStatus.NEVER_STARTED);
+  }
+
+  @Test
+  void an_organo_carrying_an_import_state_reports_that_state() {
+    OrganoId id = new OrganoId(UUID.randomUUID());
+    OrganoDeContratacion organo =
+        new OrganoDeContratacion(
+            id, "consorcio", "Consorcio Galego", true, true, null,
+            ContratosMenoresImportState.startedAt(id, Instant.parse("2026-08-06T09:00:00Z")));
+
+    assertThat(organo.importStatus()).isEqualTo(ContratosMenoresImportStatus.INCOMPLETE);
   }
 
   @Test

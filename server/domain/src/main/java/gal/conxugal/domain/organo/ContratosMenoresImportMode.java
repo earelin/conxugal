@@ -1,4 +1,4 @@
-package gal.conxugal.domain.contrato;
+package gal.conxugal.domain.organo;
 
 /**
  * How an Órgano's contratos menores are to be imported, decided from how far its history has

@@ -1,10 +1,8 @@
-package gal.conxugal.domain.contrato;
+package gal.conxugal.domain.organo;
 
-import gal.conxugal.domain.organo.OrganoId;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.Insert;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
@@ -24,12 +22,6 @@ import org.jspecify.annotations.Nullable;
 public interface ContratosMenoresImportStateRepository {
 
   Optional<ContratosMenoresImportState> findByOrganoId(OrganoId organoId);
-
-  /**
-   * Every stored state. The administrator's catalogue read pairs these with the Órganos rather
-   * than asking for one Órgano's state at a time, so the whole catalogue costs one query.
-   */
-  List<ContratosMenoresImportState> findAll();
 
   @Insert
   ContratosMenoresImportState insert(ContratosMenoresImportState state);

@@ -1,7 +1,7 @@
-package gal.conxugal.infrastructure.jdbc.contrato;
+package gal.conxugal.infrastructure.jdbc.organo;
 
-import gal.conxugal.domain.contrato.ContratosMenoresImportState;
-import gal.conxugal.domain.contrato.ContratosMenoresImportStateRepository;
+import gal.conxugal.domain.organo.ContratosMenoresImportState;
+import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
 import gal.conxugal.domain.organo.OrganoId;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.model.query.builder.sql.Dialect;

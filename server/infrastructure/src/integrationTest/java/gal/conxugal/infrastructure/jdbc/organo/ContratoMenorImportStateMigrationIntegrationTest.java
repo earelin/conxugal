@@ -1,4 +1,4 @@
-package gal.conxugal.infrastructure.jdbc.contrato;
+package gal.conxugal.infrastructure.jdbc.organo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

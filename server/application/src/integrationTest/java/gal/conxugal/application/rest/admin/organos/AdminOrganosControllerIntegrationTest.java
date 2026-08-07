@@ -6,8 +6,8 @@ import static org.mockito.Mockito.when;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
-import gal.conxugal.domain.contrato.ContratosMenoresImportStatus;
-import gal.conxugal.domain.contrato.ListContratosMenoresImportState;
+import gal.conxugal.domain.organo.ContratosMenoresImportState;
+import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
 import gal.conxugal.domain.organo.ListOrganos;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
@@ -19,8 +19,8 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import jakarta.inject.Inject;
+import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -32,21 +32,14 @@ import org.junit.jupiter.api.Test;
 class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   private static final TermoId CONSELLERIAS = new TermoId(UUID.randomUUID());
+  private static final Instant T_ZERO = Instant.parse("2026-08-06T09:00:00Z");
 
   @Inject
   ListOrganos listOrganos;
 
-  @Inject
-  ListContratosMenoresImportState listImportState;
-
   @MockBean(ListOrganos.class)
   ListOrganos listOrganosMock() {
     return mock(ListOrganos.class);
-  }
-
-  @MockBean(ListContratosMenoresImportState.class)
-  ListContratosMenoresImportState listImportStateMock() {
-    return mock(ListContratosMenoresImportState.class);
   }
 
   @Test
@@ -54,16 +47,14 @@ class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
     OrganoId marId = new OrganoId(UUID.randomUUID());
     OrganoId sanidadeId = new OrganoId(UUID.randomUUID());
     OrganoId facendaId = new OrganoId(UUID.randomUUID());
-    when(listImportState.byOrgano()).thenReturn(
-        Map.of(sanidadeId, ContratosMenoresImportStatus.INCOMPLETE,
-            facendaId, ContratosMenoresImportStatus.COMPLETE));
     when(listOrganos.list()).thenReturn(
         List.of(
             new OrganoDeContratacion(marId, "mar", "Consellería do Mar", false, true, null),
             new OrganoDeContratacion(sanidadeId, "sanidade", "Consellería de Sanidade", true,
-                true, CONSELLERIAS),
+                true, CONSELLERIAS, stateOf(sanidadeId,
+                    ContratosMenoresImportStatus.INCOMPLETE)),
             new OrganoDeContratacion(facendaId, "facenda", "Consellería de Facenda", true, false,
-                CONSELLERIAS)));
+                CONSELLERIAS, stateOf(facendaId, ContratosMenoresImportStatus.COMPLETE))));
 
     Response response = readCatalogueAsAdmin(spec);
 
@@ -86,7 +77,6 @@ class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
   // case needs the object itself to tell "sent as null" from "not sent".
   @Test
   void serves_an_unclassified_organo_with_an_explicit_null_placement(RequestSpecification spec) {
-    when(listImportState.byOrgano()).thenReturn(Map.of());
     when(listOrganos.list()).thenReturn(
         List.of(new OrganoDeContratacion(new OrganoId(UUID.randomUUID()), "mar",
             "Consellería do Mar", true, false, null)));
@@ -104,7 +94,6 @@ class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
       RequestSpecification spec) {
     OrganoId markedId = new OrganoId(UUID.randomUUID());
     OrganoId unmarkedId = new OrganoId(UUID.randomUUID());
-    when(listImportState.byOrgano()).thenReturn(Map.of());
     when(listOrganos.list()).thenReturn(
         List.of(
             new OrganoDeContratacion(markedId, "mar", "Consellería do Mar", true, true, null),
@@ -125,11 +114,9 @@ class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
   @Test
   void an_unmarked_organo_keeps_the_state_its_import_reached(RequestSpecification spec) {
     OrganoId halfLoadedId = new OrganoId(UUID.randomUUID());
-    when(listImportState.byOrgano())
-        .thenReturn(Map.of(halfLoadedId, ContratosMenoresImportStatus.INCOMPLETE));
     when(listOrganos.list()).thenReturn(
         List.of(new OrganoDeContratacion(halfLoadedId, "mar", "Consellería do Mar", true, false,
-            null)));
+            null, stateOf(halfLoadedId, ContratosMenoresImportStatus.INCOMPLETE))));
 
     Response response = readCatalogueAsAdmin(spec);
 
@@ -140,7 +127,6 @@ class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   @Test
   void serves_an_empty_catalogue_before_the_first_import(RequestSpecification spec) {
-    when(listImportState.byOrgano()).thenReturn(Map.of());
     when(listOrganos.list()).thenReturn(List.of());
 
     Response response = readCatalogueAsAdmin(spec);
@@ -180,5 +166,10 @@ class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
     response.then().statusCode(HttpStatus.OK.getCode());
     return response;
+  }
+
+  private static ContratosMenoresImportState stateOf(
+      OrganoId organoId, ContratosMenoresImportStatus status) {
+    return new ContratosMenoresImportState(organoId, status, null, T_ZERO);
   }
 }
