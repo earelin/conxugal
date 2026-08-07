@@ -1,6 +1,7 @@
 package gal.conxugal.infrastructure.jdbc.importrun;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.db.api.Assertions.assertThat;
 
@@ -409,8 +410,8 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     ImportRunId runId =
         importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
 
-    assertThat(catching(() -> importRunRepository.complete(runId, ImportRunState.ABANDONED)))
-        .isInstanceOf(IllegalArgumentException.class);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> importRunRepository.complete(runId, ImportRunState.ABANDONED));
 
     Table runs = runTable();
     assertThat(runs).row(0).value("state").isEqualTo("IN_PROGRESS");
@@ -476,15 +477,6 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
         .filter(coverage -> coverage.organoId().equals(organoId))
         .findFirst()
         .orElseThrow(() -> new AssertionError("Órgano %s is not covered".formatted(organoId)));
-  }
-
-  private static Throwable catching(Runnable call) {
-    try {
-      call.run();
-      throw new AssertionError("The call was expected to be refused");
-    } catch (RuntimeException refusal) {
-      return refusal;
-    }
   }
 
   private Table runTable() {
