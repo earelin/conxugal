@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.db.api.Assertions.assertThat;
 
+import gal.conxugal.domain.organo.ContratosMenoresImportState;
+import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.OrganoRepository;
@@ -17,6 +19,8 @@ import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -37,6 +41,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers(disabledWithoutDocker = true)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
+
+  private static final Instant COVERED_THROUGH = Instant.parse("2026-08-06T09:00:00Z");
 
   @Container
   static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18-alpine");
@@ -82,6 +88,51 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
         .containsExactly(
             tuple("axencia-y", "Axencia Y", false),
             tuple("consorcio-x", "Consorcio X", true));
+  }
+
+  // The state is a value of this aggregate, so it arrives with the Órgano rather than through a
+  // second read the caller has to pair up. Left-joined, so an Órgano that has never been imported
+  // is still listed — dropping it would hide most of the catalogue.
+  @Test
+  void carries_each_organos_contratos_menores_import_state() throws Exception {
+    OrganoId halfLoaded = insertOrgano("axencia-y", "Axencia Y", true);
+    insertOrgano("consorcio-x", "Consorcio X", true);
+    insertImportState(halfLoaded, "INCOMPLETE");
+
+    List<OrganoDeContratacion> organos = organoRepository.findAllOrderByName();
+
+    assertThat(organos)
+        .extracting(
+            OrganoDeContratacion::sourceKey, OrganoDeContratacion::importStatus)
+        .containsExactly(
+            tuple("axencia-y", ContratosMenoresImportStatus.INCOMPLETE),
+            tuple("consorcio-x", ContratosMenoresImportStatus.NEVER_STARTED));
+  }
+
+  @Test
+  void carries_the_cursor_and_covered_through_of_the_state_it_loads() throws Exception {
+    OrganoId organoId = insertOrgano("axencia-y", "Axencia Y", true);
+    insertImportState(organoId, "INCOMPLETE");
+
+    ContratosMenoresImportState state =
+        organoRepository.findAllOrderByName().getFirst().importState();
+
+    assertThat(state).isNotNull();
+    assertThat(state.organoId()).isEqualTo(organoId);
+    assertThat(state.coveredThrough()).isEqualTo(COVERED_THROUGH);
+  }
+
+  private void insertImportState(OrganoId organoId, String state) throws Exception {
+    String sql =
+        "INSERT INTO contrato_menor_import_state (organo_id, state, covered_through)"
+            + " VALUES (?, ?, ?)";
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement statement = connection.prepareStatement(sql)) {
+      statement.setObject(1, organoId.value());
+      statement.setString(2, state);
+      statement.setTimestamp(3, Timestamp.from(COVERED_THROUGH));
+      statement.executeUpdate();
+    }
   }
 
   @Test

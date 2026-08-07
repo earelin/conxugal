@@ -261,11 +261,12 @@ paths:
       summary: List the catalogue as an administrator sees it
       description: >-
         Every stored Órgano with the same id, name, active state and taxonomía placement `GET
-        /api/organos` serves, **plus its contratos menores import mark**. A second serialisation
-        of an Órgano exists because the mark is an administrator's fact: seeing which Órganos are
-        marked is an administration capability, so it cannot be added to the catalogue read any
-        authenticated user may make. It carries the placement as well as the mark so the
-        administration UI swaps one read for the other rather than issuing both.
+        /api/organos` serves, **plus its contratos menores import mark and import state**. A
+        second serialisation of an Órgano exists because both are an administrator's facts:
+        seeing which Órganos are marked, and how far each one has loaded, is an administration
+        capability, so neither can be added to the catalogue read any authenticated user may
+        make. It carries the placement alongside them so the administration UI swaps one read for
+        the other rather than issuing both.
       responses:
         "200":
           description: >-
@@ -1399,18 +1400,19 @@ components:
       type: object
       description: >-
         One Órgano de Contratación as an administrator sees it: everything `Organo` carries, plus
-        the contratos menores import mark. The mark is deliberately absent from `Organo` — a
-        `USER` is not told which Órganos are imported — so this is a second serialisation of the
-        same aggregate rather than an extension of the shared one. It carries **no import state**:
-        whether an Órgano's history is unloaded, half-loaded or complete is a separate fact, and
-        arrives on this same shape when it is built.
-      required: [id, name, active, termoId, importable]
+        the contratos menores import mark and the state of that import. Both are deliberately
+        absent from `Organo` — a `USER` is not told which Órganos are imported — so this is a
+        second serialisation of the same aggregate rather than an extension of the shared one.
+        The mark and the state are independent facts: the mark is what an administrator asked
+        for, the state is how far the system got.
+      required: [id, name, active, termoId, importable, importState]
       example:
         id: "8d1b0f6e-2c5a-4c1e-9a3f-6b7c8d9e0f11"
         name: "Consellería de Sanidade"
         active: true
         termoId: "1c9e4d2b-7a3f-4e58-9b21-0d6f5a4c3e77"
         importable: true
+        importState: "INCOMPLETE"
       properties:
         id:
           type: string
@@ -1441,6 +1443,19 @@ components:
             Whether an administrator has opted this Órgano into having its contratos menores
             imported. False for every newly discovered Órgano, and never changed by a catalogue
             import — only by `PUT`/`DELETE /api/admin/organo/{id}/importable`.
+        importState:
+          type: string
+          enum: [NEVER_STARTED, INCOMPLETE, COMPLETE]
+          example: "INCOMPLETE"
+          description: >-
+            How far this Órgano's contratos menores history has been loaded: `NEVER_STARTED`
+            before any import has run for it, `INCOMPLETE` once one has started but not reached
+            the Órgano's earliest publication, and `COMPLETE` once its full published history is
+            stored. Three values rather than two because a half-loaded Órgano and a never-loaded
+            one need different treatment, and collapsing them would let a partial load read as up
+            to date. Independent of `importable`: an Órgano never imported reports
+            `NEVER_STARTED` whether or not it is marked, and unmarking one keeps whatever state
+            it had reached, since its stored contracts are retained.
 
     Termo:
       type: object

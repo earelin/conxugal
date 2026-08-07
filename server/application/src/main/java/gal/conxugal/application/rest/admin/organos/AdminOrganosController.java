@@ -8,8 +8,8 @@ import java.util.List;
 
 /**
  * The catalogue as an administrator sees it — the same rows, the same name order, and the import
- * mark the shared read withholds. It reads the same use case that read serves, so the two orders
- * cannot drift apart; only the serialisation differs.
+ * mark and import state the shared read withholds. It reads the same use case that read serves, so
+ * the two orders cannot drift apart; only the serialisation differs.
  */
 @Controller("/api/admin/organos")
 @Secured("ADMIN")

@@ -6,6 +6,8 @@ import static org.mockito.Mockito.when;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
+import gal.conxugal.domain.organo.ContratosMenoresImportState;
+import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
 import gal.conxugal.domain.organo.ListOrganos;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
@@ -17,6 +19,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import jakarta.inject.Inject;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -29,6 +32,7 @@ import org.junit.jupiter.api.Test;
 class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   private static final TermoId CONSELLERIAS = new TermoId(UUID.randomUUID());
+  private static final Instant T_ZERO = Instant.parse("2026-08-06T09:00:00Z");
 
   @Inject
   ListOrganos listOrganos;
@@ -47,9 +51,10 @@ class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
         List.of(
             new OrganoDeContratacion(marId, "mar", "Consellería do Mar", false, true, null),
             new OrganoDeContratacion(sanidadeId, "sanidade", "Consellería de Sanidade", true,
-                true, CONSELLERIAS),
+                true, CONSELLERIAS, stateOf(sanidadeId,
+                    ContratosMenoresImportStatus.INCOMPLETE)),
             new OrganoDeContratacion(facendaId, "facenda", "Consellería de Facenda", true, false,
-                CONSELLERIAS)));
+                CONSELLERIAS, stateOf(facendaId, ContratosMenoresImportStatus.COMPLETE))));
 
     Response response = readCatalogueAsAdmin(spec);
 
@@ -64,6 +69,8 @@ class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
         .containsExactly(null, CONSELLERIAS.toString(), CONSELLERIAS.toString());
     assertThat(response.jsonPath().getList("importable", Boolean.class))
         .containsExactly(true, true, false);
+    assertThat(response.jsonPath().getList("importState", String.class))
+        .containsExactly("NEVER_STARTED", "INCOMPLETE", "COMPLETE");
   }
 
   // getList spreads over the array and yields null for an absent key too, so the unclassified
@@ -77,6 +84,45 @@ class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
     Response response = readCatalogueAsAdmin(spec);
 
     assertThat(response.jsonPath().getMap("[0]")).containsEntry("termoId", null);
+  }
+
+  // The mark says what an administrator asked for, the state says how far the system got, and
+  // an Órgano marked minutes ago has had neither the time nor a run to change the second. Reading
+  // the state off the mark would render it as loaded on the strength of the request alone.
+  @Test
+  void an_organo_never_imported_reads_as_never_started_whether_or_not_it_is_marked(
+      RequestSpecification spec) {
+    OrganoId markedId = new OrganoId(UUID.randomUUID());
+    OrganoId unmarkedId = new OrganoId(UUID.randomUUID());
+    when(listOrganos.list()).thenReturn(
+        List.of(
+            new OrganoDeContratacion(markedId, "mar", "Consellería do Mar", true, true, null),
+            new OrganoDeContratacion(unmarkedId, "facenda", "Consellería de Facenda", true, false,
+                null)));
+
+    Response response = readCatalogueAsAdmin(spec);
+
+    assertThat(response.jsonPath().getList("importable", Boolean.class))
+        .containsExactly(true, false);
+    assertThat(response.jsonPath().getList("importState", String.class))
+        .containsExactly("NEVER_STARTED", "NEVER_STARTED");
+  }
+
+  // Unmarking retains an Órgano's contracts, so it must retain how far they got too: collapsing
+  // a half-loaded unmarked Órgano to never-started would make a later re-mark restart a
+  // multi-day walk instead of resuming it.
+  @Test
+  void an_unmarked_organo_keeps_the_state_its_import_reached(RequestSpecification spec) {
+    OrganoId halfLoadedId = new OrganoId(UUID.randomUUID());
+    when(listOrganos.list()).thenReturn(
+        List.of(new OrganoDeContratacion(halfLoadedId, "mar", "Consellería do Mar", true, false,
+            null, stateOf(halfLoadedId, ContratosMenoresImportStatus.INCOMPLETE))));
+
+    Response response = readCatalogueAsAdmin(spec);
+
+    assertThat(response.jsonPath().getList("importable", Boolean.class)).containsExactly(false);
+    assertThat(response.jsonPath().getList("importState", String.class))
+        .containsExactly("INCOMPLETE");
   }
 
   @Test
@@ -120,5 +166,10 @@ class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
     response.then().statusCode(HttpStatus.OK.getCode());
     return response;
+  }
+
+  private static ContratosMenoresImportState stateOf(
+      OrganoId organoId, ContratosMenoresImportStatus status) {
+    return new ContratosMenoresImportState(organoId, status, null, T_ZERO);
   }
 }

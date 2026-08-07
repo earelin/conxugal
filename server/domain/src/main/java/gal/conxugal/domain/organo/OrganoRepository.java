@@ -3,6 +3,7 @@ package gal.conxugal.domain.organo;
 import gal.conxugal.domain.organo.taxonomia.TermoId;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.Insert;
+import io.micronaut.data.annotation.Join;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -19,9 +20,15 @@ import org.jspecify.annotations.Nullable;
 public interface OrganoRepository {
 
   /**
-   * Every Órgano, ordered by name. The order is part of this port's own contract, not the
-   * adapter's private choice: the catalogue read endpoint serves this list verbatim.
+   * Every Órgano, ordered by name, each carrying its contratos menores import state. The order is
+   * part of this port's own contract, not the adapter's private choice: the catalogue read
+   * endpoint serves this list verbatim.
+   *
+   * <p>The state is loaded with the Órgano rather than read separately, because it is a value of
+   * that aggregate: one query for the catalogue, and no caller can pair the two lists wrongly.
+   * It is left-joined, so an Órgano whose import never started still appears.
    */
+  @Join(value = "importState", type = Join.Type.LEFT_FETCH)
   List<OrganoDeContratacion> findAllOrderByName();
 
   List<OrganoDeContratacion> findAllBySourceKeyIn(Collection<String> sourceKeys);
