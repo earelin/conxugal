@@ -37,7 +37,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @MicronautTest(startApplication = false)
 @Testcontainers(disabledWithoutDocker = true)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class ContratoMenorImportStateMigrationIntegrationTest implements TestPropertyProvider {
+class ContratosMenoresImportStateMigrationIntegrationTest implements TestPropertyProvider {
 
   @Container
   static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18-alpine");
