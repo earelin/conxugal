@@ -525,20 +525,9 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     }
   }
 
-  private OrganoId insertOrgano(String sourceKey) throws SQLException {
-    String sql =
-        "INSERT INTO organo_contratacion (id, source_key, name, active)"
-            + " VALUES (uuidv7(), ?, ?, TRUE) RETURNING id";
-    try (Connection connection = rawConnection();
-        PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setString(1, sourceKey);
-      statement.setString(2, sourceKey);
-      try (ResultSet resultSet = statement.executeQuery()) {
-        if (!resultSet.next()) {
-          throw new IllegalStateException("Insert did not return a generated id");
-        }
-        return new OrganoId(resultSet.getObject("id", UUID.class));
-      }
+  private static OrganoId insertOrgano(String sourceKey) throws SQLException {
+    try (Connection connection = rawConnection()) {
+      return OrganoFixture.insert(connection, sourceKey);
     }
   }
 
