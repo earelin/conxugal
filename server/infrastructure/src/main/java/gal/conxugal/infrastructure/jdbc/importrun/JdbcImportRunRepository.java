@@ -237,15 +237,19 @@ public abstract class JdbcImportRunRepository
 
   @Override
   @Transactional(propagation = TransactionDefinition.Propagation.REQUIRES_NEW)
-  public void complete(ImportRunId runId, ImportRunState verdict, int added, int refreshed) {
+  public void complete(
+      ImportRunId runId,
+      ImportRunState verdict,
+      int addedSinceLastAdvance,
+      int refreshedSinceLastAdvance) {
     String storable = verdict.requireStorableVerdict().name();
     OffsetDateTime now = atUtc(clock.instant());
     int completed = executeUpdate(COMPLETE_RUN, statement -> {
       statement.setString(1, storable);
       statement.setObject(2, now);
       statement.setObject(3, now);
-      statement.setInt(4, added);
-      statement.setInt(5, refreshed);
+      statement.setInt(4, addedSinceLastAdvance);
+      statement.setInt(5, refreshedSinceLastAdvance);
       statement.setObject(6, runId.value());
     });
     if (completed == 0) {

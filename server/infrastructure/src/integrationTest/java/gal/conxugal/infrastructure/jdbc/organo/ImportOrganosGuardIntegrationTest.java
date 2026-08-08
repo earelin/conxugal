@@ -22,12 +22,15 @@ import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import org.assertj.core.api.SoftAssertions;
 import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
 import org.junit.jupiter.api.AfterEach;
@@ -39,9 +42,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * The catalogue import on the durable, system-wide guard, against a real Postgres. What it proves
- * is the half an in-process flag never could: a run of the <em>other</em> importer refuses this
- * one, and a run whose process died stops refusing it once it has gone quiet for long enough.
+ * The catalogue import on the durable, system-wide guard, against a real Postgres: a live run of
+ * the <em>other</em> importer refuses it, and a run whose process died stops refusing it once it
+ * has gone quiet for long enough.
  *
  * <p><strong>{@code transactional = false}</strong>, because the run record commits in
  * transactions of its own and an importer calls it with none in scope. The default would join
@@ -112,8 +115,8 @@ class ImportOrganosGuardIntegrationTest implements TestPropertyProvider {
     }
   }
 
-  // The refusal the in-process flag could not make: a contratos menores import leaves nothing for
-  // this JVM's own bookkeeping to see, and it still holds the guard.
+  // The guard is one guard across both importers, and it is read from the database rather than
+  // from this process, so a contratos menores run holds it without this JVM knowing anything.
   @Test
   void catalogue_import_is_refused_while_the_other_importer_has_one_live() {
     assertThat(importRuns.claim(Importer.CONTRATOS_MENORES, List.of())).isPresent();
@@ -139,10 +142,11 @@ class ImportOrganosGuardIntegrationTest implements TestPropertyProvider {
         .thenReturn(SOURCE_LIST);
 
     ImportOutcome outcome = importOrganos.run();
+    ImportOutcome afterItReleased = importOrganos.run();
 
     assertThat(arrivedMidRun.get().status()).isEqualTo(ImportOutcome.Status.ALREADY_RUNNING);
     assertThat(outcome.status()).isEqualTo(ImportOutcome.Status.SUCCESS);
-    assertThat(importOrganos.run().status()).isEqualTo(ImportOutcome.Status.SUCCESS);
+    assertThat(afterItReleased.status()).isEqualTo(ImportOutcome.Status.SUCCESS);
   }
 
   // The catalogue import writes no per-Órgano rows: it reports one outcome for the whole
@@ -160,18 +164,22 @@ class ImportOrganosGuardIntegrationTest implements TestPropertyProvider {
 
     ImportOutcome outcome = importOrganos.run();
 
+    // The deactivated count goes to whoever triggered and to no column: the record holds what the
+    // guard and the outcome read, and none of them reads how many Órganos an import stood down.
+    assertThat(outcome.deactivated()).isEqualTo(1);
     Table runs = runTable();
     assertThat(runs).hasNumberOfRows(1);
     assertThat(runs).row(0).value("importer").isEqualTo("ORGANOS");
     assertThat(runs).row(0).value("state").isEqualTo("SUCCEEDED");
-    assertThat(runs).row(0).value("started_at").isNotNull();
-    assertThat(runs).row(0).value("finished_at").isNotNull();
     assertThat(runs).row(0).value("added").isEqualTo(1);
     assertThat(runs).row(0).value("refreshed").isEqualTo(1);
     assertThat(coverageTable()).hasNumberOfRows(0);
-    // The deactivated count goes to whoever triggered and to no column: the record holds what the
-    // guard and the outcome read, and none of them reads how many Órganos an import stood down.
-    assertThat(outcome.deactivated()).isEqualTo(1);
+    SoftAssertions.assertSoftly(softly -> {
+      // Both stamps read the same pinned clock, so a run of this shape starts and finishes at one
+      // instant; that both are written is what an outcome needs to report it.
+      softly.assertThat(storedInstant("started_at")).isEqualTo(STARTED_AT);
+      softly.assertThat(storedInstant("finished_at")).isEqualTo(STARTED_AT);
+    });
   }
 
   @Test
@@ -186,9 +194,8 @@ class ImportOrganosGuardIntegrationTest implements TestPropertyProvider {
     assertThat(runs).row(0).value("state").isEqualTo("FAILED");
   }
 
-  // What the in-process flag handled for free by forgetting on restart. Nothing sweeps the dead
-  // run's row, so only the abandonment bound can release the guard it left held — and the row
-  // itself is not rewritten to say so.
+  // Nothing sweeps a dead run's row, so the abandonment bound is the only thing that releases the
+  // guard it left held — and the row itself is never rewritten to say it was abandoned.
   @Test
   void run_left_behind_by_dead_process_stops_refusing_the_catalogue_import_past_the_bound() {
     assertThat(importRuns.claim(Importer.CONTRATOS_MENORES, List.of())).isPresent();
@@ -227,6 +234,22 @@ class ImportOrganosGuardIntegrationTest implements TestPropertyProvider {
         .table(name)
         .columnsToOrder(new Table.Order[] {Table.Order.asc(order)})
         .build();
+  }
+
+  // Read through JDBC rather than asserted on the table, because AssertJ DB compares a timestamptz
+  // against the session time zone and the claim here is about the instant.
+  private static Instant storedInstant(String column) {
+    try (Connection connection = rawConnection();
+        PreparedStatement statement =
+            connection.prepareStatement("SELECT started_at, finished_at FROM import_run");
+        ResultSet resultSet = statement.executeQuery()) {
+      if (!resultSet.next()) {
+        throw new IllegalStateException("No run is recorded");
+      }
+      return resultSet.getObject(column, OffsetDateTime.class).toInstant();
+    } catch (SQLException e) {
+      throw new IllegalStateException("Could not read %s".formatted(column), e);
+    }
   }
 
   private static void insertOrgano(String sourceKey, String name) throws SQLException {

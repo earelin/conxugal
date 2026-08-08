@@ -49,10 +49,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * otherwise binds one shared connection to the whole calling thread, which would let the final
  * assertion see that connection's ambient, not-yet-committed state instead of what the
  * reconciler's own transaction actually committed.
- *
- * <p>The run record is deliberately not mocked here. A reconciliation that throws is the one path
- * on which the guard could be left held with no process behind it, so this is where the record has
- * to be real: what the import writes about a failure is part of the failure being survivable.
  */
 @MicronautTest(startApplication = false)
 @Testcontainers(disabledWithoutDocker = true)
@@ -137,14 +133,15 @@ class ImportOrganosAtomicityIntegrationTest implements TestPropertyProvider {
         .thenReturn(List.of(new OrganoSourceEntry("will-be-renamed", "Renamed")));
 
     runOnItsOwnThread(importOrganos::run);
+    ImportOutcome next = onItsOwnThread(importOrganos::run);
 
+    assertThat(next.status()).isEqualTo(ImportOutcome.Status.SUCCESS);
     Table runs = runTable();
-    assertThat(runs).hasNumberOfRows(1);
+    assertThat(runs).hasNumberOfRows(2);
     assertThat(runs).row(0).value("importer").isEqualTo("ORGANOS");
     assertThat(runs).row(0).value("state").isEqualTo("FAILED");
-
-    ImportOutcome next = onItsOwnThread(importOrganos::run);
-    assertThat(next.status()).isEqualTo(ImportOutcome.Status.SUCCESS);
+    assertThat(runs).row(1).value("importer").isEqualTo("ORGANOS");
+    assertThat(runs).row(1).value("state").isEqualTo("SUCCEEDED");
   }
 
   // Runs the given call on its own thread and returns the exception it threw, so a failure
@@ -175,6 +172,7 @@ class ImportOrganosAtomicityIntegrationTest implements TestPropertyProvider {
             postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
         .create()
         .table("import_run")
+        .columnsToOrder(new Table.Order[] {Table.Order.asc("started_at")})
         .build();
   }
 

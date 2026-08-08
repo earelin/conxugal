@@ -16,11 +16,14 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /**
- * The scheduler's own code is untouched by the move onto the system-wide guard, but what it
- * inherits is not: the nightly catalogue import can now be refused by work it has never heard of.
- * So this drives the real {@code ImportOrganos} through the scheduled method with the guard held,
- * rather than mocking the import and asserting the delegation — the delegation was never the part
- * that changed.
+ * The scheduled method wired to the real {@code ImportOrganos}, with the claim stubbed to refuse:
+ * the nightly catalogue import can be turned away by work it has never heard of, and it reconciles
+ * nothing when it is. Every other test in this package mocks the import itself, so none of them
+ * can see past the delegation to what a refused run actually does.
+ *
+ * <p>Only that half is assertable here — the scheduled method returns nothing, so the refusal
+ * itself is {@code ImportOrganosTest}'s to assert and the durable guard behind it is
+ * {@code ImportOrganosGuardIntegrationTest}'s.
  */
 @MicronautTest
 class ImportOrganosSchedulerGuardIntegrationTest {

@@ -53,15 +53,20 @@ public interface ImportRunRepository {
   /**
    * Settles the run: its verdict, the moment it finished, and whatever it counted that no
    * {@link #advance} had already reported. The counts are <em>added</em> to the run's totals, on
-   * the same rule as an advance, so an importer that reports as it goes settles with nothing left
-   * to add while one whose whole run is a single act carries all of it here.
+   * the same rule an advance follows, so an importer that reports as it goes settles with zeroes
+   * while one whose whole run is a single act carries all of it here — the parameters are named
+   * for that, because passing the run's totals instead would count everything twice.
    *
-   * <p>An importer with no covered Órganos has no other way to record a count: an advance moves a
+   * <p>An importer covering no Órganos has no other way to record a count: an advance moves a
    * coverage row first and leaves the run's totals alone when there is none to move.
    *
    * @throws IllegalArgumentException if {@code verdict} is not one a run can be completed with
    */
-  void complete(ImportRunId runId, ImportRunState verdict, int added, int refreshed);
+  void complete(
+      ImportRunId runId,
+      ImportRunState verdict,
+      int addedSinceLastAdvance,
+      int refreshedSinceLastAdvance);
 
   /** The run and every Órgano it covers, with the run's state already read for abandonment. */
   Optional<ImportRunReport> findRun(ImportRunId runId);

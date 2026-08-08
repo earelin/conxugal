@@ -438,10 +438,32 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(runs).row(0).value("finished_at").isNull();
   }
 
-  // Re-completing is a caller's mistake with no requirement attached; what matters is that it
-  // rewrites nothing but the verdict it was given.
+  // The shape of an importer that reports as it goes and therefore settles with zeroes: what an
+  // advance already counted stays counted once. An importer passing its run totals here instead
+  // would count everything twice, which is why the completion parameters are named for the
+  // remainder rather than for the total.
   @Test
-  void completing_run_that_is_already_complete_leaves_its_counts_and_coverage_alone()
+  void completing_run_that_advanced_adds_to_what_the_advance_counted() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    ImportRunId runId =
+        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+    importRunRepository.advance(runId, organoId, 100, 4);
+    importRunRepository.advance(runId, organoId, 30, 1);
+
+    importRunRepository.complete(runId, ImportRunState.SUCCEEDED, 0, 0);
+
+    ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
+    SoftAssertions.assertSoftly(softly -> {
+      softly.assertThat(report.added()).isEqualTo(130);
+      softly.assertThat(report.refreshed()).isEqualTo(5);
+    });
+  }
+
+  // Re-completing is a caller's mistake with no requirement attached. The verdict it is given is
+  // the one that stands, and the coverage rows are none of its business — but the counts it
+  // carries are added again, because the statement cannot tell a retry from a second remainder.
+  @Test
+  void completing_run_that_is_already_complete_takes_the_new_verdict_and_adds_its_counts()
       throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId runId =
@@ -450,12 +472,12 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     importRunRepository.finishOrgano(runId, organoId, ImportRunOrganoState.SUCCEEDED, null);
     importRunRepository.complete(runId, ImportRunState.SUCCEEDED, 0, 0);
 
-    importRunRepository.complete(runId, ImportRunState.FAILED, 0, 0);
+    importRunRepository.complete(runId, ImportRunState.FAILED, 7, 0);
 
     ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
     SoftAssertions.assertSoftly(softly -> {
       softly.assertThat(report.state()).isEqualTo(ImportRunState.FAILED);
-      softly.assertThat(report.added()).isEqualTo(100);
+      softly.assertThat(report.added()).isEqualTo(107);
       softly.assertThat(coverageFor(report, organoId).state())
           .isEqualTo(ImportRunOrganoState.SUCCEEDED);
     });

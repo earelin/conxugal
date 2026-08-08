@@ -17,14 +17,14 @@ import org.slf4j.LoggerFactory;
  * deactivated, and deactivate stored entries absent from the source — within a single
  * transaction.
  *
- * <p>It runs only while it holds the system-wide guard, which is durable and shared with every
- * other importer. So {@link ImportOutcome#alreadyRunning()} now means <em>some</em> import holds
- * it, not merely another catalogue import in this JVM: a contratos menores import measured in
- * days refuses every overnight catalogue run it overlaps, which is the cost the guard is worth.
+ * <p>It runs only while it holds the durable guard every importer shares, so
+ * {@link ImportOutcome#alreadyRunning()} means <em>some</em> import holds it rather than another
+ * catalogue import in this JVM: a contratos menores import measured in days refuses every
+ * overnight catalogue run it overlaps, which is what the guard is worth.
  *
  * <p>Holding it means recording it — a guard cannot see an import that records nothing — so a run
- * claims a row and settles it with its verdict and counts. The run covers no Órganos of its own:
- * this import reports one outcome for the whole catalogue, not one per Órgano.
+ * claims a row and settles it with its verdict and counts. It covers no Órganos of its own: this
+ * import reports one outcome for the whole catalogue, not one per Órgano.
  *
  * <p><strong>The record never breaks the import.</strong> A completion write that fails is logged
  * and let go, because a reconciliation that committed has already happened and nothing about
@@ -52,21 +52,22 @@ public class ImportOrganos {
   public ImportOutcome run() {
     Optional<ImportRunId> claimed = importRuns.claim(Importer.ORGANOS, List.of());
     if (claimed.isEmpty()) {
-      LOG.info("Órganos import refused: another import holds the guard");
       return ImportOutcome.alreadyRunning();
     }
     ImportRunId runId = claimed.get();
-    ImportOutcome outcome;
+    ImportRunState verdict = ImportRunState.FAILED;
+    ImportOutcome outcome = ImportOutcome.failure();
+    // Settled from a finally, so nothing thrown out of the reconciliation — an Error as much as an
+    // exception — can leave the guard held by a run this process has already given up on, which
+    // would refuse every import in the system until the abandonment bound passed. The settlement
+    // swallows its own failures, so it cannot mask what is on its way out.
     try {
       outcome = reconcile();
-    } catch (RuntimeException e) {
-      // Settling the run is what the in-process flag's finally block used to buy: a reconciliation
-      // that throws would otherwise leave the guard held until the abandonment bound expired.
-      record(runId, ImportRunState.FAILED, ImportOutcome.failure());
-      throw e;
+      verdict = verdictOf(outcome);
+      return outcome;
+    } finally {
+      record(runId, verdict, outcome);
     }
-    record(runId, verdictOf(outcome), outcome);
-    return outcome;
   }
 
   private ImportOutcome reconcile() {
