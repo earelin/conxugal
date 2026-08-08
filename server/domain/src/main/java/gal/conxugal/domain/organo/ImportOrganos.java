@@ -69,7 +69,7 @@ public class ImportOrganos {
       verdict = verdictOf(outcome);
       return outcome;
     } finally {
-      record(runId, verdict, outcome);
+      settle(runId, verdict, outcome);
     }
   }
 
@@ -95,7 +95,7 @@ public class ImportOrganos {
    * Settles the run, and only the run. The deactivated count is not recorded: the outcome carries
    * it to whoever triggered, and the record holds the columns the guard and the outcome read.
    */
-  private void record(ImportRunId runId, ImportRunState verdict, ImportOutcome outcome) {
+  private void settle(ImportRunId runId, ImportRunState verdict, ImportOutcome outcome) {
     try {
       importRuns.complete(runId, verdict, outcome.added(), outcome.refreshed());
     } catch (RuntimeException e) {
