@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
+import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.organo.ImportOrganos;
 import gal.conxugal.domain.organo.ImportOutcome;
 import io.micronaut.http.HttpHeaders;
@@ -28,6 +29,13 @@ class ImportOrganosControllerIntegrationTest extends AuthenticationTestSupport {
   @MockBean(ImportOrganos.class)
   ImportOrganos importOrganosMock() {
     return mock(ImportOrganos.class);
+  }
+
+  // The mock proxy above still resolves the real constructor's dependencies, and the run record's
+  // adapter wants a datasource this suite deliberately runs without.
+  @MockBean(ImportRunRepository.class)
+  ImportRunRepository importRunsMock() {
+    return mock(ImportRunRepository.class);
   }
 
   @Test

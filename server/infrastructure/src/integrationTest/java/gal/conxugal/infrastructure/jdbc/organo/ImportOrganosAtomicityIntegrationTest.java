@@ -2,10 +2,12 @@ package gal.conxugal.infrastructure.jdbc.organo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.assertj.db.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.domain.organo.ImportOrganos;
+import gal.conxugal.domain.organo.ImportOutcome;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoRepository;
 import gal.conxugal.domain.organo.OrganoSource;
@@ -27,6 +29,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import org.assertj.db.type.AssertDbConnectionFactory;
+import org.assertj.db.type.Table;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -45,6 +49,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * otherwise binds one shared connection to the whole calling thread, which would let the final
  * assertion see that connection's ambient, not-yet-committed state instead of what the
  * reconciler's own transaction actually committed.
+ *
+ * <p>The run record is deliberately not mocked here. A reconciliation that throws is the one path
+ * on which the guard could be left held with no process behind it, so this is where the record has
+ * to be real: what the import writes about a failure is part of the failure being survivable.
  */
 @MicronautTest(startApplication = false)
 @Testcontainers(disabledWithoutDocker = true)
@@ -114,11 +122,36 @@ class ImportOrganosAtomicityIntegrationTest implements TestPropertyProvider {
             tuple("will-be-renamed", "Old Name", true), tuple("disappears", "Disappears", true));
   }
 
+  // A reconciliation that throws is the one path on which nothing would settle the run: the guard
+  // would then be held by a process that has already given up, and only the abandonment bound
+  // would release it — a quarter of an hour in which no import of any kind can start.
+  @Test
+  void run_whose_write_fails_is_recorded_as_failed_and_holds_the_guard_no_longer()
+      throws Exception {
+    insertOrgano("will-be-renamed", "Old Name", true);
+    when(organoSource.fetchAll())
+        .thenReturn(
+            List.of(
+                new OrganoSourceEntry("will-be-renamed", "Renamed"),
+                new OrganoSourceEntry("new-and-poisoned", "A".repeat(256))))
+        .thenReturn(List.of(new OrganoSourceEntry("will-be-renamed", "Renamed")));
+
+    runOnItsOwnThread(importOrganos::run);
+
+    Table runs = runTable();
+    assertThat(runs).hasNumberOfRows(1);
+    assertThat(runs).row(0).value("importer").isEqualTo("ORGANOS");
+    assertThat(runs).row(0).value("state").isEqualTo("FAILED");
+
+    ImportOutcome next = onItsOwnThread(importOrganos::run);
+    assertThat(next.status()).isEqualTo(ImportOutcome.Status.SUCCESS);
+  }
+
   // Runs the given call on its own thread and returns the exception it threw, so a failure
   // that reaches the test thread as data does not silently mask the connection isolation this
   // test relies on (see the class javadoc).
   private static Exception runOnItsOwnThread(Runnable call) throws Exception {
-    Callable<Exception> captureFailure =
+    return onItsOwnThread(
         () -> {
           try {
             call.run();
@@ -126,10 +159,23 @@ class ImportOrganosAtomicityIntegrationTest implements TestPropertyProvider {
           } catch (RuntimeException e) {
             return e;
           }
-        };
+        });
+  }
+
+  private static <T> T onItsOwnThread(Callable<T> call) throws Exception {
     try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
-      return executor.submit(captureFailure).get(10, TimeUnit.SECONDS);
+      return executor.submit(call).get(10, TimeUnit.SECONDS);
     }
+  }
+
+  // Off the container rather than the injected DataSource: the run record commits in transactions
+  // of its own, on another thread, and this has to see what they committed.
+  private static Table runTable() {
+    return AssertDbConnectionFactory.of(
+            postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
+        .create()
+        .table("import_run")
+        .build();
   }
 
   private UUID insertOrgano(String sourceKey, String name, boolean active) throws Exception {
