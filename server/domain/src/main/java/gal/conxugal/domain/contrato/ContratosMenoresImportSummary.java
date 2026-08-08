@@ -19,4 +19,16 @@ public record ContratosMenoresImportSummary(
   public ContratosMenoresImportSummary {
     Objects.requireNonNull(state, "state must not be null");
   }
+
+  /** A walk that read the Órgano's history out: its stored count reached the source's own. */
+  public static ContratosMenoresImportSummary complete(int added, int refreshed) {
+    return new ContratosMenoresImportSummary(
+        added, refreshed, ContratosMenoresImportStatus.COMPLETE);
+  }
+
+  /** A walk that stopped short of that, whatever stopped it. What it stored still stands. */
+  public static ContratosMenoresImportSummary incomplete(int added, int refreshed) {
+    return new ContratosMenoresImportSummary(
+        added, refreshed, ContratosMenoresImportStatus.INCOMPLETE);
+  }
 }

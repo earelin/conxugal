@@ -134,6 +134,17 @@ public class ImportOrganoContratosMenores {
         : cursorDate;
   }
 
+  /**
+   * How one window ended: what it stored, and the count the source reported as it was read.
+   *
+   * <p>{@code mayContinue} is false when the run stopped holding the guard part-way through the
+   * window. The pages already stored stand and are counted here, but nothing beyond that window is
+   * this walk's to read — and {@code recordsTotal} then says nothing, because the window it would
+   * have been judged against was never read out.
+   */
+  private record WindowRead(int added, int refreshed, long recordsTotal, boolean mayContinue) {}
+
+  /** Window by window, newest first, until one of the three endings arrives. */
   private ContratosMenoresImportSummary walk(
       ImportRunId runId, String sourceKey, OrganoId organoId, LocalDate resumePoint) {
     LocalDate historyFloor = configuration.historyFloor();
@@ -142,32 +153,15 @@ public class ImportOrganoContratosMenores {
     int refreshed = 0;
     while (!windowEnd.isBefore(historyFloor)) {
       LocalDate windowStart = latest(windowEnd.minusMonths(WINDOW_MONTHS), historyFloor);
-      long recordsTotal = 0;
-      int offset = 0;
-      boolean windowExhausted = false;
-      while (!windowExhausted) {
-        if (!runHoldsTheGuard(runId)) {
-          LOG.warn(
-              "Contratos menores walk of Órgano {} stopped: its run {} no longer holds the import"
-                  + " guard, so another import may already have claimed it",
-              organoId, runId);
-          return new ContratosMenoresImportSummary(
-              added, refreshed, ContratosMenoresImportStatus.INCOMPLETE);
-        }
-        ContratoMenorSourcePage page =
-            contratoMenorSource.fetchPage(sourceKey, windowStart, windowEnd, offset, PAGE_SIZE);
-        recordsTotal = page.recordsTotal();
-        windowExhausted = page.entries().size() < PAGE_SIZE;
-        UpsertCounts counts = contratos.upsertAll(contratosOf(page, organoId));
-        added += counts.added();
-        refreshed += counts.refreshed();
-        recordProgress(runId, organoId, windowExhausted ? windowStart : windowEnd, counts);
-        offset += page.entries().size();
+      WindowRead read = readWindow(runId, sourceKey, organoId, windowStart, windowEnd);
+      added += read.added();
+      refreshed += read.refreshed();
+      if (!read.mayContinue()) {
+        return ContratosMenoresImportSummary.incomplete(added, refreshed);
       }
-      if (contratos.countByOrganoId(organoId) >= recordsTotal) {
+      if (contratos.countByOrganoId(organoId) >= read.recordsTotal()) {
         importStates.updateState(organoId, ContratosMenoresImportStatus.COMPLETE);
-        return new ContratosMenoresImportSummary(
-            added, refreshed, ContratosMenoresImportStatus.COMPLETE);
+        return ContratosMenoresImportSummary.complete(added, refreshed);
       }
       if (!windowStart.isAfter(historyFloor)) {
         break;
@@ -181,8 +175,41 @@ public class ImportOrganoContratosMenores {
         "Contratos menores walk of Órgano {} reached the configured history floor {} without its"
             + " stored count matching the source's; it is left incomplete and will be resumed",
         organoId, historyFloor);
-    return new ContratosMenoresImportSummary(
-        added, refreshed, ContratosMenoresImportStatus.INCOMPLETE);
+    return ContratosMenoresImportSummary.incomplete(added, refreshed);
+  }
+
+  /**
+   * One window, paged to exhaustion. The loop condition is the per-batch guard check, so falling
+   * out of it is what a walk that no longer holds the guard does — before a page it has no right
+   * to ask the source for, rather than after.
+   */
+  private WindowRead readWindow(
+      ImportRunId runId,
+      String sourceKey,
+      OrganoId organoId,
+      LocalDate windowStart,
+      LocalDate windowEnd) {
+    int added = 0;
+    int refreshed = 0;
+    int offset = 0;
+    while (runHoldsTheGuard(runId)) {
+      ContratoMenorSourcePage page =
+          contratoMenorSource.fetchPage(sourceKey, windowStart, windowEnd, offset, PAGE_SIZE);
+      boolean lastPage = page.entries().size() < PAGE_SIZE;
+      UpsertCounts counts = contratos.upsertAll(contratosOf(page, organoId));
+      added += counts.added();
+      refreshed += counts.refreshed();
+      recordProgress(runId, organoId, lastPage ? windowStart : windowEnd, counts);
+      if (lastPage) {
+        return new WindowRead(added, refreshed, page.recordsTotal(), true);
+      }
+      offset += page.entries().size();
+    }
+    LOG.warn(
+        "Contratos menores walk of Órgano {} stopped: its run {} no longer holds the import guard,"
+            + " so another import may already have claimed it",
+        organoId, runId);
+    return new WindowRead(added, refreshed, 0, false);
   }
 
   /**
