@@ -132,10 +132,15 @@ public abstract class JdbcImportRunRepository
        WHERE run_id = ? AND organo_id = ?
       """;
 
+  // last_advanced_at moves with the verdict so it is never left older than finished_at. It has no
+  // say over a completed run — a stored verdict reads back unchanged however long ago it landed —
+  // but a record whose two timestamps disagree about the same moment invites a reader to believe
+  // the wrong one.
   private static final String COMPLETE_RUN =
       """
       UPDATE import_run
-         SET state = ?, finished_at = ?
+         SET state = ?, finished_at = ?, last_advanced_at = ?,
+             added = added + ?, refreshed = refreshed + ?
        WHERE id = ?
       """;
 
@@ -232,12 +237,20 @@ public abstract class JdbcImportRunRepository
 
   @Override
   @Transactional(propagation = TransactionDefinition.Propagation.REQUIRES_NEW)
-  public void complete(ImportRunId runId, ImportRunState verdict) {
+  public void complete(
+      ImportRunId runId,
+      ImportRunState verdict,
+      int addedSinceLastAdvance,
+      int refreshedSinceLastAdvance) {
     String storable = verdict.requireStorableVerdict().name();
+    OffsetDateTime now = atUtc(clock.instant());
     int completed = executeUpdate(COMPLETE_RUN, statement -> {
       statement.setString(1, storable);
-      statement.setObject(2, atUtc(clock.instant()));
-      statement.setObject(3, runId.value());
+      statement.setObject(2, now);
+      statement.setObject(3, now);
+      statement.setInt(4, addedSinceLastAdvance);
+      statement.setInt(5, refreshedSinceLastAdvance);
+      statement.setObject(6, runId.value());
     });
     if (completed == 0) {
       LOG.warn("Run {} was completed but is not recorded", runId);

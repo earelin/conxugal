@@ -390,7 +390,7 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
 
     Instant finishedAt = CLAIMED_AT.plusSeconds(600);
     now.set(finishedAt);
-    importRunRepository.complete(runId, ImportRunState.PARTIALLY_SUCCEEDED);
+    importRunRepository.complete(runId, ImportRunState.PARTIALLY_SUCCEEDED, 0, 0);
 
     ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
     SoftAssertions.assertSoftly(softly -> {
@@ -402,6 +402,26 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     });
   }
 
+  // The shape of an importer whose whole run is one act: it never advances, so completion is its
+  // only chance to say what it counted. The counts add rather than replace, on the same rule an
+  // advance follows, and the finish stamps the last advance so the two timestamps agree.
+  @Test
+  void completing_run_adds_the_counts_it_carries_and_stamps_the_last_advance() throws Exception {
+    ImportRunId runId = importRunRepository.claim(Importer.ORGANOS, List.of()).orElseThrow();
+
+    Instant finishedAt = CLAIMED_AT.plusSeconds(90);
+    now.set(finishedAt);
+    importRunRepository.complete(runId, ImportRunState.SUCCEEDED, 12, 340);
+
+    ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
+    SoftAssertions.assertSoftly(softly -> {
+      softly.assertThat(report.added()).isEqualTo(12);
+      softly.assertThat(report.refreshed()).isEqualTo(340);
+      softly.assertThat(report.coveredOrganos()).isEmpty();
+    });
+    assertThat(storedLastAdvancedAt(runId)).isEqualTo(finishedAt);
+  }
+
   // A run cannot be completed as abandoned: that state is derived on read and stored nowhere, and
   // a caller completing with a state it just read has one in hand.
   @Test
@@ -411,31 +431,53 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
         importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
 
     assertThatIllegalArgumentException()
-        .isThrownBy(() -> importRunRepository.complete(runId, ImportRunState.ABANDONED));
+        .isThrownBy(() -> importRunRepository.complete(runId, ImportRunState.ABANDONED, 0, 0));
 
     Table runs = runTable();
     assertThat(runs).row(0).value("state").isEqualTo("IN_PROGRESS");
     assertThat(runs).row(0).value("finished_at").isNull();
   }
 
-  // Re-completing is a caller's mistake with no requirement attached; what matters is that it
-  // rewrites nothing but the verdict it was given.
+  // The shape of an importer that reports as it goes and therefore settles with zeroes: what an
+  // advance already counted stays counted once. An importer passing its run totals here instead
+  // would count everything twice, which is why the completion parameters are named for the
+  // remainder rather than for the total.
   @Test
-  void completing_run_that_is_already_complete_leaves_its_counts_and_coverage_alone()
+  void completing_run_that_advanced_adds_to_what_the_advance_counted() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    ImportRunId runId =
+        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+    importRunRepository.advance(runId, organoId, 100, 4);
+    importRunRepository.advance(runId, organoId, 30, 1);
+
+    importRunRepository.complete(runId, ImportRunState.SUCCEEDED, 0, 0);
+
+    ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
+    SoftAssertions.assertSoftly(softly -> {
+      softly.assertThat(report.added()).isEqualTo(130);
+      softly.assertThat(report.refreshed()).isEqualTo(5);
+    });
+  }
+
+  // Re-completing is a caller's mistake with no requirement attached. The verdict it is given is
+  // the one that stands, and the coverage rows are none of its business — but the counts it
+  // carries are added again, because the statement cannot tell a retry from a second remainder.
+  @Test
+  void completing_run_that_is_already_complete_takes_the_new_verdict_and_adds_its_counts()
       throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId runId =
         importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
     importRunRepository.advance(runId, organoId, 100, 4);
     importRunRepository.finishOrgano(runId, organoId, ImportRunOrganoState.SUCCEEDED, null);
-    importRunRepository.complete(runId, ImportRunState.SUCCEEDED);
+    importRunRepository.complete(runId, ImportRunState.SUCCEEDED, 0, 0);
 
-    importRunRepository.complete(runId, ImportRunState.FAILED);
+    importRunRepository.complete(runId, ImportRunState.FAILED, 7, 0);
 
     ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
     SoftAssertions.assertSoftly(softly -> {
       softly.assertThat(report.state()).isEqualTo(ImportRunState.FAILED);
-      softly.assertThat(report.added()).isEqualTo(100);
+      softly.assertThat(report.added()).isEqualTo(107);
       softly.assertThat(coverageFor(report, organoId).state())
           .isEqualTo(ImportRunOrganoState.SUCCEEDED);
     });
@@ -443,7 +485,8 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
 
   @Test
   void completing_unknown_run_records_nothing() {
-    importRunRepository.complete(new ImportRunId(UUID.randomUUID()), ImportRunState.SUCCEEDED);
+    importRunRepository.complete(
+        new ImportRunId(UUID.randomUUID()), ImportRunState.SUCCEEDED, 0, 0);
 
     assertThat(runTable()).hasNumberOfRows(0);
   }
@@ -455,14 +498,14 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId succeeded =
         importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
-    importRunRepository.complete(succeeded, ImportRunState.SUCCEEDED);
+    importRunRepository.complete(succeeded, ImportRunState.SUCCEEDED, 0, 0);
 
     ImportRunId failed = importRunRepository.claim(Importer.ORGANOS, List.of()).orElseThrow();
-    importRunRepository.complete(failed, ImportRunState.FAILED);
+    importRunRepository.complete(failed, ImportRunState.FAILED, 0, 0);
 
     ImportRunId partial =
         importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of()).orElseThrow();
-    importRunRepository.complete(partial, ImportRunState.PARTIALLY_SUCCEEDED);
+    importRunRepository.complete(partial, ImportRunState.PARTIALLY_SUCCEEDED, 0, 0);
 
     assertThat(importRunRepository.claim(Importer.ORGANOS, List.of())).isPresent();
   }

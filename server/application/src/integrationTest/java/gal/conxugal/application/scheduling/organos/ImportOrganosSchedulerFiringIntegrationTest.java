@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.organo.ImportOrganos;
 import gal.conxugal.domain.organo.ImportOutcome;
 import io.micronaut.context.annotation.Property;
@@ -32,6 +33,13 @@ class ImportOrganosSchedulerFiringIntegrationTest {
               return ImportOutcome.success(0, 0, 0);
             });
     return importOrganos;
+  }
+
+  // The mock proxy above still resolves the real constructor's dependencies, and the run record's
+  // adapter wants a datasource this suite deliberately runs without.
+  @MockBean(ImportRunRepository.class)
+  ImportRunRepository importRunsMock() {
+    return mock(ImportRunRepository.class);
   }
 
   @Test
