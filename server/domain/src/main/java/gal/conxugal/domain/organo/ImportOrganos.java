@@ -6,7 +6,6 @@ import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.domain.importrun.Importer;
 import jakarta.inject.Singleton;
 import java.util.List;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,17 +49,21 @@ public class ImportOrganos {
   }
 
   public ImportOutcome run() {
-    Optional<ImportRunId> claimed = importRuns.claim(Importer.ORGANOS, List.of());
-    if (claimed.isEmpty()) {
-      return ImportOutcome.alreadyRunning();
-    }
-    ImportRunId runId = claimed.get();
+    return importRuns
+        .claim(Importer.ORGANOS, List.of())
+        .map(this::reconcileAndSettle)
+        .orElseGet(ImportOutcome::alreadyRunning);
+  }
+
+  /**
+   * Settled from a finally, so nothing thrown out of the reconciliation — an Error as much as an
+   * exception — can leave the guard held by a run this process has already given up on, which
+   * would refuse every import in the system until the abandonment bound passed. The settlement
+   * swallows its own failures, so it cannot mask what is on its way out.
+   */
+  private ImportOutcome reconcileAndSettle(ImportRunId runId) {
     ImportRunState verdict = ImportRunState.FAILED;
     ImportOutcome outcome = ImportOutcome.failure();
-    // Settled from a finally, so nothing thrown out of the reconciliation — an Error as much as an
-    // exception — can leave the guard held by a run this process has already given up on, which
-    // would refuse every import in the system until the abandonment bound passed. The settlement
-    // swallows its own failures, so it cannot mask what is on its way out.
     try {
       outcome = reconcile();
       verdict = verdictOf(outcome);
