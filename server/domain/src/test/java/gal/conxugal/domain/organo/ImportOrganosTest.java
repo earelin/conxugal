@@ -27,6 +27,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ImportOrganosTest {
 
   private static final ImportRunId RUN_ID = new ImportRunId(UUID.randomUUID());
+  private static final List<OrganoSourceEntry> SOURCE_LIST =
+      List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X"));
 
   @Mock
   private OrganoSource organoSource;
@@ -40,10 +42,9 @@ class ImportOrganosTest {
   @Test
   void delegates_the_fetched_list_to_the_reconciler_and_returns_its_outcome() {
     guardIsFree();
-    List<OrganoSourceEntry> entries = List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X"));
-    when(organoSource.fetchAll()).thenReturn(entries);
+    when(organoSource.fetchAll()).thenReturn(SOURCE_LIST);
     ImportOutcome reconciled = ImportOutcome.success(1, 0, 0);
-    when(organoReconciler.reconcile(entries)).thenReturn(reconciled);
+    when(organoReconciler.reconcile(SOURCE_LIST)).thenReturn(reconciled);
 
     ImportOutcome outcome = importOrganos().run();
 
@@ -86,9 +87,8 @@ class ImportOrganosTest {
   @Test
   void records_succeeded_with_the_added_and_refreshed_counts_but_not_deactivated() {
     guardIsFree();
-    List<OrganoSourceEntry> entries = List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X"));
-    when(organoSource.fetchAll()).thenReturn(entries);
-    when(organoReconciler.reconcile(entries)).thenReturn(ImportOutcome.success(3, 2, 7));
+    when(organoSource.fetchAll()).thenReturn(SOURCE_LIST);
+    when(organoReconciler.reconcile(SOURCE_LIST)).thenReturn(ImportOutcome.success(3, 2, 7));
 
     ImportOutcome outcome = importOrganos().run();
 
@@ -110,10 +110,9 @@ class ImportOrganosTest {
   @Test
   void records_the_run_as_failed_and_rethrows_when_the_reconciliation_itself_throws() {
     guardIsFree();
-    List<OrganoSourceEntry> entries = List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X"));
-    when(organoSource.fetchAll()).thenReturn(entries);
+    when(organoSource.fetchAll()).thenReturn(SOURCE_LIST);
     RuntimeException reconciliationFailure = new IllegalStateException("a write went wrong");
-    when(organoReconciler.reconcile(entries)).thenThrow(reconciliationFailure);
+    when(organoReconciler.reconcile(SOURCE_LIST)).thenThrow(reconciliationFailure);
     ImportOrganos importOrganos = importOrganos();
 
     assertThatExceptionOfType(IllegalStateException.class)
@@ -126,10 +125,9 @@ class ImportOrganosTest {
   @Test
   void reports_the_outcome_as_it_stands_when_the_run_record_cannot_be_settled() {
     guardIsFree();
-    List<OrganoSourceEntry> entries = List.of(new OrganoSourceEntry("consorcio-x", "Consorcio X"));
-    when(organoSource.fetchAll()).thenReturn(entries);
+    when(organoSource.fetchAll()).thenReturn(SOURCE_LIST);
     ImportOutcome reconciled = ImportOutcome.success(3, 2, 7);
-    when(organoReconciler.reconcile(entries)).thenReturn(reconciled);
+    when(organoReconciler.reconcile(SOURCE_LIST)).thenReturn(reconciled);
     doThrow(new IllegalStateException("the run record is unreachable"))
         .when(importRuns)
         .complete(eq(RUN_ID), any(), anyInt(), anyInt());
