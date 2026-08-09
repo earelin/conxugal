@@ -2,7 +2,7 @@
 feat: FEAT-0010
 domain: backend
 adrs: [0002, 0008, 0018, 0019]
-status: todo
+status: done
 depends_on: [TASK-0002]
 ---
 
@@ -39,9 +39,45 @@ exists first.
 > - Neither `promoteName` nor `retainName` derives from its name — `retain` is not a Micronaut
 >   Data prefix, and `promoteName` spans two tables. Both need explicit queries, so this adapter
 >   will **not** be an empty interface like `JdbcOrganoRepository`.
+>
+> **Four notes from the implementation.**
+>
+> - **No migration was written.** The `V` number the Scope reserves below was never taken: both
+>   tables had already landed as `V12` with [TASK-0002](TASK-0002-operador-domain-model.md), for
+>   the reason the callout above records. What shipped here is the adapter and the tests, and the
+>   schema criteria are proved against `V12` rather than against a migration of this task's own.
+> - **The retained-name upsert advances rather than overwrites.** `ON CONFLICT … DO UPDATE`
+>   carries a `WHERE` that fires only when the incoming rank strictly outranks the stored one, so
+>   a name is left carrying the **most recent** contract that published it rather than the last
+>   one to arrive — which a walk reading newest first produces routinely. The condition coalesces
+>   an absent date to `-infinity` so that it mirrors `NomeRank`: an undated rank loses to every
+>   dated one and still orders against another undated one by source identifier. Comparing the
+>   columns directly would answer `NULL` whenever either side is undated, and a `NULL` condition
+>   skips the update silently. The strict comparison is also what makes re-reading a contract
+>   already held cost nothing.
+> - **The constraint criteria are proved in a migration test, not through the port.** A
+>   deliberately violated constraint aborts the connection Micronaut Data shares with the adapter,
+>   so those cases drive raw SQL and commit, as the termo and contrato menor migration tests
+>   already do. The port offers no delete, so the foreign-key criterion had no other home either.
+> - **The same upsert refuses to retain the name the operador is displayed under**, which the
+>   Scope below does not ask for. The aggregate throws on being built holding its own displayed
+>   name as an alternative, and nothing could undo such a row — there is no delete — so one of
+>   them would make that operador unreadable for good, through the very read the derivation
+>   performs on its next contract. It is the commonest case in the data, not a corner: for an
+>   operador whose contracts all publish one name, every contract but the R4 winner arrives with
+>   that same name at a lower rank. [TASK-0004](TASK-0004-derivation-during-import.md) states the
+>   rule and would have been right to; the guard is here as well because a caller that forgets it
+>   leaves no error behind, which is the argument the unique fiscal identifier already rests on.
+>
+>   **It makes the order of the two writes matter, and that is its cost.** Promote first, then
+>   retain the displaced name: retaining first would ask the store to file a name that is still
+>   the displayed one, and it would decline — losing the name rather than corrupting the row, but
+>   losing it quietly. Promotion drops the promoted name from the retained set, so that order
+>   needs nothing else of the caller.
 
 ## Scope
-- A migration (next free `V` number) creating `operador_economico`:
+- The migration creating `operador_economico` — **already landed as `V12`**, see the note above;
+  what this task adds is the adapter below. The columns it created:
   - `id UUID PRIMARY KEY` — a plain `uuid` column; `OperadorId` is the Java type an
     `AttributeConverter` maps onto it
     ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md));
