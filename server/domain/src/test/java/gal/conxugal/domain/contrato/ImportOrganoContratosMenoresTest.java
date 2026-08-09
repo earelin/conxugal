@@ -37,6 +37,7 @@ import java.util.stream.LongStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -334,7 +335,7 @@ class ImportOrganoContratosMenoresTest {
     runIsLive();
     stored.set(1);
     when(contratos.upsertAll(anyCollection()))
-        .thenAnswer(invocation -> new UpsertCounts(0, batchOf(invocation.getArgument(0)).size()));
+        .thenAnswer(invocation -> new UpsertCounts(0, sizeOfBatch(invocation)));
     when(contratos.countByOrganoId(ORGANO_ID)).thenAnswer(invocation -> stored.get());
     sourcePublishes(1, Map.of(FIRST_WINDOW_START, entries(1)));
 
@@ -375,7 +376,7 @@ class ImportOrganoContratosMenoresTest {
     when(importRuns.holdsGuard(RUN_ID)).thenReturn(true).thenReturn(false);
     // Only the upsert: the walk stops at the second ask, before it tests its stored count.
     when(contratos.upsertAll(anyCollection()))
-        .thenAnswer(invocation -> new UpsertCounts(batchOf(invocation.getArgument(0)).size(), 0));
+        .thenAnswer(invocation -> new UpsertCounts(sizeOfBatch(invocation), 0));
     sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
@@ -395,7 +396,7 @@ class ImportOrganoContratosMenoresTest {
     when(importRuns.holdsGuard(RUN_ID)).thenReturn(true).thenReturn(true).thenReturn(false);
     // Only the upsert: the walk stops at the top of the next batch, before it tests its count.
     when(contratos.upsertAll(anyCollection()))
-        .thenAnswer(invocation -> new UpsertCounts(batchOf(invocation.getArgument(0)).size(), 0));
+        .thenAnswer(invocation -> new UpsertCounts(sizeOfBatch(invocation), 0));
     sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
@@ -492,7 +493,7 @@ class ImportOrganoContratosMenoresTest {
   private void storeAcceptsEverything() {
     when(contratos.upsertAll(anyCollection()))
         .thenAnswer(invocation -> {
-          Collection<ContratoMenor> batch = batchOf(invocation.getArgument(0));
+          Collection<ContratoMenor> batch = invocation.getArgument(0);
           upserted.addAll(batch);
           stored.addAndGet(batch.size());
           return new UpsertCounts(batch.size(), 0);
@@ -500,9 +501,8 @@ class ImportOrganoContratosMenoresTest {
     when(contratos.countByOrganoId(ORGANO_ID)).thenAnswer(invocation -> stored.get());
   }
 
-  @SuppressWarnings("unchecked")
-  private static Collection<ContratoMenor> batchOf(Object argument) {
-    return (Collection<ContratoMenor>) argument;
+  private static int sizeOfBatch(InvocationOnMock invocation) {
+    return invocation.<Collection<?>>getArgument(0).size();
   }
 
   private static OrganoDeContratacion organo() {
