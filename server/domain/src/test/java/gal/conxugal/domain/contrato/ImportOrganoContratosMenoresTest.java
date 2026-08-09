@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -13,10 +14,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.domain.importrun.ImportRunId;
-import gal.conxugal.domain.importrun.ImportRunReport;
 import gal.conxugal.domain.importrun.ImportRunRepository;
-import gal.conxugal.domain.importrun.ImportRunState;
-import gal.conxugal.domain.importrun.Importer;
 import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.organo.ContratosMenoresImportState;
 import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
@@ -50,9 +48,9 @@ class ImportOrganoContratosMenoresTest {
 
   private static final Instant T_ZERO = Instant.parse("2026-08-06T09:00:00Z");
   private static final LocalDate T_ZERO_DAY = LocalDate.of(2026, 8, 6);
-  private static final LocalDate THREE_MONTHS_BACK = LocalDate.of(2026, 5, 6);
-  private static final LocalDate SIX_MONTHS_BACK = LocalDate.of(2026, 2, 6);
-  private static final LocalDate NINE_MONTHS_BACK = LocalDate.of(2025, 11, 6);
+  private static final LocalDate FIRST_WINDOW_START = LocalDate.of(2026, 5, 9);
+  private static final LocalDate SECOND_WINDOW_START = LocalDate.of(2026, 2, 9);
+  private static final LocalDate THIRD_WINDOW_START = LocalDate.of(2025, 11, 12);
   private static final LocalDate HISTORY_FLOOR = LocalDate.of(2018, 1, 1);
 
   @Mock
@@ -73,24 +71,61 @@ class ImportOrganoContratosMenoresTest {
   private final List<Slice> requestedSlices = new ArrayList<>();
   private final AtomicReference<ContratosMenoresImportState> createdState = new AtomicReference<>();
   private final List<ContratoMenor> upserted = new ArrayList<>();
+  private final List<LocalDate> cursorWrites = new ArrayList<>();
   private final AtomicLong stored = new AtomicLong();
 
   /** One call the source port received, which is what the walk's shape is asserted on. */
   private record Slice(LocalDate from, LocalDate to, int offset) {}
 
   @Test
-  void walks_backwards_in_three_month_windows_that_overlap_by_their_boundary_day() {
+  void walks_backwards_in_windows_that_overlap_by_their_boundary_day() {
     neverStarted();
     runIsLive();
     storeAcceptsEverything();
-    sourcePublishes(3, Map.of(THREE_MONTHS_BACK, entries(1), SIX_MONTHS_BACK, entries(2)));
+    sourcePublishes(3, Map.of(FIRST_WINDOW_START, entries(1), SECOND_WINDOW_START, entries(2)));
 
     walk().run(RUN_ID, organo());
 
     assertThat(requestedSlices)
         .containsExactly(
-            new Slice(THREE_MONTHS_BACK, T_ZERO_DAY, 0),
-            new Slice(SIX_MONTHS_BACK, THREE_MONTHS_BACK, 0));
+            new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 0),
+            new Slice(SECOND_WINDOW_START, FIRST_WINDOW_START, 0));
+  }
+
+  // Days, not months, and the dates are pinned rather than recomputed from the production formula.
+  // Stepping back by months lands on a window whose own three months end before it began whenever
+  // the month it lands in is shorter, and the source refuses that window as over-wide.
+  @Test
+  void asks_for_windows_no_wider_than_the_shortest_three_calendar_months() {
+    neverStarted();
+    runIsLive();
+    storeAcceptsEverything();
+    sourcePublishes(99, Map.of());
+
+    walk().run(RUN_ID, organo());
+
+    assertThat(requestedSlices)
+        .allSatisfy(
+            slice ->
+                assertThat(slice.from())
+                    .isAfterOrEqualTo(slice.to().minusMonths(3))
+                    .isBefore(slice.to()));
+  }
+
+  // The month-end case the pure-month arithmetic got wrong: 2026-05-31 stepped back three months
+  // lands on 2026-02-28, whose own three months end on 2026-05-28 — before the window began.
+  @Test
+  void walks_from_month_end_without_asking_for_an_over_wide_window() {
+    resumesFrom(LocalDate.of(2026, 5, 31));
+    runIsLive();
+    storeAcceptsEverything();
+    sourcePublishes(99, Map.of());
+
+    walk().run(RUN_ID, organo());
+
+    assertThat(requestedSlices)
+        .element(0)
+        .isEqualTo(new Slice(LocalDate.of(2026, 3, 3), LocalDate.of(2026, 5, 31), 0));
   }
 
   @Test
@@ -98,16 +133,17 @@ class ImportOrganoContratosMenoresTest {
     neverStarted();
     runIsLive();
     storeAcceptsEverything();
-    sourcePublishes(250, Map.of(THREE_MONTHS_BACK, entries(150), SIX_MONTHS_BACK, entries(100)));
+    sourcePublishes(
+        250, Map.of(FIRST_WINDOW_START, entries(150), SECOND_WINDOW_START, entries(100)));
 
     walk().run(RUN_ID, organo());
 
     assertThat(requestedSlices)
         .containsExactly(
-            new Slice(THREE_MONTHS_BACK, T_ZERO_DAY, 0),
-            new Slice(THREE_MONTHS_BACK, T_ZERO_DAY, 100),
-            new Slice(SIX_MONTHS_BACK, THREE_MONTHS_BACK, 0),
-            new Slice(SIX_MONTHS_BACK, THREE_MONTHS_BACK, 100));
+            new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 0),
+            new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 100),
+            new Slice(SECOND_WINDOW_START, FIRST_WINDOW_START, 0),
+            new Slice(SECOND_WINDOW_START, FIRST_WINDOW_START, 100));
   }
 
   @Test
@@ -115,14 +151,14 @@ class ImportOrganoContratosMenoresTest {
     neverStarted();
     runIsLive();
     storeAcceptsEverything();
-    sourcePublishes(2, Map.of(THREE_MONTHS_BACK, entries(1), NINE_MONTHS_BACK, entries(1)));
+    sourcePublishes(2, Map.of(FIRST_WINDOW_START, entries(1), THIRD_WINDOW_START, entries(1)));
 
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
 
     assertThat(requestedSlices)
         .extracting(Slice::from)
-        .containsExactly(THREE_MONTHS_BACK, SIX_MONTHS_BACK, NINE_MONTHS_BACK);
-    assertThat(summary.state()).isEqualTo(ContratosMenoresImportStatus.COMPLETE);
+        .containsExactly(FIRST_WINDOW_START, SECOND_WINDOW_START, THIRD_WINDOW_START);
+    assertThat(summary.status()).isEqualTo(ContratosMenoresImportStatus.COMPLETE);
   }
 
   @Test
@@ -130,12 +166,12 @@ class ImportOrganoContratosMenoresTest {
     resumesFrom(LocalDate.of(2025, 3, 10));
     runIsLive();
     storeAcceptsEverything();
-    sourcePublishes(1, Map.of(LocalDate.of(2024, 12, 10), entries(1)));
+    sourcePublishes(1, Map.of(LocalDate.of(2024, 12, 11), entries(1)));
 
     walk().run(RUN_ID, organo());
 
     assertThat(requestedSlices)
-        .containsExactly(new Slice(LocalDate.of(2024, 12, 10), LocalDate.of(2025, 3, 10), 0));
+        .containsExactly(new Slice(LocalDate.of(2024, 12, 11), LocalDate.of(2025, 3, 10), 0));
   }
 
   @Test
@@ -168,12 +204,11 @@ class ImportOrganoContratosMenoresTest {
     neverStarted();
     runIsLive();
     storeAcceptsEverything();
-    sourcePublishes(1, Map.of(THREE_MONTHS_BACK, entries(1)));
+    sourcePublishes(1, Map.of(FIRST_WINDOW_START, entries(1)));
 
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
 
-    assertThat(summary).isEqualTo(new ContratosMenoresImportSummary(1, 0,
-        ContratosMenoresImportStatus.COMPLETE));
+    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(1, 0));
     verify(importStates).updateState(ORGANO_ID, ContratosMenoresImportStatus.COMPLETE);
   }
 
@@ -187,10 +222,10 @@ class ImportOrganoContratosMenoresTest {
 
     ContratosMenoresImportSummary summary = walkFrom(floor).run(RUN_ID, organo());
 
-    assertThat(summary.state()).isEqualTo(ContratosMenoresImportStatus.INCOMPLETE);
+    assertThat(summary.status()).isEqualTo(ContratosMenoresImportStatus.INCOMPLETE);
     assertThat(requestedSlices)
         .extracting(Slice::from)
-        .containsExactly(THREE_MONTHS_BACK, SIX_MONTHS_BACK, floor);
+        .containsExactly(FIRST_WINDOW_START, SECOND_WINDOW_START, floor);
     verify(importStates, never()).updateState(any(), any());
   }
 
@@ -203,9 +238,8 @@ class ImportOrganoContratosMenoresTest {
 
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
 
-    assertThat(summary).isEqualTo(new ContratosMenoresImportSummary(0, 0,
-        ContratosMenoresImportStatus.COMPLETE));
-    assertThat(requestedSlices).containsExactly(new Slice(THREE_MONTHS_BACK, T_ZERO_DAY, 0));
+    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(0, 0));
+    assertThat(requestedSlices).containsExactly(new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 0));
   }
 
   @Test
@@ -219,21 +253,20 @@ class ImportOrganoContratosMenoresTest {
           LocalDate from = invocation.getArgument(1);
           requestedSlices.add(
               new Slice(from, invocation.getArgument(2), invocation.getArgument(3)));
-          if (THREE_MONTHS_BACK.equals(from)) {
+          if (FIRST_WINDOW_START.equals(from)) {
             // A publication arrives while the first window is being read, so the figure that
             // window is judged against is no longer the one the walk set out with.
             recordsTotal.set(2);
             return new ContratoMenorSourcePage(entries(1), recordsTotal.get());
           }
           List<ContratoMenorSourceEntry> published =
-              SIX_MONTHS_BACK.equals(from) ? entries(1) : List.of();
+              SECOND_WINDOW_START.equals(from) ? entries(1) : List.of();
           return new ContratoMenorSourcePage(published, recordsTotal.get());
         });
 
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
 
-    assertThat(summary).isEqualTo(new ContratosMenoresImportSummary(2, 0,
-        ContratosMenoresImportStatus.COMPLETE));
+    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(2, 0));
   }
 
   @Test
@@ -241,7 +274,7 @@ class ImportOrganoContratosMenoresTest {
     neverStarted();
     runIsLive();
     storeAcceptsEverything();
-    sourcePublishes(150, Map.of(THREE_MONTHS_BACK, entries(150)));
+    sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
     walk().run(RUN_ID, organo());
 
@@ -249,17 +282,20 @@ class ImportOrganoContratosMenoresTest {
     verify(importRuns).advance(RUN_ID, ORGANO_ID, 50, 0);
   }
 
+  // Asserted in order, because order is the whole claim: verifying the two calls separately passes
+  // just as well when the window's end and its start are written the wrong way round, and writing
+  // the start first is exactly the bug that makes a resumption skip a half-paged window.
   @Test
   void holds_the_cursor_at_the_window_end_until_that_window_is_fully_paged() {
     neverStarted();
     runIsLive();
     storeAcceptsEverything();
-    sourcePublishes(150, Map.of(THREE_MONTHS_BACK, entries(150)));
+    cursorWritesAreRecorded();
+    sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
     walk().run(RUN_ID, organo());
 
-    verify(importStates).updateCursorDate(ORGANO_ID, T_ZERO_DAY);
-    verify(importStates).updateCursorDate(ORGANO_ID, THREE_MONTHS_BACK);
+    assertThat(cursorWrites).containsExactly(T_ZERO_DAY, FIRST_WINDOW_START);
   }
 
   @Test
@@ -282,15 +318,14 @@ class ImportOrganoContratosMenoresTest {
     neverStarted();
     runIsLive();
     storeAcceptsEverything();
-    sourcePublishes(1, Map.of(THREE_MONTHS_BACK, entries(1)));
+    sourcePublishes(1, Map.of(FIRST_WINDOW_START, entries(1)));
     doThrow(new IllegalStateException("the run record is unreachable"))
         .when(importRuns)
         .advance(any(), any(), anyInt(), anyInt());
 
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
 
-    assertThat(summary).isEqualTo(new ContratosMenoresImportSummary(1, 0,
-        ContratosMenoresImportStatus.COMPLETE));
+    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(1, 0));
   }
 
   @Test
@@ -301,12 +336,11 @@ class ImportOrganoContratosMenoresTest {
     when(contratos.upsertAll(anyCollection()))
         .thenAnswer(invocation -> new UpsertCounts(0, batchOf(invocation.getArgument(0)).size()));
     when(contratos.countByOrganoId(ORGANO_ID)).thenAnswer(invocation -> stored.get());
-    sourcePublishes(1, Map.of(THREE_MONTHS_BACK, entries(1)));
+    sourcePublishes(1, Map.of(FIRST_WINDOW_START, entries(1)));
 
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
 
-    assertThat(summary).isEqualTo(new ContratosMenoresImportSummary(0, 1,
-        ContratosMenoresImportStatus.COMPLETE));
+    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(0, 1));
   }
 
   @Test
@@ -314,7 +348,7 @@ class ImportOrganoContratosMenoresTest {
     neverStarted();
     runIsLive();
     storeAcceptsEverything();
-    sourcePublishes(1, Map.of(THREE_MONTHS_BACK, entries(1)));
+    sourcePublishes(1, Map.of(FIRST_WINDOW_START, entries(1)));
 
     walk().run(RUN_ID, organo());
 
@@ -332,35 +366,68 @@ class ImportOrganoContratosMenoresTest {
                 null));
   }
 
+  // The guard is asked twice a batch, and this is the ask that matters: the run went quiet while
+  // its page was in flight, so the answer is read before the progress write renews it. Asking only
+  // at the top of the loop would read a liveness the walk had just written itself.
   @Test
-  void stops_before_the_next_batch_when_its_run_no_longer_holds_the_guard() {
+  void stops_without_recording_progress_when_the_guard_goes_mid_batch() {
     neverStarted();
-    when(importRuns.findRun(RUN_ID))
-        .thenReturn(Optional.of(runReport(ImportRunState.IN_PROGRESS)))
-        .thenReturn(Optional.of(runReport(ImportRunState.SUCCEEDED)));
-    // Only the upsert: the walk stops at the guard check before it ever tests its stored count.
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(true).thenReturn(false);
+    // Only the upsert: the walk stops at the second ask, before it tests its stored count.
     when(contratos.upsertAll(anyCollection()))
         .thenAnswer(invocation -> new UpsertCounts(batchOf(invocation.getArgument(0)).size(), 0));
-    sourcePublishes(150, Map.of(THREE_MONTHS_BACK, entries(150)));
+    sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
 
-    assertThat(summary).isEqualTo(new ContratosMenoresImportSummary(100, 0,
-        ContratosMenoresImportStatus.INCOMPLETE));
-    assertThat(requestedSlices).containsExactly(new Slice(THREE_MONTHS_BACK, T_ZERO_DAY, 0));
+    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.incomplete(100, 0));
+    assertThat(requestedSlices).containsExactly(new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 0));
+    // The batch's contracts stand; the cursor stays where the batch before it left it, so the
+    // window is re-read whole on resumption rather than half-skipped.
+    verify(importRuns, never()).advance(any(), any(), anyInt(), anyInt());
+    verify(importStates, never()).updateCursorDate(any(), any());
+    verify(importStates, never()).updateState(any(), any());
+  }
+
+  @Test
+  void stops_before_the_next_batch_when_the_guard_goes_between_two_of_them() {
+    neverStarted();
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(true).thenReturn(true).thenReturn(false);
+    // Only the upsert: the walk stops at the top of the next batch, before it tests its count.
+    when(contratos.upsertAll(anyCollection()))
+        .thenAnswer(invocation -> new UpsertCounts(batchOf(invocation.getArgument(0)).size(), 0));
+    sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
+
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
+
+    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.incomplete(100, 0));
+    assertThat(requestedSlices).containsExactly(new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 0));
+    verify(importRuns).advance(RUN_ID, ORGANO_ID, 100, 0);
     verify(importStates, never()).updateState(any(), any());
   }
 
   @Test
   void reads_nothing_at_all_when_the_run_is_already_gone() {
     neverStarted();
-    when(importRuns.findRun(RUN_ID)).thenReturn(Optional.empty());
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(false);
 
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
 
-    assertThat(summary).isEqualTo(new ContratosMenoresImportSummary(0, 0,
-        ContratosMenoresImportStatus.INCOMPLETE));
+    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.incomplete(0, 0));
     verifyNoInteractions(contratoMenorSource, contratos);
+  }
+
+  // A walk resuming from a cursor an earlier one left at the floor has read every window there is.
+  // Asking the source for the day-wide window that remains cannot converge a count that the whole
+  // history did not, so it asks for nothing.
+  @Test
+  void asks_the_source_for_nothing_when_it_resumes_from_the_history_floor() {
+    resumesFrom(HISTORY_FLOOR);
+
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
+
+    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.incomplete(0, 0));
+    verifyNoInteractions(contratoMenorSource, contratos, importRuns);
   }
 
   private ImportOrganoContratosMenores walk() {
@@ -397,13 +464,13 @@ class ImportOrganoContratosMenoresTest {
   }
 
   private void runIsLive() {
-    when(importRuns.findRun(RUN_ID))
-        .thenReturn(Optional.of(runReport(ImportRunState.IN_PROGRESS)));
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
   }
 
-  private static ImportRunReport runReport(ImportRunState state) {
-    return new ImportRunReport(
-        RUN_ID, Importer.CONTRATOS_MENORES, state, T_ZERO, null, 0, 0, List.of());
+  private void cursorWritesAreRecorded() {
+    doAnswer(invocation -> cursorWrites.add(invocation.getArgument(1)))
+        .when(importStates)
+        .updateCursorDate(eq(ORGANO_ID), any());
   }
 
   /** Serves {@code published} keyed by the window's start date, paged as the source pages. */

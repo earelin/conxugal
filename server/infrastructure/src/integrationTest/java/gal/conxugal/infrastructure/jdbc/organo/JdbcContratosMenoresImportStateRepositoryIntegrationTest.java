@@ -13,6 +13,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
 import jakarta.inject.Inject;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -22,7 +23,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import javax.sql.DataSource;
 import org.assertj.core.api.SoftAssertions;
 import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
@@ -33,7 +33,10 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@MicronautTest(startApplication = false)
+// transactional = false, because the two writes take a transaction of their own: inside the
+// test's own they would not see the row it had not yet committed, which is neither what a walk
+// does nor what the propagation is for.
+@MicronautTest(startApplication = false, transactional = false)
 @Testcontainers(disabledWithoutDocker = true)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPropertyProvider {
@@ -61,12 +64,11 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
   @Inject
   ContratosMenoresImportStateRepository importStateRepository;
 
-  @Inject
-  DataSource dataSource;
-
   @AfterEach
   void cleanUp() throws Exception {
-    DatabaseCleanup.truncateAllTables(dataSource);
+    try (Connection connection = rawConnection()) {
+      DatabaseCleanup.truncateAllTables(connection);
+    }
   }
 
   @Test
@@ -165,8 +167,9 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
     });
   }
 
-  private Table importStateTable() {
-    return AssertDbConnectionFactory.of(dataSource)
+  private static Table importStateTable() {
+    return AssertDbConnectionFactory.of(
+            postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
         .create()
         .table("contrato_menor_import_state")
         .columnsToOrder(new Table.Order[] {Table.Order.asc("organo_id")})
@@ -175,9 +178,9 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
 
   // Read through JDBC rather than asserted on the table, because AssertJ DB compares a
   // timestamptz against the session time zone and the claim here is about the instant.
-  private Instant storedCoveredThrough(OrganoId organoId) throws SQLException {
+  private static Instant storedCoveredThrough(OrganoId organoId) throws SQLException {
     String sql = "SELECT covered_through FROM contrato_menor_import_state WHERE organo_id = ?";
-    try (Connection connection = dataSource.getConnection();
+    try (Connection connection = rawConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setObject(1, organoId.value());
       try (ResultSet resultSet = statement.executeQuery()) {
@@ -189,11 +192,11 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
     }
   }
 
-  private OrganoId insertOrgano(String sourceKey) throws SQLException {
+  private static OrganoId insertOrgano(String sourceKey) throws SQLException {
     String sql =
         "INSERT INTO organo_contratacion (id, source_key, name, active)"
             + " VALUES (uuidv7(), ?, ?, TRUE) RETURNING id";
-    try (Connection connection = dataSource.getConnection();
+    try (Connection connection = rawConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, sourceKey);
       statement.setString(2, sourceKey);
@@ -204,5 +207,10 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
         return new OrganoId(resultSet.getObject("id", UUID.class));
       }
     }
+  }
+
+  private static Connection rawConnection() throws SQLException {
+    return DriverManager.getConnection(
+        postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
   }
 }

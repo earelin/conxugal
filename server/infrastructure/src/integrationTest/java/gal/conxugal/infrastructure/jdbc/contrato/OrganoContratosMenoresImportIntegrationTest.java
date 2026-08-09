@@ -20,6 +20,8 @@ import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.domain.importrun.Importer;
 import gal.conxugal.domain.money.Money;
+import gal.conxugal.domain.organo.ContratosMenoresImportState;
+import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
@@ -29,6 +31,7 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
+import io.micronaut.transaction.TransactionOperations;
 import jakarta.inject.Inject;
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -71,9 +74,9 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
   private static final Instant T_ZERO = Instant.parse("2026-08-07T09:00:00Z");
   private static final String SOURCE_KEY = "242";
 
-  private static final LocalDate THREE_MONTHS_BACK = LocalDate.of(2026, 5, 7);
-  private static final LocalDate SIX_MONTHS_BACK = LocalDate.of(2026, 2, 7);
-  private static final LocalDate NINE_MONTHS_BACK = LocalDate.of(2025, 11, 7);
+  private static final LocalDate FIRST_WINDOW_START = LocalDate.of(2026, 5, 10);
+  private static final LocalDate SECOND_WINDOW_START = LocalDate.of(2026, 2, 10);
+  private static final LocalDate THIRD_WINDOW_START = LocalDate.of(2025, 11, 13);
 
   @Container
   static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18-alpine");
@@ -117,15 +120,21 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
   @Inject
   ImportRunRepository importRuns;
 
+  @Inject
+  ContratosMenoresImportStateRepository importStates;
+
+  @Inject
+  TransactionOperations<Connection> transactions;
+
   @BeforeEach
   void publishThreeContractsAcrossThreeWindows() {
     published.clear();
     readWindows.clear();
     unreachableWindow = null;
     recordsTotal = 3;
-    published.put(THREE_MONTHS_BACK, List.of(entry(1, "Servizos eléctricos", "3630.00")));
-    published.put(SIX_MONTHS_BACK, List.of(entry(2, "Subministración de papel", "480.50")));
-    published.put(NINE_MONTHS_BACK, List.of(entry(3, "Mantemento de xardíns", "1200.00")));
+    published.put(FIRST_WINDOW_START, List.of(entry(1, "Servizos eléctricos", "3630.00")));
+    published.put(SECOND_WINDOW_START, List.of(entry(2, "Subministración de papel", "480.50")));
+    published.put(THIRD_WINDOW_START, List.of(entry(3, "Mantemento de xardíns", "1200.00")));
     when(contratoMenorSource.fetchPage(eq(SOURCE_KEY), any(), any(), anyInt(), anyInt()))
         .thenAnswer(invocation -> {
           LocalDate from = invocation.getArgument(1);
@@ -154,31 +163,100 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
 
     ContratosMenoresImportSummary resumed = walk(organoId);
 
-    assertThat(readWindows).containsExactly(NINE_MONTHS_BACK);
-    assertThat(resumed.state()).isEqualTo(ContratosMenoresImportStatus.COMPLETE);
+    assertThat(readWindows).containsExactly(THIRD_WINDOW_START);
+    assertThat(resumed.status()).isEqualTo(ContratosMenoresImportStatus.COMPLETE);
     assertThat(contratoTable()).hasNumberOfRows(3);
+    Table states = importStateTable();
+    assertThat(states).hasNumberOfRows(1);
+    assertThat(states).row(0).value("state").isEqualTo("COMPLETE");
+    assertThat(states).row(0).value("cursor_date").isEqualTo(THIRD_WINDOW_START);
   }
 
-  // The overlap ADR-0017 takes deliberately: the cursor is written after the batch commits, so a
-  // crash in between leaves it behind what is stored and the resumption reads that window again.
+  // Both halves of an advance commit outside the transaction that wrote the contracts, so what an
+  // interrupted walk left behind is readable rather than rolled back with the run that failed.
+  @Test
+  void interrupted_walk_leaves_its_cursor_and_its_run_counts_committed() throws Exception {
+    OrganoId organoId = insertOrgano();
+
+    interruptedWalkOf(organoId);
+
+    Table states = importStateTable();
+    assertThat(states).hasNumberOfRows(1);
+    assertThat(states).row(0).value("organo_id").isEqualTo(organoId.value());
+    assertThat(states).row(0).value("state").isEqualTo("INCOMPLETE");
+    assertThat(states).row(0).value("cursor_date").isEqualTo(SECOND_WINDOW_START);
+    Table runs = runTable();
+    assertThat(runs).hasNumberOfRows(1);
+    assertThat(runs).row(0).value("added").isEqualTo(2);
+    assertThat(runs).row(0).value("refreshed").isEqualTo(0);
+    Table coverage = coverageTable();
+    assertThat(coverage).hasNumberOfRows(1);
+    assertThat(coverage).row(0).value("organo_id").isEqualTo(organoId.value());
+    assertThat(coverage).row(0).value("added").isEqualTo(2);
+  }
+
+  // The ordering the run record owes the import: a batch that committed has happened, and a
+  // bookkeeping failure may not undo it. The record is what is sacrificed, never the contracts.
+  @Test
+  void contracts_stay_committed_when_the_run_cannot_be_advanced() throws Exception {
+    OrganoId organoId = insertOrgano();
+    ImportRunId runId = claim(organoId);
+    // Pruned from under the live walk: the advance finds no coverage row to move and gives up.
+    execute("DELETE FROM import_run_organo");
+
+    ContratosMenoresImportSummary summary =
+        importContratosMenores.run(runId, organo(organoId));
+
+    assertThat(summary.status()).isEqualTo(ContratosMenoresImportStatus.COMPLETE);
+    assertThat(contratoTable()).hasNumberOfRows(3);
+    Table runs = runTable();
+    assertThat(runs).hasNumberOfRows(1);
+    assertThat(runs).row(0).value("added").isEqualTo(0);
+  }
+
+  // The cursor is deliberately not part of whatever transaction its caller is inside: the walk
+  // writes the batch first and the cursor after, and a data failure that undid the cursor would
+  // leave the two halves of one advance disagreeing. Only the write's own propagation makes that
+  // true from inside a caller's transaction, so it is asserted from inside one that rolls back.
+  @Test
+  void cursor_write_survives_the_rollback_of_the_transaction_it_was_called_in() throws Exception {
+    OrganoId organoId = insertOrgano();
+    importStates.insert(ContratosMenoresImportState.startedAt(organoId, T_ZERO));
+
+    transactions.executeWrite(status -> {
+      importStates.updateCursorDate(organoId, FIRST_WINDOW_START);
+      importStates.updateState(organoId, ContratosMenoresImportStatus.COMPLETE);
+      status.setRollbackOnly();
+      return null;
+    });
+
+    Table states = importStateTable();
+    assertThat(states).hasNumberOfRows(1);
+    assertThat(states).row(0).value("cursor_date").isEqualTo(FIRST_WINDOW_START);
+    assertThat(states).row(0).value("state").isEqualTo("COMPLETE");
+  }
+
+  // The cursor is written after the batch commits, so a crash in between leaves it behind what is
+  // stored and the resumption reads that window again — deliberately, and safe because storing a
+  // contract twice refreshes it in place.
   @Test
   void resumption_over_the_cursor_that_the_crash_left_behind_stores_nothing_twice()
       throws Exception {
     OrganoId organoId = insertOrgano();
     interruptedWalkOf(organoId);
     final UUID identityBeforeTheOverlap = storedIdentityOf(2);
-    rewindCursorTo(THREE_MONTHS_BACK);
+    rewindCursorTo(FIRST_WINDOW_START);
     readWindows.clear();
 
     walk(organoId);
 
-    assertThat(readWindows).containsExactly(SIX_MONTHS_BACK, NINE_MONTHS_BACK);
+    assertThat(readWindows).containsExactly(SECOND_WINDOW_START, THIRD_WINDOW_START);
     assertThat(contratoTable()).hasNumberOfRows(3);
     assertThat(storedIdentityOf(2)).isEqualTo(identityBeforeTheOverlap);
   }
 
-  // SPEC-0007 R17 prunes run history, and an Órgano interrupted mid-import has no successful run
-  // to protect its rows. The cursor lives with the Órgano precisely so that costs it nothing.
+  // Run history is pruned, and an Órgano interrupted mid-import has no successful run to protect
+  // its rows. The cursor lives with the Órgano precisely so that costs it nothing.
   @Test
   void resumption_is_unaffected_by_every_run_record_being_pruned() throws Exception {
     OrganoId organoId = insertOrgano();
@@ -188,8 +266,8 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
 
     ContratosMenoresImportSummary resumed = walk(organoId);
 
-    assertThat(readWindows).containsExactly(NINE_MONTHS_BACK);
-    assertThat(resumed.state()).isEqualTo(ContratosMenoresImportStatus.COMPLETE);
+    assertThat(readWindows).containsExactly(THIRD_WINDOW_START);
+    assertThat(resumed.status()).isEqualTo(ContratosMenoresImportStatus.COMPLETE);
     assertThat(contratoTable()).hasNumberOfRows(3);
   }
 
@@ -219,7 +297,7 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
     walk(organoId);
     final UUID identityBeforeTheChange = storedIdentityOf(1);
     published.put(
-        THREE_MONTHS_BACK, List.of(entry(1, "Servizos eléctricos, corrixido", "4000.00")));
+        FIRST_WINDOW_START, List.of(entry(1, "Servizos eléctricos, corrixido", "4000.00")));
     forgetHowFarTheImportGot();
 
     walk(organoId);
@@ -236,7 +314,7 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
    * would settle it so the guard is free for the resumption to claim.
    */
   private void interruptedWalkOf(OrganoId organoId) {
-    unreachableWindow = NINE_MONTHS_BACK;
+    unreachableWindow = THIRD_WINDOW_START;
     ImportRunId runId = claim(organoId);
     assertThatExceptionOfType(ContratoMenorSourceUnavailableException.class)
         .isThrownBy(() -> importContratosMenores.run(runId, organo(organoId)));
@@ -296,11 +374,29 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
   }
 
   private static Table contratoTable() {
+    return table("contrato_menor", "source_id");
+  }
+
+  private static Table importStateTable() {
+    return table("contrato_menor_import_state", "organo_id");
+  }
+
+  private static Table runTable() {
+    return table("import_run", "started_at");
+  }
+
+  private static Table coverageTable() {
+    return table("import_run_organo", "organo_id");
+  }
+
+  // Off the container rather than the injected DataSource: with no ambient transaction every write
+  // under test really commits, and these assertions are about what it committed.
+  private static Table table(String name, String order) {
     return AssertDbConnectionFactory.of(
             postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
         .create()
-        .table("contrato_menor")
-        .columnsToOrder(new Table.Order[] {Table.Order.asc("source_id")})
+        .table(name)
+        .columnsToOrder(new Table.Order[] {Table.Order.asc(order)})
         .build();
   }
 

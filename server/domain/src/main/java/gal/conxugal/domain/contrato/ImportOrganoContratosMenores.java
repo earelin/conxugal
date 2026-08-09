@@ -2,7 +2,6 @@ package gal.conxugal.domain.contrato;
 
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
-import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.domain.organo.ContratosMenoresImportState;
 import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
@@ -52,8 +51,20 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class ImportOrganoContratosMenores {
 
-  /** The widest window the source answers. */
-  static final int WINDOW_MONTHS = 3;
+  /**
+   * The widest window the source answers is three months, and this is that bound expressed in the
+   * unit a walk stepping <em>backwards</em> can hold it in: 89 days is the shortest three calendar
+   * months there is (1 February to 1 May outside a leap year), so a window this wide is within
+   * three months of its start whatever the months around it are.
+   *
+   * <p>Stepping back by months instead would not be, and the asymmetry is silent: {@code
+   * minusMonths} clamps to the shorter month and {@code plusMonths} does not undo the clamp, so
+   * {@code 2026-05-31} steps back to {@code 2026-02-28}, whose own three months end on
+   * {@code 2026-05-28} — a 92-day window the source would have answered, refused as over-wide by
+   * arithmetic alone, and refused identically on every resumption because the cursor keeps
+   * pointing at it.
+   */
+  static final int WINDOW_DAYS = 89;
 
   /** The largest page the source answers, and so the batch a run advances after. */
   static final int PAGE_SIZE = 100;
@@ -151,8 +162,12 @@ public class ImportOrganoContratosMenores {
     LocalDate windowEnd = resumePoint;
     int added = 0;
     int refreshed = 0;
-    while (!windowEnd.isBefore(historyFloor)) {
-      LocalDate windowStart = latest(windowEnd.minusMonths(WINDOW_MONTHS), historyFloor);
+    // Strictly after the floor, so a walk resuming from a cursor an earlier one left *at* the
+    // floor asks the source for nothing. It has already read every window there is; the day-wide
+    // window it would otherwise re-read cannot converge a count that did not converge over the
+    // whole history.
+    while (windowEnd.isAfter(historyFloor)) {
+      LocalDate windowStart = latest(windowEnd.minusDays(WINDOW_DAYS), historyFloor);
       WindowRead read = readWindow(runId, sourceKey, organoId, windowStart, windowEnd);
       added += read.added();
       refreshed += read.refreshed();
@@ -160,6 +175,9 @@ public class ImportOrganoContratosMenores {
         return ContratosMenoresImportSummary.incomplete(added, refreshed);
       }
       if (contratos.countByOrganoId(organoId) >= read.recordsTotal()) {
+        // Not best-effort, unlike the progress writes: a completion mark that failed silently
+        // would leave a fully loaded Órgano reading as half-loaded for good, and the walk that
+        // could correct it is the one being told to stop. Failing the Órgano keeps it resumable.
         importStates.updateState(organoId, ContratosMenoresImportStatus.COMPLETE);
         return ContratosMenoresImportSummary.complete(added, refreshed);
       }
@@ -179,9 +197,19 @@ public class ImportOrganoContratosMenores {
   }
 
   /**
-   * One window, paged to exhaustion. The loop condition is the per-batch guard check, so falling
-   * out of it is what a walk that no longer holds the guard does — before a page it has no right
-   * to ask the source for, rather than after.
+   * One window, paged to exhaustion, and the guard asked about twice a batch.
+   *
+   * <p>The loop condition is the first ask, so a walk handed a run that is already gone reads
+   * nothing at all. The second is the one that does the work the guard exists for: it sits
+   * <em>after</em> the batch commits and <em>before</em> the progress write, because the progress
+   * write renews the run's own last-advanced stamp — so a walk that asked only at the top of the
+   * loop would be reading a liveness it had just written itself, and a stall long enough to lose
+   * the guard would be invisible to it. Between those two points the answer is still the one the
+   * stalled request left behind.
+   *
+   * <p>Stopping there leaves the batch's contracts committed and the cursor where the previous
+   * batch put it, which is the conservative pair: the window is re-read on resumption and nothing
+   * is stored twice.
    */
   private WindowRead readWindow(
       ImportRunId runId,
@@ -192,13 +220,16 @@ public class ImportOrganoContratosMenores {
     int added = 0;
     int refreshed = 0;
     int offset = 0;
-    while (runHoldsTheGuard(runId)) {
+    while (importRuns.holdsGuard(runId)) {
       ContratoMenorSourcePage page =
           contratoMenorSource.fetchPage(sourceKey, windowStart, windowEnd, offset, PAGE_SIZE);
-      boolean lastPage = page.entries().size() < PAGE_SIZE;
+      final boolean lastPage = page.entries().size() < PAGE_SIZE;
       UpsertCounts counts = contratos.upsertAll(contratosOf(page, organoId));
       added += counts.added();
       refreshed += counts.refreshed();
+      if (!importRuns.holdsGuard(runId)) {
+        break;
+      }
       recordProgress(runId, organoId, lastPage ? windowStart : windowEnd, counts);
       if (lastPage) {
         return new WindowRead(added, refreshed, page.recordsTotal(), true);
@@ -233,20 +264,6 @@ public class ImportOrganoContratosMenores {
               + " recorded; the contracts stand and the walk continues",
           organoId, runId, e);
     }
-  }
-
-  /**
-   * Whether this walk's run is still the live one. A run that goes quiet past the abandonment bound
-   * releases the guard, and the next trigger claims it — so a walk that wakes from a long stall
-   * would otherwise carry on reading the source alongside whoever claimed after it, which is the
-   * one thing the guard exists to prevent. The rule that decides it stays where the guard applies
-   * it; this only reads the answer.
-   */
-  private boolean runHoldsTheGuard(ImportRunId runId) {
-    return importRuns
-        .findRun(runId)
-        .filter(report -> report.state() == ImportRunState.IN_PROGRESS)
-        .isPresent();
   }
 
   /**
