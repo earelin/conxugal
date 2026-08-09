@@ -1,5 +1,6 @@
 package gal.conxugal.domain.contrato;
 
+import gal.conxugal.commons.time.Dates;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportState;
@@ -174,7 +175,7 @@ public class ImportOrganoContratosMenores {
     // window it would otherwise re-read cannot converge a count that did not converge over the
     // whole history.
     while (windowEnd.isAfter(historyFloor)) {
-      LocalDate windowStart = latest(windowEnd.minusDays(WINDOW_DAYS), historyFloor);
+      LocalDate windowStart = Dates.latest(windowEnd.minusDays(WINDOW_DAYS), historyFloor);
       WindowRead read = readWindow(target, windowStart, windowEnd);
       added += read.added();
       refreshed += read.refreshed();
@@ -296,9 +297,5 @@ public class ImportOrganoContratosMenores {
                     entry.duration(),
                     null))
         .toList();
-  }
-
-  private static LocalDate latest(LocalDate one, LocalDate other) {
-    return one.isAfter(other) ? one : other;
   }
 }
