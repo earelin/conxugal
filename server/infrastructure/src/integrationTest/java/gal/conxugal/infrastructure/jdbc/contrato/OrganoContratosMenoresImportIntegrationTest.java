@@ -355,9 +355,7 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
 
   /** The cursor as a crash between a batch's commit and its cursor write would have left it. */
   private static void rewindCursorTo(LocalDate cursorDate) throws SQLException {
-    execute(
-        "UPDATE contrato_menor_import_state SET cursor_date = ?",
-        statement -> statement.setObject(1, cursorDate));
+    execute("UPDATE contrato_menor_import_state SET cursor_date = ?", cursorDate);
   }
 
   private static void pruneEveryRunRecord() throws SQLException {
@@ -432,14 +430,12 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
     }
   }
 
-  private static void execute(String sql) throws SQLException {
-    execute(sql, statement -> statement.clearParameters());
-  }
-
-  private static void execute(String sql, StatementBinding binding) throws SQLException {
+  private static void execute(String sql, Object... parameters) throws SQLException {
     try (Connection connection = rawConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
-      binding.bind(statement);
+      for (int index = 0; index < parameters.length; index++) {
+        statement.setObject(index + 1, parameters[index]);
+      }
       statement.executeUpdate();
     }
   }
@@ -447,10 +443,5 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
   private static Connection rawConnection() throws SQLException {
     return DriverManager.getConnection(
         postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
-  }
-
-  @FunctionalInterface
-  private interface StatementBinding {
-    void bind(PreparedStatement statement) throws SQLException;
   }
 }
