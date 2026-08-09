@@ -2,7 +2,7 @@
 feat: FEAT-0010
 domain: backend
 adrs: [0002, 0008, 0018, 0019]
-status: todo
+status: done
 depends_on: [TASK-0002]
 ---
 
@@ -39,6 +39,26 @@ exists first.
 > - Neither `promoteName` nor `retainName` derives from its name — `retain` is not a Micronaut
 >   Data prefix, and `promoteName` spans two tables. Both need explicit queries, so this adapter
 >   will **not** be an empty interface like `JdbcOrganoRepository`.
+>
+> **Three notes from the implementation.**
+>
+> - **No migration was written.** The `V` number the Scope reserves below was never taken: both
+>   tables had already landed as `V12` with [TASK-0002](TASK-0002-operador-domain-model.md), for
+>   the reason the callout above records. What shipped here is the adapter and the tests, and the
+>   schema criteria are proved against `V12` rather than against a migration of this task's own.
+> - **The retained-name upsert advances rather than overwrites.** `ON CONFLICT … DO UPDATE`
+>   carries a `WHERE` that fires only when the incoming rank strictly outranks the stored one, so
+>   a name is left carrying the **most recent** contract that published it rather than the last
+>   one to arrive — which a walk reading newest first produces routinely. The condition coalesces
+>   an absent date to `-infinity` so that it mirrors `NomeRank`: an undated rank loses to every
+>   dated one and still orders against another undated one by source identifier. Comparing the
+>   columns directly would answer `NULL` whenever either side is undated, and a `NULL` condition
+>   skips the update silently. The strict comparison is also what makes re-reading a contract
+>   already held cost nothing.
+> - **The constraint criteria are proved in a migration test, not through the port.** A
+>   deliberately violated constraint aborts the connection Micronaut Data shares with the adapter,
+>   so those cases drive raw SQL and commit, as the termo and contrato menor migration tests
+>   already do. The port offers no delete, so the foreign-key criterion had no other home either.
 
 ## Scope
 - A migration (next free `V` number) creating `operador_economico`:
