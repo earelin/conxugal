@@ -15,6 +15,9 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
 import jakarta.inject.Inject;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Objects;
@@ -230,6 +233,30 @@ class JdbcOperadorRepositoryIntegrationTest implements TestPropertyProvider {
             .value("last_published_source_id").isEqualTo(4700L);
   }
 
+  // The other half of the same statement: dropping the operador column from its WHERE would take
+  // every operador's copy of the promoted name, and no test asserting one operador's rows could
+  // see it. Two of them hold the name, one promotes it, and the other's row must survive.
+  @Test
+  void promote_name_stops_retaining_the_name_for_its_own_operador_only() {
+    OperadorId promoting = idOf(insertOperador("B12345678", "Servizos SL", PUBLISHED_ON));
+    OperadorId untouched = idOf(insertOperador("B87654321", "Obras SL", PUBLISHED_ON));
+    operadorRepository.retainName(
+        new NomeAlternativo(promoting, "Grupo Galego", new NomeRank(PUBLISHED_EARLIER, 4700L)));
+    operadorRepository.retainName(
+        new NomeAlternativo(untouched, "Grupo Galego", new NomeRank(PUBLISHED_EARLIER, 4600L)));
+
+    operadorRepository.promoteName(
+        promoting, "Grupo Galego", new NomeRank(PUBLISHED_LATER, 4800L));
+
+    Table alternativos = nomeAlternativoTable();
+    assertThat(alternativos).hasNumberOfRows(1);
+    assertThat(alternativos)
+        .row(0)
+            .value("operador_economico_id").isEqualTo(untouched.value())
+            .value("name").isEqualTo("Grupo Galego")
+            .value("last_published_source_id").isEqualTo(4600L);
+  }
+
   @Test
   void promote_name_touches_no_other_operador() {
     OperadorId promoted = idOf(insertOperador("B12345678", "Servizos Galegos SL", PUBLISHED_ON));
@@ -311,23 +338,82 @@ class JdbcOperadorRepositoryIntegrationTest implements TestPropertyProvider {
   }
 
   // Re-reading a contract already held is what a resumption overlap and a whole re-run both do,
-  // and it must cost nothing here.
+  // and it must cost nothing here. Asserted on xmin — the transaction that last wrote the row —
+  // because the values alone would hold just as well if the upsert had fired and rewritten them,
+  // which is not what "leaves the retention unchanged" claims.
   @Test
-  void retaining_the_same_name_with_the_same_contract_leaves_the_row_unchanged() {
+  void retaining_the_same_name_with_the_same_contract_leaves_the_row_untouched() throws Exception {
     OperadorId operadorId = idOf(insertOperador("B12345678", "Servizos Galegos SL", PUBLISHED_ON));
     NomeAlternativo retained =
         new NomeAlternativo(
             operadorId, "Servizos Galegos", new NomeRank(PUBLISHED_EARLIER, 4700L));
     operadorRepository.retainName(retained);
+    String versionBefore = tupleVersionOf(operadorId, "Servizos Galegos");
 
     operadorRepository.retainName(retained);
 
+    assertThat(tupleVersionOf(operadorId, "Servizos Galegos")).isEqualTo(versionBefore);
     Table alternativos = nomeAlternativoTable();
     assertThat(alternativos).hasNumberOfRows(1);
     assertThat(alternativos)
         .row(0)
             .value("last_published_date").isEqualTo(PUBLISHED_EARLIER)
             .value("last_published_source_id").isEqualTo(4700L);
+  }
+
+  // The state the aggregate throws on being built in, and one nothing could recover from: the
+  // port offers no delete, so a single such row would make this operador unreadable for good.
+  @Test
+  void retain_name_refuses_the_name_the_operador_is_displayed_under() {
+    OperadorId operadorId = idOf(insertOperador("B12345678", "Servizos Galegos SL", PUBLISHED_ON));
+
+    operadorRepository.retainName(
+        new NomeAlternativo(
+            operadorId, "Servizos Galegos SL", new NomeRank(PUBLISHED_EARLIER, 4700L)));
+
+    assertThat(nomeAlternativoTable()).hasNumberOfRows(0);
+    assertThat(operadorRepository.findByFiscalId(new FiscalIdentifier("B12345678")))
+        .isPresent();
+  }
+
+  // The guard is on the displayed name, not on the operador: the same spelling is an ordinary
+  // alternative for anyone not displaying it.
+  @Test
+  void retain_name_accepts_the_name_another_operador_is_displayed_under() {
+    OperadorId operadorId = idOf(insertOperador("B12345678", "Servizos Galegos SL", PUBLISHED_ON));
+    insertOperador("B87654321", "Obras do Miño SL", PUBLISHED_ON);
+
+    operadorRepository.retainName(
+        new NomeAlternativo(
+            operadorId, "Obras do Miño SL", new NomeRank(PUBLISHED_EARLIER, 4700L)));
+
+    Table alternativos = nomeAlternativoTable();
+    assertThat(alternativos).hasNumberOfRows(1);
+    assertThat(alternativos)
+        .row(0)
+            .value("operador_economico_id").isEqualTo(operadorId.value())
+            .value("name").isEqualTo("Obras do Miño SL");
+  }
+
+  // Promote first, then retain the displaced name: the order the guard above imposes, walked end
+  // to end so that the sequence the derivation performs is proved rather than assumed. Neither
+  // name ends up in both places, which is the invariant a later read is built on.
+  @Test
+  void promoting_then_retaining_the_displaced_name_leaves_neither_name_in_both_places() {
+    OperadorId operadorId = idOf(insertOperador("B12345678", "Servizos Galegos SL", PUBLISHED_ON));
+
+    operadorRepository.promoteName(
+        operadorId, "Servizos Galegos SLU", new NomeRank(PUBLISHED_LATER, 4800L));
+    operadorRepository.retainName(
+        new NomeAlternativo(
+            operadorId, "Servizos Galegos SL", new NomeRank(PUBLISHED_ON, 4711L)));
+
+    OperadorEconomico found =
+        operadorRepository.findByFiscalId(new FiscalIdentifier("B12345678")).orElseThrow();
+    assertThat(found.name()).isEqualTo("Servizos Galegos SLU");
+    assertThat(found.nomesAlternativos())
+        .extracting(NomeAlternativo::name)
+        .containsExactly("Servizos Galegos SL");
   }
 
   // The retained fact is the most recent contract that published the name, not the last one to
@@ -473,6 +559,29 @@ class JdbcOperadorRepositoryIntegrationTest implements TestPropertyProvider {
     return operadorRepository.insert(
         new OperadorEconomico(
             new FiscalIdentifier(fiscalId), name, new NomeRank(rankDate, 4711L)));
+  }
+
+  // Where the row physically sits, which is what tells an upsert that did nothing from one that
+  // rewrote the same values: PostgreSQL never updates a tuple in place, so a DO UPDATE that fired
+  // leaves a new version at a new ctid. Not xmin — every write of one test shares a transaction,
+  // so that would read as unchanged whether the statement fired or not. Read as text because
+  // neither type has a JDBC mapping of its own.
+  private String tupleVersionOf(OperadorId operadorId, String name) throws Exception {
+    String sql =
+        "SELECT ctid::text AS version FROM operador_economico_nome_alternativo"
+            + " WHERE operador_economico_id = ? AND name = ?";
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement statement = connection.prepareStatement(sql)) {
+      statement.setObject(1, operadorId.value());
+      statement.setString(2, name);
+      try (ResultSet resultSet = statement.executeQuery()) {
+        if (!resultSet.next()) {
+          throw new IllegalStateException("No name %s retained beside %s".formatted(
+              name, operadorId));
+        }
+        return resultSet.getString("version");
+      }
+    }
   }
 
   private static OperadorId idOf(OperadorEconomico operador) {

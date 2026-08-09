@@ -40,7 +40,7 @@ exists first.
 >   Data prefix, and `promoteName` spans two tables. Both need explicit queries, so this adapter
 >   will **not** be an empty interface like `JdbcOrganoRepository`.
 >
-> **Three notes from the implementation.**
+> **Four notes from the implementation.**
 >
 > - **No migration was written.** The `V` number the Scope reserves below was never taken: both
 >   tables had already landed as `V12` with [TASK-0002](TASK-0002-operador-domain-model.md), for
@@ -59,9 +59,25 @@ exists first.
 >   deliberately violated constraint aborts the connection Micronaut Data shares with the adapter,
 >   so those cases drive raw SQL and commit, as the termo and contrato menor migration tests
 >   already do. The port offers no delete, so the foreign-key criterion had no other home either.
+> - **The same upsert refuses to retain the name the operador is displayed under**, which the
+>   Scope below does not ask for. The aggregate throws on being built holding its own displayed
+>   name as an alternative, and nothing could undo such a row — there is no delete — so one of
+>   them would make that operador unreadable for good, through the very read the derivation
+>   performs on its next contract. It is the commonest case in the data, not a corner: for an
+>   operador whose contracts all publish one name, every contract but the R4 winner arrives with
+>   that same name at a lower rank. [TASK-0004](TASK-0004-derivation-during-import.md) states the
+>   rule and would have been right to; the guard is here as well because a caller that forgets it
+>   leaves no error behind, which is the argument the unique fiscal identifier already rests on.
+>
+>   **It makes the order of the two writes matter, and that is its cost.** Promote first, then
+>   retain the displaced name: retaining first would ask the store to file a name that is still
+>   the displayed one, and it would decline — losing the name rather than corrupting the row, but
+>   losing it quietly. Promotion drops the promoted name from the retained set, so that order
+>   needs nothing else of the caller.
 
 ## Scope
-- A migration (next free `V` number) creating `operador_economico`:
+- The migration creating `operador_economico` — **already landed as `V12`**, see the note above;
+  what this task adds is the adapter below. The columns it created:
   - `id UUID PRIMARY KEY` — a plain `uuid` column; `OperadorId` is the Java type an
     `AttributeConverter` maps onto it
     ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md));

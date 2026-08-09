@@ -38,6 +38,20 @@ import org.jspecify.annotations.Nullable;
  * rank loses to every dated one and still orders against another undated one by source identifier.
  * Comparing the columns directly would answer {@code NULL} whenever either side is undated, and a
  * {@code NULL} condition skips the update silently.
+ *
+ * <p>The same statement <strong>refuses to retain the name the operador is displayed
+ * under</strong>. That is the state the aggregate throws on being built in, and nothing here
+ * could recover from it: the port offers no delete, so one such row would make the operador
+ * unreadable for good, through the very read its own derivation performs on the next contract.
+ * The guard is the store's because a caller that forgets it leaves no error behind — the failure
+ * mode the unique fiscal identifier is enforced against for the same reason.
+ *
+ * <p><strong>It makes the order of the two writes matter</strong>, and this is the one thing a
+ * caller has to know: when a contract outranks the incumbent, promote first and retain the
+ * displaced name afterwards. Retaining first would be asked to file a name that is still the
+ * displayed one, and this statement would decline it — costing the name rather than corrupting the
+ * row, but costing it silently. Promotion drops the promoted name from the retained set, so that
+ * order needs nothing else of the caller.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public abstract class JdbcOperadorRepository
@@ -60,7 +74,9 @@ public abstract class JdbcOperadorRepository
       """
       INSERT INTO operador_economico_nome_alternativo (
           operador_economico_id, name, last_published_date, last_published_source_id)
-      VALUES (?, ?, ?, ?)
+      SELECT ?::uuid, ?::text, ?::date, ?::bigint
+       WHERE NOT EXISTS (
+           SELECT 1 FROM operador_economico WHERE id = ?::uuid AND name = ?::text)
       ON CONFLICT (operador_economico_id, name) DO UPDATE SET
           last_published_date = EXCLUDED.last_published_date,
           last_published_source_id = EXCLUDED.last_published_source_id
@@ -119,6 +135,8 @@ public abstract class JdbcOperadorRepository
       statement.setString(2, nome.name());
       statement.setObject(3, toSqlDate(lastPublished.date()));
       statement.setLong(4, lastPublished.sourceId());
+      statement.setObject(5, operadorId.value());
+      statement.setString(6, nome.name());
     });
   }
 
