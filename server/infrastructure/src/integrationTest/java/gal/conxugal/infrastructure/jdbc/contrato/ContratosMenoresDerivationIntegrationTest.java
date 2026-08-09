@@ -79,11 +79,6 @@ class ContratosMenoresDerivationIntegrationTest implements TestPropertyProvider 
   private static final LocalDate FEBRUARY = LocalDate.of(2026, 2, 10);
   private static final LocalDate MARCH = LocalDate.of(2026, 3, 10);
 
-  /**
-   * Every catalogue row's physical location, which PostgreSQL moves whenever a row is rewritten. It
-   * is what tells a row left alone from one updated with the values it already had — {@code xmin}
-   * could not, these writes being spread over transactions of their own.
-   */
   private static final String CATALOGUE_TUPLE_VERSIONS =
       """
       SELECT 'operador:' || ctid::text AS version FROM operador_economico
@@ -329,16 +324,22 @@ class ContratosMenoresDerivationIntegrationTest implements TestPropertyProvider 
   }
 
   // Either both are there or neither is. The batch is failed on the contract side, after its
-  // operador was created, which is the only ordering that can leave a stored contract whose
+  // operadores were created, which is the only ordering that can leave a stored contract whose
   // operador does not exist.
+  //
+  // Three awards rather than one: with a single operador the test cannot tell a batch that rolled
+  // back whole from one that committed each derivation as it went and only lost the last.
   @Test
   void batch_that_fails_on_its_contracts_leaves_no_operador_behind() throws Exception {
     OrganoId unknownOrgano = new OrganoId(UUID.randomUUID());
+    List<ContratoMenorSourceEntry> awards =
+        List.of(
+            award(1L, JANUARY, "Primeira SL", "B11111111"),
+            award(2L, FEBRUARY, "Segunda SL", "B22222222"),
+            award(3L, MARCH, "Terceira SL", "B33333333"));
 
     assertThatExceptionOfType(DataAccessException.class)
-        .isThrownBy(
-            () ->
-                batch.store(List.of(award(1L, JANUARY, "ACME SL", "B12345678")), unknownOrgano));
+        .isThrownBy(() -> batch.store(awards, unknownOrgano));
 
     assertThat(operadorTable()).hasNumberOfRows(0);
     assertThat(contratoTable()).hasNumberOfRows(0);

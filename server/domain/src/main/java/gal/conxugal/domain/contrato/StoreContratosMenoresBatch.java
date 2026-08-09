@@ -10,7 +10,10 @@ import gal.conxugal.domain.organo.OrganoId;
 import io.micronaut.transaction.annotation.Transactional;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -44,10 +47,9 @@ import org.jspecify.annotations.Nullable;
  * keep.
  *
  * <p>A contract that published <em>no</em> name is stored under the operador its identifier names
- * all the same, which then carries the empty name until a contract that <b>outranks</b> it
- * publishes one. Identity is the identifier alone, and refusing the award over a value the source
- * left blank would record it under nobody; inventing a name for it is what R13 forbids. The source
- * is not expected to publish either an award without a name or one without an identifier.
+ * all the same — identity is the identifier alone, and refusing the award over a value the source
+ * left blank would record it under nobody — but it supplies no name to rank. The source is not
+ * expected to publish either an award without a name or one without an identifier.
  */
 @Singleton
 public class StoreContratosMenoresBatch {
@@ -72,8 +74,9 @@ public class StoreContratosMenoresBatch {
   public UpsertCounts store(List<ContratoMenorSourceEntry> entries, OrganoId organoId) {
     Objects.requireNonNull(entries, "entries must not be null");
     Objects.requireNonNull(organoId, "organoId must not be null");
-    List<ContratoMenor> batch = new ArrayList<>(entries.size());
-    for (ContratoMenorSourceEntry entry : entries) {
+    Collection<ContratoMenorSourceEntry> page = lastReadingPerSourceId(entries);
+    List<ContratoMenor> batch = new ArrayList<>(page.size());
+    for (ContratoMenorSourceEntry entry : page) {
       batch.add(
           new ContratoMenor(
               entry.sourceId(),
@@ -88,11 +91,32 @@ public class StoreContratosMenoresBatch {
   }
 
   /**
+   * The page with a repeated publication collapsed to its last reading — the rule the store already
+   * applies to the contracts themselves, applied here too because the derivation runs first. A
+   * reading the store is about to discard would otherwise leave the operador it named behind,
+   * catalogued from an award no stored contract points at.
+   */
+  private static Collection<ContratoMenorSourceEntry> lastReadingPerSourceId(
+      Iterable<ContratoMenorSourceEntry> entries) {
+    Map<Long, ContratoMenorSourceEntry> bySourceId = new LinkedHashMap<>();
+    for (ContratoMenorSourceEntry entry : entries) {
+      bySourceId.put(entry.sourceId(), entry);
+    }
+    return bySourceId.values();
+  }
+
+  /**
    * The operador this award names, or nothing when its published identifier is unusable — absent,
    * or empty once surrounding whitespace is ignored. Such a contract is stored under a null
    * operador: never a placeholder, and never a shared <em>unknown</em> row that would pool
    * unrelated awards under one identity. Because the schema is normalised, it therefore records no
    * awardee at all.
+   *
+   * <p>An award that published <b>no name</b> contributes none: it is catalogued under the empty
+   * name if nothing named its identifier before, because an operador has to be displayed as
+   * something and inventing one is what R13 forbids — but it never displaces a name a contract did
+   * publish, and never enters the retained set, where the empty string is not a name the operador
+   * has borne.
    */
   private @Nullable OperadorEconomico operadorAwarded(ContratoMenorSourceEntry entry) {
     Optional<FiscalIdentifier> published = FiscalIdentifier.of(entry.awardeeFiscalId());
@@ -100,14 +124,17 @@ public class StoreContratosMenoresBatch {
       return null;
     }
     FiscalIdentifier fiscalId = published.get();
-    String publishedName = entry.awardeeName() == null ? "" : entry.awardeeName();
+    String publishedName = entry.awardeeName();
     NomeRank rank = new NomeRank(entry.publicationDate(), entry.sourceId());
     Optional<OperadorEconomico> catalogued = operadores.findByFiscalId(fiscalId);
     if (catalogued.isEmpty()) {
-      return operadores.insert(new OperadorEconomico(fiscalId, publishedName, rank));
+      return operadores.insert(
+          new OperadorEconomico(fiscalId, publishedName == null ? "" : publishedName, rank));
     }
     OperadorEconomico incumbent = catalogued.get();
-    account(incumbent, publishedName, rank);
+    if (publishedName != null) {
+      account(incumbent, publishedName, rank);
+    }
     return incumbent;
   }
 

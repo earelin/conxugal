@@ -253,6 +253,46 @@ class StoreContratosMenoresBatchTest {
         .isEqualTo("");
   }
 
+  // The empty name is what an operador nothing has named is displayed as, never a name that can
+  // win R4. A blank the source left would otherwise take the display from a name a contract really
+  // published, and no read surface could tell the two apart.
+  @Test
+  void award_that_published_no_name_never_takes_the_display_from_one_that_did() {
+    catalogued("B12345678", "ACME SL", MAY, 1L);
+
+    store(award(2L, JUNE, null, "B12345678"));
+
+    verify(operadores, never()).promoteName(any(), any(), any());
+  }
+
+  // Nor does it enter the retained set: an absent name is not a name the operador has borne, and
+  // R15 retains the names it has.
+  @Test
+  void award_that_published_no_name_retains_nothing_beside_the_operador() {
+    catalogued("B12345678", "ACME SL", JUNE, 2L);
+
+    store(award(1L, MAY, null, "B12345678"));
+
+    verify(operadores, never()).retainName(any());
+  }
+
+  // The store collapses a page repeating a publication to its last reading, so deriving from the
+  // one it is about to discard would catalogue an operador no stored contract points at.
+  @Test
+  void page_repeating_one_publication_derives_only_from_its_last_reading() {
+    theStoreCataloguesOnDemand();
+
+    store(
+        award(4711L, MAY, "Lectura Descartada SL", "B11111111"),
+        award(4711L, MAY, "ACME SL", "B22222222"));
+
+    assertThat(created)
+        .singleElement()
+        .extracting(OperadorEconomico::fiscalId)
+        .isEqualTo(new FiscalIdentifier("B22222222"));
+    assertThat(upserted).hasSize(1);
+  }
+
   @Test
   void answers_with_the_counts_the_store_reported() {
     when(contratos.upsertAll(anyCollection())).thenReturn(new UpsertCounts(3, 2));

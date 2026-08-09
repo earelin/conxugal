@@ -34,10 +34,13 @@ one lands **after** there is an import to derive from.
 >   inside the batch's transaction, so the second contract naming a new operador reads what the
 >   first wrote. That is also what keeps the retained names out of memory, which is the trap the
 >   Scope below spells out.
-> - **An award publishing a usable identifier but no name is still catalogued**, under the empty
->   name, which a contract that outranks it then replaces. Identity is the identifier alone, so
->   refusing the award would record it under nobody, and giving it a name of our own is what R13
->   forbids. Neither branch is one the source is expected to take.
+> - **An award publishing a usable identifier but no name is still catalogued, and supplies no
+>   name.** Identity is the identifier alone, so refusing the award would record it under nobody,
+>   and giving it a name of our own is what R13 forbids — it is therefore catalogued under the empty
+>   name when nothing named its identifier before. But the empty name is only what an operador
+>   nothing has named is displayed as: such an award never displaces a name a contract really
+>   published, however high its rank, and never enters the retained set, an absent name not being
+>   one the operador has borne. Neither that branch nor R5's is one the source is expected to take.
 
 ## Scope
 - Inside the batch's transaction, for each contract being upserted: canonicalise **the fiscal
