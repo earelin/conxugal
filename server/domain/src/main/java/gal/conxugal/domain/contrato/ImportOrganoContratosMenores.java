@@ -116,7 +116,8 @@ public class ImportOrganoContratosMenores {
     OrganoId organoId =
         Objects.requireNonNull(organo.id(), "organo must be stored before its contracts are");
     Target target = new Target(runId, organoId, organo.sourceKey());
-    return walk(target, resumePointOf(stateOf(organoId)));
+    ContratosMenoresImportState state = stateOf(organoId);
+    return walk(target, resumePointOf(state));
   }
 
   /**
