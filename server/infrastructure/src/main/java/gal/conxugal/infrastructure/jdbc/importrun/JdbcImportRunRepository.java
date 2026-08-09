@@ -257,6 +257,21 @@ public abstract class JdbcImportRunRepository
     }
   }
 
+  /**
+   * The run's own row and nothing else — no coverage, because this is asked once per batch for as
+   * long as an import runs. The abandonment bound is applied by the state itself, the same way
+   * every other read of a run applies it.
+   */
+  @Override
+  @Transactional
+  public boolean holdsGuard(ImportRunId runId) {
+    Instant now = clock.instant();
+    return findById(runId)
+        .map(run -> run.state().asReadAt(run.lastAdvancedAt(), now, bound()))
+        .filter(ImportRunState.IN_PROGRESS::equals)
+        .isPresent();
+  }
+
   @Override
   @Transactional
   public Optional<ImportRunReport> findRun(ImportRunId runId) {

@@ -68,6 +68,22 @@ public interface ImportRunRepository {
       int addedSinceLastAdvance,
       int refreshedSinceLastAdvance);
 
+  /**
+   * Whether this run is still the live one — it exists, and it has not gone quiet past the
+   * abandonment bound. A long import owes itself this before each batch: a run that stalls past
+   * the bound releases the guard and the next trigger claims, so one that wakes and carries on
+   * would be reading the source alongside whoever claimed after it.
+   *
+   * <p>Distinct from {@link #findRun} rather than derived from it, because this runs once per
+   * batch for days: it reads the run's own row and none of its coverage, where a report reads
+   * every Órgano the run set out to cover in order to answer a question about one.
+   *
+   * <p>Ask it <em>before</em> advancing rather than after, because an advance is itself proof of
+   * life — a run that renews its own last-advanced stamp and then asks whether it is live has
+   * answered its own question.
+   */
+  boolean holdsGuard(ImportRunId runId);
+
   /** The run and every Órgano it covers, with the run's state already read for abandonment. */
   Optional<ImportRunReport> findRun(ImportRunId runId);
 }

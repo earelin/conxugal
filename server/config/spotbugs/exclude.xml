@@ -31,6 +31,13 @@
     <Field name="~(organo|termo)Repository"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
+  <!-- And once more for the contratos menores walk: ContratosMenoresImportStateRepository declares
+       insert, which is all the heuristic needs to read the injected port as mutable. -->
+  <Match>
+    <Class name="gal.conxugal.domain.contrato.ImportOrganoContratosMenores"/>
+    <Field name="importStates"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
 
   <!-- Micronaut Serde's generated (de)serializers. The @Generated match above cannot reach them:
        they carry javax.annotation.processing.Generated, which is SOURCE-retention and so absent

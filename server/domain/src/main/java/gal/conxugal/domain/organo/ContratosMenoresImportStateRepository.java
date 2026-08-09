@@ -18,6 +18,11 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>There is no delete either: an Órgano that has been loaded stays loaded, and unmarking it
  * retains both its contracts and the record of how far they got.
+ *
+ * <p><strong>Both writes commit in a transaction of their own</strong>, whatever the caller is
+ * inside. An import's contracts and the cursor describing them are deliberately not one act — a
+ * cursor rolled back by a data failure, or contracts rolled back by a failure to move the cursor,
+ * are both the coupling the resumption design exists to avoid.
  */
 public interface ContratosMenoresImportStateRepository {
 
