@@ -115,9 +115,16 @@ public class ImportOrganoContratosMenores {
   public ContratosMenoresImportSummary run(ImportRunId runId, OrganoDeContratacion organo) {
     OrganoId organoId =
         Objects.requireNonNull(organo.id(), "organo must be stored before its contracts are");
-    ContratosMenoresImportState state = stateOf(organoId);
-    return walk(runId, organo.sourceKey(), organoId, resumePointOf(state));
+    Target target = new Target(runId, organoId, organo.sourceKey());
+    return walk(target, resumePointOf(stateOf(organoId)));
   }
+
+  /**
+   * What one walk is about: the Órgano it is loading, the key the source knows that Órgano by, and
+   * the run it reports its progress against. None of the three moves while the walk runs, so they
+   * travel together rather than as three more parameters on every step of it.
+   */
+  private record Target(ImportRunId runId, OrganoId organoId, String sourceKey) {}
 
   /**
    * The state row as this walk found it, created at T₀ if this is the Órgano's first import. T₀ is
@@ -156,8 +163,7 @@ public class ImportOrganoContratosMenores {
   private record WindowRead(int added, int refreshed, long recordsTotal, boolean mayContinue) {}
 
   /** Window by window, newest first, until one of the three endings arrives. */
-  private ContratosMenoresImportSummary walk(
-      ImportRunId runId, String sourceKey, OrganoId organoId, LocalDate resumePoint) {
+  private ContratosMenoresImportSummary walk(Target target, LocalDate resumePoint) {
     LocalDate historyFloor = configuration.historyFloor();
     LocalDate windowEnd = resumePoint;
     int added = 0;
@@ -168,17 +174,17 @@ public class ImportOrganoContratosMenores {
     // whole history.
     while (windowEnd.isAfter(historyFloor)) {
       LocalDate windowStart = latest(windowEnd.minusDays(WINDOW_DAYS), historyFloor);
-      WindowRead read = readWindow(runId, sourceKey, organoId, windowStart, windowEnd);
+      WindowRead read = readWindow(target, windowStart, windowEnd);
       added += read.added();
       refreshed += read.refreshed();
       if (!read.mayContinue()) {
         return ContratosMenoresImportSummary.incomplete(added, refreshed);
       }
-      if (contratos.countByOrganoId(organoId) >= read.recordsTotal()) {
+      if (contratos.countByOrganoId(target.organoId()) >= read.recordsTotal()) {
         // Not best-effort, unlike the progress writes: a completion mark that failed silently
         // would leave a fully loaded Órgano reading as half-loaded for good, and the walk that
         // could correct it is the one being told to stop. Failing the Órgano keeps it resumable.
-        importStates.updateState(organoId, ContratosMenoresImportStatus.COMPLETE);
+        importStates.updateState(target.organoId(), ContratosMenoresImportStatus.COMPLETE);
         return ContratosMenoresImportSummary.complete(added, refreshed);
       }
       if (!windowStart.isAfter(historyFloor)) {
@@ -192,7 +198,7 @@ public class ImportOrganoContratosMenores {
     LOG.warn(
         "Contratos menores walk of Órgano {} reached the configured history floor {} without its"
             + " stored count matching the source's; it is left incomplete and will be resumed",
-        organoId, historyFloor);
+        target.organoId(), historyFloor);
     return ContratosMenoresImportSummary.incomplete(added, refreshed);
   }
 
@@ -211,26 +217,22 @@ public class ImportOrganoContratosMenores {
    * batch put it, which is the conservative pair: the window is re-read on resumption and nothing
    * is stored twice.
    */
-  private WindowRead readWindow(
-      ImportRunId runId,
-      String sourceKey,
-      OrganoId organoId,
-      LocalDate windowStart,
-      LocalDate windowEnd) {
+  private WindowRead readWindow(Target target, LocalDate windowStart, LocalDate windowEnd) {
     int added = 0;
     int refreshed = 0;
     int offset = 0;
-    while (importRuns.holdsGuard(runId)) {
+    while (importRuns.holdsGuard(target.runId())) {
       ContratoMenorSourcePage page =
-          contratoMenorSource.fetchPage(sourceKey, windowStart, windowEnd, offset, PAGE_SIZE);
+          contratoMenorSource.fetchPage(
+              target.sourceKey(), windowStart, windowEnd, offset, PAGE_SIZE);
       final boolean lastPage = page.entries().size() < PAGE_SIZE;
-      UpsertCounts counts = contratos.upsertAll(contratosOf(page, organoId));
+      UpsertCounts counts = contratos.upsertAll(contratosOf(page, target.organoId()));
       added += counts.added();
       refreshed += counts.refreshed();
-      if (!importRuns.holdsGuard(runId)) {
+      if (!importRuns.holdsGuard(target.runId())) {
         break;
       }
-      recordProgress(runId, organoId, lastPage ? windowStart : windowEnd, counts);
+      recordProgress(target, lastPage ? windowStart : windowEnd, counts);
       if (lastPage) {
         return new WindowRead(added, refreshed, page.recordsTotal(), true);
       }
@@ -239,7 +241,7 @@ public class ImportOrganoContratosMenores {
     LOG.warn(
         "Contratos menores walk of Órgano {} stopped: its run {} no longer holds the import guard,"
             + " so another import may already have claimed it",
-        organoId, runId);
+        target.organoId(), target.runId());
     return new WindowRead(added, refreshed, 0, false);
   }
 
@@ -253,16 +255,16 @@ public class ImportOrganoContratosMenores {
    * a resumption from anywhere inside a window it has not finished paging would skip the rest of
    * it; only the page that exhausts the window moves it back.
    */
-  private void recordProgress(
-      ImportRunId runId, OrganoId organoId, LocalDate cursorDate, UpsertCounts counts) {
+  private void recordProgress(Target target, LocalDate cursorDate, UpsertCounts counts) {
     try {
-      importStates.updateCursorDate(organoId, cursorDate);
-      importRuns.advance(runId, organoId, counts.added(), counts.refreshed());
+      importStates.updateCursorDate(target.organoId(), cursorDate);
+      importRuns.advance(
+          target.runId(), target.organoId(), counts.added(), counts.refreshed());
     } catch (RuntimeException e) {
       LOG.warn(
           "Contratos menores batch for Órgano {} committed but its progress against run {} was not"
               + " recorded; the contracts stand and the walk continues",
-          organoId, runId, e);
+          target.organoId(), target.runId(), e);
     }
   }
 
