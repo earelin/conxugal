@@ -77,17 +77,21 @@ public class StoreContratosMenoresBatch {
     Collection<ContratoMenorSourceEntry> page = lastReadingPerSourceId(entries);
     List<ContratoMenor> batch = new ArrayList<>(page.size());
     for (ContratoMenorSourceEntry entry : page) {
-      batch.add(
-          new ContratoMenor(
-              entry.sourceId(),
-              organoId,
-              entry.publicationDate(),
-              entry.obxecto(),
-              entry.amount(),
-              entry.duration(),
-              operadorAwarded(entry)));
+      batch.add(contratoOf(entry, organoId));
     }
     return contratos.upsertAll(batch);
+  }
+
+  /** One published award as the contract this Órgano stores, awardee resolved. */
+  private ContratoMenor contratoOf(ContratoMenorSourceEntry entry, OrganoId organoId) {
+    return new ContratoMenor(
+        entry.sourceId(),
+        organoId,
+        entry.publicationDate(),
+        entry.obxecto(),
+        entry.amount(),
+        entry.duration(),
+        operadorAwarded(entry));
   }
 
   /**
