@@ -204,41 +204,50 @@ public class ImportOrganoContratosMenores {
   }
 
   /**
-   * One window, paged to exhaustion, and the guard asked about twice a batch.
+   * One window, a page at a time until the source answers a short one — which is what says the
+   * window holds nothing further, since it only ever answers a full page while more remains.
    *
-   * <p>The loop condition is the first ask, so a walk handed a run that is already gone reads
-   * nothing at all. The second is the one that does the work the guard exists for: it sits
-   * <em>after</em> the batch commits and <em>before</em> the progress write, because the progress
-   * write renews the run's own last-advanced stamp — so a walk that asked only at the top of the
-   * loop would be reading a liveness it had just written itself, and a stall long enough to lose
-   * the guard would be invisible to it. Between those two points the answer is still the one the
-   * stalled request left behind.
-   *
-   * <p>Stopping there leaves the batch's contracts committed and the cursor where the previous
-   * batch put it, which is the conservative pair: the window is re-read on resumption and nothing
-   * is stored twice.
+   * <p>The guard is asked twice a page, and both asks are interruptions rather than the loop's
+   * business. The first means a walk handed a run that is already gone reads nothing at all. The
+   * second is the one that does the work the guard exists for: it sits <em>after</em> the batch
+   * commits and <em>before</em> the progress write, because the progress write renews the run's own
+   * last-advanced stamp — so a walk that asked only before fetching would be reading a liveness it
+   * had just written itself, and a stall long enough to lose the guard would be invisible to it.
+   * Between those two points the answer is still the one the stalled request left behind.
    */
   private WindowRead readWindow(Target target, LocalDate windowStart, LocalDate windowEnd) {
     int added = 0;
     int refreshed = 0;
     int offset = 0;
-    while (importRuns.holdsGuard(target.runId())) {
+    long recordsTotal = 0;
+    boolean lastPage = false;
+    while (!lastPage) {
+      if (!importRuns.holdsGuard(target.runId())) {
+        return stoppedShort(target, added, refreshed);
+      }
       ContratoMenorSourcePage page =
           contratoMenorSource.fetchPage(
               target.sourceKey(), windowStart, windowEnd, offset, PAGE_SIZE);
-      final boolean lastPage = page.entries().size() < PAGE_SIZE;
+      recordsTotal = page.recordsTotal();
+      lastPage = page.entries().size() < PAGE_SIZE;
       UpsertCounts counts = contratos.upsertAll(contratosOf(page, target.organoId()));
       added += counts.added();
       refreshed += counts.refreshed();
       if (!importRuns.holdsGuard(target.runId())) {
-        break;
+        return stoppedShort(target, added, refreshed);
       }
       recordProgress(target, lastPage ? windowStart : windowEnd, counts);
-      if (lastPage) {
-        return new WindowRead(added, refreshed, page.recordsTotal(), true);
-      }
       offset += page.entries().size();
     }
+    return new WindowRead(added, refreshed, recordsTotal, true);
+  }
+
+  /**
+   * The window abandoned part-way, because the run behind it stopped holding the guard. What the
+   * batches before it stored stands, and the cursor is left where the last of them put it — the
+   * conservative pair, so the window is re-read on resumption and nothing is stored twice.
+   */
+  private WindowRead stoppedShort(Target target, int added, int refreshed) {
     LOG.warn(
         "Contratos menores walk of Órgano {} stopped: its run {} no longer holds the import guard,"
             + " so another import may already have claimed it",
