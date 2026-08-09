@@ -453,24 +453,60 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
     assertThat(awardee.name()).isEqualTo("Servizos Galegos SL");
   }
 
-  // Nothing derives an awardee yet, so a re-import carries none and the update leaves the column
-  // alone rather than clearing it. Pinned as the behaviour it is, not as a rule: the derivation
-  // task widens the update to repoint this key, and that is where this expectation changes.
+  // The awardee is refreshed like every other published value, which is what moves a contract whose
+  // published fiscal identifier was corrected to the operador that identifier names. Leaving the
+  // column at whatever the row already held would keep an awardee the publication no longer names.
   @Test
-  void refreshing_contract_leaves_the_awardee_column_untouched() throws Exception {
+  void refreshing_contract_repoints_the_awardee_column() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorId operadorId = insertOperador("B12345678", "Servizos Galegos SL");
-    contratoMenorRepository.upsertAll(List.of(contrato(4711L, organoId, "As published")));
-    assignAwardee(4711L, operadorId);
+    OperadorId published = insertOperador("B12345678", "Servizos Galegos SL");
+    OperadorId corrected = insertOperador("B87654321", "Servizos Galegos SL");
+    contratoMenorRepository.upsertAll(
+        List.of(contratoAwardedTo(4711L, organoId, "As published", published, "B12345678")));
 
-    contratoMenorRepository.upsertAll(List.of(contrato(4711L, organoId, "Corrected")));
+    contratoMenorRepository.upsertAll(
+        List.of(contratoAwardedTo(4711L, organoId, "Corrected", corrected, "B87654321")));
 
     Table contratos = contratoTable();
     assertThat(contratos).hasNumberOfRows(1);
     assertThat(contratos)
         .row(0)
             .value("obxecto").isEqualTo("Corrected")
-            .value("operador_economico_id").isEqualTo(operadorId.value());
+            .value("operador_economico_id").isEqualTo(corrected.value());
+  }
+
+  // The other direction of the same rule: a publication corrected into an identifier nothing can
+  // use records no awardee, and the key it used to carry goes with it.
+  @Test
+  void refreshing_contract_clears_the_awardee_column_when_the_batch_carries_none()
+      throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    OperadorId published = insertOperador("B12345678", "Servizos Galegos SL");
+    contratoMenorRepository.upsertAll(
+        List.of(contratoAwardedTo(4711L, organoId, "As published", published, "B12345678")));
+
+    contratoMenorRepository.upsertAll(List.of(contrato(4711L, organoId, "Corrected")));
+
+    assertThat(contratoTable())
+        .row(0)
+            .value("operador_economico_id").isNull();
+  }
+
+  private static ContratoMenor contratoAwardedTo(
+      long sourceId, OrganoId organoId, String obxecto, OperadorId operadorId, String fiscalId) {
+    return new ContratoMenor(
+        sourceId,
+        organoId,
+        PUBLISHED_ON,
+        obxecto,
+        new Money(new BigDecimal("1234.50")),
+        "1 mes",
+        new OperadorEconomico(
+            operadorId,
+            new FiscalIdentifier(fiscalId),
+            "Servizos Galegos SL",
+            new NomeRank(PUBLISHED_ON, sourceId),
+            Set.of()));
   }
 
   private static ContratoMenor contrato(long sourceId, OrganoId organoId, String obxecto) {
@@ -505,17 +541,6 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
         }
         return resultSet.getObject("id", UUID.class);
       }
-    }
-  }
-
-  private void assignAwardee(long sourceId, OperadorId operadorId) throws Exception {
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement statement =
-            connection.prepareStatement(
-                "UPDATE contrato_menor SET operador_economico_id = ? WHERE source_id = ?")) {
-      statement.setObject(1, operadorId.value());
-      statement.setLong(2, sourceId);
-      statement.executeUpdate();
     }
   }
 

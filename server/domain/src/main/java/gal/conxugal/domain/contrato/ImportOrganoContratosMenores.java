@@ -12,7 +12,6 @@ import gal.conxugal.domain.time.Clock;
 import jakarta.inject.Singleton;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +41,11 @@ import org.slf4j.LoggerFactory;
  * every response and used as a test evaluated when the walk believes it is done, never as a fixed
  * target. The configured history floor is what bounds a walk whose count never converges, and
  * reaching it leaves the Órgano incomplete.
+ *
+ * <p><strong>A batch is stored with the operadores its contracts name</strong>, by {@link
+ * StoreContratosMenoresBatch} and in one transaction. The published awardee reaches nothing beyond
+ * that call: a stored contract keeps neither the name nor the identifier it was published with, so
+ * the page read here is the only thing the derivation ever has to read them from.
  *
  * <p><strong>Contracts commit first, the record of them afterwards</strong>, in transactions of
  * their own. A progress write that fails is logged and abandoned: the import wins and the record is
@@ -80,6 +84,7 @@ public class ImportOrganoContratosMenores {
   private static final Logger LOG = LoggerFactory.getLogger(ImportOrganoContratosMenores.class);
 
   private final ContratoMenorSource contratoMenorSource;
+  private final StoreContratosMenoresBatch batch;
   private final ContratoMenorRepository contratos;
   private final ContratosMenoresImportStateRepository importStates;
   private final ImportRunRepository importRuns;
@@ -88,12 +93,14 @@ public class ImportOrganoContratosMenores {
 
   public ImportOrganoContratosMenores(
       ContratoMenorSource contratoMenorSource,
+      StoreContratosMenoresBatch batch,
       ContratoMenorRepository contratos,
       ContratosMenoresImportStateRepository importStates,
       ImportRunRepository importRuns,
       Clock clock,
       ContratosMenoresImportConfiguration configuration) {
     this.contratoMenorSource = contratoMenorSource;
+    this.batch = batch;
     this.contratos = contratos;
     this.importStates = importStates;
     this.importRuns = importRuns;
@@ -231,7 +238,7 @@ public class ImportOrganoContratosMenores {
               target.sourceKey(), windowStart, windowEnd, offset, PAGE_SIZE);
       recordsTotal = page.recordsTotal();
       lastPage = page.entries().size() < PAGE_SIZE;
-      UpsertCounts counts = contratos.upsertAll(contratosOf(page, target.organoId()));
+      UpsertCounts counts = batch.store(page.entries(), target.organoId());
       added += counts.added();
       refreshed += counts.refreshed();
       if (!importRuns.holdsGuard(target.runId())) {
@@ -277,25 +284,5 @@ public class ImportOrganoContratosMenores {
               + " recorded; the contracts stand and the walk continues",
           target.organoId(), target.runId(), e);
     }
-  }
-
-  /**
-   * The page as contracts of this Órgano. No awardee: the operador a contract was awarded to is
-   * derived by the operadores feature, and inventing one here would record an award under nobody.
-   */
-  private static List<ContratoMenor> contratosOf(ContratoMenorSourcePage page, OrganoId organoId) {
-    return page.entries()
-        .stream()
-        .map(
-            entry ->
-                new ContratoMenor(
-                    entry.sourceId(),
-                    organoId,
-                    entry.publicationDate(),
-                    entry.obxecto(),
-                    entry.amount(),
-                    entry.duration(),
-                    null))
-        .toList();
   }
 }

@@ -48,12 +48,11 @@ import org.jspecify.annotations.Nullable;
  * Órgano's history for good. The last reading of a source identifier wins, which is the rule the
  * upsert already applies across batches, applied within one.
  *
- * <p>{@code operador_economico_id} is written on insert and absent from the update <em>because
- * nothing derives an awardee yet</em>, so a re-import carries none and the update has nothing
- * truthful to write there. This is a consequence of the ordering, not a rule: the derivation task
- * resolves the awardee on every upsert precisely so that a corrected fiscal identifier repoints
- * the foreign key, and adding {@code operador_economico_id = EXCLUDED.operador_economico_id} to
- * the update is that task's to make.
+ * <p>{@code operador_economico_id} is refreshed like every other published value, which is what
+ * makes a correction changing a contract's published fiscal identifier repoint the row at the
+ * operador the corrected identifier names. Leaving it out of the update would let a conflicting row
+ * keep an awardee its publication no longer names, silently and for good — the caller resolves the
+ * awardee on every upsert precisely so that it does not.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public abstract class JdbcContratoMenorRepository
@@ -71,7 +70,8 @@ public abstract class JdbcContratoMenorRepository
           publication_date = EXCLUDED.publication_date,
           obxecto = EXCLUDED.obxecto,
           amount = EXCLUDED.amount,
-          duration = EXCLUDED.duration
+          duration = EXCLUDED.duration,
+          operador_economico_id = EXCLUDED.operador_economico_id
       RETURNING (xmax = 0) AS inserted
       """;
 
