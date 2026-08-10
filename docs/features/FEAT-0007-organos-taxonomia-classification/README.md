@@ -229,6 +229,15 @@ Two reads, each `@Secured(IS_AUTHENTICATED)`, each a **flat list of one entity t
 - `GET /api/organos` — every stored Órgano: `id`, `name`, `active`, and `termoId`
   (null when unclassified). This is the R8 catalogue view: name, state, and placement or
   the absence of one, for every Órgano (SPEC-0004 R2, R8).
+
+> **SPEC-0004 was amended after this was written, and the endpoint is unaffected.** R8's
+> flat **list view** is now an administrator's surface only, and a `USER` reaches an Órgano
+> through the R9 tree or the R19 name search instead. Neither changes this contract: the
+> tree and the search are **built from this read**, so it stays
+> `@Secured(IS_AUTHENTICATED)`, returns the whole catalogue, and still carries `termoId` —
+> which now also places an unclassified Órgano at the **root** of the `USER` tree rather
+> than in an admin-only worklist. What moved is which *surfaces* render it, all of which
+> are other features'; nothing here needs rebuilding.
 - `GET /api/organos/taxonomia` — every term: `id`, `name`, and `parentId` (null for
   a root). No Órganos, no nesting — this is the data an R9 tree is built from, not the tree
   (SPEC-0004 R2).

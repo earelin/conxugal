@@ -18,29 +18,66 @@ The import keeps the catalogue current: an administrator can run it on demand, a
 also runs automatically on a recurring schedule. Re-importing reconciles against what is
 already stored so that administrators' classification work is preserved across runs and
 Órganos are never lost. The catalogue is the system's reference set of contracting
-bodies: every authenticated user reads it and browses its taxonomy tree to pick an
-Órgano when querying contracts, while only administrators import and organise it.
+bodies: every authenticated user browses its **taxonomy tree**, or **searches it by name**,
+to pick an Órgano when querying contracts, while only administrators import, organise, and
+list it.
 
-Access follows that split — **managing** the catalogue and taxonomy is `ADMIN`-only,
-while **reading** the catalogue and browsing its tree is available to any authenticated
-user — consistent with the roles of
+Access follows that split — **managing** the catalogue and taxonomy, and viewing it as a
+flat list, are `ADMIN`-only, while **browsing the taxonomy tree** and **searching by name**
+are available to any authenticated user — consistent with the roles of
 [SPEC-0002](SPEC-0002-user-authentication.md) and the administration area of
 [SPEC-0003](SPEC-0003-administration-area.md). This spec describes the *what*; framework,
 data model, source-retrieval mechanism, and scheduling technology are decided in ADRs and
 features.
+
+**The tree is a `USER`'s only view of the catalogue**, and what it shows them is not the
+whole of it. Two rules shape it, and they pull in opposite directions on purpose:
+
+- **It shows only Órganos the system holds contracts for.** A `USER` comes to the
+  catalogue to reach contracts, and most organismos publish none the system imports, so an
+  Órgano with nothing behind it is an entry that can only lead to an empty page.
+  Administrators see the whole catalogue; a `USER` sees the part of it that answers
+  something.
+- **Within that set it is exhaustive.** An Órgano an administrator has not classified is
+  **shown at the root of the tree**, alongside the root terms, rather than being absent
+  from it — so classification organises what is reachable without ever gating it, and an
+  administrator's filing backlog is never a `USER`'s missing data.
+
+Together they make a `USER`'s visible set **exactly** the Órganos whose contracts the
+system holds — which is the same set
+[SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R14 requires to be reachable,
+stated from the other side.
 
 ## Requirements
 
 ### Access
 
 - **R1** — **Managing** the catalogue and taxonomy — triggering imports (R10), creating,
-  renaming, moving and deleting terms (R14–R16), and classifying Órganos (R17) —
-  is reachable only by users with the `ADMIN` role; a `USER` or an unauthenticated visitor
-  who attempts any of these is denied (consistent with SPEC-0003 R1).
-- **R2** — **Reading** the catalogue of Órganos (R8) and browsing the taxonomy tree (R9)
-  is available to any authenticated user, `USER` or `ADMIN`, because users need Órganos to
-  query contracts. These reads grant no ability to modify the catalogue or the taxonomy.
-  An unauthenticated visitor is denied.
+  renaming, moving and deleting terms (R14–R16), and classifying Órganos (R17) — **and
+  viewing the catalogue as a flat list (R8)** is reachable only by users with the `ADMIN`
+  role; a `USER` or an unauthenticated visitor who attempts any of these is denied
+  (consistent with SPEC-0003 R1).
+- **R2** — **Browsing the taxonomy tree (R9)** and **searching for an Órgano by name
+  (R19)** are available to any authenticated user, `USER` or `ADMIN`, because users need
+  Órganos to query contracts. Neither grants any ability to modify the catalogue or the
+  taxonomy. An unauthenticated visitor is denied.
+
+  **Those two are the whole of a `USER`'s access to the catalogue.** There is no
+  `USER`-facing list of it. The distinction the two share, and the reason a search does not
+  reintroduce the list, is that **neither ever presents the catalogue undifferentiated**:
+  the tree presents it through the structure an administrator gave it, and the search
+  presents only what a user asked for by name. An administrator's flat view (R8) exists for
+  the filing work R18 describes, not as an alternative way in.
+
+  The tree carries the burden of **discovery** — finding an Órgano whose name you do not
+  know — which is why R9 requires it to hold every Órgano a `USER` may see, classified or
+  not. The search carries the burden of **speed** for a user who already knows the name,
+  over a catalogue of several hundred entries where browsing to a known target is slower
+  than typing it.
+
+  **Both are scoped to the Órganos the system holds contracts for** (R9). A `USER`'s view
+  of the catalogue is not the catalogue: it is the part of it that can answer the question
+  they came with.
 
 ### Importing the catalogue
 
@@ -73,16 +110,90 @@ features.
 
 ### Reading and selecting Órganos
 
-- **R8** — Any authenticated user can view the stored catalogue: a list of all Órganos
-  showing, for each, its name, its active/inactive state, and its current taxonomy
-  placement (or that it is unclassified).
-  > This list is also a `USER`'s second route to an Órgano's contracts, which
-  > [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R14 requires alongside the tree
-  > of R9 — and which R18 explains, by leaving every newly imported Órgano unclassified.
+- **R8** — An **administrator** can view the stored catalogue as a flat list of all
+  Órganos showing, for each, its name, its active/inactive state, and its current taxonomy
+  placement (or that it is unclassified). This is the administrator's working view of the
+  catalogue — what they file from (R18), classify from (R17) and check an import against
+  (R10) — and it is **not** a route a `USER` has.
 - **R9** — Any authenticated user can browse the taxonomy as a navigable tree of category
   terms with the Órganos placed within each term, and select an Órgano from it — for
   example, to query contracts by that Órgano. For a `USER` this tree is read-only: it
   offers no controls that create, rename, move, delete, or reassign anything.
+
+  **A `USER`'s tree holds exactly the Órganos the system holds contracts for.** An Órgano
+  the system holds **no contract data of any family** for is **not shown to a `USER` at
+  all** — not in the tree, not in the search (R19), nowhere. An administrator's surfaces
+  (R8, and the management tree of R14–R18) are **not** filtered: they show the whole
+  catalogue, because classifying and marking Órganos is work done precisely on the ones
+  that have nothing yet.
+
+  The reason is R2's own justification: a `USER` reaches Órganos **in order to query
+  contracts**, so an Órgano with no contracts is an entry that can only ever lead to an
+  empty page. Most of the catalogue is exactly that — the majority of organismos publish no
+  contracts the system imports — so showing them all would bury the few that answer a
+  question under the many that cannot.
+
+  Three consequences follow, and each is a requirement rather than a rendering detail:
+
+  - **A term with no visible Órgano anywhere beneath it is omitted from a `USER`'s tree.**
+    An empty branch is noise for the same reason an empty entry is, and a taxonomy built
+    for the whole catalogue would otherwise show mostly empty structure.
+  - **An Órgano that sits in no term is shown at the root of the tree**, alongside the root
+    terms, and is selectable there exactly as a classified one is within its term. Since
+    R18 leaves **every newly imported Órgano unclassified**, a tree that showed only
+    classified Órganos would leave an Órgano whose contracts the system does hold reachable
+    from nowhere — and, through
+    [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R14, would leave those
+    contracts stored but unreachable. Placing them at the root makes classification a way of
+    **organising** what is already reachable rather than a gate on reaching it, so an
+    administrator's filing backlog never becomes a `USER`'s missing data.
+  - **An Órgano that is inactive (R6) but still holds contracts stays visible** — in its
+    term if it has one, at the root if it has not. It keeps its placement, it keeps its
+    contracts, and they are still worth reading; *inactive* is a fact about the source
+    list, not about whether there is anything there.
+
+  > **This is the one place a requirement here depends on data another spec owns.**
+  > SPEC-0004 is consumed by [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md), not
+  > the other way round, so the direction is worth naming rather than leaving to be noticed.
+  > What is stated here is the **rule** — a `USER` sees the Órganos that have contracts —
+  > because it is a rule about who sees what in *this* catalogue. What "has contracts" means
+  > is whatever the contract specs store, across **every** family, so this requirement does
+  > not have to change when a family is added. It resolves to *the system holds at least one
+  > contract for this Órgano that a user could see*, which makes the visible set and
+  > SPEC-0005 R14's *every Órgano whose contracts the system holds is reachable* the **same
+  > set**, stated from two sides.
+- **R19** — Any authenticated user can **find an Órgano by name**: they type part of a
+  name and the Órganos whose names match are offered **as they type**, in a list they
+  choose from, without submitting a search or leaving the surface they are on. Choosing one
+  selects that Órgano exactly as choosing it in the tree does (R9), so the two affordances
+  lead to the same place.
+
+  > **Numbered R19 although it belongs beside R9.** Requirement identifiers are cited from
+  > other specs and features, so inserting one here would silently repoint every reference
+  > to R10–R18. The number follows the last requirement; its place in the document follows
+  > its meaning.
+
+  - For a `USER` it searches **exactly what R9's tree shows** — classified or not, active or
+    not, but only Órganos the system holds contracts for. The search and the tree must agree
+    about what exists, in both directions: an affordance that found **fewer** would be a
+    second, quieter answer to *what does this system hold*, and one that found **more** would
+    be a way around R9's filter, reachable by anyone who guessed a name. An administrator
+    searching the same surfaces searches the whole catalogue, as R8 shows it.
+  - Matching is on the **name**, and is **forgiving of case and of accents**: a user typing
+    `avila` finds `Ávila`. Galician names are full of accents, and a search that requires
+    them to be typed exactly fails precisely the users who know the name best.
+  - Each offered entry carries enough to **tell two similar names apart** — the name, and
+    whether the Órgano is inactive. Several Órganos differing only by a trailing qualifier
+    is the ordinary case in this catalogue, not the exception.
+  - When nothing matches, the user is **told so**, rather than shown an empty control that
+    is indistinguishable from one that has not searched yet.
+  - **An empty or blank input matches nothing and offers nothing.** This is the boundary
+    that keeps R19 from becoming the `USER`-facing list R2 removes: the search answers a
+    question a user asked, and *"show me everything"* is not one of them. A user who has
+    typed nothing has asked nothing.
+  - It is a way to **find** an Órgano, not to browse the catalogue: it offers no paging, no
+    sorting and no filters, and it never presents itself as a complete view of anything.
+    How many matches are offered at once is a design decision, not a requirement.
 
 ### Triggering imports
 
@@ -132,12 +243,15 @@ features.
 ## Acceptance criteria
 
 1. **(R1)** A `USER` or an unauthenticated visitor that attempts any management function
-   — triggering an import, creating/renaming/moving/deleting a term, or
-   assigning/clearing an Órgano's term — is denied; an authenticated `ADMIN` is allowed.
-2. **(R2)** An authenticated `USER` can read the catalogue and browse the taxonomy tree;
-   an unauthenticated visitor that requests either is denied.
-   > **Partly deferred, with criterion 9 below.** The access-control half — a `USER` may read both,
-   > an anonymous caller is denied — is satisfied by
+   — triggering an import, creating/renaming/moving/deleting a term, assigning/clearing an
+   Órgano's term, **or viewing the catalogue as a flat list** — is denied; an authenticated
+   `ADMIN` is allowed.
+2. **(R2)** An authenticated `USER` can browse the taxonomy tree and search for an Órgano
+   by name; an unauthenticated visitor that requests either is denied. **No surface offers
+   a `USER` the catalogue as a list**, and no route to an Órgano exists for them beyond
+   those two.
+   > **Partly deferred, with criterion 9 below.** The access-control half — a `USER` may
+   > reach both, an anonymous caller is denied — is satisfied by
    > [FEAT-0007](../features/FEAT-0007-organos-taxonomia-classification/README.md)'s two
    > authenticated reads. The *"browse the taxonomy tree"* half is the same unrendered
    > `USER` surface #9 defers, and travels with it to
@@ -157,8 +271,8 @@ features.
    later import that includes it again shows it active.
 7. **(R7)** Running two imports of the same source list in succession yields the same
    catalogue with no duplicate Órganos and no change to states or placements.
-8. **(R8)** The catalogue view shows, for every Órgano, its name, its active/inactive
-   state, and its taxonomy placement (or that it is unclassified).
+8. **(R8)** The **administrator's** catalogue view shows, for every Órgano, its name, its
+   active/inactive state, and its taxonomy placement (or that it is unclassified).
 9. **(R9)** A user can browse the taxonomy tree and select an Órgano from it; the tree
    presented to a `USER` offers no control to create, rename, move, delete, or reassign
    anything.
@@ -196,3 +310,27 @@ features.
     the second term; clearing its assignment leaves it in none.
 18. **(R18)** A newly imported Órgano that has not been classified appears in the
     unclassified set until an administrator assigns it to a term.
+19. **(R9)** An Órgano the system holds contracts for that is in **no term** is shown **at
+    the root of the taxonomy tree** and is selectable there; after an administrator assigns
+    it to a term it is shown within that term and no longer at the root. Every Órgano a
+    `USER` may see is therefore reachable from the tree, whether or not it is classified and
+    whether or not it is active.
+20. **(R9)** An Órgano the system holds **no contract data** for appears **nowhere** in a
+    `USER`'s tree or search, while an administrator still sees it in the catalogue list (R8)
+    and in the management tree — so the same Órgano is present for one role and absent for
+    the other. Once the system stores its first contract, it appears for a `USER` too,
+    without an administrator doing anything.
+21. **(R9)** A term whose subtree contains no Órgano visible to a `USER` is **omitted from
+    their tree**, while a term with at least one is shown, carrying only the visible ones.
+    An administrator's management tree still shows both.
+22. **(R19)** Typing part of an Órgano's name offers the matching Órganos as the user
+    types, without submitting anything; choosing one selects the same Órgano that choosing
+    it in the tree would. A query matching nothing says so, and an **empty or blank query
+    offers nothing at all** — no surface returns the whole catalogue to a `USER`.
+23. **(R19)** A query that differs from the stored name only in **letter case or accents**
+    still finds it — typing `avila` offers `Ávila` — and each offered entry states whether
+    that Órgano is inactive.
+24. **(R9, R19)** For a `USER` the search offers **exactly** the Órganos their tree shows:
+    an **unclassified** one and an **inactive** one that hold contracts are both findable,
+    and one holding no contracts is findable by neither — so no name can be typed to reach
+    what the tree withholds.

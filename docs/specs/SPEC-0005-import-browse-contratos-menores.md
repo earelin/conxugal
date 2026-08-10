@@ -26,9 +26,9 @@ the Órgano current **incrementally**. The two modes differ in cost by
 orders of magnitude — a single large Órgano holds well over a million contracts — so the
 spec treats them as distinct operations with distinct expectations.
 
-Users reach contracts by selecting an Órgano de Contratación — from the taxonomy tree or
-the catalogue list of
-[SPEC-0004](SPEC-0004-import-manage-organos-contratacion.md) — and opening its contracts,
+Users reach contracts by selecting an Órgano de Contratación — from the taxonomy tree of
+[SPEC-0004](SPEC-0004-import-manage-organos-contratacion.md), or by searching it by name —
+and opening its contracts,
 which are presented **split by contract family**: *contratos menores* and *licitacións*.
 This spec delivers the contratos menores family only; licitacións are a separate, future
 spec that fills the other side of the same split. Within contratos menores a user browses
@@ -300,14 +300,36 @@ One decision remains outside this spec:
 
 ### Finding and browsing contracts
 
-- **R14** — Any authenticated user selects an Órgano de Contratación either by browsing the
+- **R14** — Any authenticated user selects an Órgano de Contratación by browsing the
   **read-only taxonomy tree** of SPEC-0004 R9 — which offers a `USER` no control to create,
-  rename, move, delete or reassign anything — or from the **catalogue list** of SPEC-0004
-  R8, and opens that Órgano's contracts. The tree is the surface SPEC-0004 deferred to this
-  spec. Both routes are required because the tree alone is not sufficient: SPEC-0004 R18
-  makes every newly imported Órgano **unclassified**, so an Órgano can be marked, imported
-  and yet absent from the tree. **Every Órgano whose contracts the system holds is
-  reachable**, whether or not it is classified, marked, or still active.
+  rename, move, delete or reassign anything — or by **searching for it by name** (SPEC-0004
+  R19), and opens that Órgano's contracts. The tree is the surface SPEC-0004 deferred to
+  this spec. **Every Órgano whose contracts the system holds is reachable**, whether or not
+  it is classified, marked, or still active.
+
+  **The tree alone is sufficient, and SPEC-0004 R9 is what makes it so.** An Órgano in no
+  term is shown at the **root** of the tree, so the unclassified state R18 leaves every
+  newly imported Órgano in does not hide it. Without that rule this requirement would be
+  unmeetable through the tree: an Órgano could be marked, imported, hold a million
+  contracts and appear nowhere. The name search is a second way to *reach* an Órgano, not a
+  second place to *find* one — it answers a name a user already knows — so reachability
+  rests on the tree, and the search is why a user who knows the name does not have to walk
+  it. **There is no `USER`-facing catalogue list**, and this spec does not reintroduce one.
+
+  **The converse holds too, and it is SPEC-0004 R9's rule rather than this one's:** an
+  Órgano the system holds **no** contracts for is shown to a `USER` nowhere at all. So a
+  `USER`'s tree and this requirement describe the **same set** from two sides — everything
+  they can see has contracts, and everything that has contracts they can see. That is what
+  makes *reachable* checkable: the two rules cannot drift apart without one of them
+  breaking.
+
+  It also means **R18's no-section case is not something a `USER` normally meets**. An
+  Órgano with no contratos menores *and* no other family has no entry to open in the first
+  place; the section-absence rule governs an Órgano that has **another** family's data but
+  not this one — and, until licitacións exist, an Órgano reached by a typed URL. Navigating
+  directly to such an Órgano is not refused: there is nothing to withhold, so it renders as
+  holding nothing. The visibility rule is about **what is listed**, not about what is
+  permitted.
 
   There is a third route, and it is stated here with the other two so that no cross-Órgano
   surface has to invent one: **wherever a contract row names its awarding Órgano, following
@@ -386,6 +408,12 @@ One decision remains outside this spec:
   (R4, which owns the mark, and [SPEC-0007](SPEC-0007-monitor-import-runs.md) R15), and if
   users turn out to
   need it, exposing it is a later increment rather than something this rule forecloses.
+
+  **SPEC-0004 R9 narrows what this rule has to carry.** Those 234 Concellos are not shown to a
+  `USER` at all while the system holds no contracts for them, so the empty section this rule
+  prevents was, for most of the catalogue, already an entry that could not be opened. What
+  remains in scope here is an Órgano holding **some other family's** contracts but none of this
+  one — the case the split exists for — and one reached by a typed URL.
 
   **Once the section is present it is never empty**, because R19 offers only years the Órgano
   actually has contracts in. What the section must still make plain is that it is
@@ -689,8 +717,11 @@ One decision remains outside this spec:
     move, delete or reassign anything. *(Also satisfies SPEC-0004 #9 and the deferred half
     of SPEC-0004 #2.)*
 20. **(R14)** An Órgano that is marked and imported but **unclassified** — placed in no
-    taxonomy term — is still reachable and its contracts are still viewable; so is one that
-    has since become inactive but retains contracts under R5.
+    taxonomy term — is still reachable **from the tree, at its root**, and its contracts are
+    still viewable; so is one that has since become inactive but retains contracts under R5.
+    Both are also reachable by name search. Conversely, an Órgano the system holds no
+    contracts for appears in neither — so what a `USER` can see and what this requirement
+    makes reachable are the same set. *(Also satisfies SPEC-0004 #19, #20 and #24.)*
 21. **(R14)** An Órgano's own contratos menores list states no row's awarding Órgano, every
     row on it belonging to the Órgano already open — while still stating each row's awardee,
     under the name SPEC-0006 R4 selects for that operador.
