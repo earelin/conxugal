@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0004
-adrs: [0002, 0003, 0004, 0005, 0006, 0008, 0010, 0012, 0015, 0016, 0018, 0020, 0021, 0023]
+adrs: [0002, 0003, 0004, 0005, 0006, 0008, 0010, 0012, 0015, 0016, 0018, 0020, 0021]
 status: draft
 ---
 
@@ -38,9 +38,7 @@ contracts page**, which FEAT-0011 builds. That is SPEC-0005 R14's requirement, s
 side, so this feature's browse task waits on FEAT-0011's contracts page and nothing else crosses.
 
 The design sits in the hexagonal server of
-**[ADR-0002](../../architecture/0002-hexagonal-architecture.md)**, with the catalogue read scoped
-by the decision recorded in
-**[ADR-0023](../../architecture/0023-visible-set-as-a-contract-side-query.md)**. REST lives under
+**[ADR-0002](../../architecture/0002-hexagonal-architecture.md)**. REST lives under
 the reserved `/api/` prefix
 (**[ADR-0006](../../architecture/0006-reserved-api-url-prefix.md)**), named per
 **[ADR-0020](../../architecture/0020-actions-as-verbs-in-rest-paths.md)** and the
@@ -58,13 +56,6 @@ layout of
 its journeys are proved against a stubbed API per
 **[ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md)**.
 
-> **One prerequisite decision is recorded, not taken here.**
-> **[ADR-0023](../../architecture/0023-visible-set-as-a-contract-side-query.md)** decides how the
-> visible set is derived across the domain boundary — SPEC-0004's *Decisions left open* names it
-> ADR-grade and declines to settle it. It is `proposed`; **task 1 must not be picked up until it is
-> accepted**, because building one answer is how that decision gets taken by accident. Tasks 2–4 do
-> not depend on it.
-
 ## Scope
 - **Application (driving):** the **narrowing of the shipped `GET /api/organos`** to the visible set,
   with its OpenAPI description rewritten and its integration test reshaped.
@@ -80,8 +71,8 @@ its journeys are proved against a stubbed API per
 - **Everything about contracts.** The Órgano contracts page, the family split, the contratos
   menores section and its paging are
   [FEAT-0011](../FEAT-0011-contratos-menores-browsing/README.md)'s. This feature renders no contract
-  and reads no contract table — the visible-set predicate is answered behind ADR-0023's port, not by
-  this feature knowing what a contract is.
+  and reads no contract table — the visible-set predicate is answered behind a port each contract
+  family implements, not by this feature knowing what a contract is.
 - **The taxonomy and the catalogue themselves** — [FEAT-0006](../FEAT-0006-organos-catalogue-import/README.md)
   imports the catalogue and [FEAT-0007](../FEAT-0007-organos-taxonomia-classification/README.md)
   owns the terms, the placements, the two reads and every management control. This feature adds one
@@ -107,7 +98,7 @@ flowchart LR
     end
     subgraph domain["domain"]
         listUc["ListOrganos + visible-set scoping"]
-        visiblePort["has-visible-contracts port (ADR-0023)"]
+        visiblePort["has-visible-contracts port"]
         organoRepo["OrganoRepository"]
     end
     subgraph infrastructure["infrastructure (driven)"]
@@ -141,7 +132,7 @@ what is served to them. The scoping is therefore **by path**, and it needs no ne
 - **The visible set is family-neutral by construction**, so a licitación-only Órgano appears the day
   that family lands: the predicate is *has a visible contract* rather than *has a visible contrato
   menor*. Today only `contrato_menor` can satisfy it, and this feature does not know that — it asks
-  ADR-0023's port.
+  the port.
 
 **What this costs is a change to shipped, contract-tested behaviour, and it is not small.**
 `GET /api/organos` is `@Secured(IS_AUTHENTICATED)`, returns all 429 rows, has an integration test
@@ -154,6 +145,39 @@ taxonomy tree, its Órgano table and its unclassified worklist. Narrowed first, 
 silently lose every Órgano without contracts — most of the catalogue, and precisely the ones an
 administrator opens the section to file. Nothing errors, which is what makes it worth stating as an
 ordering constraint rather than leaving to whoever picks the tasks up.
+
+### How the visible set is derived
+The predicate is *there exists at least one visible contract, of any family, whose Órgano is this
+one*, evaluated **when the catalogue is read**. Nothing records it on `organo_contratacion` — no
+column, no count, no flag.
+
+- **The contract side owns the predicate.** Each contract family implements a port answering
+  whether it holds visible contracts for a set of Órganos; the catalogue read composes the answers
+  and does not reach into any family's tables or know how any family defines *visible*. A new
+  family joins by adding an implementation, which is what keeps R9's *of any family* honest rather
+  than aspirational.
+- **Visibility is not a property the import knows**, and this is what rules out a marker the import
+  maintains. *Visible* rather than *stored* is deliberate:
+  [SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) R13 lets an administrator
+  **remove** a contract — keeping it stored while removing it from every list — and restore it
+  again. An Órgano therefore leaves and re-enters the set through an action that imports no row, so
+  an import-maintained marker would be wrong in exactly the case the predicate was worded to catch.
+  SPEC-0004 #21 requires both directions.
+- **The question is cheap in the direction it is asked.** The catalogue is a few hundred rows and
+  the question is *does at least one visible row exist for this Órgano* — a semi-join on an indexed
+  foreign key, not an aggregate over millions.
+  [ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md) reached the opposite
+  conclusion for operadores because that projection carries *derived attributes* costing a
+  top-1-per-group on every read; this one carries a **boolean per Órgano over a few hundred**.
+- **Cost is measured, not assumed.** SPEC-0004 R20 puts this read on SPEC-0005 R24's reference
+  environment and fixes no budget. If measurement shows the semi-join inadequate at real volumes,
+  the replacement is a maintained marker **with an invalidation path for R13** — a change behind the
+  same port, which is why this is settled here rather than raised as an architecture decision.
+
+What that costs, stated rather than left to be found: the catalogue read is **no longer a
+single-table scan**, and it gains one semi-join per contract family on a read the browse surface
+makes on every visit. It also means nothing lets an administrator see the set as stored data, so
+diagnosing *why is this Órgano not showing* means running the query rather than reading a column.
 
 ### The tree is a `USER`'s only view of the catalogue, so it must be exhaustive within the set
 - **The read-only taxonomy tree** (R9), assembled in the browser from the narrowed
@@ -241,11 +265,11 @@ pattern that module already uses, not in a strings module of its own.
 Each task names what it depends on; nothing depends on a task numbered after it.
 
 1. **Narrow `GET /api/organos` to the visible set** *(backend, OpenAPI-first)*: the read returns
-   only Órganos with at least one visible contract, in any family, through
-   [ADR-0023](../../architecture/0023-visible-set-as-a-contract-side-query.md)'s port; its shape,
-   its Galician-collated ordering and its `termoId` unchanged. Rewrites the operation description,
-   which today asserts the rule SPEC-0004 R1 revoked, and reshapes the integration test named for
-   the old behaviour. **Blocked on ADR-0023.** *(SPEC-0004 #20, #21; SPEC-0005 #48)*
+   only Órganos with at least one visible contract, in any family, through the port described under
+   *How the visible set is derived*; its shape, its Galician-collated ordering and its `termoId`
+   unchanged. Rewrites the operation description, which today asserts the rule SPEC-0004 R1 revoked,
+   and reshapes the integration test named for the old behaviour.
+   *(SPEC-0004 #20, #21; SPEC-0005 #48)*
 2. **Move the administration area onto `GET /api/admin/organos`** *(frontend)*: FEAT-0007's taxonomy
    tree, classification worklist and Órgano table read the admin catalogue instead of the narrowed
    one, so the management surfaces keep the whole catalogue. **Lands with or before task 1.**

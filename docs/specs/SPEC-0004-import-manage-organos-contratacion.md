@@ -205,9 +205,8 @@ one set, stated from either side.
   > placement is still right — who sees what in *this* catalogue is this spec's — and it
   > follows [SPEC-0006](SPEC-0006-operadores-economicos.md) R7, which states the same shape
   > of rule in the entity's own spec about data SPEC-0005 owns. What the inversion obliges is
-  > recorded rather than left implicit: the predicate is defined above, its cost in R20, and
-  > **how the visible set is derived across the domain boundary is an open decision** —
-  > see *Decisions left open*.
+  > recorded rather than left implicit: the predicate is defined above and its cost in R20.
+  > **How** the set is derived is a feature's design decision, not this spec's.
 - **R19** — Any authenticated user can **find an Órgano by name**: they type part of a
   name and the Órganos whose names match are offered **as they type**, in a list they
   choose from, without submitting a search or leaving the surface they are on. Choosing one
@@ -298,23 +297,6 @@ one set, stated from either side.
   any time; it is never in two terms simultaneously.
 - **R18** — Órganos that have not been classified — including every newly imported one —
   are discoverable as an **unclassified** set, so an administrator can find and file them.
-
-## Decisions left open
-
-- **How the visible set (R9) is derived across the domain boundary.** The rule needs a fact
-  about **contracts** to scope a read of **Órganos**, and under
-  [ADR-0002](../architecture/0002-hexagonal-architecture.md) those are two domain areas.
-  Whether the Órgano side queries the contract side, the contract side maintains a marker on
-  the Órgano, or a read model spans both, is **architecturally significant and undecided** —
-  it sets a pattern every later contract family inherits, and it governs a read whose cost
-  R20 makes measurable. It is **ADR-grade** and no feature should settle it by building one:
-  the precedent is [SPEC-0006](SPEC-0006-operadores-economicos.md), which named its
-  equivalent derived-catalogue question in the spec and got
-  [ADR-0018](../architecture/0018-operadores-as-a-stored-projection.md) before features built
-  on it.
-
-  What is **not** open is the rule itself: the predicate is fixed in R9, and R9 fixes that
-  the scoping is applied where data is served rather than where it is drawn.
 
 ## Acceptance criteria
 
