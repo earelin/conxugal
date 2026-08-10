@@ -361,47 +361,41 @@ unauthenticated visitor, which is also the mitigation R26 rests on (#39). Neithe
 ability to modify anything.
 
 **Paging is [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md)'s,
-not this feature's.** The controller takes a `Pageable` and returns a `Page<T>`; the parameter
-names, the binding rules, the response shape, the 0-based numbering, the absent `totalPages`, the
-clamping of `page` and `size`, and the `countQuery` obligation on every explicit `@Query` are all
-recorded there, with their costs. What this section fixes is only what is **this feature's**: which
-parameters exist, which are required, and what a row carries.
+not this feature's.** The 1-based `page`, the shared envelope, the refusal of out-of-range values,
+the mapping from Micronaut Data's `Page` in the application layer, and the `countQuery` obligation
+on every explicit `@Query` are all recorded there with their costs. What this section fixes is only
+what is **this feature's**: which parameters exist, which are required, and what a row carries.
 
 **One of the ADR's rules bites hardest here and is repeated rather than assumed**: an explicit
 `@Query` returning `Page<T>` fails annotation processing without a `countQuery`, so task 2
 hand-writes one per ordering and keeps each in step with its `WHERE`. That is the price of the four
-explicit statements the total ordering needs, not of the paging model.
+explicit statements the total ordering needs, not of the paging contract.
 
-**Query parameters** on the list read:
+**Query parameters** on the list read — `page`, `size` and `sort` are ADR-0022's, declared and
+validated by this operation rather than bound from a `Pageable`:
 
-| Parameter | Bound by | Required | Values |
+| Parameter | Required | Default | Values |
 | --- | --- | --- | --- |
-| `year` | this feature | **yes** | `YYYY`, or `undated` — no absence, no third form (R19) |
-| `sort` | `Pageable` | no | `publicationDate,desc` (default) — `property,direction`, comma-delimited |
-| `page` | `Pageable` | no | **0-based**; default 0 |
-| `size` | `Pageable` | no | default 50, maximum 100 |
-
-`size` and its ceiling are `micronaut.data.pageable.default-page-size` and `max-page-size`;
-**100 is the framework's own default** and is kept rather than raised, since nothing has asked for a
-larger page and a bigger one only makes R24's deep read worse.
+| `year` | **yes** | — | `YYYY`, or `undated` — no absence, no third form (R19) |
+| `sort` | no | `publicationDate,desc` | `publicationDate` or `amount`, `,asc` or `,desc` — nothing else |
+| `page` | no | `1` | 1-based; `< 1` is a 400 |
+| `size` | no | `50` | `1`–`100`; outside that is a 400 |
 
 **Path segments are the domain's Galician nouns; fields and parameters are English.** That is the
 convention already shipped — `/api/organos` beside `/api/admin/users`, `termoId` and `parentId`
 beside `contratos-menores` — and this feature keeps it, with `obxecto` the single field name that
 stays Galician because it already is one in the domain and the store.
 
-**The response is `Page<T>` as Micronaut serialises it** — exactly three keys, verified against
-`PageSerializer` in `micronaut-data-model` rather than assumed:
+**The response is ADR-0022's envelope**, the same one SPEC-0006's and SPEC-0007's lists will carry:
 
 ```
-{ "content": [ … ], "pageable": { "number": 2, "size": 50, … }, "totalSize": 1832 }
+{ "items": [ … ], "page": 3, "size": 50, "totalItems": 1832, "totalPages": 37 }
 ```
 
-Its consequences — 0-based numbering, the absent `totalPages` the client derives, and `page`/`size`
-being clamped rather than refused — are [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md)'s
-and are not re-argued here. Two of them shape this feature's own surfaces and are picked up where
-they land: the derived page total and the 0-based-to-displayed conversion live in the one shared
-reader named under *UI*, and clamping is why no 400 is declared for `page` or `size` below.
+Both totals are served because R17 requires the reader be told both, and R16 makes the entry count
+an answer in its own right: *how many contratos menores this Órgano awarded in this year* is a
+question a reader has, not an intermediate value for computing a page span. Nothing here derives
+either number, and the URL carries the same 1-based `page` the control shows.
 
 **A row carries everything the system holds** (R16), because a contrato menor has no detail view:
 
@@ -440,10 +434,10 @@ contract:
 | Problem type | Status | Raised by |
 | --- | --- | --- |
 | `urn:conxugal:problem-type:organo-not-found` | 404 | either read naming an unknown Órgano — **reused**, not redeclared; FEAT-0007 owns it |
-| *(validation)* | 400 | an absent or malformed `year`; a `sort` naming a property other than `publicationDate` or `amount`, or a direction other than `asc`/`desc` |
+| *(validation)* | 400 | an absent or malformed `year`; a `sort` naming a property other than `publicationDate` or `amount`, or a direction other than `asc`/`desc`; a `page` below 1 or a `size` outside 1–100 |
 
-Note what is **not** in that table: a bad `page` or `size` never reaches a refusal, because the
-binder has already floored and clamped them. Only `year` and `sort` are this feature's to validate.
+Every one of those is refused rather than corrected, which is ADR-0022's rule: the API answers the
+question it was asked or says why it cannot.
 
 An Órgano that exists but holds no contracts is **not** an error: `resumo` answers 200 with no
 years and no undated selection, and that is how the client knows to render no section.
@@ -471,9 +465,9 @@ needs it, and better than a second thin API module duplicating an entity read.
 `USER`-visible entry belongs to FEAT-0012's browse section, which is where a reader starts.
 
 **The selection lives in the URL query string** — `?year=2025&sort=amount,desc&page=3`, spelled
-exactly as the API takes it, 0-based `page` and comma-joined `sort` included. One spelling, not a
-translation layer: a shared link is then a request, and the only conversion in the app is the
-paging control's own display of a 1-based page number.
+exactly as the API takes it. Because ADR-0022's `page` is 1-based, the number in the URL, the
+number the API takes and the number the control shows are **one number**: a shared link is a
+request, and nothing in the app converts between bases.
 That is one decision doing four jobs: a contract list is shareable and deep-linkable; the browser's
 back button walks paging history for free; the year, sort and page have exactly one home rather
 than a component state that could disagree with a rendered control; and **R17's re-page rule becomes
@@ -492,18 +486,15 @@ differently from the rest is a defect they would experience as inconsistency rat
 design.* The two ends are offered as controls of their own, not reached by counting, because they
 are the two a user asks for by name — the newest and the oldest.
 
-**A `shared/lib` reader stands between it and the wire**, and it exists because of the two
-consequences the response shape carries: it maps `{content, pageable: {number, size}, totalSize}`
-onto the control's props, **derives `pages`** as `ceil(totalSize / size)`, and converts the 0-based
-`number` to the 1-based page the control **displays**. Both conversions live there and nowhere else
-— SPEC-0006's and SPEC-0007's lists read the same envelope, and a page number that is 0-based in
-one list and 1-based in another is exactly the inconsistency R17 exists to prevent.
+**The control reads ADR-0022's envelope directly**, and that is the point of the envelope being
+ours: `page`, `size`, `totalItems` and `totalPages` are the four values it renders, in the base it
+renders them in. There is no conversion and no arithmetic between the wire and the control, so
+there is nowhere for SPEC-0006's and SPEC-0007's lists to diverge from this one — which is the
+inconsistency R17 exists to prevent.
 
-**The response cannot state which ordering it applied.** Because the use case passes the repository
-a sort-stripped `Pageable`, the `pageable` echoed back carries an empty sort — always. So
-`pageable.size` states the size actually applied but nothing states the ordering, and a shared link
-cannot verify its own sort against the response. The client is authoritative on ordering; the
-reader treats the URL's `sort` as the truth and the ADR records that the contract is silent.
+**The response does not state which ordering it applied**, since the envelope carries no sort. The
+URL does, and the client is authoritative on it; a shared link is read back by the same parser that
+wrote it.
 
 **What the row has to say about the values it shows**, all of it R27's and none of it optional:
 
@@ -561,8 +552,8 @@ depends on a task numbered after it.
    [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md) requires of
    every explicit `@Query` returning a `Page`, and each taking its `Pageable` **sort-stripped**.
    Integration-tested against PostgreSQL: exhaustive paging over a selection with ties, null amounts
-   ordered last both ways, a year boundary that does not leak into its neighbour, and `totalSize`
-   matching the selection rather than the page. *Depends on task 1.*
+   ordered last both ways, a year boundary that does not leak into its neighbour, and the `Page`'s
+   count matching the whole selection rather than the page returned. *Depends on task 1.*
    *(SPEC-0005 #23 store half, #27 year-scoping half, #28, #42 ordering half)*
 3. **Year facets and the section's state** *(backend)*: the aggregate returning the years an Órgano
    has **visible** contracts in and whether it holds undated ones, plus
@@ -580,22 +571,20 @@ depends on a task numbered after it.
    from task 6 rather than shipped with it. *Depends on task 3.*
    *(SPEC-0005 #2 read half, #26 contract half, #43)*
 6. **The paged contracts endpoint** *(backend, OpenAPI-first)*:
-   `GET /api/organo/{id}/contratos-menores` taking a `Pageable` and returning a `Page`, the required
-   `year`, the **`Sort` mapping and its 400** — the boundary check ADR-0022 makes a security
-   invariant, so no bound `Sort` reaches a repository — the `micronaut.data.pageable` defaults
-   (`default-page-size: 50`, which has no independent default and must be set), the `Page`/`Pageable`
-   schemas written to match what the serialiser **actually emits** including its polymorphic `sort`,
-   the `application` module declaring its own `micronaut-data-runtime` dependency rather than
-   inheriting it transitively, and the **separate property** composing `sourceUrl`.
+   `GET /api/organo/{id}/contratos-menores`, with the required `year`; ADR-0022's `page`, `size` and
+   `sort` **declared and validated by the operation** — a 400 for each, and the `sort` refusal that
+   makes the security invariant structural, since no `Sort` is built from raw input; the conversion
+   to a 0-based, unsorted `Pageable`; the mapping of the repository's `Page` onto **ADR-0022's
+   shared envelope**, which this task declares as a reusable `openapi.yaml` schema because two more
+   specs will reference it; and the **separate property** composing `sourceUrl`.
    **Blocked on [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md).**
    *Depends on task 4.* *(SPEC-0005 #2, #25 source half, #27 no-all-years half, #39 authentication
    half)*
 7. **The paging control** *(frontend)*: the `shared/ui` component — first/previous/next/last and
-   jump-to-page, the entry count and page total, the two ends disabled at the two ends — and the
-   `shared/lib` reader that maps the `Page` envelope onto it, deriving `pages` and converting the
-   0-based `number` to the 1-based page **displayed**, the URL keeping the API's spelling. Built with
-   no contract knowledge beyond the envelope, because SPEC-0006 and SPEC-0007 take both.
-   *(SPEC-0005 #23 control half)*
+   jump-to-page, the entry count and the page total stated, the two ends disabled at the two ends —
+   reading ADR-0022's envelope directly, with no conversion and no arithmetic between wire and
+   control. Built with no knowledge of what is being paged, because SPEC-0006 and SPEC-0007 take it
+   unchanged. *(SPEC-0005 #23 control half)*
 8. **Órgano contracts page + family split** *(frontend)*: the `/organos/:id` route and the
    `features/contratos` slice, with the `Organo` type and catalogue read promoted to
     `shared/entities/` now that a second slice needs them; the Órgano identity header; the family
@@ -690,9 +679,8 @@ depends on a task numbered after it.
 - **A `sort` naming a property R19 does not offer**, or a direction the binder would quietly turn
   into ascending — refused with 400 rather than answered in an ordering nobody asked for. The
   framework's permissiveness is the reason this case has to be written down. *(SPEC-0005 #28)*
-- **An oversized or negative `page`/`size`** — clamped by the binder, never refused, with
-  `pageable.size` stating the size actually applied. The one place the API answers a slightly
-  different question from the one asked, and it says so in the response. *(SPEC-0005 #23)*
+- **An oversized or non-positive `page`/`size`** — refused with 400 rather than corrected, so a
+  caller never receives an answer to a question it did not ask. *(SPEC-0005 #23)*
 - **A page number past the end** — an empty page carrying the selection's true total, and the UI
   clamps to the last page rather than showing an error. Reachable by a stale shared URL, or by an
   import that stored rows between two requests. *(SPEC-0005 #23)*
