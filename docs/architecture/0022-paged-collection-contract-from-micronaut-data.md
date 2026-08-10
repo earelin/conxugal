@@ -71,12 +71,11 @@ one greater than the number the API takes.
 ```mermaid
 flowchart LR
     req["GET …?page=3&amp;size=50&amp;sort=publicationDate,desc"]
-    ctl["controller<br/>validates, converts to 0-based"]
+    ctl["controller — the only converter<br/>in: validate → Pageable (0-based, unsorted)<br/>out: Page&lt;T&gt; → envelope (1-based, both totals)"]
     uc["use case<br/>(maps sort to a fixed ordering)"]
     repo["repository → Page&lt;T&gt;"]
-    map["map to the envelope<br/>(page + 1, totalPages)"]
     res["&#123; items, page, size, totalItems, totalPages &#125;"]
-    req --> ctl --> uc --> repo --> map --> res
+    req --> ctl --> uc --> repo --> ctl --> res
 ```
 
 **Request** — explicit query parameters, declared and validated by the operation itself. No
@@ -106,11 +105,30 @@ flowchart LR
 - **`items`, not `content`.** The envelope names what the domain has, not what the framework calls
   its field.
 
-**Micronaut Data still does the work below the application layer.** Repository methods take a
-`Pageable` and return a `Page<T>`, which is what supplies `LIMIT`, `OFFSET` and — for derived
-finders — the count query. `Pageable` and `Page` on a domain port are the leak
+**Micronaut Data still does the work beneath the contract.** Repository methods take a `Pageable`
+and return a `Page<T>`, which is what supplies `LIMIT`, `OFFSET` and — for derived finders — the
+count query. `Pageable` and `Page` on a domain port are the leak
 [ADR-0008](0008-domain-entities-carry-persistence-mapping-annotations.md) already accepted;
 `server/domain/build.gradle.kts` declares `api(libs.micronaut.data.model)` today.
+
+**`micronaut-data-model` lives in two modules — `domain` and `application` — and both declare it.**
+The domain needs `Pageable` and `Page` on its ports; the application needs them because the
+controller is what builds the one and reads the other. `server/application/build.gradle.kts`
+declares **no** Micronaut Data dependency today and resolves these types only through the domain's
+`api(...)`, which is a dependency arriving by accident of a neighbour's graph rather than by
+statement. A module that names a type in its own signatures declares the library it comes from.
+
+**`micronaut-data-runtime` stays out of `application`.** It holds
+`PageableRequestArgumentBinder`, and nothing binds a `Pageable` from a request, so the module that
+would have dragged a persistence library's *HTTP* layer behind a driving adapter is not needed.
+The distinction is the point: the application layer knows the persistence library's **model**,
+because it converts to and from it, and knows nothing of its runtime.
+
+**The controller is the only place the two vocabularies meet.** Inbound it validates the contract's
+parameters and builds a 0-based, unsorted `Pageable`; outbound it maps a `Page<T>` onto the
+envelope, adding one to the page number and taking `getTotalPages()` for the span. Nothing above
+the controller sees a `Pageable`, and nothing below it sees the envelope, so the conversion has
+exactly one home and an off-by-one has exactly one place to be.
 
 **`Sort` is never constructed from raw input, and never reaches a repository.** Each operation
 declares a **closed set** of orderings, maps a validated `sort` value onto one of them, and calls
@@ -151,9 +169,14 @@ describe a slightly different one.
 - **The public contract carries no framework vocabulary and no framework risk.** Nothing publishes
   `pageable`, `mode`, an always-empty `sort`, or the output of an `@Internal` serialiser that a
   patch release could change.
-- **The application module needs no persistence dependency.** Because no `Pageable` is bound from
+- **The application module needs no persistence *runtime*.** Because no `Pageable` is bound from
   the request, `micronaut-data-runtime`'s argument binder is not required, and the coupling that
-  would have put a persistence library's HTTP module behind a driving adapter does not arise.
+  would have put a persistence library's **HTTP** module behind a driving adapter does not arise.
+  What it does take — `micronaut-data-model` — it declares, rather than inheriting it from the
+  domain's `api(...)` by accident.
+- **The conversion has one home.** Both directions live in the controller, so no other layer has to
+  know which base it is holding, and the seam is somewhere a test can stand rather than spread
+  across a call chain.
 - **Bad input is refused, not corrected.** `page=0` and `size=5000` are 400s that say so, rather
   than being silently answered with something else — which is what the framework binder would do.
 - **The security invariant is stated once**, where every feature that pages must read it, and the
@@ -165,9 +188,15 @@ describe a slightly different one.
   This is the cost the framework's own shape would have avoided, and it is paid once per operation
   rather than once in total.
 - **Two representations of a page exist inside the server** — the framework's 0-based `Pageable` /
-  `Page` below the application layer, and the 1-based envelope above it. The conversion is one
-  line in each direction and lives in one layer, but it is a seam, and a seam is somewhere a
-  mistake can hide.
+  `Page` beneath the contract, and the 1-based envelope on it. The conversion is one line in each
+  direction and lives in one class, but it is a seam, and a seam is somewhere a mistake can hide.
+- **The application layer now knows a persistence library's types**, which widens what
+  [ADR-0008](0008-domain-entities-carry-persistence-mapping-annotations.md) accepted: that ADR put
+  Micronaut Data annotations on domain entities, not Micronaut Data types in a driving adapter's
+  signatures. The widening is deliberate and bounded to `Pageable` and `Page` — the alternative is
+  a third paging type, owned by us, existing only to carry two integers across one module
+  boundary — but it is a widening, and a later ADR that wants the application layer framework-free
+  will have to unpick it.
 - **`totalItems` and `totalPages` can disagree if a mapper is written twice.** They are derived
   from one `Page`, so the shared mapper is what keeps them consistent; an operation that builds the
   envelope by hand could produce a pair that does not.

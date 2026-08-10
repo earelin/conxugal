@@ -589,10 +589,12 @@ depends on a task numbered after it.
 6. **The paged contracts endpoint** *(backend, OpenAPI-first)*:
    `GET /api/organo/{id}/contratos-menores` with the **required `year`**; ADR-0022's `page`, `size`
    and `sort` **declared and validated by the operation** — a 400 for each, and the `sort` refusal that
-   makes the security invariant structural, since no `Sort` is built from raw input; the conversion
-   to a 0-based, unsorted `Pageable`; the mapping of the repository's `Page` onto **ADR-0022's
-   shared envelope**, which this task declares as a reusable `openapi.yaml` schema because two more
-   specs will reference it; and the **separate property** composing `sourceUrl`.
+   makes the security invariant structural, since no `Sort` is built from raw input; **both
+   conversions in the controller** — the contract's parameters to a 0-based, unsorted `Pageable`,
+   and the repository's `Page` to **ADR-0022's shared envelope**, which this task declares as a
+   reusable `openapi.yaml` schema because two more specs will reference it; the `application`
+   module **declaring `micronaut-data-model`** rather than inheriting it through the domain's
+   `api(...)`; and the **separate property** composing `sourceUrl`.
    **Blocked on [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md).**
    *Depends on task 4.* *(SPEC-0005 #2, #25 source half, #27 no-all-years half, #39 authentication
    half)*
