@@ -246,10 +246,10 @@ latency budget. So the year is not a nullable filter with a default applied some
 
 - the selection type is a **year or the undated selection**, with no third case and no absence;
 - the endpoint's `year` parameter is **required**, and a request without it is a `400` rather than
-  an all-years list — so no client, hand-written URL or generated caller can produce the read R19
+  an all-years list — so no client, hand-written URL or generated caller gets the read R19
   forbids (#27);
-- the undated selection is the same parameter carrying the literal `undated`, not a second
-  parameter that could be combined with a year into a selection R19 does not define.
+- the undated selection is that same parameter carrying `undated`, not a second parameter that
+  could be combined with a year into a selection R19 does not define.
 
 **Filtering is a date range, not a function of the date.** A year selects
 `publication_date >= 'YYYY-01-01' AND publication_date < 'YYYY+1-01-01'`, which the existing
@@ -354,7 +354,21 @@ its shared 429, and generated against by
 | Method & path | Role | Purpose |
 | --- | --- | --- |
 | `GET /api/organo/{id}/contratos-menores/resumo` | authenticated | Does the section exist, which years does it offer, is there an undated selection, and R18's two statements |
-| `GET /api/organo/{id}/contratos-menores` | authenticated | One page of one year's contracts in one ordering, with the selection's total |
+| `GET /api/organo/{id}/contratos-menores` | authenticated | One page of one year's contracts in one ordering, with its totals |
+
+> **The year stays a query parameter, and the path form was considered and rejected.** Because R19
+> makes it mandatory, the obvious move is a path segment — mandatory things look like address, and
+> it would turn *there is no all-years list* from a validation into a fact about the URL space.
+> Both spellings fail on the domain, in different ways. A bare `…/contratos-menores/{ano}` puts a
+> variable directly under a plural, which is the one thing
+> [ADR-0016](../../architecture/0016-rest-resource-naming.md) guarantees against — it is *"safe
+> precisely because the plural namespace carries no identifiers"*, and that guarantee is what lets
+> `resumo`, and anything added beside it later, be a sibling without being checked against whatever
+> a year can look like. Naming the segment instead, `…/contratos-menores/ano/{ano}`, borrows the
+> **member-path** shape for something that identifies no member: there is no `Ano` aggregate, no
+> `ano` table and no `Ano` anywhere in the domain, and ADR-0016 requires a path to take *"the domain
+> noun as the domain names it"*. **A year selects a subset; it does not identify a thing.** That is
+> what a query parameter is for, and a required one is ordinary.
 
 Both are `@Secured(IS_AUTHENTICATED)`: R2 grants the read to `USER` and `ADMIN` alike and denies an
 unauthenticated visitor, which is also the mitigation R26 rests on (#39). Neither grants any
@@ -372,7 +386,7 @@ hand-writes one per ordering and keeps each in step with its `WHERE`. That is th
 explicit statements the total ordering needs, not of the paging contract.
 
 **Query parameters** on the list read — `page`, `size` and `sort` are ADR-0022's, declared and
-validated by this operation rather than bound from a `Pageable`:
+validated by this operation rather than bound from a `Pageable`; `year` is this feature's:
 
 | Parameter | Required | Default | Values |
 | --- | --- | --- | --- |
@@ -389,6 +403,8 @@ stays Galician because it already is one in the domain and the store.
 **The response is ADR-0022's envelope**, the same one SPEC-0006's and SPEC-0007's lists will carry:
 
 ```
+GET /api/organo/{id}/contratos-menores?year=2025&sort=amount,desc&page=3
+
 { "items": [ … ], "page": 3, "size": 50, "totalItems": 1832, "totalPages": 37 }
 ```
 
@@ -465,13 +481,13 @@ needs it, and better than a second thin API module duplicating an entity read.
 `USER`-visible entry belongs to FEAT-0012's browse section, which is where a reader starts.
 
 **The selection lives in the URL query string** — `?year=2025&sort=amount,desc&page=3`, spelled
-exactly as the API takes it. Because ADR-0022's `page` is 1-based, the number in the URL, the
-number the API takes and the number the control shows are **one number**: a shared link is a
-request, and nothing in the app converts between bases.
+exactly as the API takes it. Because ADR-0022's `page` is 1-based, the number in the URL, the number
+the API takes and the number the control shows are **one number**: a shared link is a request, and
+nothing in the app converts between bases.
 That is one decision doing four jobs: a contract list is shareable and deep-linkable; the browser's
 back button walks paging history for free; the year, sort and page have exactly one home rather
 than a component state that could disagree with a rendered control; and **R17's re-page rule becomes
-a single rule about one transition** — any write to `year`, `sort` or `direction` drops `page`, so a
+a single rule about one transition** — any write to `year` or `sort` drops `page`, so a
 reader can never be left on a page number that no longer means what it did (#24). Held as component
 state instead, that rule would have to be remembered at every control.
 
@@ -571,8 +587,8 @@ depends on a task numbered after it.
    from task 6 rather than shipped with it. *Depends on task 3.*
    *(SPEC-0005 #2 read half, #26 contract half, #43)*
 6. **The paged contracts endpoint** *(backend, OpenAPI-first)*:
-   `GET /api/organo/{id}/contratos-menores`, with the required `year`; ADR-0022's `page`, `size` and
-   `sort` **declared and validated by the operation** — a 400 for each, and the `sort` refusal that
+   `GET /api/organo/{id}/contratos-menores` with the **required `year`**; ADR-0022's `page`, `size`
+   and `sort` **declared and validated by the operation** — a 400 for each, and the `sort` refusal that
    makes the security invariant structural, since no `Sort` is built from raw input; the conversion
    to a 0-based, unsorted `Pageable`; the mapping of the repository's `Page` onto **ADR-0022's
    shared envelope**, which this task declares as a reusable `openapi.yaml` schema because two more
@@ -673,9 +689,9 @@ depends on a task numbered after it.
   sorts within whatever selection is in effect. *(SPEC-0005 #23, #28)*
 - **A year boundary** — a contract published on 1 January belongs to that year and to no other, and
   the range predicate is half-open so no contract falls in two years or in none. *(SPEC-0005 #27)*
-- **A request with no `year`, or with a malformed one** — refused with 400. There is no default
-  applied server-side and no all-years list to fall back to; the *default year* is a client
-  decision, taken from `resumo`. *(SPEC-0005 #27)*
+- **A request with no `year`, or with a malformed one** — refused with 400. No default is applied
+  server-side and no all-years list exists to fall back to; the *default year* is a client decision,
+  taken from `resumo`. *(SPEC-0005 #27)*
 - **A `sort` naming a property R19 does not offer**, or a direction the binder would quietly turn
   into ascending — refused with 400 rather than answered in an ordering nobody asked for. The
   framework's permissiveness is the reason this case has to be written down. *(SPEC-0005 #28)*
