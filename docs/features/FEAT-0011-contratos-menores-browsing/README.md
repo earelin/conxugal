@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0005
-adrs: [0002, 0003, 0004, 0005, 0006, 0008, 0010, 0012, 0015, 0016, 0018, 0019, 0021]
+adrs: [0002, 0003, 0004, 0005, 0006, 0008, 0010, 0012, 0015, 0016, 0018, 0019, 0020, 0021, 0022, 0023]
 status: draft
 ---
 
@@ -49,23 +49,16 @@ layout of
 its journeys are proved against a stubbed API per
 **[ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md)**.
 
-> **One prerequisite decision is missing, and this feature must not take it alone.**
-> Nothing in the system is paged today — `docs/api/openapi.yaml` has no page parameter, no total and
-> no envelope — and R17 is explicitly a rule **three specs share**. The query-parameter spelling, the
-> response envelope, whether page numbers are 0- or 1-based, and the default and maximum page size
-> are a **cross-cutting public-contract pattern**, which is the bar
-> [ADR-0020](../../architecture/0020-actions-as-verbs-in-rest-paths.md) and
-> [ADR-0012](../../architecture/0012-rate-limit-http-contract.md) both had to clear. An ADR — *the
-> paged-collection HTTP contract* — should therefore be accepted **before task 4 publishes the first
-> paged operation**; this feature proposes the shape under *API surface* below and does not
-> consider itself the owner of it. Only tasks 4 and 11–12 depend on it; task 5 is blocked on a
-> different ADR, named under *The scoping is the endpoint's, not the client's*.
+> **Two decisions this feature depends on are recorded as ADRs, not taken here.** Both are
+> `proposed` and must be **accepted before the tasks that rest on them are picked up**:
 >
-> **The shape proposed to that ADR is Micronaut Data's own**: `Pageable` bound from the request and
-> `Page<T>` serialised as the response, rather than an envelope of our own design. The consequences
-> are set out under *API surface*, and three of them are not free — the payload becomes 0-based,
-> `totalPages` stops being on the wire, and an out-of-range `size` is silently clamped rather than
-> refused.
+> - **[ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md)** — the
+>   paged-collection HTTP contract. R17's control is a rule **three specs share**, so the wire
+>   shape is settled once or three times; the ADR adopts Micronaut Data's `Pageable`/`Page` and
+>   records what that costs. **Tasks 4, 12 and part of 11 rest on it.**
+> - **[ADR-0023](../../architecture/0023-visible-set-as-a-contract-side-query.md)** — how the
+>   visible set SPEC-0004 R9 scopes the catalogue to is derived across the domain boundary.
+>   **Tasks 5 and 6 rest on it.**
 >
 > Note what is **not** open: SPEC-0005's *Decisions taken* settles that reads are **paged by
 > position** and that the cost is **measured before it is optimised**. That mechanism needs no ADR,
@@ -445,26 +438,17 @@ Both are `@Secured(IS_AUTHENTICATED)`: R2 grants the read to `USER` and `ADMIN` 
 unauthenticated visitor, which is also the mitigation R26 rests on (#39). Neither grants any
 ability to modify anything.
 
-**Paging is Micronaut Data's model, not one of our own.** The controller takes a `Pageable`
-argument and returns a `Page<T>`, so the parameter names, the binding rules and the response shape
-are the framework's — `page`, `size` and `sort` bound by `PageableRequestArgumentBinder`, and
-`content` / `pageable` / `totalSize` emitted by `Page`'s serialiser. The reasons are worth stating,
-because three specs inherit them:
+**Paging is [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md)'s,
+not this feature's.** The controller takes a `Pageable` and returns a `Page<T>`; the parameter
+names, the binding rules, the response shape, the 0-based numbering, the absent `totalPages`, the
+clamping of `page` and `size`, and the `countQuery` obligation on every explicit `@Query` are all
+recorded there, with their costs. What this section fixes is only what is **this feature's**: which
+parameters exist, which are required, and what a row carries.
 
-- **The domain module already depends on it.** `server/domain/build.gradle.kts` declares
-  `api(libs.micronaut.data.model)`, and
-  [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md)
-  already accepted Micronaut Data inside the domain. `Pageable` and `Page` on a port are the same
-  leak that ADR has, not a new one.
-- **The repository derives its `LIMIT` and `OFFSET`**, and a *derived* finder gets its count query
-  generated too. **This feature's four orderings are `@Query` methods and get no count for free** —
-  the annotation processor refuses a `@Query` returning `Page<T>` without an explicit `countQuery`
-  (*"Query returns a Page and does not specify a 'countQuery' member"*), so task 2 hand-writes one
-  per ordering and keeps each in step with its `WHERE`. That is a cost of the four explicit
-  statements, not of adopting the model, but it is stated here because the opposite was claimed in
-  an earlier draft.
-- **One less thing to invent.** SPEC-0006 and SPEC-0007 take the same control, and an in-house
-  envelope is a shape each feature could drift from. A framework type cannot drift.
+**One of the ADR's rules bites hardest here and is repeated rather than assumed**: an explicit
+`@Query` returning `Page<T>` fails annotation processing without a `countQuery`, so task 2
+hand-writes one per ordering and keeps each in step with its `WHERE`. That is the price of the four
+explicit statements the total ordering needs, not of the paging model.
 
 **Query parameters** on the list read:
 
@@ -491,30 +475,11 @@ stays Galician because it already is one in the domain and the store.
 { "content": [ … ], "pageable": { "number": 2, "size": 50, … }, "totalSize": 1832 }
 ```
 
-**Three consequences, none of them free, all of them accepted here and offered to the ADR:**
-
-1. **Page numbers are 0-based on the wire.** The reader is shown 1-based numbers and the URL carries
-   what the API takes, so the conversion happens once, in the paging control's adapter, rather than
-   in every client. This reverses the 1-based shape an earlier draft of this feature proposed:
-   consistency with the framework that binds the parameter is worth more than a payload that reads
-   the way the control looks.
-2. **`totalPages` is not on the wire.** `Page.getTotalPages()` exists on the interface but the
-   custom serialiser emits only `content`, `pageable` and `totalSize`, so R17's *how many pages it
-   spans* is **derived by the client** as `ceil(totalSize / size)` — in the one shared reader named
-   under *UI*, not in each list. R17 requires the reader be told; it does not require the server to
-   be the one that counts.
-3. **An oversized `size` is clamped, not refused.** The binder caps it at `max-page-size` and floors
-   `page` at 0, so `?size=5000` silently yields 100. This is the framework's behaviour and it is
-   **documented in the contract rather than fought**: a validation layer that refused what the
-   binder has already corrected would be dead code, and clamping protects the read that R24 warns
-   about. It is the one place the API answers a question slightly different from the one asked, and
-   the response says so — `pageable.size` states the size actually applied.
-
-The nested `pageable` object also carries fields this feature has no use for. They are **described
-in `openapi.yaml` as the serialiser actually emits them**, verified against a running instance
-rather than transcribed from the type, because
-[ADR-0021](../../architecture/0021-openapi-contract-testing-with-schemathesis.md)'s Schemathesis run
-validates live responses against the document and a hand-guessed schema fails the build.
+Its consequences — 0-based numbering, the absent `totalPages` the client derives, and `page`/`size`
+being clamped rather than refused — are [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md)'s
+and are not re-argued here. Two of them shape this feature's own surfaces and are picked up where
+they land: the derived page total and the 0-based-to-displayed conversion live in the one shared
+reader named under *UI*, and clamping is why no 400 is declared for `page` or `size` below.
 
 **A row carries everything the system holds** (R16), because a contrato menor has no detail view:
 
