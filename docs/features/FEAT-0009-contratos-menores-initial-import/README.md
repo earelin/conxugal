@@ -216,8 +216,11 @@ untouched. ADR-0019 also records the one risk this rests on — that Micronaut D
   **R27 names this as its second exception**: the interpretation replaces the published string
   rather than accompanying it, so a date that cannot be interpreted leaves the column null and
   such a contract shows no date at all. What is kept is the half that matters more — the contract
-  is **stored rather than rejected**, and a null date is precisely what R19's *undated* selection
-  reads, so no stored contract becomes unreachable (#42).
+  is **stored rather than rejected** (#42). What such a contract is *reachable by* has since
+  changed and this feature is unaffected: SPEC-0005 **R28** makes it an **anomaly**, withheld from
+  every browsing surface and surfaced to an administrator, where an earlier form of R19 reached it
+  through an *undated* selection. Either way the import stores the row and nothing here decides
+  what is shown.
 - **The amount is likewise a single column, held as a `Money`.** The source publishes it as a
   JSON **number**, not as text, so no published spelling is lost by storing it numerically: one
   nullable `NUMERIC` column is both what was published and what R19 sorts on. In the domain it is
@@ -586,10 +589,11 @@ feature's; and the *displayed* halves of #9, #11, #16, #26, #40 and #42 are the 
   feature's. *(SPEC-0005 #17)*
 - **An attribute changed at the source** — matched by source identifier and refreshed in
   place; identity and the row survive. *(SPEC-0005 #16 storage half)*
-- **An uninterpretable amount or publication date** — the contract is stored with that column
-  null and is never rejected. For the **date**, what the source published is not retained, which
-  is the R27 departure recorded above; the row is still reachable, through R19's undated
-  selection, once the browsing feature ships it. *(SPEC-0005 #42, stored-not-rejected half)*
+- **An uninterpretable or absent amount or publication date** — the contract is stored with that
+  column null and is never rejected. For the **date**, what the source published is not retained,
+  which is the R27 departure recorded above. Either missing value makes the row an **anomaly**
+  under R28 — **stored here, withheld from browsing there**, which is a rule about readers and
+  changes nothing this feature does. *(SPEC-0005 #42, stored-not-rejected half)*
 - **Source unreachable or unusable during a long run** — that Órgano's import fails and is
   recorded as failed; contracts already stored for it and for earlier Órganos are intact, and
   the run carries on to the remaining Órganos. *(SPEC-0005 #36)*

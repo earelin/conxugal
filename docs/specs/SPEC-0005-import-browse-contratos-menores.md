@@ -442,11 +442,18 @@ One decision remains outside this spec:
   year emptied entirely by R13's removals stops being offered — and choosing a year can
   therefore never be the reason a list is empty.
 
-  Alongside those years the chooser offers an **undated** selection wherever the Órgano holds
-  contracts whose publication date cannot be interpreted (R27). Without it a mandatory year
-  would make those contracts unreachable — stored, never shown — which would cost by omission
-  exactly what R27 refuses to cost by rejecting them at import. The selection is offered only
-  when such contracts exist, so it is absent for the Órganos that have none.
+  **Every selection is a year, and nothing else is offered.** A contrato menor whose
+  publication date cannot be interpreted is not a **visible** contract at all (R28), so it is
+  not something a chooser has to reach around: every selection offered is a year, every
+  year offered has contracts in it, and **every contract in one carries both a date and an
+  amount**, so neither sort has a missing value to place.
+
+  > **This reverses an earlier form of this requirement**, which offered an **undated**
+  > selection wherever an Órgano held such contracts, on the reasoning that a mandatory year
+  > would otherwise leave them stored and never shown. R28 answers that cost a different way —
+  > the contracts are withheld from every reader and surfaced to an administrator as anomalies
+  > — which keeps a permanent affordance out of every chooser, and a second case out of every
+  > selection, for a condition the source is not expected to produce at all.
 
   Within that year a user can **sort** by **publication date** or by **amount**, ascending or
   descending. Sorting and counting apply to the **whole year's selection**, not only to the
@@ -456,6 +463,73 @@ One decision remains outside this spec:
   The year is mandatory rather than optional because it is what **bounds the size of every
   paged read** — the constraint R24 relies on when it defers a latency budget. That is why the
   scoping is a requirement here rather than a default a feature might quietly relax.
+
+### Contracts the system stores but does not show
+
+- **R28** — A contrato menor is **incomplete** if any of three things is missing: its
+  **publication date**, its **amount**, or its **awardee** — the operador the published awardee
+  data resolves to under [SPEC-0006](SPEC-0006-operadores-economicos.md) R5. An incomplete
+  contract is an **anomaly**: it is **stored** as it arrived (R27), and it is **not a visible
+  contract**.
+
+  **The three are required for three different reasons**, and stating them separately is what
+  keeps the rule from being read as a preference for tidy rows. A contract with no publication
+  date cannot be placed in the year every selection is scoped to (R19), so there is no list it
+  could appear in. A contract with no amount could be listed and is still refused: the amount is
+  the value this capability exists to expose — a row without one answers none of the questions the
+  Summary describes, cannot carry the VAT label R27 requires of it, and silently understates every
+  total a reader assembles. A contract with no awardee is refused because **who was paid is half
+  of what a contract record is for**: R16 makes the awardee one of the two crossings every row
+  offers, and a public-spending record that states an amount and not a recipient invites the
+  question it exists to answer. The common rule is that **the system does not present a contract
+  it holds only part of**.
+
+  **The awardee differs from the other two in one way that matters.** The date and the amount are
+  values the source either published or did not; the awardee is a value **this system resolves**,
+  and it can be missing for two unlike reasons — the published identifier was unusable (R5), or
+  **the resolution had not yet been built when the contract was stored**. Nothing distinguishes
+  them after the fact, because a stored contract retains no awardee data of its own to re-resolve
+  from. So a contract imported before awardee resolution existed is withheld exactly as an
+  unusable identifier is, and the only route back is a **full historical re-read** of that Órgano
+  (R10), which fetches the published awardee again. **This makes awardee resolution a
+  precondition of importing anything a reader is meant to see**, rather than an enrichment that
+  can follow.
+
+  *Not visible* is the whole of the consequence, and it is deliberately stated in the vocabulary
+  [SPEC-0004](SPEC-0004-import-manage-organos-contratacion.md) R9 already defines — *each
+  contract spec defines what makes one of its contracts visible* — so that it propagates instead
+  of being re-enforced surface by surface. An anomalous contract appears in **no year's
+  selection**, is counted in **no total** a reader is shown, does not make its Órgano show a
+  contratos menores section (R18), and does not by itself put its Órgano in a `USER`'s **visible
+  set**. An Órgano all of whose contratos menores are anomalous is, to a reader, indistinguishable
+  from one holding none.
+
+  **The award is not lost, and it must not be silently lost either.** The contract stays stored,
+  so a later import that publishes the missing value refreshes it in place under R11 and it
+  becomes an ordinary visible contract with no administrator action. What this requirement exists
+  to prevent is the state that withholding alone would create: rows the system holds that
+  **nobody can see**.
+
+  **An administrator can therefore obtain an Órgano's anomalous contratos menores**, each one
+  identifiable, each stating **which value it is missing**, and each carrying the route to its
+  publication at the source, which is where the values it was published under can be read. That
+  is an administrator's view of a data-quality problem, not a reader's view of contracts, and it
+  is the only route by which an anomalous contract is reachable at all.
+
+  > **The administrator's surface is left unbuilt for now**, and criterion #52 is carried as
+  > **unowned** rather than claimed by a feature. The requirement is recorded first so that the
+  > withholding above cannot ship without an obligation to surface what it withholds.
+  >
+  > **The three values are not expected in the same numbers, and that is a risk this note records
+  > rather than resolves.** The source publishes its dates in one fixed form, so undated contracts
+  > should be a handful. A **missing amount is an ordinary blank field**, and nothing here
+  > establishes how often the source leaves it blank. An **unusable fiscal identifier is common
+  > enough that SPEC-0006 R5 exists to define it**, which makes the awardee the most likely of the
+  > three to withhold at scale. If any of them is common, this requirement withholds real awards in
+  > bulk and does so invisibly — which is precisely what makes the administrator's view the thing
+  > that stops being optional. **The population of each is measured, split by cause, before the
+  > withholding is relied on**, and if it is large this requirement is revised rather than quietly
+  > endured.
 
 ### Triggering imports
 
@@ -653,13 +727,16 @@ One decision remains outside this spec:
   operador — not the name that contract was published under — and that operador's fiscal
   identifier in the canonical form SPEC-0006 R3 holds it in.
 
-  None of these narrowings is a reason to **reject** a contract. A published amount or date that
-  cannot
-  be interpreted leaves that value absent, the contract is stored like any other, and it takes no
-  part in the ordering it cannot support, being ordered last when sorting by the value it lacks.
-  A contract with **no date** belongs to no year and is reached through R19's **undated**
-  selection. Discarding such contracts would lose real awards, which is the same reasoning
-  SPEC-0006 applies to an unusable fiscal identifier.
+  None of these narrowings is a reason to **reject** a contract at import, and the two interpreted
+  values behave alike. A published **amount** or **date** that cannot be interpreted — including
+  one the source simply left blank — leaves that value absent and the contract **stored**;
+  discarding it would lose a real award, which is the same reasoning
+  [SPEC-0006](SPEC-0006-operadores-economicos.md) applies to an unusable fiscal identifier.
+
+  **Storing it is not showing it.** A contract missing either value is **incomplete**, and R28
+  withholds it from every reader and surfaces it to an administrator instead. *Stored, never
+  rejected* is a rule about the import; *shown only when complete* is a rule about the reader; the
+  two are decided separately and this requirement settles only the first.
 
 ## Acceptance criteria
 
@@ -692,10 +769,11 @@ One decision remains outside this spec:
    system holds — with no per-contract screen to open for further data.
 10. **(R7)** Every displayed amount, and every total derived from amounts, is labelled as
     including VAT.
-11. **(R7)** A contract whose published awardee data yields no operador under SPEC-0006 R5 is
-    **stored and browsable like any other**, showing every attribute it holds and **no awardee**
-    — since the awardee is held on the operador that award did not produce. It is not rejected,
-    and it offers no awardee route that leads nowhere.
+11. **(R7, R28)** A contract whose published awardee data yields no operador under SPEC-0006 R5 is
+    **stored and not rejected**, holding **no awardee** — since the awardee is held on the operador
+    that award did not produce. It is **not browsable**: R28 makes it an anomaly, so it is withheld
+    from every reader rather than shown without an awardee. Consequently **no list ever renders a
+    row with no awardee**, and no row offers an awardee route that leads nowhere.
 12. **(R8)** An Órgano's initial import yields **every publication the source holds for it,
     back to its earliest published date** — not merely contracts from years before the current
     one, which a run covering only the last few years would also produce.
@@ -826,15 +904,15 @@ One decision remains outside this spec:
     is a defect.
 41. **(R27)** A displayed duration is accompanied by an indication that the source frequently
     publishes a per-Órgano default rather than a per-contract value.
-42. **(R27)** A contract whose published amount or publication date cannot be interpreted is
-    **stored rather than rejected at import**, with that value absent, and is ordered last when
-    sorting by the value it lacks; one with no date appears in no year's selection but is
-    reachable through the undated selection of R19, so no stored contract is unreachable. It is
-    *displayed as published* only for the values R27 keeps as published — an uninterpretable
-    date is shown as absent, its published text having not been retained.
-43. **(R19)** An Órgano holding no contract whose publication date resists interpretation is
-    offered **no undated selection at all** — the affordance is absent rather than present and
-    empty, on the same reasoning that keeps an empty section from being rendered.
+42. **(R27, R28)** A contract whose published **amount** or **publication date** cannot be
+    interpreted — including one the source left blank — is **stored rather than rejected at
+    import**, with that value absent and, for the date, its published text not retained. It is
+    then **withheld from browsing** under R28 rather than shown anywhere a reader can reach.
+    Storing it and showing it are decided separately, and only the first happens.
+43. **(R19, R28)** **No selection reaches a contract that has no interpretable publication
+    date.** Every selection offered is a year; no control offers an *undated* selection or any
+    equivalent, for any Órgano — the affordance does not exist rather than being present and
+    empty.
 44. **(R4)** An Órgano that is marked, unmarked, and marked again imports everything published
     while it was unmarked, without re-reading the history it had already stored.
 45. **(R8)** An Órgano that goes un-imported for longer than the incremental window — because
@@ -866,3 +944,24 @@ One decision remains outside this spec:
     by a `USER` and presents **no contratos menores section**, while the families it does hold
     are presented normally and its absence causes no error in them. This is the `USER`-facing
     half of #26 and the reachable half of #22.
+50. **(R28)** A contrato menor missing **any** of its publication date, its amount or its awardee is
+    stored, and is reached by **no** browsing surface: it appears in no year's selection, is counted
+    in no total a reader is shown, does not by itself make its Órgano show a contratos menores
+    section, and does not by itself place its Órgano in a `USER`'s visible set. Conversely **every
+    contract a reader is shown carries all three**, so no list renders any of them as absent. An
+    Órgano **all** of whose contratos menores are anomalous is presented exactly as one holding
+    none.
+51. **(R11, R28)** A later import that supplies a missing **date or amount** for a contract stored
+    as anomalous makes it an ordinary visible contract — appearing in its year, in that year's count
+    and in the section — with **no administrator action**, and without being stored a second time.
+    A contract missing more than one value becomes visible only when all of them arrive.
+52. **(R28)** An administrator can obtain an Órgano's anomalous contratos menores, each one
+    identifiable, each **stating which value it is missing**, and each carrying a route to its
+    publication at the source, and no route other than that view reaches them.
+    > **Unowned:** no feature claims this criterion yet. R28 records the obligation; the
+    > administrator's surface is a later increment, decided against real rows.
+53. **(R10, R28)** A contract stored **before awardee resolution existed** holds no awardee and no
+    awardee data to re-resolve from, so an ordinary re-import does not make it visible; only a
+    **full historical re-read** of its Órgano does, by fetching the published awardee again. This
+    is the one anomaly that does not clear itself, and the reason awardee resolution must precede
+    any import whose contracts a reader is meant to see.

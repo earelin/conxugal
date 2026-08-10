@@ -38,8 +38,9 @@ contract-tested endpoint and a shipped admin surface**, where FEAT-0011 adds new
 tables.
 
 The two meet at exactly one point, and it runs one way: **the picker opens an Órgano's contracts
-page**, which FEAT-0011 builds. That is SPEC-0005 R14's requirement, satisfied from this side, so
-this feature's picker task waits on FEAT-0011's contracts page and nothing else crosses.
+page**, which [FEAT-0013](../FEAT-0013-organo-contracts-page/README.md) builds and FEAT-0011's
+section is mounted inside. That is SPEC-0005 R14's requirement, satisfied from this side, so this
+feature's picker task waits on FEAT-0013's page and nothing else crosses.
 
 The design sits in the hexagonal server of
 **[ADR-0002](../../architecture/0002-hexagonal-architecture.md)**. REST lives under

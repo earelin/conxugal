@@ -112,8 +112,10 @@ rather than added to a table of millions later.
   **R27 now names this among its exceptions** — the interpretation replaces the published
   string rather than accompanying it — so a date that cannot be interpreted leaves the field null
   and that contract shows no date rather than the text the source published. What survives is the
-  half that matters: the contract is **stored, never rejected** (#42), and a null date is exactly
-  what R19's *undated* selection reads, so no contract becomes unreachable.
+  half that matters: the contract is **stored, never rejected** (#42). Such a contract is an
+  **anomaly** under SPEC-0005 R28 — withheld from browsing and surfaced to an administrator —
+  where an earlier form of R19 reached it through an *undated* selection. Neither form changes
+  what this task stores.
 - **The amount is a `Money`, not a `BigDecimal`.** A record wrapping a `BigDecimal`, declared in
   the domain beside the other shared value types, with an `AttributeConverter` onto the
   unchanged `NUMERIC` column — the same mechanism

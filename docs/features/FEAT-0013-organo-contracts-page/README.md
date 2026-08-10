@@ -53,11 +53,13 @@ against a stubbed API per
 **[ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md)**.
 
 ## Scope
-- **Application (driving):** one authenticated read answering **which contract families this Órgano
-  has data for**, composing the per-family ports FEAT-0012 already defines.
+- **Application (driving):** the **Órgano member read**, `GET /api/organo/{id}` — the Órgano's own
+  attributes and **one summary per contract family it holds visible data for** — composing a
+  per-family summary port that each family's feature implements.
 - **UI:** the `/organo/:id` **layout route** — the Órgano's name, the tab bar built from that read,
   the redirect from the bare path to the first family's tab, the page's own no-contracts state, and
-  the `<Outlet/>` each family's section is mounted in.
+  the `<Outlet/>` each family's section is mounted in, **carrying that family's summary as outlet
+  context** so the section does not read it again.
 
 **Out of scope (owned elsewhere):**
 - **Every contract, and every control over contracts.** The contratos menores section — its year
@@ -69,7 +71,8 @@ against a stubbed API per
   scoping that decides which Órganos a reader can pick.
 - **R18's *is this section partial / no longer updated*.** Those are statements a **family's
   section** makes about its own data, not the page's, and FEAT-0011 owns them for contratos
-  menores.
+  menores. This feature's read **carries** them and renders none of them: what a summary means is
+  its family's business, and the page treats every summary as opaque except for whether it exists.
 
 ## Design
 
@@ -99,30 +102,56 @@ mounted.
 wants contracts, not a menu; the first family with data is the one they get, and the redirect is
 what makes the tab always match the URL.
 
-### Which tabs exist: one read, reusing a port that already exists
+### One member read builds the whole page
 The tab bar must be built **before any section mounts**, so the page cannot ask each family to
-answer for itself — a section that has not been rendered cannot report that it has no data.
+answer for itself — a section that has not been rendered cannot report that it has no data. And the
+page needs the Órgano's **name** at the same moment. Both come from the member the page is about:
 
 | Method & path | Role | Purpose |
 | --- | --- | --- |
-| `GET /api/organo/{id}/contratos/familias` | authenticated | the contract families this Órgano has visible data for |
+| `GET /api/organo/{id}` | authenticated | the Órgano's own attributes, and one **summary per contract family** it holds visible data for |
 
-- **It composes the per-family ports FEAT-0012 defines**, rather than introducing a mechanism. That
-  feature already needs *does this family hold visible contracts for this Órgano* to scope the
-  catalogue; this asks the same question about one Órgano and reports which families said yes.
-- **A family joins by implementing that port**, which is the same act that makes it appear in the
-  visible set. There is no second list of families to keep in step on the server.
-- **The response is family slugs**, matching the child-route segments, so the client maps a
-  response to a route without a lookup table that could disagree with the router.
+```json
+{
+  "id": "…",
+  "name": "Servizo Galego de Saúde",
+  "families": {
+    "contratos-menores": { "years": [2025, 2024, 2023], "partial": false, "updating": true }
+  }
+}
+```
 
-> **This reverses a decision an earlier draft of FEAT-0011 took**, and the reversal is recorded
-> rather than quiet. That draft rejected a families endpoint on the grounds that *"it would make
-> every new family a change to a shared contract, and it answers a question each family already
-> answers for itself"*. Both halves stop being true here: with tabs, presence is needed **before**
-> any family is mounted, so no family can answer for itself; and because the endpoint composes a
-> port rather than enumerating families in its own code, a new family changes an implementation, not
-> a contract. What was over-engineering when each section could answer for itself is the smallest
-> thing that works once the tab bar has to be drawn first.
+- **A family present in `families` has visible data; one absent has none.** Presence is not a
+  separate flag that could disagree with the summary beside it — it *is* the summary's existence,
+  the same construction FEAT-0011 uses for whether a section exists. `families: {}` is an Órgano
+  holding nothing, and it draws no tab bar.
+- **The keys are the family slugs**, spelled exactly as the child-route segments, so the client maps
+  a response onto a route with no lookup table that could disagree with the router.
+- **Each family's summary is owned by that family's feature**, not by this one. The
+  `contratos-menores` entry — its years, its `partial` and `updating` — is
+  [FEAT-0011](../FEAT-0011-contratos-menores-browsing/README.md)'s schema and comes from
+  FEAT-0011's port; this feature composes the ports and publishes the envelope. **A new family adds
+  a property and implements a port; it changes no member that already exists.**
+- **The page reads only the keys.** Which tabs to draw, which to redirect to, and whether to draw a
+  bar at all are answered by `Object.keys(families)`. Every value is opaque to this feature and is
+  handed to the section that owns it.
+
+> **This replaces two endpoints an earlier draft split**, and the consolidation is the user-visible
+> point. That draft had `GET /api/organo/{id}/contratos/familias` here for the tabs, FEAT-0011's
+> `GET /api/organo/{id}/contratos-menores/resumo` for the section, and the Órgano's **name** taken
+> from FEAT-0012's catalogue list — three reads before a reader saw anything, two of them
+> round-tripping in series because the tab had to exist before the section mounted. One member read
+> answers all three, and the page renders its name, its tabs and its opening section's year chooser
+> from a single response.
+>
+> **FEAT-0011 declined a member endpoint on the grounds that it would "add a member endpoint to
+> serve one field"** — the name. That was right when the name was the only thing wanted from it.
+> With the families and their summaries on the same response it is serving three purposes, and the
+> objection stops applying.
+
+**An Órgano outside a `USER`'s visible set answers 200 with `families: {}`**, not 404 and not 403.
+SPEC-0004 R9 scopes what is **listed**; SPEC-0005 is explicit that it does not make an Órgano's
+identity a secret. An unknown id is a 404.
 
 ### What the page renders when there is nothing
 **No family with data means no tab bar**, and the page shows the Órgano's name and a plain statement
@@ -139,11 +168,20 @@ structure rather than append to it, which is exactly what R15's *additive* wordi
 
 ### UI ([ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md))
 The page is its own slice, `ui/src/features/organo/`, holding the layout component, the tab bar, the
-families read and the redirect. It imports **no other feature**, and no other feature imports it.
+member read and the redirect. It imports **no other feature**, and no other feature imports it.
 
-- The **`Organo` type and the catalogue read** come from `shared/entities`, where FEAT-0012 promotes
-  them — this page needs the Órgano's **name**, and that is the second consumer ADR-0015's rule waits
-  for.
+- **The member read and its `Organo` type live in `shared/entities`**, beside the catalogue read
+  FEAT-0012 promotes there — because two slices consume the response: this page reads the name and
+  the family keys, and **each family's section reads its own entry** out of the same object. That is
+  the second consumer ADR-0015's rule waits for.
+- **`families` is typed as a record of opaque values** in `shared/entities`, never as a union of the
+  known families. A shared module that knew what a `contratos-menores` summary contains would be
+  `shared/` depending on a feature, which ADR-0015 forbids in exactly that direction. Each family's
+  slice narrows its own entry; nothing else may.
+- **The summary reaches the section through `<Outlet context={…}/>`**, read with
+  `useOutletContext()`. That is what lets the section have the years without importing this slice
+  and without a second request: the router passes data, so neither feature imports the other. It is
+  the same boundary trick the child routes already use, applied to data instead of composition.
 - The **family registry** — slug, tab label, child-route path — lives here, because it is what the
   tab bar renders and what the router's child routes are declared from. It is a list, and a family is
   an entry.
@@ -152,17 +190,19 @@ families read and the redirect. It imports **no other feature**, and no other fe
 
 ## Sequencing (tasks, one small change each)
 
-1. **The families read** *(backend, OpenAPI-first)*: `GET /api/organo/{id}/contratos/familias`,
-   authenticated, composing the per-family visible-contracts ports and returning the slugs of the
-   families that have data; the reused `organo-not-found` for an unknown Órgano. *Depends on
-   [FEAT-0012](../FEAT-0012-organos-visible-set-and-browse/README.md)'s port existing.*
-   *(SPEC-0005 #22 presence half)*
+1. **The Órgano member read** *(backend, OpenAPI-first)*: `GET /api/organo/{id}`, authenticated,
+   returning the Órgano's attributes and the `families` map — each entry produced by that family's
+   summary port, a family with no visible data producing no entry; the reused `organo-not-found`
+   for an unknown Órgano; ADR-0012's headers. The `contratos-menores` entry's **schema is
+   FEAT-0011's**, referenced rather than restated, so one feature owns each family's shape.
+   *Depends on [FEAT-0011](../FEAT-0011-contratos-menores-browsing/README.md)'s summary port
+   (its task 6).* *(SPEC-0005 #22 presence half, #26 contract half, #43)*
 2. **The Órgano page and its tabs** *(frontend)*: the `features/organo` slice; the `/organo/:id`
-   layout route rendering the Órgano's name, the tab bar built from task 1, and an `<Outlet/>`; the
-   redirect from the bare path to the first family with data; the family registry; the
-   no-contracts state; and the loading and failed-fetch states. Mounts no section — the outlet is
-   empty until a family's route is declared. *Depends on task 1.*
-   *(SPEC-0005 #22, #49 tab-absence half)*
+   layout route rendering the Órgano's name, the tab bar built from the family keys, and an
+   `<Outlet/>` **carrying the active family's summary as context**; the redirect from the bare path
+   to the first family with data; the family registry; the no-contracts state; and the loading and
+   failed-fetch states. Mounts no section — the outlet is empty until a family's route is declared.
+   *Depends on task 1.* *(SPEC-0005 #22, #49 tab-absence half)*
 3. **Mount the contratos menores section** *(frontend)*: the child route at
    `/organo/:id/contratos-menores` wiring FEAT-0011's section into this page's outlet, declared in
    `app/router.tsx` so neither slice imports the other. *Depends on task 2 and on FEAT-0011's
@@ -190,8 +230,10 @@ families read and the redirect. It imports **no other feature**, and no other fe
 - **The last visible contract removed while a reader holds the page** — under SPEC-0005 R13 — the
   next load has no tab for that family, and the bare path redirects elsewhere or, if nothing
   remains, shows the no-contracts state.
-- **The families read failing** must not render as *this Órgano has no contracts*: an empty result
-  and a failed fetch are different, and the page shows an error with a retry for the second.
-  FEAT-0007 recorded the same hazard, and the same answer applies.
-- **An unknown Órgano id** — 404 from the families read, and a not-found state on the page rather
+- **The member read failing** must not render as *this Órgano has no contracts*: `families: {}` and a
+  failed fetch are different, and the page shows an error with a retry for the second.
+  FEAT-0007 recorded the same hazard, and the same answer applies. Consolidating three reads into
+  one makes this **more** important, not less — a single failure now costs the name, the tabs and
+  the opening section's chooser at once, so there is exactly one place that has to get it right.
+- **An unknown Órgano id** — 404 from the member read, and a not-found state on the page rather
   than an empty tab bar.
