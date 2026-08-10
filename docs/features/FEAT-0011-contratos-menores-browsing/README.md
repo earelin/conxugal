@@ -133,13 +133,15 @@ its journeys are proved against a stubbed API per
 
 ### Hexagonal placement ([ADR-0002](../../architecture/0002-hexagonal-architecture.md))
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph application["application (driving)"]
+        direction LR
         resumoApi["GET /api/organo/&#123;id&#125;/contratos-menores/resumo"]
         listApi["GET /api/organo/&#123;id&#125;/contratos-menores"]
-        pageUi["/organo/&#123;id&#125;: name + family tabs + contratos menores section"]
+        sectionUi["/organo/&#123;id&#125;/contratos-menores<br/>the contratos menores section"]
     end
     subgraph domain["domain"]
+        direction LR
         listUc["ListContratosMenores"]
         resumoUc["DescribeContratosMenoresSection"]
         selection["YearSelection · SortKey · Direction"]
@@ -148,6 +150,7 @@ flowchart LR
         organoRepo["OrganoRepository (port)"]
     end
     subgraph infrastructure["infrastructure (driven)"]
+        direction LR
         jdbcReads["paged + counted reads · year facets"]
     end
     application --> domain
