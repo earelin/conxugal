@@ -55,10 +55,13 @@ its journeys are proved against a stubbed API per
 > - **[ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md)** — the
 >   paged-collection HTTP contract. R17's control is a rule **three specs share**, so the wire
 >   shape is settled once or three times; the ADR adopts Micronaut Data's `Pageable`/`Page` and
->   records what that costs. **Tasks 4, 12 and part of 11 rest on it.**
+>   records what that costs. **Task 6 is blocked on it**, and tasks 9 and 13 build against it.
 > - **[ADR-0023](../../architecture/0023-visible-set-as-a-contract-side-query.md)** — how the
 >   visible set SPEC-0004 R9 scopes the catalogue to is derived across the domain boundary.
->   **Tasks 5 and 6 rest on it.**
+>   **Task 7 is blocked on it**, and task 8 travels with it.
+>
+> The split of the section read (task 5) from the paged read (task 6) is what keeps the blocking
+> narrow: everything up to the section on screen proceeds while ADR-0022 is settled.
 >
 > Note what is **not** open: SPEC-0005's *Decisions taken* settles that reads are **paged by
 > position** and that the cost is **measured before it is optimised**. That mechanism needs no ADR,
@@ -275,7 +278,7 @@ fetched:
 
 | Answer | Decides |
 | --- | --- |
-| the years the Órgano has contracts in, each with its count | which years the chooser offers (R19), **and whether the section exists at all** (R18) |
+| the years the Órgano has visible contracts in | which years the chooser offers (R19), **and whether the section exists at all** (R18) |
 | whether any contract has no interpretable publication date | whether the *undated* selection is offered — **absent, not empty, when none exists** (#43) |
 | `partial` | the initial import has not completed, so what is shown is incomplete (R18, #26) |
 | `updating` | the Órgano is still being refreshed — it is active and marked |
@@ -490,7 +493,7 @@ reader named under *UI*, and clamping is why no 400 is declared for `page` or `s
 | `obxecto` | as published |
 | `amount` | as published, VAT-inclusive, or absent |
 | `duration` | as published, capped at 64 characters at import |
-| `awardee` | the operador's `id`, its R4-selected `name` and its canonical `fiscalId` — or **absent** |
+| `awardee` | the operador's R4-selected `name` and its canonical `fiscalId` — or **absent** |
 | `sourceUrl` | absolute link to the publication at the official source |
 
 - **`sourceUrl` is composed on the server, not in the browser.** FEAT-0009 established that the
@@ -506,7 +509,9 @@ reader named under *UI*, and clamping is why no 400 is declared for `page` or `s
   coincide in production; they get two properties.
 - **`awardee` absent is a valid row** (#11): R5 yields no operador for an unusable identifier, and
   because the schema is normalised such a contract records no awardee at all. It is shown like any
-  other row, without an awardee and without a crossing that leads nowhere.
+  other row, without an awardee and without a crossing that leads nowhere. It carries **no operador id**: nothing
+  consumes one until SPEC-0006's read feature builds the operador route, and that feature adds the
+  field with the crossing it enables rather than this one shipping a value no client reads.
 - **No field states the awarding Órgano** (#21). Every row of this list belongs to the Órgano
   already open.
 
@@ -546,9 +551,15 @@ slice, `features/contratos`, which reads `GET /api/organos` through its own thin
 endpoint reuse, which is free, rather than code reuse across a boundary, which is forbidden.
 
 **A `USER`-visible nav entry** joins the ungrouped primary section of `ui/src/app/nav.ts` — the
-first one that is not Home or About — with its label in the shared strings module the nav already
-reads. The admin `/administracion/organos` entry stays exactly where it is: they are two surfaces
-over one catalogue, and merging them would put management controls in front of a `USER` (#19).
+first one that is not Home or About. The admin `/administracion/organos` entry stays exactly where
+it is: they are two surfaces over one catalogue, and merging them would put management controls in
+front of a `USER` (#19).
+
+**The two entries cannot share a label**, and one is taken: `strings.nav.organos` is already
+`'Órganos'` for the admin entry, and an `ADMIN` sees both at once. The browse entry needs its own
+label naming what it is *for* rather than what it lists — the reader goes there to reach contracts,
+not to administer a catalogue — and the admin entry keeps the name it ships with, since renaming a
+shipped surface to make room is a cost paid by the wrong side.
 
 **The selection lives in the URL query string** — `?year=2025&sort=amount,desc&page=3`, spelled
 exactly as the API takes it, 0-based `page` and comma-joined `sort` included. One spelling, not a
@@ -626,87 +637,111 @@ defect in this feature, and the acceptance coverage for the awardee-present case
 
 ## Sequencing (tasks, one small change each)
 Backend first, then the shared control, then the surfaces — the order FEAT-0006/FEAT-0007 and
-FEAT-0009 took. Tasks 1–3 and 5 have no dependency on the ADR raised above; **task 4 does**.
+FEAT-0009 took. Each task names what it depends on; the numbering is that order, and nothing
+depends on a task numbered after it.
 
 1. **Selection value types + read ports** *(backend)*: `YearSelection` (a year, or undated — with no
-   representable absence) and `SortKey`/`Direction`, plus the mapping from a bound `Sort` onto one
-   of the four orderings that **refuses** anything outside it; the `ContratoMenorRepository` port
-   methods, taking a `Pageable` and returning a `Page`, for the four orderings and the year-facet
-   read. Pure domain, unit-tested — including that a selection cannot be built without a year, and
-   that an unknown sort property or direction is rejected rather than defaulted.
-   *(SPEC-0005 #27 no-all-years half)*
-2. **Paged, ordered and counted reads** *(backend)*: the JDBC implementation — the four orderings
-   with the `source_id` tiebreaker and `NULLS LAST` in **both** directions, each taking its
-   `Pageable` **sort-stripped** so the framework appends offset and limit but no second `ORDER BY`;
-   the range predicate that uses the existing index, the undated predicate, and the year-facet
-   aggregate. Integration-tested against PostgreSQL: exhaustive paging over a selection with ties,
-   null amounts ordered last both ways, a year boundary that does not leak into its neighbour, and
-   `totalSize` matching the selection rather than the page.
+   representable absence), `SortKey` and `Direction` parsed from plain strings, and the
+   `ContratoMenorRepository` port methods for the four orderings, taking a `Pageable` and returning
+   a `Page`. Pure domain — **the bound `Sort` is not seen here**, since it is an HTTP-bound type and
+   its refusal is a 400; task 6 owns that mapping and calls in with these types. Unit-tested,
+   including that a selection cannot be built without a year. *(SPEC-0005 #27 no-all-years half)*
+2. **Paged, ordered and counted reads** *(backend)*: the JDBC implementation of the four orderings
+   — `source_id` tiebreaker, `NULLS LAST` in **both** directions, the half-open year range on the
+   existing index, the undated predicate — each with its **own `countQuery`**, which
+   [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md) requires of
+   every explicit `@Query` returning a `Page`, and each taking its `Pageable` **sort-stripped**.
+   Integration-tested against PostgreSQL: exhaustive paging over a selection with ties, null amounts
+   ordered last both ways, a year boundary that does not leak into its neighbour, and `totalSize`
+   matching the selection rather than the page. *Depends on task 1.*
    *(SPEC-0005 #23 store half, #27 year-scoping half, #28, #42 ordering half)*
-3. **The two read use cases** *(backend)*: `ListContratosMenores`, and
-   `DescribeContratosMenoresSection` deriving the offered years, the undated selection's presence,
-   and R18's `partial` and `updating` from the per-Órgano import state and the catalogue row.
-   Unit-tested over the state combinations — never started, incomplete, complete, unmarked,
-   inactive. *(SPEC-0005 #26 state half, #43)*
-4. **The two read endpoints** *(backend, OpenAPI-first)*: `GET /api/organo/{id}/contratos-menores/resumo`
-   and `GET /api/organo/{id}/contratos-menores`, authenticated, the controller taking a `Pageable`
-   and returning a `Page`, with the required `year`, the `sort` refusal, the reused
-   `organo-not-found`, ADR-0012's headers, the `micronaut.data.pageable` defaults, and the
-   configuration that composes `sourceUrl`. The `Page` and `Pageable` schemas are written to match
-   what the serialiser **actually emits**, proven by the Schemathesis run rather than by reading the
-   type. **Blocked on the paged-collection ADR** — adopting the framework's model on the public
-   contract is that decision. *(SPEC-0005 #2, #25 source half, #27 no-all-years half, #39
-   authentication half)*
-5. **Narrow `GET /api/organos` to the visible set** *(backend, OpenAPI-first)*: the read returns
+3. **Year facets and the section's state** *(backend)*: the aggregate returning the years an Órgano
+   has **visible** contracts in and whether it holds undated ones, plus
+   `DescribeContratosMenoresSection` deriving from it — and from FEAT-0009's per-Órgano import state
+   and the catalogue row — the offered selections and R18's `partial` and `updating`. Kept apart
+   from task 2 because it is a different query shape with a different test surface. Unit-tested over
+   every state combination, **including an Órgano with no import-state row at all**, which is how
+   *never started* is represented — there is no enum value for it. *Depends on task 1.*
+   *(SPEC-0005 #26 state half, #43)*
+4. **`ListContratosMenores`** *(backend)*: the use case answering one Órgano's contracts of one
+   year in one ordering, one page at a time. *Depends on tasks 1–2.* *(SPEC-0005 #27, #28)*
+5. **The section endpoint** *(backend, OpenAPI-first)*:
+   `GET /api/organo/{id}/contratos-menores/resumo`, authenticated, the reused `organo-not-found`,
+   ADR-0012's headers. **Not paged**, so it does not wait on ADR-0022 — which is why it is split
+   from task 6 rather than shipped with it. *Depends on task 3.*
+   *(SPEC-0005 #2 read half, #26 contract half, #43)*
+6. **The paged contracts endpoint** *(backend, OpenAPI-first)*:
+   `GET /api/organo/{id}/contratos-menores` taking a `Pageable` and returning a `Page`, the required
+   `year`, the **`Sort` mapping and its 400** — the boundary check ADR-0022 makes a security
+   invariant, so no bound `Sort` reaches a repository — the `micronaut.data.pageable` defaults
+   (`default-page-size: 50`, which has no independent default and must be set), the `Page`/`Pageable`
+   schemas written to match what the serialiser **actually emits** including its polymorphic `sort`,
+   the `application` module declaring its own `micronaut-data-runtime` dependency rather than
+   inheriting it transitively, and the **separate property** composing `sourceUrl`.
+   **Blocked on [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md).**
+   *Depends on task 4.* *(SPEC-0005 #2, #25 source half, #27 no-all-years half, #39 authentication
+   half)*
+7. **Narrow `GET /api/organos` to the visible set** *(backend, OpenAPI-first)*: the read returns
    only Órganos with at least one visible contract, in any family; its shape, its Galician-collated
-   ordering and its `termoId` are unchanged. Rewrites the operation's description, which today
-   asserts the rule SPEC-0004 R1 revoked, and reshapes the integration test named for the old
-   behaviour. **Blocked on the visible-set derivation ADR** — how the predicate is answered across
-   the domain boundary is that decision, not this task's. *(SPEC-0004 #20, #21; SPEC-0005 #48)*
-6. **Move the admin section onto `GET /api/admin/organos`** *(frontend)*: FEAT-0007's taxonomy
-   tree, classification worklist and Órgano table read the admin catalogue instead of the narrowed
-   one, so the management surfaces keep the whole catalogue. **Lands with or before task 5** —
-   after it, and the admin section silently loses every Órgano without contracts, which is most of
-   the catalogue and precisely the ones awaiting filing. *(SPEC-0004 #19 management half, #22
-   management half; guards SPEC-0004 #8, #18)*
-7. **The paging control** *(frontend)*: the `shared/ui` component — first/previous/next/last and
+   ordering and its `termoId` are unchanged. Rewrites the operation description, which today asserts
+   the rule SPEC-0004 R1 revoked, and reshapes the integration test named for the old behaviour.
+   **Blocked on [ADR-0023](../../architecture/0023-visible-set-as-a-contract-side-query.md).**
+   *(SPEC-0004 #20, #21; SPEC-0005 #48)*
+8. **Move the admin section onto `GET /api/admin/organos`** *(frontend)*: FEAT-0007's taxonomy tree,
+   classification worklist and Órgano table read the admin catalogue instead of the narrowed one.
+   **Lands with or before task 7** — after it, the management surfaces silently lose every Órgano
+   without contracts, which is most of the catalogue and precisely the ones awaiting filing.
+   *(SPEC-0004 #19 management half, #22 management half; guards SPEC-0004 #8, #18)*
+9. **The paging control** *(frontend)*: the `shared/ui` component — first/previous/next/last and
    jump-to-page, the entry count and page total, the two ends disabled at the two ends — and the
    `shared/lib` reader that maps the `Page` envelope onto it, deriving `pages` and converting the
-   0-based `number` to the 1-based page **shown** — the URL keeps the API's spelling. Built with no
-   contract knowledge beyond the envelope, because SPEC-0006 and SPEC-0007 take both.
+   0-based `number` to the 1-based page **displayed**, the URL keeping the API's spelling. Built with
+   no contract knowledge beyond the envelope, because SPEC-0006 and SPEC-0007 take both.
    *(SPEC-0005 #23 control half)*
-8. **Órganos browse section** *(frontend)*: the `/organos` route and nav entry, the read-only tree
-   over the **narrowed** `GET /api/organos` and FEAT-0007's taxonomy read, with **unclassified
-   Órganos at its root** and **empty branches pruned recursively**, each Órgano opening its
-   contracts, and the loading/empty/failed-fetch states. Offers no management control of any kind,
-   and no list. *Depends on tasks 5 and 10.* *(SPEC-0005 #19, #20; SPEC-0004 #9, #19, #22 browse
-   half, and the deferred half of SPEC-0004 #2)*
-9. **Órgano name search** *(frontend)*: the typeahead over the **same list the tree is built
-   from** — matching as the user types, partial, case- and accent-insensitively, each entry stating
-   whether the Órgano is inactive, a stated no-matches result distinguishable from a control not yet
-   typed in, and **nothing at all offered for a blank input**. Choosing an entry opens the same
-   Órgano the tree would, and no name reaches an Órgano the tree withholds. *Depends on task 8.*
-   *(SPEC-0004 #23, #24, #25, #26)*
 10. **Órgano contracts page + family split** *(frontend)*: the `/organos/:id` route and the
-   `features/contratos` slice; the Órgano identity header; the family list that renders a section
-   only where its family has data; and the page's own no-contracts state. *(SPEC-0005 #22, #26
-   section-presence half)*
-11. **The contratos menores section: year chooser + rows** *(frontend)*: the chooser offering only
-   years the Órgano has contracts in, defaulting to the most recent, plus the undated selection only
-   where it exists; the row with every attribute the system holds, its source link, the awardee as
-   text, the VAT label and the duration's unreliability marker; and R18's partial / no-longer-updated
-   statements. *(SPEC-0005 #9 display half, #10, #11 display half, #16 display half, #25 source
-   half, #26, #27, #40, #41, #42 display half, #43)*
-12. **Sorting and paging over the selection** *(frontend)*: the two sorts in both directions, the
-   paging control wired to the list, all of it held in the URL query string, and the single rule
-   that any change to the selection drops the page. *(SPEC-0005 #23, #24, #28)*
-13. **R24 read-latency measurement** *(devops/backend)*: a repeatable measurement of the four reads
-    R24 names — the first page and the count, a deep page, and both of those sorted by amount
-    descending — plus the year-facet read, taken at the busiest year of the largest Órgano the
-    system holds, against the **production deployment** under at least 10 concurrent readers, with
-    the dataset volume recorded beside every number. It asserts no threshold, because R24 sets
-    none; what it delivers is the method and the recorded numbers, and the numbers are re-taken as
-    the dataset grows. *(SPEC-0005 #37)*
+    `features/contratos` slice, with the `Organo` type and catalogue read promoted to
+    `shared/entities/` now that a second slice needs them; the Órgano identity header; the family
+    list that renders a section only where its family has data; and the page's own no-contracts
+    state. *Depends on task 5.* *(SPEC-0005 #22, #26 section-presence half, #49)*
+11. **Year chooser and the section's state** *(frontend)*: the chooser offering only years the
+    Órgano has visible contracts in, defaulting to the most recent, plus the undated selection only
+    where it exists; and R18's *partial* and *no longer updated* statements. *Depends on task 10.*
+    *(SPEC-0005 #26, #42 undated half, #43; #7 third clause — the list saying the Órgano is no
+    longer being updated, which FEAT-0009 claims only the first two clauses of)*
+12. **The contract row** *(frontend)*: every attribute the system holds, the link to the publication
+    at the source, the awardee as text under the operador's R4-selected name and canonical
+    identifier, the VAT label, the duration's unreliability marker, and absent values shown as
+    absent. States **no awarding Órgano**, every row belonging to the Órgano open. *Depends on task
+    10.* *(SPEC-0005 #9 display half, #10, #11 display half, #16 display half, #21 awardee-and-no-
+    Órgano half, #25 source half, #27, #39 awardee-name half, #40, #41, #42 display half)*
+13. **Sorting and paging over the selection** *(frontend)*: the two sorts in both directions, the
+    paging control wired to the list, all of it held in the URL query string in the API's own
+    spelling, and the single rule that any change to the selection drops the page. *Depends on tasks
+    6, 9 and 12.* *(SPEC-0005 #23, #24, #28)*
+14. **Órganos browse section** *(frontend)*: the `/organos` route and its nav entry, the read-only
+    tree over the narrowed `GET /api/organos` and FEAT-0007's taxonomy read, with **unclassified
+    Órganos at its root** and **empty branches pruned recursively**, each Órgano opening its
+    contracts, and the loading/empty/failed-fetch states. No management control, no list. *Depends
+    on tasks 7 and 10 — the tree links to a page that must already exist.* *(SPEC-0005 #19, #20;
+    SPEC-0004 #9, #19, #22 browse half, and the deferred half of SPEC-0004 #2)*
+15. **Órgano name search** *(frontend)*: the typeahead over the same list the tree is built from —
+    matching as the user types, partial, case- and accent-insensitively, each entry stating whether
+    the Órgano is inactive, a no-matches result distinguishable from a control not yet typed in, and
+    **nothing offered for a blank input**. Choosing an entry opens the same Órgano the tree would.
+    *Depends on task 14.* *(SPEC-0004 #23, #24, #25, #26)*
+16. **The R24 measurement harness** *(devops)*: a repeatable, committed measurement of the reads R24
+    names — the first page and the count, a deep page, both of those sorted by amount descending —
+    plus the year-facet read and the narrowed catalogue read SPEC-0004 R20 adds, with the place its
+    numbers are recorded. **Acceptance is that it runs and records against whatever production holds
+    on the day it lands**, which is what makes it a task at all. *Depends on tasks 6 and 7.*
+
+> **The measurement itself is an obligation, not a task.** R24's conditions — ten imported Órganos
+> including the largest, under ten concurrent readers — cannot be created by any task here: they
+> need FEAT-0009's remaining tasks, the incremental feature, and weeks of running. A task whose
+> `status:` could never legitimately flip to `done` would hold this feature out of `implemented`
+> for ever, so task 16 delivers the **method** and the recording place, and taking the measurement
+> is discharged the way R24 says a budget is set — **by revising the requirement**. #37 stays open,
+> and open **owned**.
 
 **Criteria this feature deliberately leaves incomplete**, so no task claims what it cannot prove:
 
@@ -716,11 +751,17 @@ FEAT-0009 took. Tasks 1–3 and 5 have no dependency on the ADR raised above; **
   about* is provable with one family; a second family's omission-and-no-error case is provable only
   when a second family exists.
 - **#37** is met by the measurements **existing and being recorded**, and its conditions are
-  relative to production — at least ten imported Órganos including the largest. Task 13 delivers the
-  method and takes the measurement when production holds them; until then the criterion is open, and
-  it is open **owned** rather than unowned.
-- Every criterion about **importing** — #1 and #3–#8, #12–#18, #29–#36, #38, #44–#47 — belongs to
+  relative to production — at least ten imported Órganos including the largest. Task 16 delivers the
+  method and the recording place; taking the measurement waits on production holding them, and is
+  discharged by revising R24. The criterion stays open, and open **owned** rather than unowned.
+- Every criterion about **importing** — #1, #3–#6, #8, #12–#18, #29–#36, #38, #44–#47 — belongs to
   FEAT-0009, the incremental feature, or the curation feature. This feature writes nothing.
+
+  **#7 is the one exception, and it was orphaned.** FEAT-0009 claims its *first two clauses* — the
+  contracts stay stored, a later import retrieves nothing further — and disclaims the third:
+  *the list says the Órgano is no longer being updated*. That is a display obligation over data this
+  feature reads, so **task 11 claims it**. Without this note it belonged to neither feature while
+  both cited it.
 
 ## Edge cases
 - **An Órgano with no contratos menores at all** — the majority of the catalogue — is reachable from
