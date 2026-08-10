@@ -177,34 +177,23 @@ narrowed to the visible set, the contracts page finds its Órgano's name in a li
 than the catalogue** — which is exactly the set of Órganos whose contracts anyone can open. No
 member endpoint is added to serve one field.
 
-### The family split is rendered as tabs
-R15 presents an Órgano's contracts as **one section per family**, each independently reachable, and
-**omits** a family the system holds no data for rather than showing it empty. The page renders that
-as **the Órgano's name and a tab per family**.
+### The page and its tabs are FEAT-0013's; this feature fills one tab
+R15's split — an Órgano's contracts presented one family at a time, a family with no data omitted —
+is delivered by **[FEAT-0013](../FEAT-0013-organo-contracts-page/README.md)**: the `/organo/{id}`
+layout route, the Órgano's name, the tab bar, and the redirect from the bare path to the first
+family that has data.
 
-Tabs are what *independently reachable* looks like: one family is on screen at a time, switching
-between them costs nothing, and neither is scrolled past to reach the other — which stacked sections
-would make true of whichever came second, and the second is licitacións, the larger family.
+**This feature builds the contratos menores section that fills that tab**, mounted at
+`/organo/{id}/contratos-menores`. The wiring is a **child route declared in `app/router.tsx`**, not
+an import: under [ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md)
+neither slice may import the other, and the router — which is in `app/` and may import from every
+feature — is what composes them. That is also what lets the licitacións feature add its own tab
+without touching either.
 
-The mechanism is deliberately the smallest thing that is genuinely additive: the page renders a
-**list of families**, each entry owning its own presence read and its own section component, and
-today that list has **one entry**. A family joins by appending one — it does not join by editing a
-conditional. What is *not* built is a server-side "which families does this Órgano have" endpoint:
-that would make every new family a change to a shared contract, which is the coupling R15's
-*additive* wording is warning against, and it would answer a question each family already answers
-for itself in the read it must make anyway.
-
-**A family with no data has no tab**, which is how R18's *never render an empty section* is honoured
-here — the family is not a disabled tab or an empty panel, it is absent from the tab bar. **Today
-that leaves exactly one tab.** A single tab is mild redundancy rather than a defect, and the
-alternative — showing no tab bar until a second family exists — would make the licitacións feature
-change this page's structure rather than append to it, which is what R15's *additive* wording
-exists to prevent. It is drawn as one tab and gains a sibling.
-
-**A page with no tabs at all is the page's own empty state, not an empty section.** An Órgano the
-system holds no contracts for renders its identity and a plain statement that the system holds
-none — R18 forbids an empty *section*, and says nothing about a page needing to be blank. With
-SPEC-0004 R9 scoping the picker to the visible set, this state is reached only by a retained link.
+So the page-level states are not this feature's to render. **An Órgano with no tab bar at all**,
+and **the absence of a contratos menores tab**, are FEAT-0013's; what this feature owns begins
+inside the tab, with R18's rules about whether the *section* has content and what it says about
+itself.
 
 ### The section exists, or it does not: `resumo`
 Everything R18 and R19 decide about a section is answered by **one read**, before any contract is
@@ -477,35 +466,35 @@ years and no undated selection, and that is how the client knows to render no se
 
 One route, authenticated, in Galician (SPEC-0001 AC7), with copy in the shared strings module under
 a per-feature namespace — the pattern `ui/src/shared/lib/strings.ts` already uses — rather than
-inline. It is **singular**, `/organo/:id`, because it addresses one Órgano — the same rule
-[ADR-0016](../../architecture/0016-rest-resource-naming.md) applies to the API, followed here so a
-reader of either address space meets one convention:
+inline. It is a **child** of FEAT-0013's `/organo/:id`, which is singular because it addresses one
+Órgano — the same rule [ADR-0016](../../architecture/0016-rest-resource-naming.md) applies to the
+API, followed here so a reader of either address space meets one convention:
 
 | Route | Slice | What it is |
 | --- | --- | --- |
-| `/organo/:id` | `features/contratos` | one Órgano's name and a tab per contract family (R15) |
+| `/organo/:id/contratos-menores` | `features/contratos-menores` | this family's section, mounted in FEAT-0013's outlet |
 
-**It takes its own slice**, and that is a boundary decision rather than a preference:
-`eslint-plugin-boundaries` forbids one feature slice importing another. The contracts page is
-genuinely new ground — a different read, a different volume, a different set of controls — so it
-sits in `features/contratos` rather than joining the Órgano slice
-[FEAT-0012](../FEAT-0012-organos-visible-set-and-browse/README.md)'s browse section extends. It
-needs the `Organo` type and the catalogue read to name the Órgano it is showing, and those are
-**promoted to `shared/entities/`** — which is ADR-0015's own rule for a type once a second feature
-needs it, and better than a second thin API module duplicating an entity read.
+**It takes its own slice**, `features/contratos-menores`, named for the family it renders rather
+than for contracts in general — because the licitacións section will be a sibling of it, not a
+successor. `eslint-plugin-boundaries` forbids it importing FEAT-0013's page slice or being imported
+by it; the router composes them.
 
-**It adds no nav entry.** The route is reached by choosing an Órgano, never from the navbar; the
-`USER`-visible entry belongs to FEAT-0012's browse section, which is where a reader starts.
+**It needs no `Organo` and no catalogue read.** The Órgano's name is rendered by the page above it,
+so this section knows only the id in its route and the reads keyed on it. That is a consequence of
+the split worth stating: the section is mounted, not navigated to on its own terms.
 
-**The selection lives in the URL query string** — `/organo/:id?family=contratos-menores&year=2025&sort=amount,desc&page=3`
+**It adds no nav entry and no route of its own beyond the child.** A reader arrives by choosing an
+Órgano in FEAT-0012's picker, which lands on FEAT-0013's page, which redirects into this tab.
+
+**The selection lives in the URL query string** — `/organo/:id/contratos-menores?year=2025&sort=amount,desc&page=3`
 — spelled exactly as the API takes it. Because ADR-0022's `page` is 1-based, the number in the URL,
 the number the API takes and the number the control shows are **one number**: a shared link is a
 request, and nothing in the app converts between bases.
 
-**`family` names the open tab**, so a copied link reopens the family it was copied from rather than
-the default one. The year, sort and page beside it belong to **that** family's section — only one is
-open at a time, so they need no per-family prefix, and switching tab drops them along with the page
-for the same reason changing the year does: they describe a selection that no longer exists.
+**The family is the path, not a parameter**, so the year, sort and page belong unambiguously to the
+section mounted — only one ever is. Switching tab is a route change, which discards them along with
+the page, for the same reason changing the year does: they describe a selection that no longer
+exists.
 That is one decision doing four jobs: a contract list is shareable and deep-linkable; the browser's
 back button walks paging history for free; the year, sort and page have exactly one home rather
 than a component state that could disagree with a rendered control; and **R17's re-page rule becomes
@@ -624,38 +613,31 @@ accepted — so the whole feature is ready to be cut into task files.
    reading ADR-0022's envelope directly, with no conversion and no arithmetic between wire and
    control. Built with no knowledge of what is being paged, because SPEC-0006 and SPEC-0007 take it
    unchanged. *(SPEC-0005 #23 control half)*
-8. **Órgano contracts page + family tabs** *(frontend)*: the `/organo/:id` route and the
-   `features/contratos` slice, reading the `Organo` type and catalogue read from `shared/entities`;
-   the Órgano's name; the **tab bar carrying one tab per family that has data**, with the active
-   family in the URL so a link opens the tab it was copied from; and the page's own no-contracts
-   state when no family has any. *Depends on task 5.*
-   *(SPEC-0005 #22, #26 section-presence half, #49)*
-9. **Year chooser and the section's state** *(frontend)*: the chooser offering only years the
+8. **Year chooser and the section's state** *(frontend)*: the chooser offering only years the
     Órgano has visible contracts in, defaulting to the most recent, plus the undated selection only
     where it exists; and R18's *partial* and *no longer updated* statements. *Depends on task 8.*
     *(SPEC-0005 #26, #42 undated half, #43; #7 third clause — the list saying the Órgano is no
     longer being updated, which FEAT-0009 claims only the first two clauses of)*
-10. **The contract row** *(frontend)*: every attribute the system holds, the link to the publication
+9. **The contract row** *(frontend)*: every attribute the system holds, the link to the publication
     at the source, the awardee as text under the operador's R4-selected name and canonical
     identifier, the VAT label, the duration's unreliability marker, and absent values shown as
     absent. States **no awarding Órgano**, every row belonging to the Órgano open. *Depends on
     task 8.* *(SPEC-0005 #9 display half, #10, #11 display half, #16 display half, #21
     awardee-and-no-Órgano half, #25 source half, #27, #39 awardee-name half, #40, #41, #42 display
     half)*
-11. **Sorting and paging over the selection** *(frontend)*: the two sorts in both directions, the
+10. **Sorting and paging over the selection** *(frontend)*: the two sorts in both directions, the
     paging control wired to the list, all of it held in the URL query string in the API's own
-    spelling, and the single rule that any change to the selection drops the page. *Depends on tasks
-    6, 7 and 10.* *(SPEC-0005 #23, #24, #28)*
-12. **The R24 measurement harness** *(devops)*: a repeatable, committed measurement of the reads R24
+    spelling, and the single rule that any change to the selection drops the page. *Depends on tasks 6, 7 and 9.* *(SPEC-0005 #23, #24, #28)*
+11. **The R24 measurement harness** *(devops)*: a repeatable, committed measurement of the reads R24
     names — the first page and the count, a deep page, both of those sorted by amount descending —
     plus the year-facet read, with the place its numbers are recorded. **Acceptance is that it runs and records against whatever production holds
-    on the day it lands**, which is what makes it a task at all. *Depends on tasks 6 and 8.*
+    on the day it lands**, which is what makes it a task at all. *Depends on tasks 6 and 9.*
 
 > **The measurement itself is an obligation, not a task.** R24's conditions — ten imported Órganos
 > including the largest, under ten concurrent readers — cannot be created by any task here: they
 > need FEAT-0009's remaining tasks, the incremental feature, and weeks of running. A task whose
 > `status:` could never legitimately flip to `done` would hold this feature out of `implemented`
-> for ever, so task 12 delivers the **method** and the recording place, and taking the measurement
+> for ever, so task 11 delivers the **method** and the recording place, and taking the measurement
 > is discharged the way R24 says a budget is set — **by revising the requirement**. #37 stays open,
 > and open **owned**.
 
@@ -663,11 +645,11 @@ accepted — so the whole feature is ready to be cut into task files.
 
 - **#25's awardee half** — the crossing into an operador — waits on SPEC-0006's read feature, which
   owns the route it would target. The row states its awardee here; the link is added there.
-- **#22's licitacións clause** — *contratos menores as one family among those the system knows
-  about* is provable with one family; a second family's omission-and-no-error case is provable only
-  when a second family exists.
+- **#22 whole**, and the page-level half of **#26** and **#49**, belong to
+  [FEAT-0013](../FEAT-0013-organo-contracts-page/README.md): whether a *tab* exists is that
+  feature's, what the *section* inside it says is this one's.
 - **#37** is met by the measurements **existing and being recorded**, and its conditions are
-  relative to production — at least ten imported Órganos including the largest. Task 12 delivers the
+  relative to production — at least ten imported Órganos including the largest. Task 11 delivers the
   method and the recording place; taking the measurement waits on production holding them, and is
   discharged by revising R24. The criterion stays open, and open **owned** rather than unowned.
 - **#19, #20 and #48** — reaching an Órgano through the tree or the search — belong to
@@ -679,18 +661,15 @@ accepted — so the whole feature is ready to be cut into task files.
   **#7 is the one exception, and it was orphaned.** FEAT-0009 claims its *first two clauses* — the
   contracts stay stored, a later import retrieves nothing further — and disclaims the third:
   *the list says the Órgano is no longer being updated*. That is a display obligation over data this
-  feature reads, so **task 9 claims it**. Without this note it belonged to neither feature while
+  feature reads, so **task 8 claims it**. Without this note it belonged to neither feature while
   both cited it.
 
 ## Edge cases
 - **An Órgano holding another family's contracts but no visible contratos menores** — the case R18
-  now governs, once licitacións exist — shows **no contratos menores tab** while the families it
-  does hold get theirs. The family is absent from the tab bar, not a disabled tab and not an empty
-  panel. Until licitacións exist the same path is reached by a retained link. *(SPEC-0005 #26, #49)*
-- **A `family` in the URL that has no tab** — a link copied before its contracts were removed, or
-  before the family existed — falls back to the default tab rather than rendering an empty panel or
-  erroring. The tab bar is built from what has data, so a URL cannot conjure a tab. *(SPEC-0005
-  #22)*
+  now governs, once licitacións exist — has **no contratos menores tab**, which is
+  [FEAT-0013](../FEAT-0013-organo-contracts-page/README.md)'s to render and this feature's to make
+  true by reporting no data. Nothing here draws an empty section, because nothing mounts it.
+  *(SPEC-0005 #26, #49)*
 - **An Órgano holding only undated contracts** — the year list is empty but the section **exists**,
   and the **undated selection is the default**, since it is the only selection there is. *(SPEC-0005
   #42, #43)*
@@ -703,9 +682,10 @@ accepted — so the whole feature is ready to be cut into task files.
 - **An Órgano unmarked, or gone inactive, that retains contracts** — reachable, section intact, and
   it says it is no longer being updated. Both facts can hold at once with *partial*. *(SPEC-0005 #7
   browsing half, #20)*
-- **An Órgano reached by a retained link that holds nothing** — opens, and renders as holding
-  nothing. SPEC-0004 R9 scopes what is listed; it does not make an Órgano's identity a secret, so
-  there is no `403` on data the system is willing to show is empty. *(SPEC-0005 #26)*
+- **An Órgano reached by a retained link that holds nothing** — FEAT-0013's page renders as holding
+  nothing and mounts no section. SPEC-0004 R9 scopes what is listed; it does not make an Órgano's
+  identity a secret, so there is no `403` on data the system is willing to show is empty.
+  *(SPEC-0005 #26)*
 - **Ties on the sorted value** — hundreds of contracts on one publication date, or repeated round
   amounts — are ordered by the unique `source_id` tiebreaker, so paging the whole selection yields
   exactly the stated count with none repeated and none skipped. *(SPEC-0005 #23)*
