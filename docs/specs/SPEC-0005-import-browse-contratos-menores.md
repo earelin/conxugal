@@ -323,12 +323,13 @@ One decision remains outside this spec:
   is why a user who knows the name need not walk it. **There is no `USER`-facing catalogue
   list**, and this spec does not reintroduce one.
 
-  **An Órgano outside a `USER`'s visible set is unreachable by every route**, a retained or
-  shared link included: SPEC-0004 R9 scopes the data served rather than the surface drawn.
-  This spec owes that rule the same treatment on its own reads — **a `USER` asking for the
-  contracts of an Órgano outside their visible set is answered as though it does not
-  exist**, rather than shown an empty page that confirms it does. An administrator, whose
-  visible set is the whole catalogue, is answered normally.
+  **An Órgano outside the visible set is offered by no route this spec provides.** SPEC-0004
+  R9 scopes the catalogue where it is served rather than where it is drawn, so neither the
+  tree nor the search can lead to one, and no contract list names one. What that rule does
+  **not** do is make an Órgano's identity a secret, and this spec does not add what it
+  withholds: a reader arriving with an identifier by other means is answered truthfully —
+  such an Órgano has no visible contrato menor, so there is nothing to show and R18's rule on
+  an absent section is what governs the result.
 
   There is a third route, and it is stated here with the other two so that no cross-Órgano
   surface has to invent one: **wherever a contract row names its awarding Órgano, following
@@ -854,12 +855,12 @@ One decision remains outside this spec:
     historical re-read automatically.
     > **Criteria below are appended, not inserted.** Numbers are cited from features and
     > tasks, so a new criterion takes the next free one rather than a place in the sequence.
-48. **(R14)** An Órgano holding **no visible contract of any family** is reachable by a `USER`
-    through neither tree nor search, and a `USER` requesting its contracts directly is answered
-    as though it does not exist; an administrator reaches it normally. Conversely, once that
-    Órgano's **first** visible contrato menor is stored it becomes reachable for a `USER` with
-    no administrator action, and when its **last** visible contract is removed under R13 it
-    stops being. *(Also satisfies SPEC-0004 #20 and #21.)*
+48. **(R14)** An Órgano holding **no visible contract of any family** is offered by neither the
+    tree nor the search, and the catalogue read they are built from does not return it.
+    Conversely, once that Órgano's **first** visible contrato menor is stored it is offered by
+    both with no administrator action, and when its **last** visible contract is removed under
+    R13 it stops being. The administration area shows it throughout.
+    *(Also satisfies SPEC-0004 #20 and #21.)*
 49. **(R18)** An Órgano holding **another family's** contracts but no visible contratos
     menores — including one whose contratos menores were all removed under R13 — is reachable
     by a `USER` and presents **no contratos menores section**, while the families it does hold

@@ -37,8 +37,8 @@ on purpose:
 - **It holds only Órganos with at least one visible contract** — the *visible set*, defined
   in R9. A `USER` comes to the catalogue to reach contracts, and most organismos publish
   none the system imports, so an Órgano with nothing behind it is an entry that can only
-  lead to an empty page. Administrators see the whole catalogue; a `USER` is not merely
-  shown less, but **sent** less.
+  lead to an empty page. The administration area shows the whole catalogue; the browse
+  surfaces are not merely shown less, they are **served** less.
 - **Within that set the tree is exhaustive.** An Órgano an administrator has not classified
   is reachable without being classified first — at the root, beside the root terms — so
   filing organises what is reachable without ever gating it, and an administrator's backlog
@@ -80,9 +80,11 @@ one set, stated from either side.
   over a catalogue of several hundred entries where browsing to a known target is slower
   than typing it.
 
-  **Both are scoped to the Órganos the system holds contracts for** (R9). A `USER`'s view
-  of the catalogue is not the catalogue: it is the part of it that can answer the question
-  they came with.
+  **Both are scoped to the visible set** (R9), and scoped by **surface** rather than by
+  role: the catalogue read they are built from serves that set and nothing else, whoever
+  calls it. A `USER`'s view of the catalogue is not the catalogue — it is the part of it that
+  can answer the question they came with — and an administrator wanting the rest goes to the
+  administration area for it.
 
 ### Importing the catalogue
 
@@ -122,15 +124,23 @@ one set, stated from either side.
   (R10) — and it is **not** a route a `USER` has.
 - **R9** — Any authenticated user can browse the taxonomy as a navigable tree of category
   terms, select an Órgano from it, and so reach that Órgano — for example, to query its
-  contracts. A tree exists for both roles and they differ in **what they contain**:
+  contracts. **Two trees exist**, and they differ in what they contain rather than in who
+  may look at them:
 
-  - an **administrator's** tree shows the **whole catalogue**, since classifying and marking
-    are work done precisely on the Órganos that have nothing yet, and carries the management
-    controls of R14–R18;
-  - a **`USER`'s** tree is **read-only** — it offers no control that creates, renames, moves,
+  - the **management tree**, in the administration area, shows the **whole catalogue** and
+    carries the controls of R14–R18. Classifying and marking are work done precisely on the
+    Órganos that have nothing yet, so it can withhold nothing;
+  - the **browse tree** is **read-only** — it offers no control that creates, renames, moves,
     deletes or reassigns anything — and is **scoped** by the rule below.
 
-  **A `USER`'s tree holds exactly the Órganos of the visible set**, defined once here and
+  **The two are told apart by which surface they are, not by who is looking.** An
+  administrator using the browse tree sees what any reader sees, because there they are
+  reading rather than managing; the whole catalogue is reached by going to the administration
+  area, which R1 already gates. A rule keyed on the reader's role instead would give one
+  surface two meanings and make *what does this tree show* unanswerable without knowing who
+  asked.
+
+  **The browse tree holds exactly the Órganos of the visible set**, defined once here and
   referred to by that name wherever it is used:
 
   > **The visible set** is every Órgano with **at least one visible contract, in any
@@ -142,13 +152,21 @@ one set, stated from either side.
   > the sibling catalogue, deliberately reused so the system describes derived reachability
   > one way.
 
-  An Órgano outside the visible set is **not shown to a `USER` at all** — not in the tree,
-  not in the search (R19), nowhere — **and a `USER` cannot obtain it**. The scoping is
-  applied where the data is served, not where it is drawn: a `USER` is never sent the
-  catalogue entries the rule withholds, and a request naming an Órgano outside their visible
-  set is answered as though it does not exist. R2's *a `USER`'s view of the catalogue is not
-  the catalogue* is therefore literally true, and R1's flat list stays an administrator's in
-  substance rather than only on screen.
+  An Órgano outside the visible set appears on **no browse surface at all** — not in the
+  tree, not in the search (R19), nowhere — **and is not served to one**. The scoping is
+  applied where the catalogue is served, not where it is drawn: **the shared catalogue read
+  returns the visible set and nothing else**, and the whole catalogue is served only by the
+  `ADMIN`-gated administration read that R8's list is built from. So R2's *a `USER`'s view of
+  the catalogue is not the catalogue* is literally true — a `USER` is not merely shown less,
+  they are sent less — and R1's flat list stays an administrator's in substance rather than
+  only on screen.
+
+  **What this does not do is make an Órgano's identity a secret.** The rule removes an Órgano
+  from every listing a reader is offered; it does not add a permission check to reads of that
+  Órgano's own data, which would mean computing a reader's visible set on every such request
+  to withhold something no listing disclosed. A reader who arrives holding an identifier by
+  other means simply finds nothing there — which is the truthful answer, since an Órgano
+  outside the visible set has no visible contract to show.
 
   The reason for the scoping is R2's own justification: a `USER` reaches Órganos **in order
   to query contracts**, so an Órgano with none is an entry that can only ever lead to an
@@ -196,11 +214,12 @@ one set, stated from either side.
   selects that Órgano exactly as choosing it in the tree does (R9), so the two affordances
   lead to the same place.
 
-  - It searches **the set that reader's tree shows** — the visible set for a `USER`
-    (classified or not, active or not), the whole catalogue for an administrator. Search and
-    tree must agree in **both** directions: an affordance finding **fewer** would be a
-    second, quieter answer to *what does this system hold*, and one finding **more** would be
-    a way around R9's scoping, reachable by anyone who guessed a name.
+  - It searches **the set the tree beside it shows** — the visible set on the browse surface
+    (classified or not, active or not), the whole catalogue in the administration area — so
+    it is scoped by surface exactly as R9's trees are. Search and tree must agree in **both**
+    directions: an affordance finding **fewer** would be a second, quieter answer to *what
+    does this system hold*, and one finding **more** would be a way around R9's scoping,
+    reachable by anyone who guessed a name.
   - Matching is a **partial, case- and accent-insensitive match** on the name — the wording
     [SPEC-0006](SPEC-0006-operadores-economicos.md) R8 uses, reused so the two searches
     behave alike — so a user typing `avila` finds `Ávila`. Galician names are full of
@@ -377,37 +396,37 @@ one set, stated from either side.
     > reaches an Órgano's contracts through them. SPEC-0005 claims #19, #20, #21 and #26 from
     > its side; **#22, #23, #24 and #25 are recorded here as owned by whichever feature builds
     > those surfaces**, so the gap stays visible from the spec that owns the requirement.
-19. **(R9)** An Órgano of the visible set that is in **no term** is reachable from a
-    `USER`'s tree without being classified — at its root, under the layout this spec
+19. **(R9)** An Órgano of the visible set that is in **no term** is reachable from the
+    **browse tree** without being classified — at its root, under the layout this spec
     expects — and after an administrator assigns it to a term it is reached within that term
-    instead. Every Órgano of the visible set is therefore reachable from a `USER`'s tree,
-    classified or not, active or not. *(An administrator's tree is unaffected: it keeps the
+    instead. Every Órgano of the visible set is therefore reachable from the browse tree,
+    classified or not, active or not. *(The management tree is unaffected: it keeps the
     unclassified set R18 requires.)*
-20. **(R9)** An Órgano **outside the visible set** appears **nowhere** for a `USER` — not in
-    the tree, not in the search — **and is not sent to them**: a `USER` requesting the
-    catalogue receives only the visible set, and a request naming such an Órgano is answered
-    as though it does not exist. An administrator still sees it in the catalogue list (R8)
-    and in their tree, so the same Órgano is present for one role and absent for the other.
-21. **(R9)** Once the system stores an Órgano's first visible contract it appears for a
-    `USER`, **without an administrator doing anything**; and when its **last** visible
-    contract stops being visible — removed under
-    [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R13 — it leaves a `USER`'s
-    tree and search again. Membership of the visible set follows the contracts, in both
-    directions.
-22. **(R9)** A term whose subtree contains no Órgano of the visible set is **omitted from a
-    `USER`'s tree**; a term whose **own** Órganos are all withheld but which has a
-    descendant that is not **is still shown**. An administrator's tree shows both.
+20. **(R9)** An Órgano **outside the visible set** appears **nowhere on the browse
+    surfaces** — not in the tree, not in the search — **and is not served to them**: the
+    shared catalogue read returns the visible set and nothing else, whoever calls it. The
+    **administration area** still shows it, in the catalogue list (R8) and the management
+    tree, from its own `ADMIN`-gated read — so the same Órgano is present on one surface and
+    absent from the other, including for one administrator using both.
+21. **(R9)** Once the system stores an Órgano's first visible contract it appears on the
+    browse surfaces, **without an administrator doing anything**; and when its **last**
+    visible contract stops being visible — removed under
+    [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R13 — it leaves them again.
+    Membership of the visible set follows the contracts, in both directions.
+22. **(R9)** A term whose subtree contains no Órgano of the visible set is **omitted from the
+    browse tree**; a term whose **own** Órganos are all withheld but which has a descendant
+    that is not **is still shown**. The management tree shows both.
 23. **(R19)** Typing part of an Órgano's name offers the matching Órganos **as the user
     types**, without submitting anything; each offered entry states whether that Órgano is
     **inactive**; and choosing one selects the same Órgano that choosing it in the tree
     would.
 24. **(R19)** A **blank or whitespace-only** query offers nothing at all, and a query
-    matching nothing **says so** — distinguishably from one not yet typed in. No input
-    returns the whole catalogue to a `USER`.
+    matching nothing **says so** — distinguishably from one not yet typed in. No input to the
+    browse search returns the whole catalogue.
 25. **(R19)** A query differing from the stored name only in **letter case or accents**
     still finds it — typing `avila` offers `Ávila` — and a query matching an interior
     fragment of a name finds it too.
-26. **(R9, R19)** For a `USER` the search offers **exactly** the Órganos their tree shows:
-    an **unclassified** one and an **inactive** one in the visible set are both findable,
-    and one outside it is findable by neither — so no name can be typed to reach what the
-    tree withholds. For an administrator both cover the whole catalogue.
+26. **(R9, R19)** On the browse surface the search offers **exactly** the Órganos the tree
+    beside it shows: an **unclassified** one and an **inactive** one in the visible set are
+    both findable, and one outside it is findable by neither — so no name can be typed to
+    reach what the tree withholds. In the administration area both cover the whole catalogue.
