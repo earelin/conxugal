@@ -102,8 +102,9 @@ its journeys are proved against a stubbed API per
   the narrowing of `GET /api/organos` to the visible set, and the move of the administration area
   onto `GET /api/admin/organos` — belongs to
   [FEAT-0012](../FEAT-0012-organos-visible-set-and-browse/README.md), which traces to SPEC-0004
-  where those criteria live. **This feature's contracts page is what its tree opens**, so FEAT-0012's
-  browse task depends on this feature's task 8 and nothing crosses the other way.
+  where those criteria live — and which renders them as a **picker in the left side panel** rather
+  than a page of its own. **This feature's contracts page is what that picker opens**, so
+  FEAT-0012's picker task depends on this feature's task 8 and nothing crosses the other way.
 - **Everything that writes.** Marking, triggering, resuming, the scheduler and the incremental mode
   are [FEAT-0009](../FEAT-0009-contratos-menores-initial-import/README.md)'s and the incremental
   feature's; the **historical re-read (R10)** and **contract removal and restore (R13)** are the
@@ -157,11 +158,12 @@ flowchart LR
 A `USER` has **no catalogue list** — SPEC-0004 R2 removes it — and reaches an Órgano through the
 read-only taxonomy tree (SPEC-0004 R9) or the name search (R19), over the **visible set** R9 scopes
 them to. All of that is
-**[FEAT-0012](../FEAT-0012-organos-visible-set-and-browse/README.md)**'s: the tree, the search, the
-narrowing of `GET /api/organos`, and the move of the administration area onto the read that still
-carries the whole catalogue. It traces to SPEC-0004, which is where those criteria live.
+**[FEAT-0012](../FEAT-0012-organos-visible-set-and-browse/README.md)**'s, and it renders both as one
+**dropdown in the left side panel** rather than a page: the tree, its filter, the narrowing of
+`GET /api/organos`, and the move of the administration area onto the read that still carries the
+whole catalogue. It traces to SPEC-0004, which is where those criteria live.
 
-The two features meet at **one point, running one way**: FEAT-0012's tree and search **open the
+The two features meet at **one point, running one way**: FEAT-0012's side-panel picker **opens the
 contracts page this feature builds**. That is SPEC-0005 R14, satisfied from FEAT-0012's side and
 proved by its criteria, so nothing here renders a tree and nothing there renders a contract.
 

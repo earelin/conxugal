@@ -13,6 +13,10 @@ the **read-only taxonomy tree** (R9) and a **name search** (R19) — over the **
 scopes them to, and scope the catalogue at the endpoint that serves it rather than in the browser
 that draws it.
 
+**Both live in one control: an Órgano picker in the left side panel**, open on every page. It drops
+down a selectable tree of the Órganos a reader may see, arranged by their taxonomy classification,
+with a text box that filters it. Choosing an Órgano opens its contracts.
+
 It delivers **R9's browse tree** whole, **R19** whole, the **narrowing of `GET /api/organos`** R1
 and R2 now require, and the move of the administration area onto the read that still carries the
 whole catalogue.
@@ -33,9 +37,9 @@ criterion to satisfy. The work is different in kind too: this feature **changes 
 contract-tested endpoint and a shipped admin surface**, where FEAT-0011 adds new reads over new
 tables.
 
-The two meet at exactly one point, and it runs one way: **the tree and the search open an Órgano's
-contracts page**, which FEAT-0011 builds. That is SPEC-0005 R14's requirement, satisfied from this
-side, so this feature's browse task waits on FEAT-0011's contracts page and nothing else crosses.
+The two meet at exactly one point, and it runs one way: **the picker opens an Órgano's contracts
+page**, which FEAT-0011 builds. That is SPEC-0005 R14's requirement, satisfied from this side, so
+this feature's picker task waits on FEAT-0011's contracts page and nothing else crosses.
 
 The design sits in the hexagonal server of
 **[ADR-0002](../../architecture/0002-hexagonal-architecture.md)**. REST lives under
@@ -59,10 +63,11 @@ its journeys are proved against a stubbed API per
 ## Scope
 - **Application (driving):** the **narrowing of the shipped `GET /api/organos`** to the visible set,
   with its OpenAPI description rewritten and its integration test reshaped.
-- **UI — the browse section (`/organos`, any authenticated user):** the read-only taxonomy tree over
-  the narrowed catalogue and FEAT-0007's taxonomy read, holding unclassified Órganos at its root and
-  pruning branches left empty; the name search beside it; and a nav entry of its own. No management
-  control of any kind, and **no catalogue list**.
+- **UI — the Órgano picker in the left side panel (any authenticated user):** a dropdown over the
+  narrowed catalogue and FEAT-0007's taxonomy read, showing a selectable tree arranged by taxonomy
+  classification with unclassified Órganos at its root and branches left empty pruned, filtered by a
+  text box. Choosing an Órgano opens its contracts. **No route, no page, no management control and
+  no catalogue list.**
 - **UI — the administration area:** FEAT-0007's taxonomy tree, classification worklist and Órgano
   table moved onto `GET /api/admin/organos`, so the management surfaces keep the whole catalogue
   after the narrowing.
@@ -93,7 +98,7 @@ flowchart LR
     subgraph application["application (driving)"]
         organosApi["GET /api/organos (narrowed)"]
         adminApi["GET /api/admin/organos (unchanged)"]
-        browseUi["browse: tree + name search"]
+        pickerUi["side-panel Órgano picker: tree + filter"]
         adminUi["administration area (moved read)"]
     end
     subgraph domain["domain"]
@@ -115,7 +120,7 @@ what is served to them. The scoping is therefore **by path**, and it needs no ne
 
 | Path | Role | Returns | Built for |
 | --- | --- | --- | --- |
-| `GET /api/organos` | authenticated | **the visible set only** | the browse tree and search |
+| `GET /api/organos` | authenticated | **the visible set only** | the side-panel picker |
 | `GET /api/admin/organos` | `ADMIN` | the whole catalogue | the administration area |
 
 - **`GET /api/organos` is narrowed, not duplicated.** It stops returning the whole catalogue and
@@ -179,87 +184,110 @@ single-table scan**, and it gains one semi-join per contract family on a read th
 makes on every visit. It also means nothing lets an administrator see the set as stored data, so
 diagnosing *why is this Órgano not showing* means running the query rather than reading a column.
 
-### The tree is a `USER`'s only view of the catalogue, so it must be exhaustive within the set
-- **The read-only taxonomy tree** (R9), assembled in the browser from the narrowed
+### What the picker drops down
+The dropdown holds **one control doing R9's job and R19's**, and the two are states of it rather
+than neighbours:
+
+- **With the filter empty it shows the tree** (R9), assembled in the browser from the narrowed
   `GET /api/organos` and FEAT-0007's `GET /api/organos/taxonomia` by the **same pure builder the
   admin section already uses**. It offers a `USER` no control at all — no create, rename, move,
   delete or reassign — which is #9's second clause and the reason it is a *view* rather than the
   admin tree with its buttons hidden.
-- **Unclassified Órganos render at the root, beside the root terms.** SPEC-0004 R18 leaves every
-  newly imported Órgano unclassified, so a tree of classified Órganos only would leave an Órgano
-  holding a million contracts reachable from nowhere — which SPEC-0005 R14 forbids and #19 tests.
-  The builder already computes that bucket; what changes is that it renders **at the root** rather
-  than as the admin section's separate worklist.
+- **With text in the filter it shows the matches** (R19), and nothing else.
+
+> **This is not the `USER` catalogue list R2 removes**, and the distinction is R2's own: neither
+> state ever presents the catalogue *undifferentiated*. Empty, the control shows the catalogue
+> **through the structure an administrator gave it**; filtered, it shows **only what the reader
+> asked for by name**. #24's *a blank query offers nothing* is a rule about the **matches**, which
+> are empty until something is typed — not a requirement that an unfiltered dropdown be blank,
+> which would delete R9's tree from the only surface that renders it.
+
+- **Unclassified Órganos sit at the root of the tree, beside the root terms.** SPEC-0004 R18 leaves
+  every newly imported Órgano unclassified, so a tree of classified Órganos only would leave an
+  Órgano holding a million contracts reachable from nowhere — which SPEC-0005 R14 forbids and #19
+  tests. The builder already computes that bucket; what changes is that it renders **at the root**
+  rather than as the admin section's separate worklist.
 - **Empty branches are pruned, recursively.** A term whose whole subtree holds no Órgano of the
   visible set is omitted (#22) — a *recursive* condition, not a per-term one, since a parent whose
   own Órganos are all absent still shows when a descendant has one. A single-level check would prune
   exactly the intermediate terms a deep taxonomy is made of.
 
-  The prune belongs to the **browse** section's call, **not inside the shared builder**: the admin
-  section renders terms that are legitimately empty, and a builder that dropped them would delete
-  newly created terms from the management tree the moment they were made.
+  The prune belongs to the **picker's** call, **not inside the shared builder**: the admin section
+  renders terms that are legitimately empty, and a builder that dropped them would delete newly
+  created terms from the management tree the moment they were made.
+
+**Being in the side panel rather than on a page is what makes it worth building this way.** It is
+present on every route, so a reader changes Órgano from wherever they are instead of navigating
+back to an index and in again — which is the journey R14 describes, since every read in SPEC-0005
+begins by choosing an Órgano. It also means **no `/organos` route exists**, and R19's *there is no
+`USER`-facing catalogue list* stops being a rule anyone could accidentally break by adding a page:
+there is no page to add a list to.
 
 ### The search costs a component, not a contract
 R19 is answered **client-side, over the list the tree is already built from**. The catalogue is a
-few hundred rows and the browse section holds it, so the search is a filter over data in memory: no
-request per keystroke, no debounce against the server, no query endpoint, and **no second definition
-of what matches** that could disagree with the tree.
+few hundred rows and the picker holds it, so the filter is over data in memory: no request per
+keystroke, no debounce against the server, no query endpoint, and **no second definition of what
+matches** that could disagree with the tree.
 
 That agreement is a requirement, not a convenience — #26 requires the search to offer exactly what
-the tree shows, in both directions, and sharing one list is what makes it true by construction
-rather than by two implementations staying in step.
+the tree shows, in both directions, and one control over one list is what makes it true by
+construction rather than by two implementations staying in step. Sharing a control, rather than
+merely a data source, closes it further: there is no second component to drift.
 
 - **Matching is partial, case- and accent-insensitive** (R19), which is not free in a browser: a
   naïve `toLowerCase().includes()` fails `avila` → `Ávila`, and this catalogue is full of accents.
   The comparison normalises both sides — decomposing and stripping diacritics — in a pure function
   unit-tested from both sides, beside the tree builder.
-- **A blank input offers nothing** (#24). This is the boundary that keeps R19 from reinstating the
-  `USER` catalogue list R2 removes, and it is a rule about the component, not about the data.
+- **A query matching nothing says so** (#24), distinguishably from a filter not yet typed in — which
+  shows the tree.
 - **Each entry states whether the Órgano is inactive** (#23), since Órganos differing only by a
   trailing qualifier are ordinary here.
 
-Were the catalogue ever to outgrow being held client-side, the search would need a server-side read
+Were the catalogue ever to outgrow being held client-side, the filter would need a server-side read
 — a decision for whichever feature meets that limit, against a measurement, not one to pre-empt at
-a few hundred rows. SPEC-0004 R20 takes no latency budget for either surface for the same reason.
+a few hundred rows. SPEC-0004 R20 takes no latency budget for either state for the same reason.
 
 ### UI ([ADR-0003](../../architecture/0003-react-router-ui-served-by-backend.md), [ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md), [ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md))
 
-One new route, authenticated, in Galician (SPEC-0001 AC7):
+**No route is added.** The picker is chrome: it lives in the `AppShell` navbar that
+`ui/src/app/layout/` already renders, above `nav.ts`'s sections, and is visible to any
+authenticated user on every page. Selecting an Órgano navigates to its contracts page, which is
+FEAT-0011's `/organos/:id`.
 
-| Route | Slice | What it is |
+**Two problems disappear with the route**, and they were the two this feature was carrying:
+
+- **the nav-label collision** — `strings.nav.organos` is `'Órganos'` for the admin entry, and a
+  second `USER` entry would have sat beside it for an `ADMIN`. There is no second entry now; the
+  picker is not a link;
+- **the eager-chunk risk** — a `/organos` route importing `features/organos` would have pulled that
+  slice's 39 files of `ADMIN` management into a `USER`'s bundle. Placement below solves it outright
+  rather than by code-splitting a route that no longer exists.
+
+**Where the code lands, and why it is not `features/organos`.** The shell may import from any layer
+([ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md)), so
+rendering a feature slice's component from it is legal — but it would make the navbar statically
+depend on the admin slice on **every** route, which is precisely the eager-chunk problem the ADR
+records. The picker is also not any feature's: it is navigation, used by the shell, consumed by
+whatever page the reader lands on.
+
+So the three pieces land where the ADR's own rules put them, and the trigger is the rule it states
+— *a thing moves to `shared/` once a second consumer needs it*, which is now true of all three:
+
+| Piece | Lands in | Second consumer that triggers the move |
 | --- | --- | --- |
-| `/organos` | `features/organos` | the browse section: read-only tree, unclassified at its root, plus the name search |
+| the tree builder (`taxonomiaTree.ts`) | `shared/lib` | the picker, beside the admin section |
+| the `Organo` type and the catalogue read | `shared/entities` | the picker, beside FEAT-0011's contracts page |
+| the picker component itself | `shared/ui` | new; the shell renders it and no feature owns it |
 
-**The browse section joins the existing `features/organos` slice**, and that is a constraint rather
-than a preference: `eslint-plugin-boundaries` forbids one slice importing another, and the browse
-section needs the *same* pure tree builder (`taxonomiaTree.ts`) and the *same* endpoints the admin
-surface already uses. Promoting the builder to `shared/` to justify a second Órgano slice would move
-code with no second owner.
+`features/organos` keeps everything genuinely administrative — the modals, the pickers for
+classification, the import controls — and the navbar never imports it.
 
-**Two things must be kept apart inside that one slice**, because the surfaces genuinely differ now:
+**The picker shows which Órgano is currently open**, so a reader on a contracts page can see what
+they are looking at and change it in one action rather than two. That is a property of putting it in
+the chrome; on a separate index page the current selection would have nowhere to live.
 
-- the **admin** surface reads `GET /api/admin/organos` and prunes nothing;
-- the **browse** surface reads the narrowed `GET /api/organos` and prunes recursively.
-
-`ui/src/features/organos/` is today 39 files of `ADMIN` management — modals, pickers, import
-controls. [ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md)
-records that a static barrel import "pulls that whole slice into the eager chunk", and the
-repository has already code-split the UI by route once for exactly this reason. The browse route
-must not drag the admin components into its chunk; task 3 says how.
-
-**A `USER`-visible nav entry** joins the ungrouped primary section of `ui/src/app/nav.ts` — the
-first one that is not Home or About. The admin `/administracion/organos` entry stays where it is:
-they are two surfaces over one catalogue, and merging them would put management controls in front
-of a `USER` (#9).
-
-**The two entries cannot share a label**, and one is taken: `strings.nav.organos` is already
-`'Órganos'` for the admin entry, and an `ADMIN` sees both at once. The browse entry needs its own
-label naming what it is *for* — the reader goes there to reach contracts, not to administer a
-catalogue — and the admin entry keeps the name it ships with, since renaming a shipped surface to
-make room is a cost paid by the wrong side.
-
-All copy belongs in `ui/src/shared/lib/strings.ts` under the slice's namespace, which is the
-pattern that module already uses, not in a strings module of its own.
+All copy belongs in `ui/src/shared/lib/strings.ts` under its own namespace, which is the pattern
+that module already uses, not in a strings module of its own.
 
 ## Sequencing (tasks, one small change each)
 Each task names what it depends on; nothing depends on a task numbered after it.
@@ -274,18 +302,22 @@ Each task names what it depends on; nothing depends on a task numbered after it.
    tree, classification worklist and Órgano table read the admin catalogue instead of the narrowed
    one, so the management surfaces keep the whole catalogue. **Lands with or before task 1.**
    *(SPEC-0004 #19 management half, #22 management half; guards #3, #8, #18)*
-3. **Órganos browse section** *(frontend)*: the `/organos` route and its own nav entry and label,
-   the read-only tree over the narrowed catalogue and FEAT-0007's taxonomy read, **unclassified
-   Órganos at its root**, **empty branches pruned recursively**, each Órgano opening its contracts,
-   and the loading/empty/failed-fetch states — with the route code-split so it pulls none of the
-   admin slice's components. No management control, no list. *Depends on tasks 1–2, and on
-   [FEAT-0011](../FEAT-0011-contratos-menores-browsing/README.md)'s contracts page, which the tree
-   links to.* *(SPEC-0004 #9, #19, #22 browse half, and the deferred half of #2; SPEC-0005 #19, #20)*
-4. **Órgano name search** *(frontend)*: the typeahead over the same list the tree is built from —
-   matching as the user types, partial, case- and accent-insensitively; each entry stating whether
-   the Órgano is inactive; a no-matches result distinguishable from a control not yet typed in; and
-   **nothing offered for a blank input**. Choosing an entry opens the same Órgano the tree would.
-   *Depends on task 3.* *(SPEC-0004 #23, #24, #25, #26 browse half)*
+3. **The side-panel Órgano picker: the tree** *(frontend)*: the dropdown in the `AppShell` navbar
+   and the three promotions it needs — the tree builder to `shared/lib`, the `Organo` type and
+   catalogue read to `shared/entities`, the component to `shared/ui` — rendering the tree over the
+   narrowed catalogue and FEAT-0007's taxonomy read, with **unclassified Órganos at its root**,
+   **empty branches pruned recursively**, the currently-open Órgano shown as selected, selection
+   navigating to that Órgano's contracts, and the loading/empty/failed-fetch states. No filter yet;
+   no management control; the navbar imports nothing from `features/organos`.
+   *Depends on tasks 1–2, and on
+   [FEAT-0011](../FEAT-0011-contratos-menores-browsing/README.md)'s contracts page, which selection
+   navigates to.* *(SPEC-0004 #9, #19, #22 browse half, and the deferred half of #2; SPEC-0005 #19,
+   #20)*
+4. **The picker's text filter** *(frontend)*: filtering the same list the tree is built from as the
+   user types — partial, case- and accent-insensitive; each match stating whether the Órgano is
+   inactive; a no-matches result distinguishable from an **untyped filter, which shows the tree**;
+   and choosing a match opening the same Órgano the tree would. *Depends on task 3.*
+   *(SPEC-0004 #23, #24, #25, #26 browse half)*
 
 **Criteria this feature deliberately leaves incomplete:**
 
@@ -300,13 +332,17 @@ Each task names what it depends on; nothing depends on a task numbered after it.
   belongs to FEAT-0006 and FEAT-0007. This feature adds no management control and imports nothing.
 
 ## Edge cases
-- **An unclassified Órgano in the visible set** — rendered at the **root** of the browse tree,
+- **An unclassified Órgano in the visible set** — rendered at the **root** of the picker's tree,
   findable by name, and it opens its contracts like any other. This is the ordinary state of every
   newly imported Órgano, not an exception, and with no `USER` catalogue list to fall back on it is
   the whole reason R9 places it there. *(SPEC-0004 #19)*
-- **An Órgano outside the visible set** — most of the catalogue — is absent from the browse tree and
-  search **and from what they are served**, while the administration area shows it throughout.
+- **An Órgano outside the visible set** — most of the catalogue — is absent from the picker in both
+  its states **and from what it is served**, while the administration area shows it throughout.
   *(SPEC-0004 #20)*
+- **The picker opened with an empty filter** shows the **tree**, not a flat list and not nothing.
+  That is R9's affordance, and the reason it does not breach R2 or #24 is that the tree presents the
+  catalogue through its structure while a list would present it undifferentiated.
+  *(SPEC-0004 #9, #24)*
 - **A term whose Órganos are all outside the set but whose descendant has one** — still shown. The
   prune is recursive; a per-term check would delete exactly the intermediate levels of a deep
   taxonomy. *(SPEC-0004 #22)*
@@ -319,15 +355,21 @@ Each task names what it depends on; nothing depends on a task numbered after it.
 - **An inactive Órgano that still holds visible contracts** — in the browse tree like any other, in
   its term if it has one and at the root if not, marked inactive in the search. *Inactive* is a fact
   about the source list, not about whether there is anything there. *(SPEC-0004 #19, #23)*
-- **A blank search box, and a search matching nothing** — the first offers nothing, the second says
-  so. They must not render alike, and neither may fall back to listing the catalogue.
-  *(SPEC-0004 #24)*
+- **A filter matching nothing, and a filter not yet typed in** — the first says so, the second
+  shows the tree. They must not render alike, and neither may fall back to listing the catalogue
+  flat. *(SPEC-0004 #24)*
 - **A name differing only by accent or case** — `avila` finds `Ávila`. A plain lowercase match would
   fail exactly the users who know the name. *(SPEC-0004 #25)*
 - **The catalogue read and the taxonomy read disagreeing** — two requests, so an admin's edit can
   land between them. FEAT-0007 already decided this: an unresolvable `termoId` renders as
   unclassified rather than dropped or crashed on. With the catalogue narrowed the same rule holds,
   and no Órgano disappears, because the catalogue read is the one that lists them.
-- **An empty visible set** — nothing imported yet — renders an empty browse section, which must be
-  distinguishable from a **failed** read. FEAT-0007 recorded the same hazard for its two reads, and
-  the same answer applies: a failed fetch shows an error with a retry, never an empty result.
+- **An empty visible set** — nothing imported yet — leaves the picker with nothing selectable, and
+  it must say so **distinguishably from a failed read**. FEAT-0007 recorded the same hazard for its
+  two reads and the same answer applies: a failed fetch shows an error with a retry, never an empty
+  result. The picker is on every page, so this state is the one a reader meets first on a fresh
+  deployment.
+- **A reader on a contracts page whose Órgano leaves the visible set** — its last visible contract
+  removed under SPEC-0005 R13 — finds it gone from the picker on the next read, while the page they
+  are on still renders. Nothing forces them off it; the picker simply no longer offers it.
+  *(SPEC-0004 #21)*
