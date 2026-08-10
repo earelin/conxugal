@@ -137,7 +137,7 @@ flowchart LR
     subgraph application["application (driving)"]
         resumoApi["GET /api/organo/&#123;id&#125;/contratos-menores/resumo"]
         listApi["GET /api/organo/&#123;id&#125;/contratos-menores"]
-        pageUi["Órgano page: family split + contratos menores section"]
+        pageUi["/organo/&#123;id&#125;: name + family tabs + contratos menores section"]
     end
     subgraph domain["domain"]
         listUc["ListContratosMenores"]
@@ -177,9 +177,14 @@ narrowed to the visible set, the contracts page finds its Órgano's name in a li
 than the catalogue** — which is exactly the set of Órganos whose contracts anyone can open. No
 member endpoint is added to serve one field.
 
-### The family split, and how the second family joins it
+### The family split is rendered as tabs
 R15 presents an Órgano's contracts as **one section per family**, each independently reachable, and
-**omits** a family the system holds no data for rather than showing it empty.
+**omits** a family the system holds no data for rather than showing it empty. The page renders that
+as **the Órgano's name and a tab per family**.
+
+Tabs are what *independently reachable* looks like: one family is on screen at a time, switching
+between them costs nothing, and neither is scrolled past to reach the other — which stacked sections
+would make true of whichever came second, and the second is licitacións, the larger family.
 
 The mechanism is deliberately the smallest thing that is genuinely additive: the page renders a
 **list of families**, each entry owning its own presence read and its own section component, and
@@ -189,9 +194,17 @@ that would make every new family a change to a shared contract, which is the cou
 *additive* wording is warning against, and it would answer a question each family already answers
 for itself in the read it must make anyway.
 
-**A page with no families at all is the page's own empty state, not an empty section.** An Órgano
-the system holds no contracts for renders its identity and a plain statement that the system holds
-none — R18 forbids an empty *section*, and says nothing about a page needing to be blank.
+**A family with no data has no tab**, which is how R18's *never render an empty section* is honoured
+here — the family is not a disabled tab or an empty panel, it is absent from the tab bar. **Today
+that leaves exactly one tab.** A single tab is mild redundancy rather than a defect, and the
+alternative — showing no tab bar until a second family exists — would make the licitacións feature
+change this page's structure rather than append to it, which is what R15's *additive* wording
+exists to prevent. It is drawn as one tab and gains a sibling.
+
+**A page with no tabs at all is the page's own empty state, not an empty section.** An Órgano the
+system holds no contracts for renders its identity and a plain statement that the system holds
+none — R18 forbids an empty *section*, and says nothing about a page needing to be blank. With
+SPEC-0004 R9 scoping the picker to the visible set, this state is reached only by a retained link.
 
 ### The section exists, or it does not: `resumo`
 Everything R18 and R19 decide about a section is answered by **one read**, before any contract is
@@ -464,11 +477,13 @@ years and no undated selection, and that is how the client knows to render no se
 
 One route, authenticated, in Galician (SPEC-0001 AC7), with copy in the shared strings module under
 a per-feature namespace — the pattern `ui/src/shared/lib/strings.ts` already uses — rather than
-inline:
+inline. It is **singular**, `/organo/:id`, because it addresses one Órgano — the same rule
+[ADR-0016](../../architecture/0016-rest-resource-naming.md) applies to the API, followed here so a
+reader of either address space meets one convention:
 
 | Route | Slice | What it is |
 | --- | --- | --- |
-| `/organos/:id` | `features/contratos` | one Órgano's contracts, split by family (R15) |
+| `/organo/:id` | `features/contratos` | one Órgano's name and a tab per contract family (R15) |
 
 **It takes its own slice**, and that is a boundary decision rather than a preference:
 `eslint-plugin-boundaries` forbids one feature slice importing another. The contracts page is
@@ -482,10 +497,15 @@ needs it, and better than a second thin API module duplicating an entity read.
 **It adds no nav entry.** The route is reached by choosing an Órgano, never from the navbar; the
 `USER`-visible entry belongs to FEAT-0012's browse section, which is where a reader starts.
 
-**The selection lives in the URL query string** — `?year=2025&sort=amount,desc&page=3`, spelled
-exactly as the API takes it. Because ADR-0022's `page` is 1-based, the number in the URL, the number
-the API takes and the number the control shows are **one number**: a shared link is a request, and
-nothing in the app converts between bases.
+**The selection lives in the URL query string** — `/organo/:id?family=contratos-menores&year=2025&sort=amount,desc&page=3`
+— spelled exactly as the API takes it. Because ADR-0022's `page` is 1-based, the number in the URL,
+the number the API takes and the number the control shows are **one number**: a shared link is a
+request, and nothing in the app converts between bases.
+
+**`family` names the open tab**, so a copied link reopens the family it was copied from rather than
+the default one. The year, sort and page beside it belong to **that** family's section — only one is
+open at a time, so they need no per-family prefix, and switching tab drops them along with the page
+for the same reason changing the year does: they describe a selection that no longer exists.
 That is one decision doing four jobs: a contract list is shareable and deep-linkable; the browser's
 back button walks paging history for free; the year, sort and page have exactly one home rather
 than a component state that could disagree with a rendered control; and **R17's re-page rule becomes
@@ -604,11 +624,12 @@ accepted — so the whole feature is ready to be cut into task files.
    reading ADR-0022's envelope directly, with no conversion and no arithmetic between wire and
    control. Built with no knowledge of what is being paged, because SPEC-0006 and SPEC-0007 take it
    unchanged. *(SPEC-0005 #23 control half)*
-8. **Órgano contracts page + family split** *(frontend)*: the `/organos/:id` route and the
-   `features/contratos` slice, with the `Organo` type and catalogue read promoted to
-    `shared/entities/` now that a second slice needs them; the Órgano identity header; the family
-    list that renders a section only where its family has data; and the page's own no-contracts
-    state. *Depends on task 5.* *(SPEC-0005 #22, #26 section-presence half, #49)*
+8. **Órgano contracts page + family tabs** *(frontend)*: the `/organo/:id` route and the
+   `features/contratos` slice, reading the `Organo` type and catalogue read from `shared/entities`;
+   the Órgano's name; the **tab bar carrying one tab per family that has data**, with the active
+   family in the URL so a link opens the tab it was copied from; and the page's own no-contracts
+   state when no family has any. *Depends on task 5.*
+   *(SPEC-0005 #22, #26 section-presence half, #49)*
 9. **Year chooser and the section's state** *(frontend)*: the chooser offering only years the
     Órgano has visible contracts in, defaulting to the most recent, plus the undated selection only
     where it exists; and R18's *partial* and *no longer updated* statements. *Depends on task 8.*
@@ -663,9 +684,13 @@ accepted — so the whole feature is ready to be cut into task files.
 
 ## Edge cases
 - **An Órgano holding another family's contracts but no visible contratos menores** — the case R18
-  now governs, once licitacións exist — renders **no contratos menores section** while its other
-  families render normally. Until then the same path is reached by a retained link.
-  *(SPEC-0005 #26, #49)*
+  now governs, once licitacións exist — shows **no contratos menores tab** while the families it
+  does hold get theirs. The family is absent from the tab bar, not a disabled tab and not an empty
+  panel. Until licitacións exist the same path is reached by a retained link. *(SPEC-0005 #26, #49)*
+- **A `family` in the URL that has no tab** — a link copied before its contracts were removed, or
+  before the family existed — falls back to the default tab rather than rendering an empty panel or
+  erroring. The tab bar is built from what has data, so a URL cannot conjure a tab. *(SPEC-0005
+  #22)*
 - **An Órgano holding only undated contracts** — the year list is empty but the section **exists**,
   and the **undated selection is the default**, since it is the only selection there is. *(SPEC-0005
   #42, #43)*

@@ -251,8 +251,8 @@ a few hundred rows. SPEC-0004 R20 takes no latency budget for either state for t
 
 **No route is added.** The picker is chrome: it lives in the `AppShell` navbar that
 `ui/src/app/layout/` already renders, above `nav.ts`'s sections, and is visible to any
-authenticated user on every page. Selecting an Órgano navigates to its contracts page, which is
-FEAT-0011's `/organos/:id`.
+authenticated user on every page. Selecting an Órgano navigates to **`/organo/{id}`** — FEAT-0011's
+page, which shows that Órgano's name and a tab per contract family.
 
 **Two problems disappear with the route**, and they were the two this feature was carrying:
 
@@ -307,7 +307,7 @@ Each task names what it depends on; nothing depends on a task numbered after it.
    catalogue read to `shared/entities`, the component to `shared/ui` — rendering the tree over the
    narrowed catalogue and FEAT-0007's taxonomy read, with **unclassified Órganos at its root**,
    **empty branches pruned recursively**, the currently-open Órgano shown as selected, selection
-   navigating to that Órgano's contracts, and the loading/empty/failed-fetch states. No filter yet;
+   navigating to **`/organo/{id}`**, and the loading/empty/failed-fetch states. No filter yet;
    no management control; the navbar imports nothing from `features/organos`.
    *Depends on tasks 1–2, and on
    [FEAT-0011](../FEAT-0011-contratos-menores-browsing/README.md)'s contracts page, which selection
