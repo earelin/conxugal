@@ -304,32 +304,31 @@ One decision remains outside this spec:
   **read-only taxonomy tree** of SPEC-0004 R9 — which offers a `USER` no control to create,
   rename, move, delete or reassign anything — or by **searching for it by name** (SPEC-0004
   R19), and opens that Órgano's contracts. The tree is the surface SPEC-0004 deferred to
-  this spec. **Every Órgano whose contracts the system holds is reachable**, whether or not
-  it is classified, marked, or still active.
+  this spec. **Every Órgano holding at least one visible contrato menor is reachable**,
+  whether or not it is classified, marked, or still active.
 
-  **The tree alone is sufficient, and SPEC-0004 R9 is what makes it so.** An Órgano in no
-  term is shown at the **root** of the tree, so the unclassified state R18 leaves every
-  newly imported Órgano in does not hide it. Without that rule this requirement would be
-  unmeetable through the tree: an Órgano could be marked, imported, hold a million
-  contracts and appear nowhere. The name search is a second way to *reach* an Órgano, not a
-  second place to *find* one — it answers a name a user already knows — so reachability
-  rests on the tree, and the search is why a user who knows the name does not have to walk
-  it. **There is no `USER`-facing catalogue list**, and this spec does not reintroduce one.
+  **The tree alone is sufficient, and SPEC-0004 R9 is what makes it so** — that requirement
+  owns the rule, and this one depends on it rather than restating it. Two of its properties
+  carry this requirement: an Órgano in no term is reachable from the tree **without being
+  classified first**, so the unclassified state R18 leaves every newly imported Órgano in
+  does not hide it; and a `USER`'s **visible set** is exactly the Órganos holding at least
+  one visible contract of any family. Without the first, this requirement would be
+  unmeetable through the tree — an Órgano could be marked, imported, hold a million
+  contracts and appear nowhere. The second is what makes *reachable* checkable, since what a
+  `USER` can see and what this requirement obliges are then one set approached from either
+  end.
 
-  **The converse holds too, and it is SPEC-0004 R9's rule rather than this one's:** an
-  Órgano the system holds **no** contracts for is shown to a `USER` nowhere at all. So a
-  `USER`'s tree and this requirement describe the **same set** from two sides — everything
-  they can see has contracts, and everything that has contracts they can see. That is what
-  makes *reachable* checkable: the two rules cannot drift apart without one of them
-  breaking.
+  The name search is a second way to *reach* an Órgano, not a second place to *find* one —
+  it answers a name a user already knows — so reachability rests on the tree, and the search
+  is why a user who knows the name need not walk it. **There is no `USER`-facing catalogue
+  list**, and this spec does not reintroduce one.
 
-  It also means **R18's no-section case is not something a `USER` normally meets**. An
-  Órgano with no contratos menores *and* no other family has no entry to open in the first
-  place; the section-absence rule governs an Órgano that has **another** family's data but
-  not this one — and, until licitacións exist, an Órgano reached by a typed URL. Navigating
-  directly to such an Órgano is not refused: there is nothing to withhold, so it renders as
-  holding nothing. The visibility rule is about **what is listed**, not about what is
-  permitted.
+  **An Órgano outside a `USER`'s visible set is unreachable by every route**, a retained or
+  shared link included: SPEC-0004 R9 scopes the data served rather than the surface drawn.
+  This spec owes that rule the same treatment on its own reads — **a `USER` asking for the
+  contracts of an Órgano outside their visible set is answered as though it does not
+  exist**, rather than shown an empty page that confirms it does. An administrator, whose
+  visible set is the whole catalogue, is answered normally.
 
   There is a third route, and it is stated here with the other two so that no cross-Órgano
   surface has to invent one: **wherever a contract row names its awarding Órgano, following
@@ -393,30 +392,39 @@ One decision remains outside this spec:
   [SPEC-0007](SPEC-0007-monitor-import-runs.md) both cite it rather than defining their own. A
   reader meets several of these lists in one session, and one of them paging differently from
   the rest is a defect they would experience as inconsistency rather than as a design.
-- **R18** — **An Órgano holding no contratos menores shows no contratos menores section at
-  all.** The section appears once at least one contract is stored for that Órgano, and not
-  before — whether it is empty because the Órgano is not being imported (R3), because it was
-  imported and awarded none, or because its initial import has not yet stored anything (R9).
-  An empty section is never rendered.
+- **R18** — **An Órgano holding no visible contratos menores shows no contratos menores
+  section at all.** The section appears once at least one contract of this family is
+  **visible** for that Órgano, and not before. *Visible* rather than *stored* because R13
+  keeps a removed contract stored while removing it from every list: an Órgano all of whose
+  contratos menores have been removed holds contracts and shows no section, exactly as one
+  that never had any. An empty section is never rendered.
 
-  This is a deliberate trade-off, and what it costs is worth stating: absence is silent, so a
-  user cannot tell an Órgano the system does not import from one that was imported and awarded
-  nothing. Both simply have no section. The judgement is that an empty section on the many
-  Órganos that publish no contratos menores at all — 234 of the catalogue's 429 organismos are
-  Concellos, which publish none — is noise on every one of them to disambiguate a question few
-  users are asking. Whether an Órgano is imported remains answerable by an administrator
-  (R4, which owns the mark, and [SPEC-0007](SPEC-0007-monitor-import-runs.md) R15), and if
-  users turn out to
-  need it, exposing it is a later increment rather than something this rule forecloses.
+  **Who this rule protects has changed, and the enumeration follows.** SPEC-0004 R9 keeps an
+  Órgano with no visible contract **of any family** out of a `USER`'s reach entirely, so the
+  three cases this rule used to enumerate — not imported (R3), imported and awarded none,
+  initial import has stored nothing (R9) — no longer describe an Órgano a `USER` can open.
+  For them the rule now governs exactly two cases:
 
-  **SPEC-0004 R9 narrows what this rule has to carry.** Those 234 Concellos are not shown to a
-  `USER` at all while the system holds no contracts for them, so the empty section this rule
-  prevents was, for most of the catalogue, already an entry that could not be opened. What
-  remains in scope here is an Órgano holding **some other family's** contracts but none of this
-  one — the case the split exists for — and one reached by a typed URL.
+  - an Órgano holding **another family's** contracts but none of this one — the case the R15
+    split exists for, and the only live one once licitacións land;
+  - an Órgano whose contratos menores were **all removed** under R13 while another family's
+    remain.
+
+  For an **administrator**, whose visible set is the whole catalogue, the original three
+  cases all remain reachable and the rule still governs them.
+
+  What the rule costs is still worth stating, and it is now a narrower cost: absence is
+  silent, so where a section is missing a reader cannot tell an unimported family from one
+  imported and empty. The judgement is unchanged — an empty section is noise on every Órgano
+  that has one to disambiguate a question few users are asking — but the 234 Concellos that
+  once carried the argument are no longer the evidence for it, since a `USER` cannot reach
+  them at all. Whether an Órgano is imported remains answerable by an administrator (R4,
+  which owns the mark, and [SPEC-0007](SPEC-0007-monitor-import-runs.md) R15), and if users
+  turn out to need it, exposing it is a later increment rather than something this rule
+  forecloses.
 
   **Once the section is present it is never empty**, because R19 offers only years the Órgano
-  actually has contracts in. What the section must still make plain is that it is
+  actually has visible contracts in. What the section must still make plain is that it is
   **incomplete**: while the **initial import has not finished** what is shown is partial (R9),
   and it says so, because a user must not read a growing list as a complete one.
 
@@ -428,9 +436,10 @@ One decision remains outside this spec:
   they are looking at one.
 
   The year in effect when the section is first opened is the **most recent year for which the
-  Órgano has contracts**, so a user lands on data rather than on a chooser. Only years the
-  Órgano actually has contracts in are offered, so choosing a year can never be the reason a
-  list is empty.
+  Órgano has visible contracts**, so a user lands on data rather than on a chooser. Only years
+  the Órgano actually has visible contracts in are offered — *visible* for R18's reason, so a
+  year emptied entirely by R13's removals stops being offered — and choosing a year can
+  therefore never be the reason a list is empty.
 
   Alongside those years the chooser offers an **undated** selection wherever the Órgano holds
   contracts whose publication date cannot be interpreted (R27). Without it a mandatory year
@@ -717,11 +726,10 @@ One decision remains outside this spec:
     move, delete or reassign anything. *(Also satisfies SPEC-0004 #9 and the deferred half
     of SPEC-0004 #2.)*
 20. **(R14)** An Órgano that is marked and imported but **unclassified** — placed in no
-    taxonomy term — is still reachable **from the tree, at its root**, and its contracts are
-    still viewable; so is one that has since become inactive but retains contracts under R5.
-    Both are also reachable by name search. Conversely, an Órgano the system holds no
-    contracts for appears in neither — so what a `USER` can see and what this requirement
-    makes reachable are the same set. *(Also satisfies SPEC-0004 #19, #20 and #24.)*
+    taxonomy term — is still reachable **from the tree, without being classified first**, and
+    its contracts are still viewable; after an administrator files it, it is reached within
+    that term instead. So is one that has since become inactive but retains contracts under
+    R5. Both are also reachable by name search. *(Also satisfies SPEC-0004 #19 and #26.)*
 21. **(R14)** An Órgano's own contratos menores list states no row's awarding Órgano, every
     row on it belonging to the Órgano already open — while still stating each row's awardee,
     under the name SPEC-0006 R4 selects for that operador.
@@ -744,16 +752,20 @@ One decision remains outside this spec:
     clearing a filter, or changing the sort — returns the reader to the first page.
 25. **(R16)** Each contract row offers a way to reach that contract's publication at the
     official source, and a way to reach its awardee's operador where one exists.
-26. **(R18)** An Órgano with no stored contratos menores presents no contratos menores section
-    at all — equally so whether it is unmarked, or marked and imported having awarded none —
-    while an Órgano holding at least one presents the section; and an Órgano whose initial
-    import is still running presents it stating that what is shown is partial, distinguishably
-    from one whose import has completed.
+26. **(R18)** An Órgano with no **visible** contratos menores presents no contratos menores
+    section at all — equally so whether it is unmarked, or marked and imported having awarded
+    none — while an Órgano holding at least one presents the section; and an Órgano whose
+    initial import is still running presents it stating that what is shown is partial,
+    distinguishably from one whose import has completed.
+    > **Taken from an administrator's view**, whose visible set is the whole catalogue: the
+    > unmarked and awarded-none cases describe Órganos SPEC-0004 R9 puts beyond a `USER`'s
+    > reach entirely, so they have no `USER`-facing subject to test. #48 covers the cases a
+    > `USER` can still meet.
 27. **(R19)** An Órgano's contratos menores are always scoped to one publication year: opening
-    the section selects the most recent year the Órgano has contracts in, the years offered are
-    exactly those it has contracts in, no control clears the year to produce an all-years list,
-    and the contracts shown for a chosen year are exactly those whose publication date falls in
-    it. No CPV filter control is present.
+    the section selects the most recent year the Órgano has visible contracts in, the years
+    offered are exactly those it has visible contracts in, no control clears the year to
+    produce an all-years list, and the contracts shown for a chosen year are exactly those
+    whose publication date falls in it. No CPV filter control is present.
 28. **(R19)** Sorting by publication date returns contracts in date order, and sorting by
     amount returns them in amount order, in the chosen direction; the first page after
     sorting descending by amount contains the largest-amount contract of the **whole**
@@ -840,3 +852,16 @@ One decision remains outside this spec:
     without restarting it, an incremental import reads only the recent window, and a historical
     re-read covers the full history of an already-loaded Órgano. No trigger selects a
     historical re-read automatically.
+    > **Criteria below are appended, not inserted.** Numbers are cited from features and
+    > tasks, so a new criterion takes the next free one rather than a place in the sequence.
+48. **(R14)** An Órgano holding **no visible contract of any family** is reachable by a `USER`
+    through neither tree nor search, and a `USER` requesting its contracts directly is answered
+    as though it does not exist; an administrator reaches it normally. Conversely, once that
+    Órgano's **first** visible contrato menor is stored it becomes reachable for a `USER` with
+    no administrator action, and when its **last** visible contract is removed under R13 it
+    stops being. *(Also satisfies SPEC-0004 #20 and #21.)*
+49. **(R18)** An Órgano holding **another family's** contracts but no visible contratos
+    menores — including one whose contratos menores were all removed under R13 — is reachable
+    by a `USER` and presents **no contratos menores section**, while the families it does hold
+    are presented normally and its absence causes no error in them. This is the `USER`-facing
+    half of #26 and the reachable half of #22.
