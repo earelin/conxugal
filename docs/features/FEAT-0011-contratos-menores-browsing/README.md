@@ -53,12 +53,12 @@ its journeys are proved against a stubbed API per
 >
 > **[ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md)** — the
 > paged-collection HTTP contract. R17's control is a rule **three specs share**, so the wire shape
-> is settled once or three times; the ADR adopts Micronaut Data's `Pageable`/`Page` and records what
-> that costs. It is `proposed`: **task 6 must not be picked up until it is accepted**, and tasks 7
-> and 11 build against it.
->
-> The split of the section read (task 5) from the paged read (task 6) is what keeps the blocking
-> narrow: everything up to the section on screen proceeds while ADR-0022 is settled.
+> is settled once or three times; the ADR publishes a 1-based envelope of our own, mapped from
+> Micronaut Data's `Page` in the controller, and records what that costs. It is **`accepted`**, so
+> tasks 6, 7 and 11 build directly onto it and nothing here is gated on a decision still in
+> discussion. No task may restate or vary it: the envelope, the 1-based `page`, the refusal of
+> out-of-range values and the `Sort` invariant are that ADR's, and SPEC-0006's and SPEC-0007's
+> features will cite the same record.
 >
 > Note what is **not** open: SPEC-0005's *Decisions taken* settles that reads are **paged by
 > position** and that the cost is **measured before it is optimised**. That mechanism needs no ADR,
@@ -554,7 +554,8 @@ defect in this feature, and the acceptance coverage for the awardee-present case
 ## Sequencing (tasks, one small change each)
 Backend first, then the shared control, then the surfaces — the order FEAT-0006/FEAT-0007 and
 FEAT-0009 took. Each task names what it depends on; the numbering is that order, and nothing
-depends on a task numbered after it.
+depends on a task numbered after it. **No task is blocked on an open decision** — ADR-0022 is
+accepted — so the whole feature is ready to be cut into task files.
 
 1. **Selection value types + read ports** *(backend)*: `YearSelection` (a year, or undated — with no
    representable absence), `SortKey` and `Direction` parsed from plain strings, and the
@@ -594,9 +595,7 @@ depends on a task numbered after it.
    and the repository's `Page` to **ADR-0022's shared envelope**, which this task declares as a
    reusable `openapi.yaml` schema because two more specs will reference it; the `application`
    module **declaring `micronaut-data-model`** rather than inheriting it through the domain's
-   `api(...)`; and the **separate property** composing `sourceUrl`.
-   **Blocked on [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md).**
-   *Depends on task 4.* *(SPEC-0005 #2, #25 source half, #27 no-all-years half, #39 authentication
+   `api(...)`; and the **separate property** composing `sourceUrl`. *Depends on task 4.* *(SPEC-0005 #2, #25 source half, #27 no-all-years half, #39 authentication
    half)*
 7. **The paging control** *(frontend)*: the `shared/ui` component — first/previous/next/last and
    jump-to-page, the entry count and the page total stated, the two ends disabled at the two ends —

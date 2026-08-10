@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-08-10
 spec: SPEC-0005
 supersedes: null
@@ -9,7 +9,7 @@ superseded_by: null
 # 0022. A 1-based paged-collection contract, mapped from Micronaut Data at the application layer
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 
