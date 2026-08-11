@@ -188,6 +188,11 @@ member read and the redirect. It imports **no other feature**, and no other feat
 - All copy is Galician (SPEC-0001 AC7) in `ui/src/shared/lib/strings.ts` under this slice's
   namespace.
 
+**The screens are drawn in [`design/`](design/README.md)** — the page as it ships, the tab bar as a
+function of the `families` keys, and the four states in which it has no section to frame. The
+outlet is drawn as a placeholder there for the same reason it is empty here: what fills it is
+another feature's.
+
 ## Sequencing (tasks, one small change each)
 
 1. **The Órgano member read** *(backend, OpenAPI-first)*: `GET /api/organo/{id}`, authenticated,
