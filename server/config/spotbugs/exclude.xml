@@ -38,6 +38,13 @@
     <Field name="importStates"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
+  <!-- And for the batch the walk stores through: OperadorRepository declares insert, same as
+       above. -->
+  <Match>
+    <Class name="gal.conxugal.domain.contrato.StoreContratosMenoresBatch"/>
+    <Field name="operadores"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
 
   <!-- Micronaut Serde's generated (de)serializers. The @Generated match above cannot reach them:
        they carry javax.annotation.processing.Generated, which is SOURCE-retention and so absent

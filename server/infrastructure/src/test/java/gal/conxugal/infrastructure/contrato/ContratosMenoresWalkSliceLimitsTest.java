@@ -10,9 +10,11 @@ import static org.mockito.Mockito.when;
 import gal.conxugal.domain.contrato.ContratoMenorRepository;
 import gal.conxugal.domain.contrato.ContratosMenoresImportConfiguration;
 import gal.conxugal.domain.contrato.ImportOrganoContratosMenores;
+import gal.conxugal.domain.contrato.StoreContratosMenoresBatch;
 import gal.conxugal.domain.contrato.UpsertCounts;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
+import gal.conxugal.domain.operador.OperadorRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportState;
 import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
@@ -54,6 +56,7 @@ class ContratosMenoresWalkSliceLimitsTest {
 
   private final ContratosMenoresClient contratosMenoresClient = mock(ContratosMenoresClient.class);
   private final ContratoMenorRepository contratos = mock(ContratoMenorRepository.class);
+  private final OperadorRepository operadores = mock(OperadorRepository.class);
   private final ContratosMenoresImportStateRepository importStates =
       mock(ContratosMenoresImportStateRepository.class);
   private final ImportRunRepository importRuns = mock(ImportRunRepository.class);
@@ -109,6 +112,7 @@ class ContratosMenoresWalkSliceLimitsTest {
   private ImportOrganoContratosMenores walk() {
     return new ImportOrganoContratosMenores(
         new ContratosDeGaliciaContratoMenorSourceAdapter(contratosMenoresClient),
+        new StoreContratosMenoresBatch(operadores, contratos),
         contratos,
         importStates,
         importRuns,
