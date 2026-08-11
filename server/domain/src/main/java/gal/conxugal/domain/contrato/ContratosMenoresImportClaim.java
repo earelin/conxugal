@@ -24,9 +24,11 @@ public record ContratosMenoresImportClaim(Status status, @Nullable ImportRunId r
 
   public ContratosMenoresImportClaim {
     Objects.requireNonNull(status, "status must not be null");
-    if ((status == Status.CLAIMED) != (runId != null)) {
-      throw new IllegalArgumentException(
-          "a claimed import carries its run identity and a refused one has none");
+    if (status == Status.CLAIMED && runId == null) {
+      throw new IllegalArgumentException("a claimed import carries the identity of its run");
+    }
+    if (status != Status.CLAIMED && runId != null) {
+      throw new IllegalArgumentException("a refused import started no run to identify");
     }
   }
 
