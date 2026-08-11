@@ -3,8 +3,8 @@ package gal.conxugal.domain.contrato;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -58,6 +58,9 @@ class ImportOrganoContratosMenoresTest {
   private ContratoMenorSource contratoMenorSource;
 
   @Mock
+  private StoreContratosMenoresBatch batch;
+
+  @Mock
   private ContratoMenorRepository contratos;
 
   @Mock
@@ -71,7 +74,7 @@ class ImportOrganoContratosMenoresTest {
 
   private final List<Slice> requestedSlices = new ArrayList<>();
   private final AtomicReference<ContratosMenoresImportState> createdState = new AtomicReference<>();
-  private final List<ContratoMenor> upserted = new ArrayList<>();
+  private final List<ContratoMenorSourceEntry> handedToTheStore = new ArrayList<>();
   private final List<LocalDate> cursorWrites = new ArrayList<>();
   private final AtomicLong stored = new AtomicLong();
 
@@ -334,7 +337,7 @@ class ImportOrganoContratosMenoresTest {
     neverStarted();
     runIsLive();
     stored.set(1);
-    when(contratos.upsertAll(anyCollection()))
+    when(batch.store(anyList(), eq(ORGANO_ID)))
         .thenAnswer(invocation -> new UpsertCounts(0, sizeOfBatch(invocation)));
     when(contratos.countByOrganoId(ORGANO_ID)).thenAnswer(invocation -> stored.get());
     sourcePublishes(1, Map.of(FIRST_WINDOW_START, entries(1)));
@@ -344,8 +347,11 @@ class ImportOrganoContratosMenoresTest {
     assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(0, 1));
   }
 
+  // The page is handed on as the source published it, awardee included. Anything the walk narrowed
+  // here would be narrowed for good: the awardee is on no stored contract, so the derivation has
+  // only what this call carries.
   @Test
-  void stores_each_published_row_under_the_awarding_organo_with_no_awardee() {
+  void hands_each_page_to_the_store_under_the_awarding_organo_as_the_source_published_it() {
     neverStarted();
     runIsLive();
     storeAcceptsEverything();
@@ -353,18 +359,7 @@ class ImportOrganoContratosMenoresTest {
 
     walk().run(RUN_ID, organo());
 
-    assertThat(upserted)
-        .singleElement()
-        .usingRecursiveComparison()
-        .isEqualTo(
-            new ContratoMenor(
-                1L,
-                ORGANO_ID,
-                LocalDate.of(2026, 6, 1),
-                "Obxecto 1",
-                new Money(new BigDecimal("100.00")),
-                "1 mes",
-                null));
+    assertThat(handedToTheStore).isEqualTo(entries(1));
   }
 
   // The guard is asked twice a batch, and this is the ask that matters: the run went quiet while
@@ -375,7 +370,7 @@ class ImportOrganoContratosMenoresTest {
     neverStarted();
     when(importRuns.holdsGuard(RUN_ID)).thenReturn(true).thenReturn(false);
     // Only the upsert: the walk stops at the second ask, before it tests its stored count.
-    when(contratos.upsertAll(anyCollection()))
+    when(batch.store(anyList(), eq(ORGANO_ID)))
         .thenAnswer(invocation -> new UpsertCounts(sizeOfBatch(invocation), 0));
     sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
@@ -395,7 +390,7 @@ class ImportOrganoContratosMenoresTest {
     neverStarted();
     when(importRuns.holdsGuard(RUN_ID)).thenReturn(true).thenReturn(true).thenReturn(false);
     // Only the upsert: the walk stops at the top of the next batch, before it tests its count.
-    when(contratos.upsertAll(anyCollection()))
+    when(batch.store(anyList(), eq(ORGANO_ID)))
         .thenAnswer(invocation -> new UpsertCounts(sizeOfBatch(invocation), 0));
     sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
@@ -415,7 +410,7 @@ class ImportOrganoContratosMenoresTest {
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
 
     assertThat(summary).isEqualTo(ContratosMenoresImportSummary.incomplete(0, 0));
-    verifyNoInteractions(contratoMenorSource, contratos);
+    verifyNoInteractions(contratoMenorSource, batch, contratos);
   }
 
   // A walk resuming from a cursor an earlier one left at the floor has read every window there is.
@@ -428,7 +423,7 @@ class ImportOrganoContratosMenoresTest {
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
 
     assertThat(summary).isEqualTo(ContratosMenoresImportSummary.incomplete(0, 0));
-    verifyNoInteractions(contratoMenorSource, contratos, importRuns);
+    verifyNoInteractions(contratoMenorSource, batch, contratos, importRuns);
   }
 
   private ImportOrganoContratosMenores walk() {
@@ -438,6 +433,7 @@ class ImportOrganoContratosMenoresTest {
   private ImportOrganoContratosMenores walkFrom(LocalDate historyFloor) {
     return new ImportOrganoContratosMenores(
         contratoMenorSource,
+        batch,
         contratos,
         importStates,
         importRuns,
@@ -491,12 +487,12 @@ class ImportOrganoContratosMenoresTest {
   }
 
   private void storeAcceptsEverything() {
-    when(contratos.upsertAll(anyCollection()))
+    when(batch.store(anyList(), eq(ORGANO_ID)))
         .thenAnswer(invocation -> {
-          Collection<ContratoMenor> batch = invocation.getArgument(0);
-          upserted.addAll(batch);
-          stored.addAndGet(batch.size());
-          return new UpsertCounts(batch.size(), 0);
+          List<ContratoMenorSourceEntry> page = invocation.getArgument(0);
+          handedToTheStore.addAll(page);
+          stored.addAndGet(page.size());
+          return new UpsertCounts(page.size(), 0);
         });
     when(contratos.countByOrganoId(ORGANO_ID)).thenAnswer(invocation -> stored.get());
   }
