@@ -1,0 +1,223 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="840" viewBox="0 0 1280 840" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <!-- ===== app background & AppShell frame ===== -->
+  <rect width="1280" height="840" fill="#f8f9fa"/>
+  <rect x="0" y="0" width="1280" height="60" fill="#ffffff"/>
+  <rect x="0" y="60" width="260" height="780" fill="#ffffff"/>
+  <line x1="0" y1="60" x2="1280" y2="60" stroke="#dee2e6" stroke-width="1"/>
+  <line x1="260" y1="60" x2="260" y2="840" stroke="#dee2e6" stroke-width="1"/>
+
+  <!-- ===== header ===== -->
+  <g transform="translate(24,12) scale(0.18)">
+    <rect x="0" y="0" width="200" height="200" rx="46" fill="#4c6ef5"/>
+    <path d="M 132 55 A 56 56 0 1 0 132 145" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+    <path d="M 112 100 L 176 100" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round"/>
+    <path d="M 156 80 L 178 100 L 156 120" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="72" y="31" font-size="20" font-weight="700" fill="#212529">conxugal</text>
+  <text x="72" y="47" font-size="11" fill="#868e96">Contratos públicos da Xunta de Galicia</text>
+  <line x1="1148" y1="16" x2="1148" y2="44" stroke="#e9ecef" stroke-width="1"/>
+  <text x="1210" y="26" text-anchor="end" font-size="13" font-weight="500" fill="#495057">ana.pereira@conxugal.gal</text>
+  <text x="1210" y="42" text-anchor="end" font-size="11" fill="#868e96">Administradora</text>
+  <circle cx="1236" cy="30" r="18" fill="#4c6ef5"/>
+  <text x="1236" y="30" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">AP</text>
+
+  <!-- ===== navbar: the picker is chrome for every authenticated user, ADMIN included ===== -->
+  <text x="24" y="92" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ÓRGANO</text>
+  <rect x="12" y="104" width="236" height="44" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="28" y="131" font-size="13" fill="#adb5bd">Escolle un órgano</text>
+  <path d="M222 123 l6 6 l6 -6" stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="12" y1="166" x2="248" y2="166" stroke="#f1f3f5"/>
+
+  <g transform="translate(0,84)">
+    <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M27 111 L37 102 L47 111 M29.5 108.5 V119 H44.5 V108.5" transform="translate(-3,-1)"/>
+    </g>
+    <text x="52" y="106" font-size="14" fill="#495057">Inicio</text>
+    <g stroke="#868e96" stroke-width="1.6" fill="none">
+      <circle cx="34" cy="149" r="8"/>
+      <line x1="34" y1="147" x2="34" y2="153" stroke-linecap="round"/>
+      <circle cx="34" cy="143.5" r="0.6" fill="#868e96" stroke="none"/>
+    </g>
+    <text x="52" y="154" font-size="14" fill="#495057">Acerca de</text>
+
+    <text x="24" y="192" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ADMINISTRACIÓN</text>
+
+    <g stroke="#868e96" stroke-width="1.6" fill="none">
+      <rect x="24" y="217" width="8" height="9" rx="1.5"/>
+      <rect x="36" y="217" width="8" height="5" rx="1.5"/>
+      <rect x="24" y="230" width="8" height="5" rx="1.5"/>
+      <rect x="36" y="226" width="8" height="9" rx="1.5"/>
+    </g>
+    <text x="52" y="232" font-size="14" fill="#495057">Panel</text>
+
+    <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="31" cy="255" r="3"/>
+      <path d="M25 267 c0 -3.5 3 -5 6 -5 s6 1.5 6 5"/>
+      <circle cx="41.5" cy="257" r="2.4"/>
+      <path d="M41 263 c2.5 0 4.5 1.3 4.5 4"/>
+    </g>
+    <text x="52" y="264" font-size="14" fill="#495057">Usuarios</text>
+
+    <rect x="12" y="286" width="236" height="42" rx="8" fill="#edf2ff"/>
+    <g stroke="#4263eb" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="30" y="298" width="8" height="6" rx="1.5"/>
+      <rect x="20" y="312" width="8" height="6" rx="1.5"/>
+      <rect x="40" y="312" width="8" height="6" rx="1.5"/>
+      <path d="M34 304 V308 M24 308 H44 M24 308 V312 M44 308 V312"/>
+    </g>
+    <text x="52" y="312" font-size="14" font-weight="600" fill="#3b5bdb">Órganos</text>
+  </g>
+
+  <!-- ===== main ===== -->
+  <text x="284" y="112" font-size="26" font-weight="700" fill="#212529">Órganos</text>
+  <text x="284" y="138" font-size="14" fill="#868e96">Organiza o catálogo nunha taxonomía e clasifica os órganos de contratación.</text>
+
+  <!-- ===== tree card: the whole catalogue ===== -->
+  <rect x="284" y="172" width="400" height="508" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="284" y="170" width="400" height="508" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="308" y="202" font-size="15" font-weight="600" fill="#212529">Taxonomía</text>
+  <rect x="550" y="188" width="118" height="28" rx="8" fill="#4c6ef5"/>
+  <g stroke="#ffffff" stroke-width="1.7" stroke-linecap="round">
+    <line x1="563" y1="202" x2="575" y2="202"/><line x1="569" y1="196" x2="569" y2="208"/>
+  </g>
+  <text x="582" y="206" font-size="12" font-weight="600" fill="#ffffff">Novo termo</text>
+  <line x1="284" y1="230" x2="684" y2="230" stroke="#f1f3f5"/>
+
+  <path d="M300 247 l5 5 l5 -5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="320" y="256" font-size="14" font-weight="500" fill="#212529">Consellerías</text>
+  <rect x="638" y="243" width="30" height="18" rx="9" fill="#f1f3f5"/>
+  <text x="653" y="252" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="600" fill="#868e96">18</text>
+
+  <path d="M338 285 l6 5 l-6 5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="360" y="295" font-size="14" font-weight="500" fill="#212529">Consellería de Sanidade</text>
+  <rect x="638" y="281" width="30" height="18" rx="9" fill="#f1f3f5"/>
+  <text x="653" y="290" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="600" fill="#868e96">3</text>
+
+  <!-- selected: a term whose órganos hold no visible contract — present here, pruned from the picker -->
+  <rect x="296" y="304" width="372" height="34" rx="8" fill="#edf2ff"/>
+  <path d="M338 323 l6 5 l-6 5" stroke="#3b5bdb" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="360" y="333" font-size="14" font-weight="600" fill="#3b5bdb">Consellería de Facenda</text>
+  <g stroke="#3b5bdb" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M598 315 l6 -6 l4 4 l-6 6 l-5 1.5 z"/>
+    <path d="M622 314 l4 5 l-4 5 M626 319 h-9"/>
+  </g>
+  <g stroke="#e03131" stroke-width="1.4" fill="none" stroke-linecap="round">
+    <path d="M642 314 h9 M644 314 v-1.5 a1.5 1.5 0 0 1 1.5 -1.5 h1 a1.5 1.5 0 0 1 1.5 1.5 v1.5 M643 316.5 l0.6 8 h5.8 l0.6 -8"/>
+  </g>
+
+  <path d="M338 357 l6 5 l-6 5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="360" y="367" font-size="14" font-weight="500" fill="#212529">Consellería do Mar</text>
+  <rect x="638" y="353" width="30" height="18" rx="9" fill="#f1f3f5"/>
+  <text x="653" y="362" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="600" fill="#868e96">2</text>
+
+  <path d="M302 391 l6 5 l-6 5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="320" y="401" font-size="14" font-weight="500" fill="#212529">Concellos</text>
+  <rect x="638" y="387" width="30" height="18" rx="9" fill="#f1f3f5"/>
+  <text x="653" y="396" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="600" fill="#868e96">64</text>
+
+  <path d="M302 425 l6 5 l-6 5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="320" y="435" font-size="14" font-weight="500" fill="#212529">Deputacións provinciais</text>
+  <rect x="638" y="421" width="30" height="18" rx="9" fill="#f1f3f5"/>
+  <text x="653" y="430" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="600" fill="#868e96">4</text>
+
+  <!-- a term an administrator has just created: legitimately empty, still shown -->
+  <text x="320" y="469" font-size="14" font-weight="500" fill="#212529">Portos e augas</text>
+  <rect x="638" y="455" width="30" height="18" rx="9" fill="#f1f3f5"/>
+  <text x="653" y="464" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="600" fill="#868e96">0</text>
+
+  <line x1="296" y1="492" x2="668" y2="492" stroke="#e9ecef"/>
+
+  <g stroke="#e8590c" stroke-width="1.5" fill="none">
+    <rect x="300" y="508" width="14" height="11" rx="1.5"/>
+    <path d="M300 513 h4 l1.5 2 h3 l1.5 -2 h4"/>
+  </g>
+  <text x="326" y="522" font-size="14" font-weight="500" fill="#212529">Sen clasificar</text>
+  <rect x="638" y="509" width="30" height="18" rx="9" fill="#fff4e6"/>
+  <text x="653" y="518" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" fill="#e8590c">12</text>
+
+  <text x="308" y="560" font-size="12" fill="#868e96">429 órganos no catálogo</text>
+
+  <!-- ===== content card: the selected term ===== -->
+  <rect x="708" y="172" width="548" height="508" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="708" y="170" width="548" height="508" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+
+  <text x="732" y="200" font-size="12" fill="#868e96" xml:space="preserve">Taxonomía<tspan fill="#adb5bd"> › </tspan>Consellerías<tspan fill="#adb5bd"> › </tspan><tspan fill="#495057" font-weight="600">Consellería de Facenda</tspan></text>
+
+  <rect x="762" y="228" width="104" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="814" y="245" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#495057">Renomear</text>
+  <rect x="882" y="228" width="84" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="924" y="245" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#495057">Mover</text>
+  <rect x="982" y="228" width="84" height="34" rx="8" fill="#ffffff" stroke="#ffc9c9"/>
+  <text x="1024" y="245" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#e03131">Eliminar</text>
+  <rect x="1082" y="228" width="150" height="34" rx="8" fill="#4c6ef5"/>
+  <g stroke="#ffffff" stroke-width="1.7" stroke-linecap="round">
+    <line x1="1099" y1="245" x2="1109" y2="245"/><line x1="1104" y1="240" x2="1104" y2="250"/>
+  </g>
+  <text x="1172" y="245" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">Asignar órgano</text>
+
+  <text x="732" y="292" font-size="22" font-weight="700" fill="#212529">Consellería de Facenda</text>
+  <line x1="732" y1="308" x2="1232" y2="308" stroke="#f1f3f5"/>
+
+  <rect x="708" y="324" width="548" height="48" fill="#f8f9fa"/>
+  <line x1="708" y1="372" x2="1256" y2="372" stroke="#e9ecef"/>
+  <text x="732" y="353" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ÓRGANO</text>
+  <text x="980" y="353" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ESTADO</text>
+  <text x="1232" y="353" text-anchor="end" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ACCIÓNS</text>
+
+  <text x="732" y="398" font-size="14" font-weight="500" fill="#212529">Axencia Tributaria de Galicia</text>
+  <rect x="980" y="387" width="72" height="22" rx="11" fill="#ebfbee"/>
+  <text x="1016" y="399" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVO</text>
+  <rect x="1112" y="386" width="120" height="26" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="1172" y="399" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Quitar do termo</text>
+  <line x1="732" y1="416" x2="1232" y2="416" stroke="#f1f3f5"/>
+
+  <text x="732" y="456" font-size="14" font-weight="500" fill="#212529">Instituto Galego de Estatística</text>
+  <rect x="980" y="445" width="72" height="22" rx="11" fill="#ebfbee"/>
+  <text x="1016" y="457" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#2b8a3e">ACTIVO</text>
+  <rect x="1112" y="444" width="120" height="26" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="1172" y="457" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Quitar do termo</text>
+  <line x1="732" y1="474" x2="1232" y2="474" stroke="#f1f3f5"/>
+
+  <text x="732" y="514" font-size="14" font-weight="500" fill="#adb5bd">Centro Informático Tributario</text>
+  <rect x="980" y="503" width="80" height="22" rx="11" fill="#f1f3f5"/>
+  <text x="1020" y="515" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">INACTIVO</text>
+  <rect x="1112" y="502" width="120" height="26" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="1172" y="515" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">Quitar do termo</text>
+  <line x1="732" y1="532" x2="1232" y2="532" stroke="#f1f3f5"/>
+
+  <text x="732" y="556" font-size="12" fill="#868e96">3 órganos neste termo · ningún deles ten contratos importados</text>
+
+  <!-- ===== annotations ===== -->
+  <g stroke="#ced4da" stroke-width="1.2" fill="none" stroke-dasharray="5 4">
+    <path d="M300 700 H272 V126 H248"/>
+    <path d="M770 700 V690 H500 V678"/>
+    <path d="M1102 700 V692 H694 V463 H670"/>
+  </g>
+
+  <rect x="284" y="700" width="308" height="120" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <circle cx="304" cy="722" r="10" fill="#4c6ef5"/>
+  <text x="304" y="722" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#ffffff">1</text>
+  <text x="322" y="726" font-size="12" font-weight="600" fill="#495057">O selector le GET /api/organos</text>
+  <text x="302" y="750" font-size="11.5" fill="#868e96">Xa estreitado ao conxunto visible. A mesma</text>
+  <text x="302" y="767" font-size="11.5" fill="#868e96">administradora ve aquí só os órganos con</text>
+  <text x="302" y="784" font-size="11.5" fill="#868e96">algún contrato visible: o selector é o mesmo</text>
+  <text x="302" y="801" font-size="11.5" fill="#868e96">control para todos, non un control de rol.</text>
+
+  <rect x="616" y="700" width="308" height="120" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <circle cx="636" cy="722" r="10" fill="#4c6ef5"/>
+  <text x="636" y="722" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#ffffff">2</text>
+  <text x="654" y="726" font-size="12" font-weight="600" fill="#495057">A administración le GET /api/admin/organos</text>
+  <text x="634" y="750" font-size="11.5" fill="#868e96">A árbore, a lista de sen clasificar e a táboa de</text>
+  <text x="634" y="767" font-size="11.5" fill="#868e96">órganos pasan á lectura de administración, así</text>
+  <text x="634" y="784" font-size="11.5" fill="#868e96">que conservan o catálogo enteiro tras o</text>
+  <text x="634" y="801" font-size="11.5" fill="#868e96">estreitamento. Aterra coa tarefa 1 ou antes.</text>
+
+  <rect x="948" y="700" width="308" height="120" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <circle cx="968" cy="722" r="10" fill="#4c6ef5"/>
+  <text x="968" y="722" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#ffffff">3</text>
+  <text x="986" y="726" font-size="12" font-weight="600" fill="#495057">Os termos baleiros seguen aquí (#14)</text>
+  <text x="966" y="750" font-size="11.5" fill="#868e96">«Portos e augas» acaba de crearse e</text>
+  <text x="966" y="767" font-size="11.5" fill="#868e96">«Consellería de Facenda» non ten ningún</text>
+  <text x="966" y="784" font-size="11.5" fill="#868e96">órgano con contratos: ambos se amosan. Por</text>
+  <text x="966" y="801" font-size="11.5" fill="#868e96">iso a poda vive na chamada do selector.</text>
+</svg>

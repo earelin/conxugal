@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="840" viewBox="0 0 1280 840" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <!-- ===== app background & AppShell frame ===== -->
+  <rect width="1280" height="840" fill="#f8f9fa"/>
+  <rect x="0" y="0" width="1280" height="60" fill="#ffffff"/>
+  <rect x="0" y="60" width="260" height="780" fill="#ffffff"/>
+  <line x1="0" y1="60" x2="1280" y2="60" stroke="#dee2e6" stroke-width="1"/>
+  <line x1="260" y1="60" x2="260" y2="840" stroke="#dee2e6" stroke-width="1"/>
+
+  <!-- ===== header ===== -->
+  <g transform="translate(24,12) scale(0.18)">
+    <rect x="0" y="0" width="200" height="200" rx="46" fill="#4c6ef5"/>
+    <path d="M 132 55 A 56 56 0 1 0 132 145" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+    <path d="M 112 100 L 176 100" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round"/>
+    <path d="M 156 80 L 178 100 L 156 120" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="72" y="31" font-size="20" font-weight="700" fill="#212529">conxugal</text>
+  <text x="72" y="47" font-size="11" fill="#868e96">Contratos públicos da Xunta de Galicia</text>
+  <line x1="1148" y1="16" x2="1148" y2="44" stroke="#e9ecef" stroke-width="1"/>
+  <text x="1210" y="26" text-anchor="end" font-size="13" font-weight="500" fill="#495057">xoan.rivas@conxugal.gal</text>
+  <text x="1210" y="42" text-anchor="end" font-size="11" fill="#868e96">Usuario</text>
+  <circle cx="1236" cy="30" r="18" fill="#4c6ef5"/>
+  <text x="1236" y="30" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">XR</text>
+
+  <!-- ===== navbar: the Órgano picker sits above the nav sections ===== -->
+  <text x="24" y="92" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ÓRGANO</text>
+  <rect x="12" y="104" width="236" height="44" rx="8" fill="#ffffff" stroke="#4c6ef5" stroke-width="1.5"/>
+  <text x="28" y="131" font-size="13" font-weight="600" fill="#212529">Portos de Galicia</text>
+  <path d="M222 130 l6 -6 l6 6" stroke="#4c6ef5" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="12" y1="166" x2="248" y2="166" stroke="#f1f3f5"/>
+
+  <!-- nav items (no ADMINISTRACIÓN section: this is a USER session) -->
+  <g transform="translate(0,84)">
+    <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M27 111 L37 102 L47 111 M29.5 108.5 V119 H44.5 V108.5" transform="translate(-3,-1)"/>
+    </g>
+    <text x="52" y="106" font-size="14" fill="#495057">Inicio</text>
+    <g stroke="#868e96" stroke-width="1.6" fill="none">
+      <circle cx="34" cy="149" r="8"/>
+      <line x1="34" y1="147" x2="34" y2="153" stroke-linecap="round"/>
+      <circle cx="34" cy="143.5" r="0.6" fill="#868e96" stroke="none"/>
+    </g>
+    <text x="52" y="154" font-size="14" fill="#495057">Acerca de</text>
+  </g>
+
+  <!-- ===== the page underneath (context only) ===== -->
+  <text x="284" y="112" font-size="26" font-weight="700" fill="#212529">Benvido/a a conxugal</text>
+  <text x="284" y="140" font-size="14" fill="#868e96">Explora, busca e analiza a información de contratos públicos da Xunta de Galicia publicada en contratosdegalicia.gal.</text>
+
+  <!-- ===== the picker dropdown: empty filter, so the tree ===== -->
+  <rect x="12" y="161" width="400" height="500" rx="8" fill="#212529" opacity="0.08"/>
+  <rect x="12" y="158" width="400" height="500" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+
+  <!-- filter box, empty -->
+  <rect x="28" y="174" width="368" height="38" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <g stroke="#adb5bd" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="48" cy="191" r="5.5"/>
+    <line x1="52" y1="195" x2="56" y2="199"/>
+  </g>
+  <text x="68" y="198" font-size="13" fill="#adb5bd">Buscar un órgano…</text>
+  <line x1="12" y1="228" x2="412" y2="228" stroke="#f1f3f5"/>
+
+  <!-- root term: Consellerías (expanded) -->
+  <path d="M32 247 l5 5 l5 -5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="54" y="255" font-size="14" font-weight="500" fill="#212529">Consellerías</text>
+
+  <!-- child term: Consellería de Sanidade (expanded) -->
+  <path d="M52 281 l5 5 l5 -5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="74" y="289" font-size="14" font-weight="500" fill="#212529">Consellería de Sanidade</text>
+
+  <!-- its órganos -->
+  <text x="94" y="323" font-size="14" fill="#495057">Servizo Galego de Saúde (SERGAS)</text>
+  <text x="94" y="357" font-size="14" fill="#495057">Fundación Pública Urxencias Sanitarias…</text>
+
+  <!-- child term: Consellería do Mar (expanded) -->
+  <path d="M52 383 l5 5 l5 -5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="74" y="391" font-size="14" font-weight="500" fill="#212529">Consellería do Mar</text>
+
+  <!-- the órgano currently open, shown as selected -->
+  <rect x="20" y="404" width="384" height="32" rx="8" fill="#edf2ff"/>
+  <text x="94" y="425" font-size="14" font-weight="600" fill="#3b5bdb">Portos de Galicia</text>
+  <path d="M372 420 l4 4 l8 -9" stroke="#3b5bdb" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- root term: Deputacións provinciais (expanded) -->
+  <path d="M32 451 l5 5 l5 -5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="54" y="459" font-size="14" font-weight="500" fill="#212529">Deputacións provinciais</text>
+  <text x="74" y="493" font-size="14" fill="#495057">Deputación Provincial da Coruña</text>
+  <text x="74" y="527" font-size="14" fill="#495057">Deputación Provincial de Lugo</text>
+
+  <!-- root term: Concellos (collapsed) -->
+  <path d="M34 551 l6 5 l-6 5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="54" y="561" font-size="14" font-weight="500" fill="#212529">Concellos</text>
+
+  <!-- unclassified órganos: at the root, beside the root terms -->
+  <text x="54" y="595" font-size="14" fill="#495057">Augas de Galicia</text>
+  <text x="54" y="629" font-size="14" fill="#495057">Instituto Galego da Vivenda e Solo</text>
+
+  <!-- ===== annotations ===== -->
+  <g stroke="#ced4da" stroke-width="1.2" fill="none" stroke-dasharray="5 4">
+    <path d="M460 230 H436 V193 H412"/>
+    <path d="M460 336 H436 V284 H412"/>
+    <path d="M460 442 H436 V420 H412"/>
+    <path d="M460 548 H436 V527 H412"/>
+    <path d="M460 654 H436 V612 H412"/>
+  </g>
+
+  <rect x="460" y="186" width="580" height="88" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="478" y="210" font-size="12" font-weight="600" fill="#495057">Un só control, dous estados</text>
+  <text x="478" y="231" font-size="11.5" fill="#868e96">Co filtro baleiro amosa a árbore da taxonomía (R9); ao escribir amosa as</text>
+  <text x="478" y="248" font-size="11.5" fill="#868e96">coincidencias (R19). Nunca amosa o catálogo como unha lista plana: iso é o</text>
+  <text x="478" y="265" font-size="11.5" fill="#868e96">que R2 retira, e é o que distingue esta vista dunha listaxe do catálogo.</text>
+
+  <rect x="460" y="292" width="580" height="88" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="478" y="316" font-size="12" font-weight="600" fill="#495057">Ramas baleiras podadas, de forma recursiva (#22)</text>
+  <text x="478" y="337" font-size="11.5" fill="#868e96">Un termo cuxa subárbore enteira non ten ningún órgano do conxunto visible</text>
+  <text x="478" y="354" font-size="11.5" fill="#868e96">non aparece: «Consellería de Facenda» falta aquí e segue na administración.</text>
+  <text x="478" y="371" font-size="11.5" fill="#868e96">A poda vive na chamada do selector, non no construtor compartido.</text>
+
+  <rect x="460" y="398" width="580" height="88" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="478" y="422" font-size="12" font-weight="600" fill="#495057">O órgano aberto amósase seleccionado</text>
+  <text x="478" y="443" font-size="11.5" fill="#868e96">Estando na barra lateral, o control pode dicir que se está a ver e cambialo</text>
+  <text x="478" y="460" font-size="11.5" fill="#868e96">nunha soa acción. Nunha páxina índice separada a selección actual non</text>
+  <text x="478" y="477" font-size="11.5" fill="#868e96">tería onde vivir.</text>
+
+  <rect x="460" y="504" width="580" height="88" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="478" y="528" font-size="12" font-weight="600" fill="#495057">Escoller un órgano abre os seus contratos</text>
+  <text x="478" y="549" font-size="11.5" fill="#868e96">A selección navega a /organo/&#123;id&#125;, a páxina de FEAT-0013 que amosa o nome</text>
+  <text x="478" y="566" font-size="11.5" fill="#868e96">do órgano e unha lapela por familia de contratos. É o único punto no que</text>
+  <text x="478" y="583" font-size="11.5" fill="#868e96">esta funcionalidade toca as demais, e vai nunha soa dirección.</text>
+
+  <rect x="460" y="610" width="580" height="88" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="478" y="634" font-size="12" font-weight="600" fill="#495057">Órganos sen clasificar, na raíz (#19)</text>
+  <text x="478" y="655" font-size="11.5" fill="#868e96">Todo órgano recén importado queda sen clasificar, así que renderízanse na</text>
+  <text x="478" y="672" font-size="11.5" fill="#868e96">raíz, canda os termos raíz: sen listaxe do catálogo á que recorrer, se non</text>
+  <text x="478" y="689" font-size="11.5" fill="#868e96">estivesen aquí non serían alcanzables desde ningures.</text>
+
+  <!-- footnotes -->
+  <g stroke="#868e96" stroke-width="1.4" fill="none">
+    <circle cx="467" cy="734" r="7"/>
+    <line x1="467" y1="733" x2="467" y2="738" stroke-linecap="round"/>
+    <circle cx="467" cy="729.5" r="0.6" fill="#868e96" stroke="none"/>
+  </g>
+  <text x="484" y="738" font-size="12" fill="#868e96">Un USER non ten aquí ningún control de xestión: nin crear, renomear, mover, eliminar nin reasignar. É unha vista, non a</text>
+  <text x="484" y="755" font-size="12" fill="#868e96">árbore de administración cos botóns agochados.</text>
+
+  <g stroke="#868e96" stroke-width="1.4" fill="none">
+    <circle cx="467" cy="785" r="7"/>
+    <line x1="467" y1="784" x2="467" y2="789" stroke-linecap="round"/>
+    <circle cx="467" cy="780.5" r="0.6" fill="#868e96" stroke="none"/>
+  </g>
+  <text x="484" y="789" font-size="12" fill="#868e96">Non hai ruta /organos: o selector é chrome, presente en todas as páxinas, e non hai páxina á que engadirlle unha listaxe.</text>
+</svg>

@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="780" viewBox="0 0 1280 780" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <rect width="1280" height="780" fill="#f8f9fa"/>
+
+  <text x="40" y="60" font-size="22" font-weight="700" fill="#212529">A barra de lapelas é función da resposta</text>
+  <text x="40" y="84" font-size="13" fill="#868e96">Unha familia presente en «families» ten datos visibles; unha ausente non ten ningún. A presenza non é unha marca á parte que poida discrepar do resumo: é a existencia do resumo.</text>
+
+  <text x="40" y="122" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">CLAVES QUE DEVOLVE GET /api/organo/&#123;id&#125;</text>
+  <text x="500" y="122" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">O QUE RENDERIZA A PÁXINA</text>
+  <line x1="40" y1="134" x2="1240" y2="134" stroke="#dee2e6"/>
+
+  <!-- ===== case 1: today ===== -->
+  <text x="40" y="168" font-size="13" font-weight="600" fill="#212529">Hoxe</text>
+  <rect x="40" y="182" width="146" height="24" rx="12" fill="#f1f3f5"/>
+  <text x="113" y="194" text-anchor="middle" dominant-baseline="central" font-size="11.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#495057">contratos-menores</text>
+  <text x="40" y="228" font-size="11.5" fill="#868e96">A única familia que o sistema importa.</text>
+
+  <line x1="500" y1="206" x2="1240" y2="206" stroke="#dee2e6"/>
+  <text x="584" y="192" text-anchor="middle" font-size="14" font-weight="600" fill="#3b5bdb">Contratos menores</text>
+  <rect x="500" y="204" width="168" height="3" fill="#4c6ef5"/>
+  <text x="500" y="232" font-size="11.5" fill="#868e96">Unha soa lapela, e non é un defecto: a barra existe desde o primeiro día para que a</text>
+  <text x="500" y="249" font-size="11.5" fill="#868e96">seguinte familia se engada a ela en vez de cambiar a estrutura desta páxina.</text>
+  <line x1="40" y1="278" x2="1240" y2="278" stroke="#f1f3f5"/>
+
+  <!-- ===== case 2: when licitacións arrives ===== -->
+  <text x="40" y="312" font-size="13" font-weight="600" fill="#212529">Cando chegue licitacións</text>
+  <rect x="40" y="326" width="146" height="24" rx="12" fill="#f1f3f5"/>
+  <text x="113" y="338" text-anchor="middle" dominant-baseline="central" font-size="11.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#495057">contratos-menores</text>
+  <rect x="196" y="326" width="94" height="24" rx="12" fill="#f1f3f5"/>
+  <text x="243" y="338" text-anchor="middle" dominant-baseline="central" font-size="11.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#495057">licitacions</text>
+  <text x="40" y="372" font-size="11.5" fill="#adb5bd">Ilustración: esta familia non se constrúe aquí.</text>
+
+  <line x1="500" y1="350" x2="1240" y2="350" stroke="#dee2e6"/>
+  <text x="584" y="336" text-anchor="middle" font-size="14" font-weight="600" fill="#3b5bdb">Contratos menores</text>
+  <rect x="500" y="348" width="168" height="3" fill="#4c6ef5"/>
+  <text x="736" y="336" text-anchor="middle" font-size="14" font-weight="500" fill="#868e96">Licitacións</text>
+  <text x="500" y="376" font-size="11.5" fill="#868e96">A familia nova engade unha entrada ao rexistro e unha ruta filla en app/router.tsx.</text>
+  <text x="500" y="393" font-size="11.5" fill="#868e96">Ningún ficheiro que esta funcionalidade entrega cambia: iso é o que R15 pide ao dicir aditivo.</text>
+  <line x1="40" y1="422" x2="1240" y2="422" stroke="#f1f3f5"/>
+
+  <!-- ===== case 3: a family the Órgano does not hold ===== -->
+  <text x="40" y="456" font-size="13" font-weight="600" fill="#212529">Un órgano que só ten licitacións</text>
+  <rect x="40" y="470" width="94" height="24" rx="12" fill="#f1f3f5"/>
+  <text x="87" y="482" text-anchor="middle" dominant-baseline="central" font-size="11.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#495057">licitacions</text>
+  <text x="40" y="516" font-size="11.5" fill="#868e96">Sen contratos menores visibles, non hai entrada.</text>
+
+  <line x1="500" y1="494" x2="1240" y2="494" stroke="#dee2e6"/>
+  <text x="555" y="480" text-anchor="middle" font-size="14" font-weight="600" fill="#3b5bdb">Licitacións</text>
+  <rect x="500" y="492" width="110" height="3" fill="#4c6ef5"/>
+  <text x="500" y="520" font-size="11.5" fill="#868e96">Contratos menores está ausente da barra: nin desactivada, nin cunha lapela que abra un</text>
+  <text x="500" y="537" font-size="11.5" fill="#868e96">panel baleiro. A súa ausencia non lle causa erro ningún á familia que queda (#49).</text>
+  <line x1="40" y1="566" x2="1240" y2="566" stroke="#f1f3f5"/>
+
+  <!-- ===== case 4: nothing at all ===== -->
+  <text x="40" y="600" font-size="13" font-weight="600" fill="#212529">Un órgano sen datos de ningunha familia</text>
+  <rect x="40" y="614" width="106" height="24" rx="12" fill="#ffffff" stroke="#dee2e6" stroke-dasharray="4 3"/>
+  <text x="93" y="626" text-anchor="middle" dominant-baseline="central" font-size="11.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#adb5bd">families: &#123;&#125;</text>
+  <text x="40" y="660" font-size="11.5" fill="#868e96">Raro por construción: o selector non o ofrece.</text>
+
+  <text x="500" y="628" font-size="13" fill="#adb5bd">— sen barra de lapelas —</text>
+  <text x="500" y="660" font-size="11.5" fill="#868e96">A páxina amosa o nome do órgano e unha frase que di que non se garda ningún contrato del.</text>
+  <text x="500" y="677" font-size="11.5" fill="#868e96">R18 prohibe unha sección baleira; unha páxina que di claramente que non ten nada non o é.</text>
+
+  <!-- ===== footnote ===== -->
+  <rect x="40" y="706" width="1200" height="52" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="60" y="730" font-size="11.5" fill="#868e96">As claves son exactamente os segmentos das rutas fillas, así que a resposta mapea sobre unha ruta sen táboa de equivalencias que poida discrepar do router. O que hai</text>
+  <text x="60" y="747" font-size="11.5" fill="#868e96">dentro de cada valor — anos, «parcial», «actualizándose» — é da familia que o publica: esta páxina non o le nunca, só llo pasa á sección que o entende.</text>
+</svg>

@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <rect width="1280" height="640" fill="#f8f9fa"/>
+
+  <text x="40" y="60" font-size="22" font-weight="700" fill="#212529">Selector de órganos — estados de carga</text>
+  <text x="40" y="84" font-size="13" fill="#868e96">O selector está en todas as páxinas, así que estes son os primeiros estados que un lector atopa nunha instalación recente.</text>
+
+  <!-- ===== A: loading ===== -->
+  <text x="40" y="122" font-size="12" font-weight="600" fill="#495057">Cargando</text>
+  <rect x="40" y="135" width="376" height="228" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="133" width="376" height="228" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="56" y="149" width="344" height="38" rx="8" fill="#f8f9fa" stroke="#e9ecef"/>
+  <g stroke="#dee2e6" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="76" cy="166" r="5.5"/>
+    <line x1="80" y1="170" x2="84" y2="174"/>
+  </g>
+  <text x="96" y="173" font-size="13" fill="#dee2e6">Buscar un órgano…</text>
+  <line x1="40" y1="203" x2="416" y2="203" stroke="#f1f3f5"/>
+  <rect x="60" y="223" width="150" height="12" rx="6" fill="#f1f3f5"/>
+  <rect x="80" y="255" width="220" height="12" rx="6" fill="#f1f3f5"/>
+  <rect x="80" y="287" width="184" height="12" rx="6" fill="#f1f3f5"/>
+  <rect x="60" y="319" width="120" height="12" rx="6" fill="#f1f3f5"/>
+
+  <!-- ===== B: empty visible set ===== -->
+  <text x="452" y="122" font-size="12" font-weight="600" fill="#495057">Conxunto visible baleiro</text>
+  <rect x="452" y="135" width="376" height="228" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="452" y="133" width="376" height="228" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="468" y="149" width="344" height="38" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <g stroke="#adb5bd" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="488" cy="166" r="5.5"/>
+    <line x1="492" y1="170" x2="496" y2="174"/>
+  </g>
+  <text x="508" y="173" font-size="13" fill="#adb5bd">Buscar un órgano…</text>
+  <line x1="452" y1="203" x2="828" y2="203" stroke="#f1f3f5"/>
+  <g stroke="#ced4da" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="628" y="232" width="24" height="16" rx="3"/>
+    <rect x="604" y="270" width="24" height="16" rx="3"/>
+    <rect x="652" y="270" width="24" height="16" rx="3"/>
+    <path d="M640 248 V259 M616 259 H664 M616 259 V270 M664 259 V270"/>
+  </g>
+  <text x="640" y="315" text-anchor="middle" font-size="13" font-weight="500" fill="#495057">Aínda non hai órganos con contratos.</text>
+  <text x="640" y="335" text-anchor="middle" font-size="11.5" fill="#868e96">Cando se importe o primeiro contrato dun órgano, aparecerá aquí.</text>
+
+  <!-- ===== C: failed read ===== -->
+  <text x="864" y="122" font-size="12" font-weight="600" fill="#495057">Lectura fallida</text>
+  <rect x="864" y="135" width="376" height="228" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="864" y="133" width="376" height="228" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="880" y="149" width="344" height="38" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <g stroke="#adb5bd" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="900" cy="166" r="5.5"/>
+    <line x1="904" y1="170" x2="908" y2="174"/>
+  </g>
+  <text x="920" y="173" font-size="13" fill="#adb5bd">Buscar un órgano…</text>
+  <line x1="864" y1="203" x2="1240" y2="203" stroke="#f1f3f5"/>
+  <rect x="880" y="223" width="344" height="90" rx="8" fill="#fff5f5" stroke="#ffc9c9"/>
+  <g stroke="#e03131" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="902" cy="245" r="8.5"/>
+    <line x1="902" y1="241" x2="902" y2="246"/>
+    <circle cx="902" cy="249.5" r="0.7" fill="#e03131" stroke="none"/>
+  </g>
+  <text x="920" y="249" font-size="13" font-weight="600" fill="#c92a2a">Non se puido cargar a lista de órganos.</text>
+  <text x="920" y="270" font-size="11.5" fill="#868e96">Téntao de novo; se persiste, volve máis tarde.</text>
+  <rect x="920" y="282" width="122" height="28" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="981" y="296" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="500" fill="#495057">Tentar de novo</text>
+
+  <!-- ===== the closed control, in the navbar ===== -->
+  <text x="40" y="418" font-size="12" font-weight="600" fill="#495057">O control pechado, tal e como vive na barra lateral</text>
+
+  <text x="40" y="450" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ÓRGANO</text>
+  <rect x="40" y="462" width="236" height="44" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="56" y="489" font-size="13" fill="#adb5bd">Escolle un órgano</text>
+  <path d="M250 484 l6 6 l6 -6" stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="40" y="530" font-size="11.5" fill="#868e96">Sen ningún órgano aberto.</text>
+
+  <text x="332" y="450" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ÓRGANO</text>
+  <rect x="332" y="462" width="236" height="44" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="348" y="489" font-size="13" font-weight="600" fill="#212529">Portos de Galicia</text>
+  <path d="M542 484 l6 6 l6 -6" stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="332" y="530" font-size="11.5" fill="#868e96">Co órgano aberto: di cal se está a ver.</text>
+
+  <!-- ===== annotations ===== -->
+  <rect x="624" y="400" width="616" height="150" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="642" y="426" font-size="12" font-weight="600" fill="#495057">Un fallo de lectura nunca se amosa como resultado baleiro</text>
+  <text x="642" y="447" font-size="11.5" fill="#868e96">Os dous estados din cousas distintas: «aínda non hai nada que ver» é unha resposta correcta do servidor, e</text>
+  <text x="642" y="464" font-size="11.5" fill="#868e96">«non puiden preguntar» é un fallo que se pode reintentar. Só o segundo ofrece «Tentar de novo».</text>
+  <text x="642" y="492" font-size="11.5" fill="#868e96">O selector fai dúas lecturas — o catálogo estreitado e a taxonomía — e o mesmo criterio vale para as dúas.</text>
+  <text x="642" y="509" font-size="11.5" fill="#868e96">Se a taxonomía non resolve un termo, o órgano renderízase como sen clasificar, nunca se descarta: a lectura</text>
+  <text x="642" y="526" font-size="11.5" fill="#868e96">do catálogo é a que enumera os órganos, así que ningún desaparece por unha discrepancia entre as dúas.</text>
+</svg>
