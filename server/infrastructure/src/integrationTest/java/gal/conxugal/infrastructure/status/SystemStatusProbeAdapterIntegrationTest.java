@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import gal.conxugal.domain.status.SystemStatus;
 import gal.conxugal.domain.status.SystemStatusProbe;
+import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -29,23 +30,14 @@ class SystemStatusProbeAdapterIntegrationTest implements TestPropertyProvider {
 
   @Container
   static PostgreSQLContainer<?> postgres =
-      new PostgreSQLContainer<>("postgres:18-alpine")
+      PostgresContainer.create()
           .withUsername(USERNAME)
           .withPassword(PASSWORD);
 
   @Override
   public @NonNull Map<String, String> getProperties() {
-    if (!postgres.isRunning()) {
-      postgres.start();
-    }
-    return Map.of(
-        "datasources.default.url", postgres.getJdbcUrl(),
-        "datasources.default.username", postgres.getUsername(),
-        "datasources.default.password", postgres.getPassword(),
-        "datasources.default.driverClassName", postgres.getDriverClassName(),
-        "datasources.default.dialect", "POSTGRES",
-        "flyway.datasources.default.enabled", "false"
-    );
+    return PostgresContainer.datasourceProperties(
+        postgres, Map.of("flyway.datasources.default.enabled", "false"));
   }
 
   @Inject

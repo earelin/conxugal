@@ -12,6 +12,7 @@ import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.OrganoRepository;
 import gal.conxugal.domain.organo.taxonomia.TermoId;
 import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
+import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -45,21 +46,11 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
   private static final Instant COVERED_THROUGH = Instant.parse("2026-08-06T09:00:00Z");
 
   @Container
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18-alpine");
+  static PostgreSQLContainer<?> postgres = PostgresContainer.create();
 
   @Override
   public @NonNull Map<String, String> getProperties() {
-    if (!postgres.isRunning()) {
-      postgres.start();
-    }
-    return Map.of(
-        "datasources.default.url", postgres.getJdbcUrl(),
-        "datasources.default.username", postgres.getUsername(),
-        "datasources.default.password", postgres.getPassword(),
-        "datasources.default.driverClassName", postgres.getDriverClassName(),
-        "datasources.default.dialect", "POSTGRES",
-        "flyway.datasources.default.enabled", "true"
-    );
+    return PostgresContainer.datasourceProperties(postgres);
   }
 
   @Inject

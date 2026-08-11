@@ -6,6 +6,7 @@ import static org.assertj.db.api.Assertions.assertThat;
 import gal.conxugal.domain.organo.taxonomia.DeleteTermo;
 import gal.conxugal.domain.organo.taxonomia.TermoId;
 import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
+import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -48,21 +49,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class DeleteTermoIntegrationTest implements TestPropertyProvider {
 
   @Container
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18-alpine");
+  static PostgreSQLContainer<?> postgres = PostgresContainer.create();
 
   @Override
   public @NonNull Map<String, String> getProperties() {
-    if (!postgres.isRunning()) {
-      postgres.start();
-    }
-    return Map.of(
-        "datasources.default.url", postgres.getJdbcUrl(),
-        "datasources.default.username", postgres.getUsername(),
-        "datasources.default.password", postgres.getPassword(),
-        "datasources.default.driverClassName", postgres.getDriverClassName(),
-        "datasources.default.dialect", "POSTGRES",
-        "flyway.datasources.default.enabled", "true"
-    );
+    return PostgresContainer.datasourceProperties(postgres);
   }
 
   @Inject
