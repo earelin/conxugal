@@ -11,6 +11,7 @@ import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.OperadorId;
 import gal.conxugal.domain.operador.OperadorRepository;
 import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
+import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -52,21 +53,11 @@ class JdbcOperadorRepositoryIntegrationTest implements TestPropertyProvider {
   private static final LocalDate PUBLISHED_LATER = LocalDate.of(2026, 6, 1);
 
   @Container
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18-alpine");
+  static PostgreSQLContainer<?> postgres = PostgresContainer.create();
 
   @Override
   public @NonNull Map<String, String> getProperties() {
-    if (!postgres.isRunning()) {
-      postgres.start();
-    }
-    return Map.of(
-        "datasources.default.url", postgres.getJdbcUrl(),
-        "datasources.default.username", postgres.getUsername(),
-        "datasources.default.password", postgres.getPassword(),
-        "datasources.default.driverClassName", postgres.getDriverClassName(),
-        "datasources.default.dialect", "POSTGRES",
-        "flyway.datasources.default.enabled", "true"
-    );
+    return PostgresContainer.datasourceProperties(postgres);
   }
 
   @Inject

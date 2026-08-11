@@ -2,7 +2,7 @@
 feat: FEAT-0010
 domain: backend
 adrs: [0002, 0018]
-status: todo
+status: done
 depends_on: [TASK-0001, TASK-0003]
 ---
 
@@ -20,6 +20,27 @@ awardee knowable at all.
 builds the walk and the batch this hangs inside. Unlike this feature's first three tasks, which
 land **before** the contratos menores store so the foreign key is created rather than added, this
 one lands **after** there is an import to derive from.
+
+> **Three notes from the implementation.**
+>
+> - **The batch is its own use case.** `ImportOrganoContratosMenores` was not made transactional:
+>   its walk runs for days, and one transaction around it would hold a multi-day write open. The
+>   derivation and the contract upsert live together in a new `StoreContratosMenoresBatch`, which
+>   the walk calls once per page and which carries the `@Transactional` that makes contract and
+>   link commit together. The walk keeps its own repository injection for `countByOrganoId`, and
+>   nothing about its cursor and progress writes changed — they still commit after the batch, in
+>   transactions of their own.
+> - **An operador is looked up per contract rather than cached for the batch.** Every write is
+>   inside the batch's transaction, so the second contract naming a new operador reads what the
+>   first wrote. That is also what keeps the retained names out of memory, which is the trap the
+>   Scope below spells out.
+> - **An award publishing a usable identifier but no name is still catalogued, and supplies no
+>   name.** Identity is the identifier alone, so refusing the award would record it under nobody,
+>   and giving it a name of our own is what R13 forbids — it is therefore catalogued under the empty
+>   name when nothing named its identifier before. But the empty name is only what an operador
+>   nothing has named is displayed as: such an award never displaces a name a contract really
+>   published, however high its rank, and never enters the retained set, an absent name not being
+>   one the operador has borne. Neither that branch nor R5's is one the source is expected to take.
 
 ## Scope
 - Inside the batch's transaction, for each contract being upserted: canonicalise **the fiscal

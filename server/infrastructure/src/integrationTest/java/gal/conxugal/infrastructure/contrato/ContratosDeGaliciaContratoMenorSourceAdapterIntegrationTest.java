@@ -244,10 +244,9 @@ class ContratosDeGaliciaContratoMenorSourceAdapterIntegrationTest implements Tes
   }
 
   private static String table(long recordsTotal, String... rows) {
-    String json =
+    return
         """
         {"draw":1,"recordsTotal":%d,"recordsFiltered":%d,"data":[%s]}\
-        """;
-    return json.formatted(recordsTotal, rows.length, String.join(",", rows));
+        """.formatted(recordsTotal, rows.length, String.join(",", rows));
   }
 }

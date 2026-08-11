@@ -15,6 +15,7 @@ import gal.conxugal.domain.importrun.Importer;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.time.Clock;
 import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
+import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -70,23 +71,13 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   private static final Duration BOUND = Duration.ofMinutes(15);
 
   @Container
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18-alpine");
+  static PostgreSQLContainer<?> postgres = PostgresContainer.create();
 
   private final AtomicReference<Instant> now = new AtomicReference<>(CLAIMED_AT);
 
   @Override
   public @NonNull Map<String, String> getProperties() {
-    if (!postgres.isRunning()) {
-      postgres.start();
-    }
-    return Map.of(
-        "datasources.default.url", postgres.getJdbcUrl(),
-        "datasources.default.username", postgres.getUsername(),
-        "datasources.default.password", postgres.getPassword(),
-        "datasources.default.driverClassName", postgres.getDriverClassName(),
-        "datasources.default.dialect", "POSTGRES",
-        "flyway.datasources.default.enabled", "true"
-    );
+    return PostgresContainer.datasourceProperties(postgres);
   }
 
   @MockBean(Clock.class)
