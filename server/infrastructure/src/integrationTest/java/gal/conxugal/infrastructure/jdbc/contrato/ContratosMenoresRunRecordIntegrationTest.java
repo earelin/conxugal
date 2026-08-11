@@ -177,6 +177,14 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
     assertThat(reasonFor(failing)).isNotNull();
     // The Órgano before the failure keeps what it stored, and the one after it is still imported.
     assertThat(contratoTable()).hasNumberOfRows(2);
+    // Counted once, per Órgano as its batch committed, and totalled on the run. Settling with the
+    // walk's own totals instead would add every contract a second time.
+    assertThat(addedFor(first)).isOne();
+    assertThat(addedFor(failing)).isZero();
+    assertThat(addedFor(last)).isOne();
+    Table runs = runTable();
+    assertThat(runs).row(0).value("added").isEqualTo(2);
+    assertThat(runs).row(0).value("refreshed").isEqualTo(0);
   }
 
   @Test
@@ -361,8 +369,8 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
     assertThat(runs).row(0).value("finished_at").isNotNull();
   }
 
-  /** How one covered Órgano was settled: the state, and the reason recorded beside it. */
-  private record Coverage(String state, String reason) {}
+  /** How one covered Órgano was settled: the state, the reason beside it, and what it counted. */
+  private record Coverage(String state, String reason, int added) {}
 
   /** Pinned to the Órgano's own row rather than to a position, so the order cannot mislead. */
   private static void assertCoverage(OrganoId organoId, String state) throws SQLException {
@@ -375,8 +383,12 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
     return coverageOf(organoId).reason();
   }
 
+  private static int addedFor(OrganoId organoId) throws SQLException {
+    return coverageOf(organoId).added();
+  }
+
   private static Coverage coverageOf(OrganoId organoId) throws SQLException {
-    String sql = "SELECT state, failure_reason FROM import_run_organo WHERE organo_id = ?";
+    String sql = "SELECT state, failure_reason, added FROM import_run_organo WHERE organo_id = ?";
     try (Connection connection = rawConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setObject(1, organoId.value());
@@ -384,7 +396,10 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
         if (!resultSet.next()) {
           throw new IllegalStateException("No coverage row for Órgano %s".formatted(organoId));
         }
-        return new Coverage(resultSet.getString("state"), resultSet.getString("failure_reason"));
+        return new Coverage(
+            resultSet.getString("state"),
+            resultSet.getString("failure_reason"),
+            resultSet.getInt("added"));
       }
     }
   }

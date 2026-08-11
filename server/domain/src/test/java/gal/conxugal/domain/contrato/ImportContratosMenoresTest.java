@@ -6,11 +6,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import gal.conxugal.domain.contrato.ContratosMenoresImportSummary.StopReason;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
@@ -206,20 +209,47 @@ class ImportContratosMenoresTest {
 
     importContratosMenores().execute(RUN_ID);
 
-    verify(importRuns).finishOrgano(RUN_ID, FIRST, ImportRunOrganoState.STOPPED, null);
+    verify(importRuns)
+        .finishOrgano(
+            eq(RUN_ID),
+            eq(FIRST),
+            eq(ImportRunOrganoState.STOPPED),
+            argThat(Objects::nonNull));
     verifyNoInteractions(walk);
   }
 
   @Test
-  void settles_the_organo_the_walk_was_told_to_stop_as_stopped() {
+  void settles_the_organo_unmarked_mid_walk_as_stopped_naming_what_stopped_it() {
     runCovers(FIRST);
     organoIsMarked(FIRST);
     when(walk.run(eq(RUN_ID), any(), any()))
-        .thenReturn(ContratosMenoresImportSummary.stoppedShort(100, 0));
+        .thenReturn(ContratosMenoresImportSummary.stopped(100, 0, StopReason.UNMARKED));
 
     importContratosMenores().execute(RUN_ID);
 
-    verify(importRuns).finishOrgano(RUN_ID, FIRST, ImportRunOrganoState.STOPPED, null);
+    verify(importRuns)
+        .finishOrgano(
+            eq(RUN_ID),
+            eq(FIRST),
+            eq(ImportRunOrganoState.STOPPED),
+            argThat(Objects::nonNull));
+  }
+
+  // The two stops read alike on the row without this: one is an administrator's decision about one
+  // Órgano, the other is this run having been replaced, and only the reason tells them apart.
+  @Test
+  void distinguishes_the_organo_unmarked_before_its_turn_from_one_unmarked_mid_walk() {
+    runCovers(FIRST, SECOND);
+    when(organos.findById(FIRST)).thenReturn(Optional.of(marked(FIRST)));
+    when(organos.findById(SECOND)).thenReturn(Optional.of(organo(SECOND, true, false)));
+    when(walk.run(eq(RUN_ID), any(), any()))
+        .thenReturn(ContratosMenoresImportSummary.stopped(100, 0, StopReason.UNMARKED));
+    List<String> reasons = new ArrayList<>();
+    recordStopReasonsInto(reasons);
+
+    importContratosMenores().execute(RUN_ID);
+
+    assertThat(reasons).hasSize(2).doesNotHaveDuplicates();
   }
 
   @Test
@@ -416,12 +446,47 @@ class ImportContratosMenoresTest {
     verifyNoInteractions(organos, walk);
   }
 
+  // ------------------------------------------------------------ the guard going
+
+  // The run has been claimed by whoever triggered after this one went quiet. Its record is theirs
+  // now, and this process settling it would report the work the live run is still doing as done.
+  @Test
+  void settles_nothing_at_all_when_the_run_stops_holding_the_guard_mid_walk() {
+    runCovers(FIRST, SECOND);
+    organoIsMarked(FIRST);
+    when(walk.run(eq(RUN_ID), any(), any()))
+        .thenAnswer(
+            invocation -> {
+              walked.add(organoIdOf(invocation.getArgument(1)));
+              return ContratosMenoresImportSummary.stopped(100, 0, StopReason.GUARD_LOST);
+            });
+
+    importContratosMenores().execute(RUN_ID);
+
+    assertThat(walked).containsExactly(FIRST);
+    verify(importRuns, never()).finishOrgano(any(), any(), any(), any());
+    verify(importRuns, never()).complete(any(), any(), anyInt(), anyInt());
+  }
+
+  // Asked to execute a run that is already over — a retry, or a redelivered trigger. Without this
+  // it would walk the coverage again and overwrite the verdict and the Órganos it named as failed.
+  @Test
+  void reads_no_organo_when_the_run_it_was_handed_is_no_longer_the_live_one() {
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(false);
+
+    importContratosMenores().execute(RUN_ID);
+
+    verifyNoInteractions(organos, walk);
+    verify(importRuns, never()).complete(any(), any(), anyInt(), anyInt());
+  }
+
   // ---------------------------------------------------------------- settling
 
   // Settled from a finally: a run left in progress by a process that has given up on it refuses
   // every import in the system until the abandonment bound passes.
   @Test
   void settles_the_run_as_failed_when_the_orchestration_itself_throws() {
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
     when(importRuns.findRun(RUN_ID)).thenThrow(new IllegalStateException("the record is gone"));
     ImportContratosMenores importContratosMenores = importContratosMenores();
 
@@ -444,8 +509,11 @@ class ImportContratosMenoresTest {
     verify(importRuns).complete(RUN_ID, ImportRunState.SUCCEEDED, 0, 0);
   }
 
+  // Defence rather than a reachable state — the guard and the coverage are read off the same row —
+  // but a run that answers no coverage must walk nothing rather than fall through to the catalogue.
   @Test
   void reads_no_organo_when_the_run_it_was_handed_is_not_recorded() {
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
     when(importRuns.findRun(RUN_ID)).thenReturn(Optional.empty());
 
     importContratosMenores().execute(RUN_ID);
@@ -460,6 +528,7 @@ class ImportContratosMenoresTest {
   }
 
   private void runCovers(OrganoId... organoIds) {
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
     List<ImportRunOrganoCoverage> coverage =
         Arrays.stream(organoIds)
             .map(
@@ -510,6 +579,17 @@ class ImportContratosMenoresTest {
               }
               return ContratosMenoresImportSummary.complete(1, 0);
             });
+  }
+
+  /** Collects the reason recorded on every Órgano settled as stopped. */
+  private void recordStopReasonsInto(List<String> reasons) {
+    doAnswer(
+            invocation -> {
+              reasons.add(invocation.getArgument(3));
+              return null;
+            })
+        .when(importRuns)
+        .finishOrgano(eq(RUN_ID), any(), eq(ImportRunOrganoState.STOPPED), any());
   }
 
   /** Hands back the check the walk was given, so the test can ask it what the walk would ask. */

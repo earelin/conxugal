@@ -1,6 +1,7 @@
 package gal.conxugal.domain.contrato;
 
 import gal.conxugal.commons.time.Dates;
+import gal.conxugal.domain.contrato.ContratosMenoresImportSummary.StopReason;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportState;
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -171,12 +173,13 @@ public class ImportOrganoContratosMenores {
   /**
    * How one window ended: what it stored, and the count the source reported as it was read.
    *
-   * <p>{@code mayContinue} is false when the window was cut off part-way — the run stopped holding
-   * the guard, or the Órgano stopped being eligible. The pages already stored stand and are counted
-   * here, but nothing beyond that window is this walk's to read — and {@code recordsTotal} then
-   * says nothing, because the window it would have been judged against was never read out.
+   * <p>{@code stoppedBy} is present when the window was cut off part-way. The pages already stored
+   * stand and are counted here, but nothing beyond that window is this walk's to read — and {@code
+   * recordsTotal} then says nothing, because the window it would have been judged against was never
+   * read out.
    */
-  private record WindowRead(int added, int refreshed, long recordsTotal, boolean mayContinue) {}
+  private record WindowRead(
+      int added, int refreshed, long recordsTotal, @Nullable StopReason stoppedBy) {}
 
   /** Window by window, newest first, until one of the three endings arrives. */
   private ContratosMenoresImportSummary walk(
@@ -194,8 +197,9 @@ public class ImportOrganoContratosMenores {
       WindowRead read = readWindow(target, windowStart, windowEnd, stillEligible);
       added += read.added();
       refreshed += read.refreshed();
-      if (!read.mayContinue()) {
-        return ContratosMenoresImportSummary.stoppedShort(added, refreshed);
+      StopReason stoppedBy = read.stoppedBy();
+      if (stoppedBy != null) {
+        return ContratosMenoresImportSummary.stopped(added, refreshed, stoppedBy);
       }
       if (contratos.countByOrganoId(target.organoId()) >= read.recordsTotal()) {
         // Not best-effort, unlike the progress writes: a completion mark that failed silently
@@ -267,7 +271,7 @@ public class ImportOrganoContratosMenores {
         return noLongerEligible(target, added, refreshed);
       }
     }
-    return new WindowRead(added, refreshed, recordsTotal, true);
+    return new WindowRead(added, refreshed, recordsTotal, null);
   }
 
   /**
@@ -280,7 +284,8 @@ public class ImportOrganoContratosMenores {
         "Contratos menores walk of Órgano {} stopped: its run {} no longer holds the import guard,"
             + " so another import may already have claimed it",
         target.organoId(), target.runId());
-    return new WindowRead(added, refreshed, 0, false);
+    return new WindowRead(
+        added, refreshed, 0, StopReason.GUARD_LOST);
   }
 
   /**
@@ -293,7 +298,7 @@ public class ImportOrganoContratosMenores {
         "Contratos menores walk of Órgano {} stopped at a batch boundary: it is no longer active"
             + " and marked for import, and run {} leaves it where it reached",
         target.organoId(), target.runId());
-    return new WindowRead(added, refreshed, 0, false);
+    return new WindowRead(added, refreshed, 0, StopReason.UNMARKED);
   }
 
   /**

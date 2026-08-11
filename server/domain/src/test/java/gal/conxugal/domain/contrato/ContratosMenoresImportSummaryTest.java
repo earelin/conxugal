@@ -12,8 +12,18 @@ class ContratosMenoresImportSummaryTest {
   @Test
   void rejects_null_status() {
     assertThatNullPointerException()
-        .isThrownBy(() -> new ContratosMenoresImportSummary(0, 0, null, false))
+        .isThrownBy(() -> new ContratosMenoresImportSummary(0, 0, null, null))
         .withMessageContaining("status");
+  }
+
+  /** The javadoc's claim, made executable: a walk that ran has started by definition. */
+  @Test
+  void rejects_the_walk_that_reads_as_never_started() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(
+            () ->
+                new ContratosMenoresImportSummary(
+                    0, 0, ContratosMenoresImportStatus.NEVER_STARTED, null));
   }
 
   /**
@@ -26,25 +36,31 @@ class ContratosMenoresImportSummaryTest {
         .isThrownBy(
             () ->
                 new ContratosMenoresImportSummary(
-                    0, 0, ContratosMenoresImportStatus.COMPLETE, true));
+                    0,
+                    0,
+                    ContratosMenoresImportStatus.COMPLETE,
+                    ContratosMenoresImportSummary.StopReason.UNMARKED));
   }
 
   @Test
   void leaves_the_stopped_walk_incomplete() {
-    ContratosMenoresImportSummary summary = ContratosMenoresImportSummary.stoppedShort(100, 3);
+    ContratosMenoresImportSummary summary =
+        ContratosMenoresImportSummary.stopped(
+            100, 3, ContratosMenoresImportSummary.StopReason.GUARD_LOST);
 
     assertThat(summary.status()).isEqualTo(ContratosMenoresImportStatus.INCOMPLETE);
-    assertThat(summary.stopped()).isTrue();
+    assertThat(summary.stoppedBy())
+        .isEqualTo(ContratosMenoresImportSummary.StopReason.GUARD_LOST);
   }
 
   /** Incomplete is not stopped: a walk that reached the history floor ended on its own terms. */
   @Test
   void does_not_report_the_incomplete_walk_as_stopped() {
-    assertThat(ContratosMenoresImportSummary.incomplete(100, 3).stopped()).isFalse();
+    assertThat(ContratosMenoresImportSummary.incomplete(100, 3).stoppedBy()).isNull();
   }
 
   @Test
   void does_not_report_the_complete_walk_as_stopped() {
-    assertThat(ContratosMenoresImportSummary.complete(100, 3).stopped()).isFalse();
+    assertThat(ContratosMenoresImportSummary.complete(100, 3).stoppedBy()).isNull();
   }
 }

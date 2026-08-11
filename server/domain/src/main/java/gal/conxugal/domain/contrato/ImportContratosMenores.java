@@ -67,6 +67,18 @@ public class ImportContratosMenores {
   private static final String GONE_FROM_THE_CATALOGUE =
       "This Órgano is no longer in the catalogue";
 
+  /**
+   * The two ways a mark can be withdrawn, told apart on the row. Both leave the Órgano exactly as
+   * it stands, but only one of them read anything at all, and an administrator looking at a stopped
+   * Órgano has no other way to know which happened.
+   */
+  private static final String UNMARKED_BEFORE_ITS_TURN =
+      "Nothing was read: this Órgano stopped being active and marked before the run reached it";
+
+  private static final String UNMARKED_MID_WALK =
+      "Stopped at a batch boundary: this Órgano stopped being active and marked while it was"
+          + " being imported";
+
   private static final Logger LOG = LoggerFactory.getLogger(ImportContratosMenores.class);
 
   private final OrganoRepository organos;
@@ -126,21 +138,59 @@ public class ImportContratosMenores {
    * <p>Settled from a finally, so nothing thrown out of the walking — an Error as much as an
    * exception — can leave the guard held by a run this process has already given up on, which would
    * refuse every import in the system until the abandonment bound passed.
+   *
+   * <p><strong>Nothing is written to a run this process does not hold the guard for.</strong> It is
+   * asked once here, before anything is read, and again by every walk before every batch; a run
+   * that has gone quiet past the abandonment bound has already been claimed by whoever triggered
+   * next, and its record is theirs. Writing anyway would settle a run this process abandoned as
+   * though it had finished the work the live run is still doing — and, asked to execute a run that
+   * is already over, would overwrite the verdict and the failed Órganos it named.
    */
   public void execute(ImportRunId runId) {
-    ImportRunState verdict = ImportRunState.FAILED;
-    try {
-      List<OrganoId> covered = coveredOrganosOf(runId);
-      int failed = 0;
-      for (OrganoId organoId : covered) {
-        if (importOne(runId, organoId) == ImportRunOrganoState.FAILED) {
-          failed++;
-        }
-      }
-      verdict = verdictOver(covered.size(), failed);
-    } finally {
-      settle(runId, verdict);
+    if (!importRuns.holdsGuard(runId)) {
+      LOG.warn(
+          "Contratos menores run {} is not the live import; it walks nothing and settles nothing",
+          runId);
+      return;
     }
+    ImportRunState verdict = ImportRunState.FAILED;
+    boolean stillTheLiveRun = true;
+    try {
+      Walked walked = walkCoveredOrganos(runId);
+      stillTheLiveRun = walked.stillTheLiveRun();
+      verdict = verdictOver(walked.covered(), walked.failed());
+    } finally {
+      if (stillTheLiveRun) {
+        settle(runId, verdict);
+      }
+    }
+  }
+
+  /**
+   * What walking a run's coverage came to. {@code stillTheLiveRun} is false when the guard went
+   * part-way: the walking stops there and the run's record is left exactly as this process found
+   * it, which is what an abandoned run is supposed to look like.
+   */
+  private record Walked(int covered, int failed, boolean stillTheLiveRun) {}
+
+  private Walked walkCoveredOrganos(ImportRunId runId) {
+    List<OrganoId> covered = coveredOrganosOf(runId);
+    int failed = 0;
+    for (OrganoId organoId : covered) {
+      Optional<Settlement> settlement = settlementFor(runId, organoId);
+      if (settlement.isEmpty()) {
+        LOG.warn(
+            "Contratos menores run {} stopped holding the import guard while walking Órgano {};"
+                + " what it covered is another import's now, and it settles nothing",
+            runId, organoId);
+        return new Walked(covered.size(), failed, false);
+      }
+      settleOrgano(runId, organoId, settlement.get());
+      if (settlement.get().state() == ImportRunOrganoState.FAILED) {
+        failed++;
+      }
+    }
+    return new Walked(covered.size(), failed, true);
   }
 
   /**
@@ -164,15 +214,8 @@ public class ImportContratosMenores {
             });
   }
 
-  /** One Órgano, from the mode rule through to its settled row. Answers the state it settled at. */
-  private ImportRunOrganoState importOne(ImportRunId runId, OrganoId organoId) {
-    Settlement settlement = outcomeFor(runId, organoId);
-    settleOrgano(runId, organoId, settlement);
-    return settlement.state();
-  }
-
   /**
-   * How one Órgano ended, and why if the reason is not the state itself. It exists so the walking
+   * How one Órgano ended, and why if the state does not say it on its own. It exists so the walking
    * and the recording of it stay separate acts — the record is evidence about an import, never a
    * participant in it.
    */
@@ -182,8 +225,8 @@ public class ImportContratosMenores {
       return new Settlement(ImportRunOrganoState.SUCCEEDED, null);
     }
 
-    static Settlement stopped() {
-      return new Settlement(ImportRunOrganoState.STOPPED, null);
+    static Settlement stopped(String reason) {
+      return new Settlement(ImportRunOrganoState.STOPPED, reason);
     }
 
     static Settlement skipped(String reason) {
@@ -196,6 +239,28 @@ public class ImportContratosMenores {
   }
 
   /**
+   * How one Órgano ended, or nothing at all when the run stopped being the live one while it was
+   * being walked — which is not an ending this Órgano had, and not one to write down.
+   *
+   * <p>Everything the step can throw is caught, not only the source being unavailable, and the
+   * catch covers reading the catalogue as much as walking it. The rule the run owes the rest of its
+   * Órganos is that one of them failing costs only that one, and a momentary failure to read one
+   * row must not abandon the Órganos after it. An Error is deliberately not caught: it says this
+   * process is no longer to be trusted with them either.
+   */
+  private Optional<Settlement> settlementFor(ImportRunId runId, OrganoId organoId) {
+    try {
+      return outcomeFor(runId, organoId);
+    } catch (RuntimeException e) {
+      LOG.warn(
+          "Contratos menores import of Órgano {} failed within run {}; what it stored stands and"
+              + " the run carries on to the Órganos after it",
+          organoId, runId, e);
+      return Optional.of(Settlement.failed(reasonOf(e)));
+    }
+  }
+
+  /**
    * The mode rule decides what happens to an Órgano, not the trigger that arrived — so a mark, a
    * manual sweep and a future scheduler all resume a half-loaded Órgano and all leave a loaded one
    * alone.
@@ -203,39 +268,34 @@ public class ImportContratosMenores {
    * <p>Eligibility is asked again first, because a sweep reaches its four-hundredth Órgano days
    * after the run enumerated it, and one unmarked in between must have nothing read for it at all.
    */
-  private Settlement outcomeFor(ImportRunId runId, OrganoId organoId) {
+  private Optional<Settlement> outcomeFor(ImportRunId runId, OrganoId organoId) {
     Optional<OrganoDeContratacion> found = organos.findById(organoId);
     if (found.isEmpty()) {
-      return Settlement.failed(GONE_FROM_THE_CATALOGUE);
+      return Optional.of(Settlement.failed(GONE_FROM_THE_CATALOGUE));
     }
     OrganoDeContratacion organo = found.get();
     if (!organo.eligibleForImport()) {
-      return Settlement.stopped();
+      return Optional.of(Settlement.stopped(UNMARKED_BEFORE_ITS_TURN));
     }
     return switch (ContratosMenoresImportMode.of(organo.importStatus())) {
       case INITIAL, RESUMED -> walked(runId, organo, organoId);
-      case INCREMENTAL -> Settlement.skipped(ALREADY_LOADED);
+      case INCREMENTAL -> Optional.of(Settlement.skipped(ALREADY_LOADED));
     };
   }
 
   /**
-   * Everything the walk can throw is caught, not only the source being unavailable. The rule the
-   * run owes the rest of its Órganos is that one of them failing costs only that one, and a walk
-   * has more than its source to fail on. An Error is deliberately not caught: it says this process
-   * is no longer to be trusted with the other Órganos either.
+   * The walk, and what its ending means to the run. A walk stopped because the Órgano was unmarked
+   * is an ordinary ending and the run carries on; one stopped because the guard went is the run
+   * being over, and nothing further is written to it.
    */
-  private Settlement walked(ImportRunId runId, OrganoDeContratacion organo, OrganoId organoId) {
-    try {
-      ContratosMenoresImportSummary summary =
-          walk.run(runId, organo, () -> stillEligible(organoId));
-      return summary.stopped() ? Settlement.stopped() : Settlement.succeeded();
-    } catch (RuntimeException e) {
-      LOG.warn(
-          "Contratos menores import of Órgano {} failed within run {}; what it stored stands and"
-              + " the run carries on to the Órganos after it",
-          organoId, runId, e);
-      return Settlement.failed(reasonOf(e));
-    }
+  private Optional<Settlement> walked(
+      ImportRunId runId, OrganoDeContratacion organo, OrganoId organoId) {
+    ContratosMenoresImportSummary summary = walk.run(runId, organo, () -> stillEligible(organoId));
+    return switch (summary.stoppedBy()) {
+      case null -> Optional.of(Settlement.succeeded());
+      case UNMARKED -> Optional.of(Settlement.stopped(UNMARKED_MID_WALK));
+      case GUARD_LOST -> Optional.empty();
+    };
   }
 
   /** Asked at every batch boundary of the walk, which is what makes an unmark stop it. */
