@@ -750,7 +750,7 @@ accepted — so the whole feature is ready to be cut into task files.
    representable absence and no second case), `SortKey` and `Direction` parsed from plain strings, and the
    `ContratoMenorRepository` port methods for the four orderings, taking a `Pageable` and returning
    a `Page`. Pure domain — **the bound `Sort` is not seen here**, since it is an HTTP-bound type and
-   its refusal is a 400; task 6 owns that mapping and calls in with these types. Unit-tested,
+   its refusal is a 400; task 7 owns that mapping and calls in with these types. Unit-tested,
    including that a selection cannot be built without a year. *(SPEC-0005 #27 no-all-years half)*
 2. **The schema the reads need** *(backend, migration)*: `V16` adding `publication_year` as a
    **stored generated column** over `publication_date`, creating the two composite indexes of the
@@ -820,9 +820,10 @@ accepted — so the whole feature is ready to be cut into task files.
     longer being updated, which FEAT-0009 claims only the first two clauses of)*
 10. **The contract row** *(frontend)*: every attribute the system holds, the link to the publication
     at the source, the awardee as text under the operador's R4-selected name and canonical
-    identifier, the VAT label, the duration's unreliability marker, and absent values shown as
-    absent. States **no awarding Órgano**, every row belonging to the Órgano open. *Depends on
-    tasks 7 and 9.* *(SPEC-0005 #9 display half, #10, #11 display half, #16 display half, #21
+    identifier, the VAT label, the duration's unreliability marker, and an absent `obxecto` or
+    `duration` — the only two values that can be absent once R28 withholds the rest — shown as
+    absent rather than invented. States **no awarding Órgano**, every row belonging to the Órgano
+    open. *Depends on tasks 7 and 9.* *(SPEC-0005 #9 display half, #10, #11 display half, #16 display half, #21
     awardee-and-no-Órgano half, #25 source half, #27, #39 awardee-name half, #40, #41, #42 display
     half)*
 11. **Sorting and paging over the selection** *(frontend)*: the two sorts in both directions, the
