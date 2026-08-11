@@ -370,7 +370,7 @@ class ContratosMenoresDerivationIntegrationTest implements TestPropertyProvider 
         importRuns
             .claim(Importer.CONTRATOS_MENORES, List.of(organoId))
             .orElseThrow(() -> new IllegalStateException("the import guard was already held"));
-    importContratosMenores.run(runId, organo(organoId));
+    importContratosMenores.run(runId, organo(organoId), () -> true);
     importRuns.complete(runId, ImportRunState.SUCCEEDED, 0, 0);
   }
 

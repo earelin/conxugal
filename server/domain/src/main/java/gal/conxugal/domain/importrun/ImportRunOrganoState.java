@@ -8,9 +8,10 @@ package gal.conxugal.domain.importrun;
  * four hundred can still name what it was going to cover.
  *
  * <p>{@link #STOPPED} and {@link #SKIPPED} exist so the normal case is not reported as a failure.
- * An Órgano unmarked mid-run is stopped deliberately, keeping everything already stored; an
- * Órgano already complete is skipped because there is no incremental mode to run for it yet.
- * Neither is a fault of the run.
+ * An Órgano is stopped when its walk was cut off rather than ending on its own terms — unmarked
+ * mid-run, or its run no longer holding the guard — keeping everything already stored; an Órgano
+ * already complete is skipped because there is no incremental mode to run for it yet. Neither is a
+ * fault of the run.
  */
 public enum ImportRunOrganoState {
   PENDING,

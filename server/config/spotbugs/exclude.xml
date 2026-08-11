@@ -38,6 +38,12 @@
     <Field name="importStates"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
+  <!-- And for the orchestrator above that walk: OrganoRepository declares insert, same as above. -->
+  <Match>
+    <Class name="gal.conxugal.domain.contrato.ImportContratosMenores"/>
+    <Field name="organos"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
   <!-- And for the batch the walk stores through: OperadorRepository declares insert, same as
        above. -->
   <Match>
