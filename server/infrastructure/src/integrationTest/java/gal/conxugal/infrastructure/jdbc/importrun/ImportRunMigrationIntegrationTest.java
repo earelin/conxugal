@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
+import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
@@ -42,21 +43,11 @@ class ImportRunMigrationIntegrationTest implements TestPropertyProvider {
   private static final Instant STARTED_AT = Instant.parse("2026-08-07T09:00:00Z");
 
   @Container
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18-alpine");
+  static PostgreSQLContainer<?> postgres = PostgresContainer.create();
 
   @Override
   public @NonNull Map<String, String> getProperties() {
-    if (!postgres.isRunning()) {
-      postgres.start();
-    }
-    return Map.of(
-        "datasources.default.url", postgres.getJdbcUrl(),
-        "datasources.default.username", postgres.getUsername(),
-        "datasources.default.password", postgres.getPassword(),
-        "datasources.default.driverClassName", postgres.getDriverClassName(),
-        "datasources.default.dialect", "POSTGRES",
-        "flyway.datasources.default.enabled", "true"
-    );
+    return PostgresContainer.datasourceProperties(postgres);
   }
 
   @Inject
