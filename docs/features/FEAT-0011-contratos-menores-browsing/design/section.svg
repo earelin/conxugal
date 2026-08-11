@@ -1,0 +1,222 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1040" viewBox="0 0 1280 1040" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <!-- ===== app background & AppShell frame ===== -->
+  <rect width="1280" height="1040" fill="#f8f9fa"/>
+  <rect x="0" y="0" width="1280" height="60" fill="#ffffff"/>
+  <rect x="0" y="60" width="260" height="980" fill="#ffffff"/>
+  <line x1="0" y1="60" x2="1280" y2="60" stroke="#dee2e6" stroke-width="1"/>
+  <line x1="260" y1="60" x2="260" y2="1040" stroke="#dee2e6" stroke-width="1"/>
+
+  <!-- ===== header ===== -->
+  <g transform="translate(24,12) scale(0.18)">
+    <rect x="0" y="0" width="200" height="200" rx="46" fill="#4c6ef5"/>
+    <path d="M 132 55 A 56 56 0 1 0 132 145" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+    <path d="M 112 100 L 176 100" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round"/>
+    <path d="M 156 80 L 178 100 L 156 120" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="72" y="31" font-size="20" font-weight="700" fill="#212529">conxugal</text>
+  <text x="72" y="47" font-size="11" fill="#868e96">Contratos públicos da Xunta de Galicia</text>
+  <line x1="1148" y1="16" x2="1148" y2="44" stroke="#e9ecef" stroke-width="1"/>
+  <text x="1210" y="26" text-anchor="end" font-size="13" font-weight="500" fill="#495057">xoan.rivas@conxugal.gal</text>
+  <text x="1210" y="42" text-anchor="end" font-size="11" fill="#868e96">Usuario</text>
+  <circle cx="1236" cy="30" r="18" fill="#4c6ef5"/>
+  <text x="1236" y="30" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">XR</text>
+
+  <!-- ===== navbar: FEAT-0012's picker ===== -->
+  <text x="24" y="92" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ÓRGANO</text>
+  <rect x="12" y="104" width="236" height="44" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="28" y="131" font-size="13" font-weight="600" fill="#212529">Servizo Galego de Saúde</text>
+  <path d="M222 123 l6 6 l6 -6" stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="12" y1="166" x2="248" y2="166" stroke="#f1f3f5"/>
+  <g transform="translate(0,84)">
+    <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M27 111 L37 102 L47 111 M29.5 108.5 V119 H44.5 V108.5" transform="translate(-3,-1)"/>
+    </g>
+    <text x="52" y="106" font-size="14" fill="#495057">Inicio</text>
+    <g stroke="#868e96" stroke-width="1.6" fill="none">
+      <circle cx="34" cy="149" r="8"/>
+      <line x1="34" y1="147" x2="34" y2="153" stroke-linecap="round"/>
+      <circle cx="34" cy="143.5" r="0.6" fill="#868e96" stroke="none"/>
+    </g>
+    <text x="52" y="154" font-size="14" fill="#495057">Acerca de</text>
+  </g>
+
+  <!-- ===== FEAT-0013's page: the name and the tab bar ===== -->
+  <text x="284" y="118" font-size="26" font-weight="700" fill="#212529">Servizo Galego de Saúde</text>
+  <line x1="284" y1="190" x2="1256" y2="190" stroke="#dee2e6"/>
+  <text x="368" y="176" text-anchor="middle" font-size="14" font-weight="600" fill="#3b5bdb">Contratos menores</text>
+  <rect x="284" y="188" width="168" height="3" fill="#4c6ef5"/>
+  <circle cx="480" cy="169" r="10" fill="#4c6ef5"/>
+  <text x="480" y="169" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#ffffff">1</text>
+
+  <!-- ===== the section ===== -->
+  <rect x="284" y="216" width="972" height="640" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="284" y="214" width="972" height="640" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+
+  <!-- toolbar: the year and the ordering -->
+  <text x="308" y="248" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ANO</text>
+  <rect x="308" y="256" width="120" height="36" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="324" y="279" font-size="14" font-weight="500" fill="#212529">2025</text>
+  <path d="M400 271 l6 6 l6 -6" stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <text x="444" y="248" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ORDENAR POR</text>
+  <rect x="444" y="256" width="320" height="36" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="460" y="279" font-size="13" font-weight="500" fill="#212529">Data de publicación (máis recente primeiro)</text>
+  <path d="M736 271 l6 6 l6 -6" stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="790" cy="274" r="10" fill="#4c6ef5"/>
+  <text x="790" y="274" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#ffffff">2</text>
+
+  <!-- table header -->
+  <rect x="284" y="308" width="972" height="52" fill="#f8f9fa"/>
+  <line x1="284" y1="308" x2="1256" y2="308" stroke="#e9ecef"/>
+  <line x1="284" y1="360" x2="1256" y2="360" stroke="#e9ecef"/>
+  <text x="308" y="339" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">DATA</text>
+  <text x="418" y="339" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">OBXECTO</text>
+  <text x="738" y="339" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ADXUDICATARIO</text>
+  <text x="1088" y="331" text-anchor="end" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">IMPORTE</text>
+  <text x="1088" y="347" text-anchor="end" font-size="10" font-weight="600" letter-spacing="0.4" fill="#adb5bd">IVE INCLUÍDO</text>
+  <text x="1108" y="339" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">DURACIÓN</text>
+  <g stroke="#adb5bd" stroke-width="1.3" fill="none">
+    <circle cx="1172" cy="335" r="6"/>
+    <line x1="1172" y1="332" x2="1172" y2="338" stroke-linecap="round"/>
+    <circle cx="1172" cy="329.5" r="0.6" fill="#adb5bd" stroke="none"/>
+  </g>
+  <text x="1232" y="339" text-anchor="end" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">FONTE</text>
+
+  <!-- row 1 -->
+  <text x="308" y="388" font-size="13" font-weight="500" fill="#212529">12 mar 2025</text>
+  <text x="308" y="406" font-size="11" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#adb5bd">2025/0184621</text>
+  <text x="418" y="388" font-size="13.5" fill="#212529">Subministración de material funxible de</text>
+  <text x="418" y="406" font-size="13.5" fill="#212529">laboratorio para o Hospital de Santiago</text>
+  <text x="738" y="388" font-size="13" fill="#212529">CLINILAB GALICIA, S.L.</text>
+  <text x="738" y="406" font-size="11" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#868e96">ESB15234567</text>
+  <text x="1088" y="392" text-anchor="end" font-size="13.5" font-weight="600" fill="#212529">12.480,00 €</text>
+  <text x="1108" y="392" font-size="13" fill="#495057">12 meses</text>
+  <g stroke="#4c6ef5" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1224 384 h-8 v14 h14 v-8 M1226 382 h6 v6 M1232 382 l-8 8"/>
+  </g>
+  <line x1="308" y1="432" x2="1232" y2="432" stroke="#f1f3f5"/>
+
+  <!-- row 2 -->
+  <text x="308" y="460" font-size="13" font-weight="500" fill="#212529">28 feb 2025</text>
+  <text x="308" y="478" font-size="11" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#adb5bd">2025/0179004</text>
+  <text x="418" y="460" font-size="13.5" fill="#212529">Servizo de mantemento de equipos de</text>
+  <text x="418" y="478" font-size="13.5" fill="#212529">radiodiagnóstico</text>
+  <text x="738" y="460" font-size="13" fill="#212529">TECNOMÉDICA NOROESTE, S.A.</text>
+  <text x="738" y="478" font-size="11" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#868e96">ESA36112233</text>
+  <text x="1088" y="464" text-anchor="end" font-size="13.5" font-weight="600" fill="#212529">8.750,50 €</text>
+  <text x="1108" y="464" font-size="13" fill="#495057">6 meses</text>
+  <g stroke="#4c6ef5" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1224 456 h-8 v14 h14 v-8 M1226 454 h6 v6 M1232 454 l-8 8"/>
+  </g>
+  <line x1="308" y1="504" x2="1232" y2="504" stroke="#f1f3f5"/>
+
+  <!-- row 3 -->
+  <text x="308" y="532" font-size="13" font-weight="500" fill="#212529">14 feb 2025</text>
+  <text x="308" y="550" font-size="11" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#adb5bd">2025/0171338</text>
+  <text x="418" y="532" font-size="13.5" fill="#212529">Adquisición de mobiliario clínico para</text>
+  <text x="418" y="550" font-size="13.5" fill="#212529">consultas externas</text>
+  <text x="738" y="532" font-size="13" fill="#212529">MOBILIARIO SANITARIO DO EIXO, S.L.</text>
+  <text x="738" y="550" font-size="11" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#868e96">ESB27998811</text>
+  <text x="1088" y="536" text-anchor="end" font-size="13.5" font-weight="600" fill="#212529">3.215,00 €</text>
+  <text x="1108" y="536" font-size="13" fill="#495057">1 ano</text>
+  <g stroke="#4c6ef5" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1224 528 h-8 v14 h14 v-8 M1226 526 h6 v6 M1232 526 l-8 8"/>
+  </g>
+  <line x1="308" y1="576" x2="1232" y2="576" stroke="#f1f3f5"/>
+
+  <!-- row 4 -->
+  <text x="308" y="604" font-size="13" font-weight="500" fill="#212529">3 feb 2025</text>
+  <text x="308" y="622" font-size="11" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#adb5bd">2025/0166710</text>
+  <text x="418" y="604" font-size="13.5" fill="#212529">Reparación urxente da instalación de</text>
+  <text x="418" y="622" font-size="13.5" fill="#212529">climatización do bloque cirúrxico</text>
+  <text x="738" y="604" font-size="13" fill="#212529">INSTALACIÓNS TÉRMICAS RÍA, S.L.U.</text>
+  <text x="738" y="622" font-size="11" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#868e96">ESB36447722</text>
+  <text x="1088" y="608" text-anchor="end" font-size="13.5" font-weight="600" fill="#212529">14.900,00 €</text>
+  <text x="1108" y="608" font-size="13" fill="#495057">3 meses</text>
+  <g stroke="#4c6ef5" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1224 600 h-8 v14 h14 v-8 M1226 598 h6 v6 M1232 598 l-8 8"/>
+  </g>
+  <line x1="308" y1="648" x2="1232" y2="648" stroke="#f1f3f5"/>
+
+  <!-- row 5 -->
+  <text x="308" y="676" font-size="13" font-weight="500" fill="#212529">21 xan 2025</text>
+  <text x="308" y="694" font-size="11" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#adb5bd">2025/0160245</text>
+  <text x="418" y="676" font-size="13.5" fill="#212529">Servizo de tradución e interpretación</text>
+  <text x="418" y="694" font-size="13.5" fill="#212529">para pacientes estranxeiros</text>
+  <text x="738" y="676" font-size="13" fill="#212529">LINGUA ATLÁNTICA, S. COOP. GALEGA</text>
+  <text x="738" y="694" font-size="11" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#868e96">ESF15667788</text>
+  <text x="1088" y="680" text-anchor="end" font-size="13.5" font-weight="600" fill="#212529">4.060,00 €</text>
+  <text x="1108" y="680" font-size="13" fill="#495057">12 meses</text>
+  <g stroke="#4c6ef5" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1224 672 h-8 v14 h14 v-8 M1226 670 h6 v6 M1232 670 l-8 8"/>
+  </g>
+  <line x1="308" y1="720" x2="1232" y2="720" stroke="#f1f3f5"/>
+
+  <!-- the duration caveat, on the column rather than on the rows we could detect -->
+  <g stroke="#adb5bd" stroke-width="1.3" fill="none">
+    <circle cx="314" cy="746" r="6.5"/>
+    <line x1="314" y1="743" x2="314" y2="749" stroke-linecap="round"/>
+    <circle cx="314" cy="740" r="0.6" fill="#adb5bd" stroke="none"/>
+  </g>
+  <text x="330" y="750" font-size="12" fill="#868e96">A fonte publica a miúdo unha duración por defecto do órgano no canto da do contrato, así que esta columna non se debe ler como un prazo real.</text>
+
+  <line x1="284" y1="772" x2="1256" y2="772" stroke="#f1f3f5"/>
+
+  <!-- ===== the paging control (shared/ui) ===== -->
+  <text x="308" y="805" font-size="12.5" fill="#868e96">1.832 rexistros</text>
+  <circle cx="420" cy="801" r="10" fill="#4c6ef5"/>
+  <text x="420" y="801" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#ffffff">3</text>
+
+  <rect x="652" y="784" width="96" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <g stroke="#495057" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M672 797 l5 -5 M672 801 l5 5 M672 801 h0 M678 796 l-5 5 l5 5 M668 792 v18"/>
+  </g>
+  <text x="708" y="801" text-anchor="middle" dominant-baseline="central" font-size="12.5" font-weight="500" fill="#495057">Primeira</text>
+
+  <rect x="756" y="784" width="96" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <path d="M776 795 l-5 6 l5 6" stroke="#495057" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="812" y="801" text-anchor="middle" dominant-baseline="central" font-size="12.5" font-weight="500" fill="#495057">Anterior</text>
+
+  <text x="868" y="801" dominant-baseline="central" font-size="12.5" fill="#868e96">Páxina</text>
+  <rect x="916" y="784" width="52" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="942" y="801" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#212529">3</text>
+  <text x="976" y="801" dominant-baseline="central" font-size="12.5" fill="#868e96">de 37</text>
+
+  <rect x="1032" y="784" width="96" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="1074" y="801" text-anchor="middle" dominant-baseline="central" font-size="12.5" font-weight="500" fill="#495057">Seguinte</text>
+  <path d="M1110 795 l5 6 l-5 6" stroke="#495057" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="1136" y="784" width="96" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="1174" y="801" text-anchor="middle" dominant-baseline="central" font-size="12.5" font-weight="500" fill="#495057">Última</text>
+  <g stroke="#495057" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1206 796 l5 5 l-5 5 M1216 792 v18"/>
+  </g>
+
+  <!-- ===== annotations ===== -->
+  <rect x="284" y="880" width="308" height="120" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <circle cx="304" cy="902" r="10" fill="#4c6ef5"/>
+  <text x="304" y="902" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#ffffff">1</text>
+  <text x="322" y="906" font-size="12" font-weight="600" fill="#495057">O nome e a lapela non son desta slice</text>
+  <text x="302" y="930" font-size="11.5" fill="#868e96">Son de FEAT-0013. Esta sección móntase no</text>
+  <text x="302" y="947" font-size="11.5" fill="#868e96">seu outlet e non le o órgano por ningunha</text>
+  <text x="302" y="964" font-size="11.5" fill="#868e96">banda: o resumo — anos, «parcial» e «xa non</text>
+  <text x="302" y="981" font-size="11.5" fill="#868e96">se actualiza» — chégalle como contexto.</text>
+
+  <rect x="616" y="880" width="308" height="120" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <circle cx="636" cy="902" r="10" fill="#4c6ef5"/>
+  <text x="636" y="902" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#ffffff">2</text>
+  <text x="654" y="906" font-size="12" font-weight="600" fill="#495057">Un ano, unha orde de catro posibles</text>
+  <text x="634" y="930" font-size="11.5" fill="#868e96">O selector ofrece só anos nos que hai</text>
+  <text x="634" y="947" font-size="11.5" fill="#868e96">contratos visibles, e non ofrece nada máis:</text>
+  <text x="634" y="964" font-size="11.5" fill="#868e96">non hai lista de todos os anos. A orde é un</text>
+  <text x="634" y="981" font-size="11.5" fill="#868e96">conxunto pechado, dúas claves por dous sentidos.</text>
+
+  <rect x="948" y="880" width="308" height="120" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <circle cx="968" cy="902" r="10" fill="#4c6ef5"/>
+  <text x="968" y="902" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#ffffff">3</text>
+  <text x="986" y="906" font-size="12" font-weight="600" fill="#495057">O control de paxinación é de shared/ui</text>
+  <text x="966" y="930" font-size="11.5" fill="#868e96">Primeira, anterior, seguinte, última e salto a</text>
+  <text x="966" y="947" font-size="11.5" fill="#868e96">páxina, co número de rexistros e o total de</text>
+  <text x="966" y="964" font-size="11.5" fill="#868e96">páxinas ditos. Constrúese aquí unha vez</text>
+  <text x="966" y="981" font-size="11.5" fill="#868e96">porque outras dúas especificacións o toman.</text>
+</svg>

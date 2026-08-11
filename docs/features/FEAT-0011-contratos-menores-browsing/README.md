@@ -689,6 +689,12 @@ wrote it.
 search over contract objects (#27, and SPEC-0005's Scope). Neither is hidden, disabled or coming
 soon; there is simply no control.
 
+**The screens are drawn in [`design/`](design/README.md)** — the section in place, one row
+annotated field by field, the paging control in its four states, and the two statements R18
+obliges the section to make about itself. That README also records the rendering choices the
+mockups take that no criterion fixes, so none of them is built as though a requirement demanded
+it.
+
 **Journeys are proved against a stubbed API**
 ([ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md)), which is
 what makes the hard cases cheap to hold: a year whose count is not a multiple of the page size, an
