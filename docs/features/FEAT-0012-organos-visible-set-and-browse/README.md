@@ -290,6 +290,11 @@ the chrome; on a separate index page the current selection would have nowhere to
 All copy belongs in `ui/src/shared/lib/strings.ts` under its own namespace, which is the pattern
 that module already uses, not in a strings module of its own.
 
+**The screens are drawn in [`design/`](design/README.md)** — the picker's two states, its
+loading/empty/failed states, and the administration area after the read swap. That README also
+records the handful of details the mockups render that no criterion asks for, so nobody builds
+against a picture.
+
 ## Sequencing (tasks, one small change each)
 Each task names what it depends on; nothing depends on a task numbered after it.
 
