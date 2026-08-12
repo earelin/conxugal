@@ -56,29 +56,6 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class ImportContratosMenores {
 
-  /**
-   * Recorded on an Órgano whose history is already loaded. It is neither imported nor failed, and
-   * reporting it as either would be untrue; naming the mode says why nothing was done.
-   */
-  private static final String ALREADY_LOADED =
-      "Nothing to import: this Órgano's history is loaded, and the %s mode does not exist yet"
-          .formatted(ContratosMenoresImportMode.INCREMENTAL);
-
-  private static final String GONE_FROM_THE_CATALOGUE =
-      "This Órgano is no longer in the catalogue";
-
-  /**
-   * The two ways a mark can be withdrawn, told apart on the row. Both leave the Órgano exactly as
-   * it stands, but only one of them read anything at all, and an administrator looking at a stopped
-   * Órgano has no other way to know which happened.
-   */
-  private static final String UNMARKED_BEFORE_ITS_TURN =
-      "Nothing was read: this Órgano stopped being active and marked before the run reached it";
-
-  private static final String UNMARKED_MID_WALK =
-      "Stopped at a batch boundary: this Órgano stopped being active and marked while it was"
-          + " being imported";
-
   private static final Logger LOG = LoggerFactory.getLogger(ImportContratosMenores.class);
 
   private final OrganoRepository organos;
@@ -221,16 +198,45 @@ public class ImportContratosMenores {
    */
   private record Settlement(ImportRunOrganoState state, @Nullable String reason) {
 
+    /**
+     * Recorded on an Órgano whose history is already loaded. It is neither imported nor failed, and
+     * reporting it as either would be untrue; naming the mode says why nothing was done.
+     */
+    private static final String ALREADY_LOADED =
+        "Nothing to import: this Órgano's history is loaded, and the %s mode does not exist yet"
+            .formatted(ContratosMenoresImportMode.INCREMENTAL);
+
+    /**
+     * The two ways a mark can be withdrawn, told apart on the row. Both leave the Órgano exactly as
+     * it stands, but only one of them read anything at all, and an administrator looking at a
+     * stopped Órgano has no other way to know which happened.
+     */
+    private static final String UNMARKED_BEFORE_ITS_TURN =
+        "Nothing was read: this Órgano stopped being active and marked before the run reached it";
+
+    private static final String UNMARKED_MID_WALK =
+        "Stopped at a batch boundary: this Órgano stopped being active and marked while it was"
+            + " being imported";
+
     static Settlement succeeded() {
       return new Settlement(ImportRunOrganoState.SUCCEEDED, null);
     }
 
-    static Settlement stopped(String reason) {
-      return new Settlement(ImportRunOrganoState.STOPPED, reason);
+    static Settlement unmarkedBeforeItsTurn() {
+      return new Settlement(ImportRunOrganoState.STOPPED, UNMARKED_BEFORE_ITS_TURN);
     }
 
-    static Settlement skipped(String reason) {
-      return new Settlement(ImportRunOrganoState.SKIPPED, reason);
+    static Settlement unmarkedMidWalk() {
+      return new Settlement(ImportRunOrganoState.STOPPED, UNMARKED_MID_WALK);
+    }
+
+    static Settlement alreadyLoaded() {
+      return new Settlement(ImportRunOrganoState.SKIPPED, ALREADY_LOADED);
+    }
+
+    static Settlement goneFromTheCatalogue() {
+      return new Settlement(
+          ImportRunOrganoState.FAILED, "This Órgano is no longer in the catalogue");
     }
 
     static Settlement failed(String reason) {
@@ -271,15 +277,15 @@ public class ImportContratosMenores {
   private Optional<Settlement> outcomeFor(ImportRunId runId, OrganoId organoId) {
     Optional<OrganoDeContratacion> found = organos.findById(organoId);
     if (found.isEmpty()) {
-      return Optional.of(Settlement.failed(GONE_FROM_THE_CATALOGUE));
+      return Optional.of(Settlement.goneFromTheCatalogue());
     }
     OrganoDeContratacion organo = found.get();
     if (!organo.eligibleForImport()) {
-      return Optional.of(Settlement.stopped(UNMARKED_BEFORE_ITS_TURN));
+      return Optional.of(Settlement.unmarkedBeforeItsTurn());
     }
     return switch (ContratosMenoresImportMode.of(organo.importStatus())) {
       case INITIAL, RESUMED -> walked(runId, organo, organoId);
-      case INCREMENTAL -> Optional.of(Settlement.skipped(ALREADY_LOADED));
+      case INCREMENTAL -> Optional.of(Settlement.alreadyLoaded());
     };
   }
 
@@ -293,7 +299,7 @@ public class ImportContratosMenores {
     ContratosMenoresImportSummary summary = walk.run(runId, organo, () -> stillEligible(organoId));
     return switch (summary.stoppedBy()) {
       case null -> Optional.of(Settlement.succeeded());
-      case UNMARKED -> Optional.of(Settlement.stopped(UNMARKED_MID_WALK));
+      case UNMARKED -> Optional.of(Settlement.unmarkedMidWalk());
       case GUARD_LOST -> Optional.empty();
     };
   }
