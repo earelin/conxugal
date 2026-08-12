@@ -1,6 +1,7 @@
 package gal.conxugal.application.contrato;
 
-import gal.conxugal.domain.contrato.ImportContratosMenores;
+import gal.conxugal.domain.contrato.ClaimContratosMenoresImport;
+import gal.conxugal.domain.contrato.ExecuteContratosMenoresImport;
 import gal.conxugal.domain.importrun.ImportAlreadyRunningException;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
@@ -18,9 +19,9 @@ import org.slf4j.LoggerFactory;
  * Starts a contratos menores import and answers which run is doing it — one call per kind of
  * import, so nothing that triggers one has to remember to finish it.
  *
- * <p><strong>This is where the import stops being synchronous.</strong> The use case beneath it
- * claims in milliseconds and then walks for days, and those are deliberately two calls there so
- * that neither the claim's answer nor the walk's duration is imposed on the other. Pairing them —
+ * <p><strong>This is where the import stops being synchronous.</strong> Claiming answers in
+ * milliseconds and walking runs for days, and they are deliberately two use cases so that neither
+ * the claim's answer nor the walk's duration is imposed on the other. Pairing them —
  * and choosing the thread the long half runs on — is a driving-side decision, which is why it is
  * made here rather than in the domain: a trigger is what needs an answer now, and a trigger is
  * what knows there is somewhere else to put the work.
@@ -42,15 +43,18 @@ public class StartContratosMenoresImport {
 
   private static final Logger LOG = LoggerFactory.getLogger(StartContratosMenoresImport.class);
 
-  private final ImportContratosMenores imports;
+  private final ClaimContratosMenoresImport claim;
+  private final ExecuteContratosMenoresImport execute;
   private final ImportRunRepository importRuns;
   private final Executor executor;
 
   public StartContratosMenoresImport(
-      ImportContratosMenores imports,
+      ClaimContratosMenoresImport claim,
+      ExecuteContratosMenoresImport execute,
       ImportRunRepository importRuns,
       @Named(IMPORT_EXECUTOR) Executor executor) {
-    this.imports = imports;
+    this.claim = claim;
+    this.execute = execute;
     this.importRuns = importRuns;
     this.executor = executor;
   }
@@ -61,7 +65,7 @@ public class StartContratosMenoresImport {
    * @throws ImportAlreadyRunningException if another import holds the guard
    */
   public ImportRunId startAll() {
-    return start(imports.claimAll());
+    return start(claim.claimAll());
   }
 
   /**
@@ -72,7 +76,7 @@ public class StartContratosMenoresImport {
    * @throws ImportAlreadyRunningException if another import holds the guard
    */
   public ImportRunId startOrgano(OrganoId organoId) {
-    return start(imports.claimOrgano(organoId));
+    return start(claim.claimOrgano(organoId));
   }
 
   /**
@@ -100,7 +104,7 @@ public class StartContratosMenoresImport {
    */
   private void walk(ImportRunId runId) {
     try {
-      imports.execute(runId);
+      execute.execute(runId);
     } catch (RuntimeException e) {
       LOG.error("Contratos menores run {} ended in an unhandled failure", runId, e);
     }

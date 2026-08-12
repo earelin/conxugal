@@ -11,7 +11,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import gal.conxugal.domain.importrun.ImportAlreadyRunningException;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
@@ -19,11 +18,7 @@ import gal.conxugal.domain.importrun.ImportRunReport;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.domain.importrun.Importer;
-import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
-import gal.conxugal.domain.organo.OrganoNotEligibleForImportException;
-import gal.conxugal.domain.organo.OrganoNotFoundException;
-import gal.conxugal.domain.organo.OrganoRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,20 +32,17 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * The run: who it covers, the order they are taken in, and what the whole thing amounts to. What
- * one Órgano's turn means is {@link ImportCoveredOrgano}'s and is stubbed here.
+ * Walking a claimed run: the order its Órganos are taken in, and what the whole thing amounts to.
+ * What one Órgano's turn means is {@link ImportCoveredOrgano}'s and is stubbed here.
  */
 @ExtendWith(MockitoExtension.class)
-class ImportContratosMenoresTest {
+class ExecuteContratosMenoresImportTest {
 
   private static final ImportRunId RUN_ID = new ImportRunId(UUID.randomUUID());
   private static final OrganoId FIRST = new OrganoId(UUID.randomUUID());
   private static final OrganoId SECOND = new OrganoId(UUID.randomUUID());
   private static final OrganoId THIRD = new OrganoId(UUID.randomUUID());
   private static final Instant T_ZERO = Instant.parse("2026-08-06T09:00:00Z");
-
-  @Mock
-  private OrganoRepository organos;
 
   @Mock
   private ImportRunRepository importRuns;
@@ -60,89 +52,6 @@ class ImportContratosMenoresTest {
 
   private final List<OrganoId> imported = new ArrayList<>();
 
-  // ---------------------------------------------------------------- claiming
-
-  @Test
-  void claims_one_run_covering_every_active_and_marked_organo() {
-    when(organos.findAllByActiveTrueAndImportableTrue())
-        .thenReturn(List.of(marked(FIRST), marked(SECOND)));
-    // Stubbed on the exact coverage: strict stubbing refuses any other list, so this is what
-    // proves the run was claimed over these two and no others.
-    when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of(FIRST, SECOND)))
-        .thenReturn(Optional.of(RUN_ID));
-
-    assertThat(importContratosMenores().claimAll()).isEqualTo(RUN_ID);
-  }
-
-  // A catalogue with nothing marked is an ordinary answer, not a refusal: the run records that it
-  // was asked and covered nothing, which is what an administrator seeing no import needs.
-  @Test
-  void claims_one_run_covering_nothing_when_no_organo_is_marked() {
-    when(organos.findAllByActiveTrueAndImportableTrue()).thenReturn(List.of());
-    when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of())).thenReturn(Optional.of(RUN_ID));
-
-    assertThat(importContratosMenores().claimAll()).isEqualTo(RUN_ID);
-  }
-
-  @Test
-  void refuses_the_sweep_when_another_import_holds_the_guard() {
-    when(organos.findAllByActiveTrueAndImportableTrue()).thenReturn(List.of(marked(FIRST)));
-    when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of(FIRST))).thenReturn(Optional.empty());
-
-    ImportContratosMenores importContratosMenores = importContratosMenores();
-
-    assertThatExceptionOfType(ImportAlreadyRunningException.class)
-        .isThrownBy(importContratosMenores::claimAll);
-  }
-
-  @Test
-  void claims_one_run_covering_only_the_named_organo() {
-    when(organos.findById(SECOND)).thenReturn(Optional.of(marked(SECOND)));
-    when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of(SECOND)))
-        .thenReturn(Optional.of(RUN_ID));
-
-    assertThat(importContratosMenores().claimOrgano(SECOND)).isEqualTo(RUN_ID);
-  }
-
-  // The guard is never touched: an ineligible Órgano leaves no run row and no evidence of having
-  // been asked for, and the refusal it gets is its own rather than whichever one the guard had.
-  @Test
-  void refuses_the_named_organo_that_is_not_marked_without_touching_the_guard() {
-    when(organos.findById(FIRST)).thenReturn(Optional.of(organo(FIRST, true, false)));
-
-    ImportContratosMenores importContratosMenores = importContratosMenores();
-
-    assertThatExceptionOfType(OrganoNotEligibleForImportException.class)
-        .isThrownBy(() -> importContratosMenores.claimOrgano(FIRST))
-        .satisfies(refusal -> assertThat(refusal.getOrganoId()).isEqualTo(FIRST));
-
-    verifyNoInteractions(importRuns);
-  }
-
-  @Test
-  void refuses_the_named_organo_that_is_no_longer_active() {
-    when(organos.findById(FIRST)).thenReturn(Optional.of(organo(FIRST, false, true)));
-    ImportContratosMenores importContratosMenores = importContratosMenores();
-
-    assertThatExceptionOfType(OrganoNotEligibleForImportException.class)
-        .isThrownBy(() -> importContratosMenores.claimOrgano(FIRST));
-
-    verifyNoInteractions(importRuns);
-  }
-
-  @Test
-  void throws_when_the_named_organo_is_unknown() {
-    when(organos.findById(FIRST)).thenReturn(Optional.empty());
-    ImportContratosMenores importContratosMenores = importContratosMenores();
-
-    assertThatExceptionOfType(OrganoNotFoundException.class)
-        .isThrownBy(() -> importContratosMenores.claimOrgano(FIRST));
-
-    verifyNoInteractions(importRuns);
-  }
-
-  // ---------------------------------------------------------------- the sweep
-
   // Serial, and in the order the run recorded: a run is working on one identifiable Órgano at any
   // moment, which is what makes its per-Órgano outcomes reportable.
   @Test
@@ -150,7 +59,7 @@ class ImportContratosMenoresTest {
     runCovers(FIRST, SECOND, THIRD);
     eachOrganoSettles(organoId -> ImportRunOrganoState.SUCCEEDED);
 
-    importContratosMenores().execute(RUN_ID);
+    executeContratosMenoresImport().execute(RUN_ID);
 
     assertThat(imported).containsExactly(FIRST, SECOND, THIRD);
   }
@@ -164,7 +73,7 @@ class ImportContratosMenoresTest {
                 ? ImportRunOrganoState.FAILED
                 : ImportRunOrganoState.SUCCEEDED);
 
-    importContratosMenores().execute(RUN_ID);
+    executeContratosMenoresImport().execute(RUN_ID);
 
     assertThat(imported).containsExactly(FIRST, SECOND);
   }
@@ -173,9 +82,9 @@ class ImportContratosMenoresTest {
   void reads_no_organo_when_the_run_it_was_handed_is_no_longer_the_live_one() {
     when(importRuns.holdsGuard(RUN_ID)).thenReturn(false);
 
-    importContratosMenores().execute(RUN_ID);
+    executeContratosMenoresImport().execute(RUN_ID);
 
-    verifyNoInteractions(organos, coveredOrgano);
+    verifyNoInteractions(coveredOrgano);
     verify(importRuns, never()).complete(any(), any(), anyInt(), anyInt());
   }
 
@@ -186,9 +95,9 @@ class ImportContratosMenoresTest {
     when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
     when(importRuns.findRun(RUN_ID)).thenReturn(Optional.empty());
 
-    importContratosMenores().execute(RUN_ID);
+    executeContratosMenoresImport().execute(RUN_ID);
 
-    verifyNoInteractions(organos, coveredOrgano);
+    verifyNoInteractions(coveredOrgano);
   }
 
   // ------------------------------------------------------------ the guard going
@@ -200,7 +109,7 @@ class ImportContratosMenoresTest {
     runCovers(FIRST, SECOND);
     theRunIsTakenOverAt(FIRST);
 
-    importContratosMenores().execute(RUN_ID);
+    executeContratosMenoresImport().execute(RUN_ID);
 
     assertThat(imported).containsExactly(FIRST);
     verify(importRuns, never()).complete(any(), any(), anyInt(), anyInt());
@@ -213,7 +122,7 @@ class ImportContratosMenoresTest {
     runCovers(FIRST, SECOND);
     eachOrganoSettles(organoId -> ImportRunOrganoState.SUCCEEDED);
 
-    importContratosMenores().execute(RUN_ID);
+    executeContratosMenoresImport().execute(RUN_ID);
 
     verify(importRuns).complete(RUN_ID, ImportRunState.SUCCEEDED, 0, 0);
   }
@@ -223,7 +132,7 @@ class ImportContratosMenoresTest {
     runCovers(FIRST, SECOND);
     eachOrganoSettles(organoId -> ImportRunOrganoState.FAILED);
 
-    importContratosMenores().execute(RUN_ID);
+    executeContratosMenoresImport().execute(RUN_ID);
 
     verify(importRuns).complete(RUN_ID, ImportRunState.FAILED, 0, 0);
   }
@@ -237,7 +146,7 @@ class ImportContratosMenoresTest {
                 ? ImportRunOrganoState.FAILED
                 : ImportRunOrganoState.SUCCEEDED);
 
-    importContratosMenores().execute(RUN_ID);
+    executeContratosMenoresImport().execute(RUN_ID);
 
     verify(importRuns).complete(RUN_ID, ImportRunState.PARTIALLY_SUCCEEDED, 0, 0);
   }
@@ -250,7 +159,7 @@ class ImportContratosMenoresTest {
     runCovers(FIRST, SECOND);
     eachOrganoSettles(organoId -> ImportRunOrganoState.SKIPPED);
 
-    importContratosMenores().execute(RUN_ID);
+    executeContratosMenoresImport().execute(RUN_ID);
 
     verify(importRuns).complete(RUN_ID, ImportRunState.SUCCEEDED, 0, 0);
   }
@@ -260,7 +169,7 @@ class ImportContratosMenoresTest {
     runCovers(FIRST, SECOND);
     eachOrganoSettles(organoId -> ImportRunOrganoState.STOPPED);
 
-    importContratosMenores().execute(RUN_ID);
+    executeContratosMenoresImport().execute(RUN_ID);
 
     verify(importRuns).complete(RUN_ID, ImportRunState.SUCCEEDED, 0, 0);
   }
@@ -269,10 +178,10 @@ class ImportContratosMenoresTest {
   void records_the_run_as_succeeded_when_it_covered_no_organo() {
     runCovers();
 
-    importContratosMenores().execute(RUN_ID);
+    executeContratosMenoresImport().execute(RUN_ID);
 
     verify(importRuns).complete(RUN_ID, ImportRunState.SUCCEEDED, 0, 0);
-    verifyNoInteractions(organos, coveredOrgano);
+    verifyNoInteractions(coveredOrgano);
   }
 
   // ---------------------------------------------------------------- settling
@@ -283,10 +192,10 @@ class ImportContratosMenoresTest {
   void settles_the_run_as_failed_when_the_orchestration_itself_throws() {
     when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
     when(importRuns.findRun(RUN_ID)).thenThrow(new IllegalStateException("the record is gone"));
-    ImportContratosMenores importContratosMenores = importContratosMenores();
+    ExecuteContratosMenoresImport execute = executeContratosMenoresImport();
 
     assertThatExceptionOfType(IllegalStateException.class)
-        .isThrownBy(() -> importContratosMenores.execute(RUN_ID));
+        .isThrownBy(() -> execute.execute(RUN_ID));
 
     verify(importRuns).complete(RUN_ID, ImportRunState.FAILED, 0, 0);
   }
@@ -297,17 +206,11 @@ class ImportContratosMenoresTest {
     doThrow(new IllegalStateException("the run record is unreachable"))
         .when(importRuns)
         .complete(any(), any(), anyInt(), anyInt());
-    ImportContratosMenores importContratosMenores = importContratosMenores();
+    ExecuteContratosMenoresImport execute = executeContratosMenoresImport();
 
-    importContratosMenores.execute(RUN_ID);
+    execute.execute(RUN_ID);
 
     verify(importRuns).complete(RUN_ID, ImportRunState.SUCCEEDED, 0, 0);
-  }
-
-  // ---------------------------------------------------------------- fixtures
-
-  private ImportContratosMenores importContratosMenores() {
-    return new ImportContratosMenores(organos, importRuns, coveredOrgano);
   }
 
   private void runCovers(OrganoId... organoIds) {
@@ -360,13 +263,7 @@ class ImportContratosMenoresTest {
             });
   }
 
-  private static OrganoDeContratacion marked(OrganoId organoId) {
-    return organo(organoId, true, true);
-  }
-
-  private static OrganoDeContratacion organo(
-      OrganoId organoId, boolean active, boolean importable) {
-    return new OrganoDeContratacion(
-        organoId, "source-key", "Órgano", active, importable, null, null);
+  private ExecuteContratosMenoresImport executeContratosMenoresImport() {
+    return new ExecuteContratosMenoresImport(importRuns, coveredOrgano);
   }
 }

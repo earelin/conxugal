@@ -8,10 +8,9 @@ depends_on: [TASK-0007, TASK-0009]
 
 # Multi-Órgano orchestration
 
-`ImportContratosMenores`: the use case that turns [TASK-0009](TASK-0009-single-organo-initial-import.md)'s
-single walk into a run — eligibility, serial execution, per-Órgano failure isolation, and the
-run record that says what happened. Governed by
-[ADR-0002](../../architecture/0002-hexagonal-architecture.md) and
+What turns [TASK-0009](TASK-0009-single-organo-initial-import.md)'s single walk into a run —
+eligibility, serial execution, per-Órgano failure isolation, and the run record that says what
+happened. Governed by [ADR-0002](../../architecture/0002-hexagonal-architecture.md) and
 [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md).
 
 Synchronous and blocking by design: it is a domain use case, and it runs for days. What answers a
@@ -20,15 +19,20 @@ delivers. [TASK-0011](TASK-0011-triggers-and-run-read.md) is what exposes that o
 its refusals into responses.
 
 ## Scope
-- Two entry points on the use case, because a trigger must answer in milliseconds about a job
-  that runs for days:
-  - **claim** — takes the scope (every eligible Órgano, or one named Órgano), evaluates
-    eligibility, claims the guard and writes the run row with its covered Órganos enumerated,
-    then answers **the run identifier (`ImportRunId`)** or refuses. Synchronous and short.
-  - **execute** — takes that `ImportRunId` and performs the walks. Long. Taking the typed
-    identifier rather than a bare `UUID` is what stops an Órgano's id being passed here
-    ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)) — the two travel
-    together through every method in this task.
+- **Two use cases, not one**, because a trigger must answer in milliseconds about a job that runs
+  for days, and because the two share no state — each needs a collaborator the other does not, and
+  they touch disjoint halves of the run record:
+  - `ClaimContratosMenoresImport` — takes the scope (every eligible Órgano, or one named Órgano),
+    evaluates eligibility, claims the guard and writes the run row with its covered Órganos
+    enumerated, then answers **the run identifier (`ImportRunId`)** or refuses. Short and
+    synchronous; it reads no source and writes no contract.
+  - `ExecuteContratosMenoresImport` — takes that `ImportRunId` and performs the walks. Long.
+    Taking the typed identifier rather than a bare `UUID` is what stops an Órgano's id being
+    passed here ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)) — the two
+    travel together through every method in this task.
+  - `ImportCoveredOrgano` — one Órgano's turn: whether it is still to be imported, which mode its
+    history calls for, the walk, and the row that says how it ended. Nothing in it knows there are
+    other Órganos.
 - **One entry point per kind of import for whoever triggers one**, because a trigger has no use
   for a half-started import it must remember to finish. Pairing the two — claim, hand the walking
   over, answer the identity — is `StartContratosMenoresImport`'s, and it lives in `application`

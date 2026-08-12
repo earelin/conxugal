@@ -1,119 +1,58 @@
 package gal.conxugal.domain.contrato;
 
-import gal.conxugal.domain.importrun.ImportAlreadyRunningException;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.ImportRunState;
-import gal.conxugal.domain.importrun.Importer;
-import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
-import gal.conxugal.domain.organo.OrganoNotEligibleForImportException;
-import gal.conxugal.domain.organo.OrganoNotFoundException;
-import gal.conxugal.domain.organo.OrganoRepository;
 import jakarta.inject.Singleton;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Turns a trigger into a run: which Órganos it covers, the order they are walked in, what one
- * failing means to the rest, and the verdict the whole thing is settled with.
+ * Walks the Órganos a claimed run covers and settles it with what they came to.
  *
- * <p><strong>Asking and doing are two calls</strong>, because a trigger has to answer in
- * milliseconds about work measured in days. {@link #claimAll()} and {@link #claimOrgano} decide
- * eligibility, take the guard and write the run with its coverage enumerated — short, and the only
- * part whose answer a caller waits for. {@link #execute} takes that identity and does the walking,
- * blocking for as long as it takes. Submitting it somewhere it can block is the trigger's business,
- * not this class's.
- *
- * <p><strong>Eligibility is decided here and nowhere else.</strong> Every trigger — a mark, an
- * administrator's button, a future scheduler — asks the same question of the same code, so none of
- * them can disagree with the others about which Órganos an import covers.
+ * <p>Long and blocking, and separate from the claim for that reason: this runs for days, while the
+ * decision to start it was over in milliseconds. It takes the identity that decision produced —
+ * typed rather than a bare {@code UUID}, which is what stops an Órgano's id reaching it — and looks
+ * up everything else from the run itself. Submitting it somewhere it can block is the trigger's
+ * business, not this class's.
  *
  * <p><strong>Órganos are walked one at a time</strong>, each finished before the next begins. The
  * reason is reportability rather than pacing: it gives the per-Órgano outcomes a well-defined
  * order, so at any moment a run is working on one identifiable Órgano.
  *
  * <p><strong>A failing Órgano does not take the run down with it.</strong> The run moves to the
- * next; what it and the Órganos before it stored stands. A run of four hundred Órganos that gave
- * up at the fortieth because one source answered badly would be worth far less than the
- * thirty-nine imports it already had. Isolating it is {@link ImportCoveredOrgano}'s, which is
- * also where what one Órgano's turn amounts to is decided — this class only counts what came
- * back.
+ * next; what it and the Órganos before it stored stands. A run of four hundred Órganos that gave up
+ * at the fortieth because one source answered badly would be worth far less than the thirty-nine
+ * imports it already had. Isolating it is {@link ImportCoveredOrgano}'s, which is also where what
+ * one Órgano's turn amounts to is decided — this class only counts what came back.
  *
  * <p><strong>The verdict is read off the failed rows, not the successful ones.</strong> Nothing
  * failed is a success, whatever else happened: a run whose Órganos were every one skipped, or every
  * one stopped, imported nothing and is still not a failure. Reading it the other way round —
- * nothing succeeded, therefore failed — would report the ordinary state of a fully loaded
- * catalogue as a fault every night.
+ * nothing succeeded, therefore failed — would report the ordinary state of a fully loaded catalogue
+ * as a fault every night.
  *
  * <p><strong>Nothing here checks whether an Órgano went inactive mid-run.</strong> Only the
  * catalogue import deactivates one, and the guard forbids it running while this does, so the
  * obligation is met by the guard rather than by a check.
  */
 @Singleton
-public class ImportContratosMenores {
+public class ExecuteContratosMenoresImport {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ImportContratosMenores.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExecuteContratosMenoresImport.class);
 
-  private final OrganoRepository organos;
   private final ImportRunRepository importRuns;
   private final ImportCoveredOrgano coveredOrgano;
 
-  public ImportContratosMenores(
-      OrganoRepository organos,
-      ImportRunRepository importRuns,
-      ImportCoveredOrgano coveredOrgano) {
-    this.organos = organos;
+  public ExecuteContratosMenoresImport(
+      ImportRunRepository importRuns, ImportCoveredOrgano coveredOrgano) {
     this.importRuns = importRuns;
     this.coveredOrgano = coveredOrgano;
-  }
-
-  /**
-   * Claims a run over every eligible Órgano and answers its identity.
-   *
-   * <p>One covering none is still a run: the catalogue having nothing marked is an ordinary answer,
-   * not a refusal, and it settles as a success that imported nothing.
-   *
-   * @throws ImportAlreadyRunningException if another import holds the guard, in which case nothing
-   *     was claimed
-   */
-  public ImportRunId claimAll() {
-    return claimCovering(
-        organos.findAllByActiveTrueAndImportableTrue().stream()
-            .map(ImportContratosMenores::identityOf)
-            .toList());
-  }
-
-  /**
-   * Claims a run over one named Órgano and answers its identity.
-   *
-   * <p>Eligibility is settled before the guard is touched, so an Órgano that cannot be imported
-   * claims no run and leaves no trace of having asked — and it is told apart from the guard being
-   * held, because one refusal repeats until the catalogue or the mark changes while the other is a
-   * matter of timing.
-   *
-   * @throws OrganoNotFoundException if no Órgano has this identity
-   * @throws OrganoNotEligibleForImportException if it is not active in the catalogue and marked
-   * @throws ImportAlreadyRunningException if another import holds the guard
-   */
-  public ImportRunId claimOrgano(OrganoId organoId) {
-    OrganoDeContratacion organo =
-        organos.findById(organoId).orElseThrow(() -> new OrganoNotFoundException(organoId));
-    if (!organo.eligibleForImport()) {
-      throw new OrganoNotEligibleForImportException(organoId);
-    }
-    return claimCovering(List.of(organoId));
-  }
-
-  private ImportRunId claimCovering(List<OrganoId> covered) {
-    return importRuns
-        .claim(Importer.CONTRATOS_MENORES, covered)
-        .orElseThrow(ImportAlreadyRunningException::new);
   }
 
   /**
@@ -223,9 +162,5 @@ public class ImportContratosMenores {
               + " bound passes",
           verdict, runId, e);
     }
-  }
-
-  private static OrganoId identityOf(OrganoDeContratacion organo) {
-    return Objects.requireNonNull(organo.id(), "a stored Órgano always carries its identity");
   }
 }

@@ -38,19 +38,18 @@
     <Field name="importStates"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
-  <!-- And for the orchestrator above that walk and the per-Órgano step between them:
+  <!-- And for the claim, the run that follows it and the per-Órgano step beneath that:
        OrganoRepository declares insert, same as above, and the heuristic reads a constructor-stored
        use case as mutable for the same want of an immutability marker. -->
   <Match>
-    <Class name="~gal\.conxugal\.domain\.contrato\.Import(ContratosMenores|CoveredOrgano)"/>
+    <Class name="~gal\.conxugal\.domain\.contrato\.(Claim|Execute)ContratosMenoresImport|gal\.conxugal\.domain\.contrato\.ImportCoveredOrgano"/>
     <Field name="~(organos|coveredOrgano)"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
-  <!-- And once more for the trigger above the orchestrator: a constructor-stored use case trips
-       the same heuristic, for the same want of an immutability marker. -->
+  <!-- And once more for the trigger above them, which stores both use cases. -->
   <Match>
     <Class name="gal.conxugal.application.contrato.StartContratosMenoresImport"/>
-    <Field name="imports"/>
+    <Field name="~(claim|execute)"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
   <!-- And for the batch the walk stores through: OperadorRepository declares insert, same as

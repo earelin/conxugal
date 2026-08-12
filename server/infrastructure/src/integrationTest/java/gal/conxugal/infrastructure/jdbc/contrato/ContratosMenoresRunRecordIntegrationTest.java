@@ -9,11 +9,12 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import gal.conxugal.domain.contrato.ClaimContratosMenoresImport;
 import gal.conxugal.domain.contrato.ContratoMenorSource;
 import gal.conxugal.domain.contrato.ContratoMenorSourceEntry;
 import gal.conxugal.domain.contrato.ContratoMenorSourcePage;
 import gal.conxugal.domain.contrato.ContratoMenorSourceUnavailableException;
-import gal.conxugal.domain.contrato.ImportContratosMenores;
+import gal.conxugal.domain.contrato.ExecuteContratosMenoresImport;
 import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.OrganoNotEligibleForImportException;
@@ -103,7 +104,10 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
   }
 
   @Inject
-  ImportContratosMenores importContratosMenores;
+  ClaimContratosMenoresImport claim;
+
+  @Inject
+  ExecuteContratosMenoresImport execute;
 
   @Inject
   ContratoMenorSource contratoMenorSource;
@@ -147,7 +151,7 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
     insertOrgano("marked-but-inactive", false, true);
     insertOrgano("active-but-unmarked", true, false);
 
-    importContratosMenores.claimAll();
+    claim.claimAll();
 
     Table coverage = coverageTable();
     assertThat(coverage).hasNumberOfRows(2);
@@ -276,7 +280,7 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
     OrganoId organoId = insertOrgano("unmarked", true, false);
 
     assertThatExceptionOfType(OrganoNotEligibleForImportException.class)
-        .isThrownBy(() -> importContratosMenores.claimOrgano(organoId));
+        .isThrownBy(() -> claim.claimOrgano(organoId));
 
     assertThat(runTable()).isEmpty();
     assertThat(coverageTable()).isEmpty();
@@ -300,7 +304,7 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
   }
 
   private void run() {
-    importContratosMenores.execute(importContratosMenores.claimAll());
+    execute.execute(claim.claimAll());
   }
 
   /** One window's worth of history, so the walk reads the Órgano out in a single request. */
