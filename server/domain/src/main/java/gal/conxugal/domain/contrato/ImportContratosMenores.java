@@ -162,8 +162,9 @@ public class ImportContratosMenores {
             runId, organoId);
         return new Walked(covered.size(), failed, false);
       }
-      settleOrgano(runId, organoId, settlement.get());
-      if (settlement.get().state() == ImportRunOrganoState.FAILED) {
+      Settlement settled = settlement.get();
+      settleOrgano(runId, organoId, settled);
+      if (settled.state() == ImportRunOrganoState.FAILED) {
         failed++;
       }
     }
