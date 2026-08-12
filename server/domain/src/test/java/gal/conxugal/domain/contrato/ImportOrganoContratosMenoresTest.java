@@ -430,8 +430,7 @@ class ImportOrganoContratosMenoresTest {
         .thenAnswer(invocation -> new UpsertCounts(sizeOfBatch(invocation), 0));
     sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
-    ContratosMenoresImportSummary summary =
-        walk().run(RUN_ID, organo(), unmarkedAfterBatch(1));
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), unmarkedAfterBatch(1));
 
     assertThat(summary)
         .isEqualTo(ContratosMenoresImportSummary.stopped(100, 0, StopReason.UNMARKED));
@@ -451,8 +450,7 @@ class ImportOrganoContratosMenoresTest {
     cursorWritesAreRecorded();
     sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
-    ContratosMenoresImportSummary summary =
-        walk().run(RUN_ID, organo(), unmarkedAfterBatch(2));
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), unmarkedAfterBatch(2));
 
     assertThat(summary)
         .isEqualTo(ContratosMenoresImportSummary.stopped(150, 0, StopReason.UNMARKED));

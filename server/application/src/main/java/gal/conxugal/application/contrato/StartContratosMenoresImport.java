@@ -110,6 +110,13 @@ public class StartContratosMenoresImport {
     }
   }
 
+  /**
+   * The one run settled {@code FAILED} with nothing behind it. Every other verdict is read off the
+   * per-Órgano rows, and this one has none to read: the run was claimed and then never started, so
+   * no Órgano was ever reached to fail. It is recorded as a failure anyway because the alternative
+   * is a run that reads as having succeeded at work it never began, and the cause is here rather
+   * than on the record because there is nowhere on a run to put one.
+   */
   private void settleUnstarted(ImportRunId runId) {
     try {
       importRuns.complete(runId, ImportRunState.FAILED, 0, 0);

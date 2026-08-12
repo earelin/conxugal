@@ -115,6 +115,19 @@ class ExecuteContratosMenoresImportTest {
     verify(importRuns, never()).complete(any(), any(), anyInt(), anyInt());
   }
 
+  // A sweep whose Órganos all need no walk never asks the guard through a walk, so without this
+  // ask a run that went quiet part-way would still settle itself over the top of whoever claimed
+  // the guard next — reporting as finished the work the live run is still doing.
+  @Test
+  void settles_nothing_when_the_run_stopped_being_the_live_one_before_the_verdict() {
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(true).thenReturn(false);
+    runIsRecordedCovering();
+
+    executeContratosMenoresImport().execute(RUN_ID);
+
+    verify(importRuns, never()).complete(any(), any(), anyInt(), anyInt());
+  }
+
   // ---------------------------------------------------------------- verdicts
 
   @Test
@@ -213,8 +226,14 @@ class ExecuteContratosMenoresImportTest {
     verify(importRuns).complete(RUN_ID, ImportRunState.SUCCEEDED, 0, 0);
   }
 
+  /** A run this process holds the guard for, covering the given Órganos. */
   private void runCovers(OrganoId... organoIds) {
     when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
+    runIsRecordedCovering(organoIds);
+  }
+
+  /** The coverage alone, for the tests that say themselves what the guard answers. */
+  private void runIsRecordedCovering(OrganoId... organoIds) {
     List<ImportRunOrganoCoverage> coverage =
         Arrays.stream(organoIds)
             .map(

@@ -108,7 +108,7 @@ import use case
 ```mermaid
 flowchart LR
     subgraph domain["domain"]
-        importUseCase["ImportCoveredOrgano (FEAT-0009)"]
+        importUseCase["ImportOrganoContratosMenores (FEAT-0009)"]
         derive["resolve operador per contract"]
         rules["canonical id (R3) · emptiness (R5) · rank (R4)"]
         operador["OperadorEconomico"]

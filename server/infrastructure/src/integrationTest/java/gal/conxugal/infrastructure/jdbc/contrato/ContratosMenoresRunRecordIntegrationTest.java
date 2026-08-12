@@ -300,7 +300,12 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
 
     run();
 
-    assertThat(inProgress).isNotEmpty().allMatch(count -> count <= 1);
+    // `contains(1)` and not just the cap: every sample being zero would satisfy "never more than
+    // one" while proving nothing, and would go on doing so if the coverage row stopped moving to
+    // in progress at all.
+    assertThat(inProgress)
+        .contains(1)
+        .allMatch(count -> count <= 1);
   }
 
   private void run() {

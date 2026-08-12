@@ -63,12 +63,19 @@ public class ExecuteContratosMenoresImport {
    * exception — can leave the guard held by a run this process has already given up on, which would
    * refuse every import in the system until the abandonment bound passed.
    *
-   * <p><strong>Nothing is written to a run this process does not hold the guard for.</strong> It is
-   * asked once here, before anything is read, and again by every walk before every batch; a run
-   * that has gone quiet past the abandonment bound has already been claimed by whoever triggered
-   * next, and its record is theirs. Writing anyway would settle a run this process abandoned as
-   * though it had finished the work the live run is still doing — and, asked to execute a run that
-   * is already over, would overwrite the verdict and the failed Órganos it named.
+   * <p><strong>The verdict is never written to a run this process does not hold the guard
+   * for.</strong> It is asked here before anything is read, by every walk before every batch, and
+   * once more before settling; a run that has gone quiet past the abandonment bound has already
+   * been claimed by whoever triggered next, and its record is theirs. Writing anyway would settle a
+   * run this process abandoned as though it had finished the work the live run is still doing —
+   * and, asked to execute a run that is already over, would overwrite the verdict and the failed
+   * Órganos it named.
+   *
+   * <p>The per-Órgano rows are best-effort by comparison: an Órgano that needs no walk — already
+   * loaded, unmarked before its turn, gone from the catalogue — is settled without asking the guard
+   * again, because those take no measurable time and asking would double the reads a sweep of a
+   * loaded catalogue makes. A stall long enough to lose the guard between two of them leaves a row
+   * written against a run nobody reads any more; the verdict is what stops that being visible.
    */
   public void execute(ImportRunId runId) {
     if (!importRuns.holdsGuard(runId)) {
@@ -153,6 +160,13 @@ public class ExecuteContratosMenoresImport {
    * its batch committed, and passing totals here would add them a second time.
    */
   private void settle(ImportRunId runId, ImportRunState verdict) {
+    if (!importRuns.holdsGuard(runId)) {
+      LOG.warn(
+          "Contratos menores run {} stopped being the live import before it could be settled as"
+              + " {}; its record is another import's now and it is left as it stands",
+          runId, verdict);
+      return;
+    }
     try {
       importRuns.complete(runId, verdict, 0, 0);
     } catch (RuntimeException e) {

@@ -53,9 +53,16 @@ class OrganoDeContratacionTest {
     OrganoId id = new OrganoId(UUID.randomUUID());
     OrganoDeContratacion organo =
         new OrganoDeContratacion(
-            id, "consorcio", "Consorcio Galego", true, true, null,
+            id,
+            "consorcio",
+            "Consorcio Galego",
+            true,
+            true,
+            null,
             new ContratosMenoresImportState(
-                id, ContratosMenoresImportStatus.COMPLETE, null,
+                id,
+                ContratosMenoresImportStatus.COMPLETE,
+                null,
                 Instant.parse("2026-08-06T09:00:00Z")));
 
     assertThat(organo.importStatus()).isEqualTo(ContratosMenoresImportStatus.COMPLETE);
@@ -92,12 +99,6 @@ class OrganoDeContratacionTest {
         new OrganoDeContratacion("xunta-consorcio-galego", "Consorcio Galego");
 
     assertThat(organo.eligibleForImport()).isFalse();
-  }
-
-  private static OrganoDeContratacion organoThatIs(boolean active, boolean importable) {
-    return new OrganoDeContratacion(
-        new OrganoId(UUID.randomUUID()), "xunta-consorcio-galego", "Consorcio Galego", active,
-        importable, null);
   }
 
   @Test
@@ -231,5 +232,15 @@ class OrganoDeContratacionTest {
 
     assertThat(undiscovered).isNotEqualTo(catalogued);
     assertThat(catalogued).isNotEqualTo(undiscovered);
+  }
+
+  private static OrganoDeContratacion organoThatIs(boolean active, boolean importable) {
+    return new OrganoDeContratacion(
+        new OrganoId(UUID.randomUUID()),
+        "xunta-consorcio-galego",
+        "Consorcio Galego",
+        active,
+        importable,
+        null);
   }
 }

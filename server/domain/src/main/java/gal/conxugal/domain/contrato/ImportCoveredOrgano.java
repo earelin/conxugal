@@ -4,6 +4,7 @@ import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportMode;
+import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.OrganoRepository;
@@ -32,6 +33,9 @@ import org.slf4j.LoggerFactory;
  */
 @Singleton
 public class ImportCoveredOrgano {
+
+  /** Long enough for any message worth reading, short enough that no row becomes a log dump. */
+  private static final int LONGEST_REASON = 500;
 
   private static final Logger LOG = LoggerFactory.getLogger(ImportCoveredOrgano.class);
 
@@ -89,8 +93,25 @@ public class ImportCoveredOrgano {
         "Stopped at a batch boundary: this Órgano stopped being active and marked while it was"
             + " being imported";
 
-    static Settlement succeeded() {
+    private static final String REACHED_THE_HISTORY_FLOOR =
+        "Read every window down to the configured history floor without the stored count matching"
+            + " the source's; this Órgano is imported as far as it can be and stays incomplete";
+
+    /**
+     * The Órgano read its history out: its stored count reached the one the source reports. This
+     * is the only ending that leaves nothing more to say, so it is the only one with no reason.
+     */
+    static Settlement readItsHistoryOut() {
       return new Settlement(ImportRunOrganoState.SUCCEEDED, null);
+    }
+
+    /**
+     * A walk that read every window it had and still fell short. Not a failure — it did all the
+     * work there was — but not a loaded Órgano either, and without a reason it would read on the
+     * row exactly like one that finished, on this run and on every run after it.
+     */
+    static Settlement reachedTheHistoryFloor() {
+      return new Settlement(ImportRunOrganoState.SUCCEEDED, REACHED_THE_HISTORY_FLOOR);
     }
 
     static Settlement unmarkedBeforeItsTurn() {
@@ -159,10 +180,21 @@ public class ImportCoveredOrgano {
       ImportRunId runId, OrganoDeContratacion organo, OrganoId organoId) {
     ContratosMenoresImportSummary summary = walk.run(runId, organo, () -> stillEligible(organoId));
     return switch (summary.stoppedBy()) {
-      case null -> Optional.of(Settlement.succeeded());
+      case null -> Optional.of(endedOnItsOwnTerms(summary));
       case UNMARKED -> Optional.of(Settlement.unmarkedMidWalk());
       case GUARD_LOST -> Optional.empty();
     };
+  }
+
+  /**
+   * A walk nothing interrupted, which is still two endings: the history read out, or every window
+   * read down to the floor without the count converging. Both succeeded — neither failed and both
+   * did all the work there was — and only the reason tells them apart afterwards.
+   */
+  private static Settlement endedOnItsOwnTerms(ContratosMenoresImportSummary summary) {
+    return summary.status() == ContratosMenoresImportStatus.COMPLETE
+        ? Settlement.readItsHistoryOut()
+        : Settlement.reachedTheHistoryFloor();
   }
 
   /** Asked at every batch boundary of the walk, which is what makes an unmark stop it. */
@@ -181,8 +213,15 @@ public class ImportCoveredOrgano {
     }
   }
 
+  /**
+   * What a failure is recorded as. The message of an arbitrary runtime exception is whatever threw
+   * it felt like saying — a statement fragment, a URL, a stack of causes — and this one is stored
+   * on the row and served to an administrator, so it is capped rather than trusted to be short.
+   */
   private static String reasonOf(RuntimeException e) {
-    String message = e.getMessage();
-    return message == null ? e.getClass().getSimpleName() : message;
+    String message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+    return message.length() <= LONGEST_REASON
+        ? message
+        : message.substring(0, LONGEST_REASON) + "…";
   }
 }

@@ -284,8 +284,7 @@ public class ImportOrganoContratosMenores {
         "Contratos menores walk of Órgano {} stopped: its run {} no longer holds the import guard,"
             + " so another import may already have claimed it",
         target.organoId(), target.runId());
-    return new WindowRead(
-        added, refreshed, 0, StopReason.GUARD_LOST);
+    return new WindowRead(added, refreshed, 0, StopReason.GUARD_LOST);
   }
 
   /**

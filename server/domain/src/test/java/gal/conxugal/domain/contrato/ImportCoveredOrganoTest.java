@@ -147,6 +147,23 @@ class ImportCoveredOrganoTest {
     assertThat(settled).contains(ImportRunOrganoState.SUCCEEDED);
   }
 
+  // Without this the two succeeding endings are the same row, and an Órgano stuck at the floor
+  // reports as loaded on this run and on every run after it, with nothing saying otherwise.
+  @Test
+  void tells_the_organo_that_reached_the_history_floor_from_one_that_read_it_out() {
+    organoIs(marked());
+    walkAnswers(organoId -> ContratosMenoresImportSummary.incomplete(100, 0));
+
+    importCoveredOrgano().run(RUN_ID, ORGANO_ID);
+
+    verify(importRuns)
+        .finishOrgano(
+            eq(RUN_ID),
+            eq(ORGANO_ID),
+            eq(ImportRunOrganoState.SUCCEEDED),
+            argThat(Objects::nonNull));
+  }
+
   @Test
   void settles_the_organo_unmarked_mid_walk_as_stopped_naming_what_stopped_it() {
     organoIs(marked());
@@ -178,7 +195,9 @@ class ImportCoveredOrganoTest {
     importCoveredOrgano.run(RUN_ID, ORGANO_ID);
     importCoveredOrgano.run(RUN_ID, ORGANO_ID);
 
-    assertThat(reasons).hasSize(2).doesNotHaveDuplicates();
+    assertThat(reasons)
+        .hasSize(2)
+        .doesNotHaveDuplicates();
   }
 
   // The run is another import's now. Its record is left exactly as this process found it, which is
@@ -248,6 +267,26 @@ class ImportCoveredOrganoTest {
     verify(importRuns)
         .finishOrgano(
             RUN_ID, ORGANO_ID, ImportRunOrganoState.FAILED, "the source is unreachable");
+  }
+
+  // The message belongs to whatever threw, and it is stored on the row and served to an
+  // administrator, so its length is this class's to bound rather than the source's to choose.
+  @Test
+  void caps_the_reason_it_records_for_an_unreasonably_long_failure() {
+    organoIs(marked());
+    walkAnswers(
+        organoId -> {
+          throw new IllegalStateException("x".repeat(5_000));
+        });
+
+    importCoveredOrgano().run(RUN_ID, ORGANO_ID);
+
+    verify(importRuns)
+        .finishOrgano(
+            eq(RUN_ID),
+            eq(ORGANO_ID),
+            eq(ImportRunOrganoState.FAILED),
+            argThat(reason -> reason != null && reason.length() < 1_000));
   }
 
   // Reading the catalogue is inside the catch too: a momentary failure on that one row must not
