@@ -35,6 +35,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -59,6 +60,7 @@ class ImportContratosMenoresTest {
   private ImportOrganoContratosMenores walk;
 
   private final List<OrganoId> walked = new ArrayList<>();
+  private final List<BooleanSupplier> eligibilityChecks = new ArrayList<>();
 
   // ---------------------------------------------------------------- claiming
 
@@ -222,8 +224,7 @@ class ImportContratosMenoresTest {
   void settles_the_organo_unmarked_mid_walk_as_stopped_naming_what_stopped_it() {
     runCovers(FIRST);
     organoIsMarked(FIRST);
-    when(walk.run(eq(RUN_ID), any(), any()))
-        .thenReturn(ContratosMenoresImportSummary.stopped(100, 0, StopReason.UNMARKED));
+    walkAnswers(organoId -> ContratosMenoresImportSummary.stopped(100, 0, StopReason.UNMARKED));
 
     importContratosMenores().execute(RUN_ID);
 
@@ -242,8 +243,7 @@ class ImportContratosMenoresTest {
     runCovers(FIRST, SECOND);
     when(organos.findById(FIRST)).thenReturn(Optional.of(marked(FIRST)));
     when(organos.findById(SECOND)).thenReturn(Optional.of(organo(SECOND, true, false)));
-    when(walk.run(eq(RUN_ID), any(), any()))
-        .thenReturn(ContratosMenoresImportSummary.stopped(100, 0, StopReason.UNMARKED));
+    walkAnswers(organoId -> ContratosMenoresImportSummary.stopped(100, 0, StopReason.UNMARKED));
     List<String> reasons = new ArrayList<>();
     recordStopReasonsInto(reasons);
 
@@ -269,8 +269,7 @@ class ImportContratosMenoresTest {
   void settles_the_organo_that_reached_the_history_floor_as_succeeded() {
     runCovers(FIRST);
     organoIsMarked(FIRST);
-    when(walk.run(eq(RUN_ID), any(), any()))
-        .thenReturn(ContratosMenoresImportSummary.incomplete(100, 0));
+    walkAnswers(organoId -> ContratosMenoresImportSummary.incomplete(100, 0));
 
     importContratosMenores().execute(RUN_ID);
 
@@ -454,12 +453,7 @@ class ImportContratosMenoresTest {
   void settles_nothing_at_all_when_the_run_stops_holding_the_guard_mid_walk() {
     runCovers(FIRST, SECOND);
     organoIsMarked(FIRST);
-    when(walk.run(eq(RUN_ID), any(), any()))
-        .thenAnswer(
-            invocation -> {
-              walked.add(organoIdOf(invocation.getArgument(1)));
-              return ContratosMenoresImportSummary.stopped(100, 0, StopReason.GUARD_LOST);
-            });
+    walkAnswers(organoId -> ContratosMenoresImportSummary.stopped(100, 0, StopReason.GUARD_LOST));
 
     importContratosMenores().execute(RUN_ID);
 
@@ -556,29 +550,37 @@ class ImportContratosMenoresTest {
     }
   }
 
-  /** Records which Órgano each walk was for, and answers a walk that read the history out. */
-  private void walkCompletesEveryOrgano() {
-    when(walk.run(eq(RUN_ID), any(), any()))
-        .thenAnswer(
-            invocation -> {
-              walked.add(organoIdOf(invocation.getArgument(1)));
-              return ContratosMenoresImportSummary.complete(1, 0);
-            });
-  }
-
-  /** As above, but the named Órganos answer an unreachable source instead. */
-  private void walkFailsOn(OrganoId... failing) {
-    List<OrganoId> unreachable = List.of(failing);
+  /**
+   * The one place the walk is stubbed. Every walk records the Órgano it was for and the eligibility
+   * check it was handed, whatever it goes on to answer — so no test can assert the order Órganos
+   * were walked in, or what the walk was told to ask, against a recording it forgot to set up.
+   */
+  private void walkAnswers(Function<OrganoId, ContratosMenoresImportSummary> answer) {
     when(walk.run(eq(RUN_ID), any(), any()))
         .thenAnswer(
             invocation -> {
               OrganoId organoId = organoIdOf(invocation.getArgument(1));
               walked.add(organoId);
-              if (unreachable.contains(organoId)) {
-                throw new ContratoMenorSourceUnavailableException("the source is unreachable");
-              }
-              return ContratosMenoresImportSummary.complete(1, 0);
+              eligibilityChecks.add(invocation.getArgument(2));
+              return answer.apply(organoId);
             });
+  }
+
+  /** Every walk reads its Órgano's history out. */
+  private void walkCompletesEveryOrgano() {
+    walkAnswers(organoId -> ContratosMenoresImportSummary.complete(1, 0));
+  }
+
+  /** As above, but the named Órganos answer an unreachable source instead. */
+  private void walkFailsOn(OrganoId... failing) {
+    List<OrganoId> unreachable = List.of(failing);
+    walkAnswers(
+        organoId -> {
+          if (unreachable.contains(organoId)) {
+            throw new ContratoMenorSourceUnavailableException("the source is unreachable");
+          }
+          return ContratosMenoresImportSummary.complete(1, 0);
+        });
   }
 
   /** Collects the reason recorded on every Órgano settled as stopped. */
@@ -594,14 +596,8 @@ class ImportContratosMenoresTest {
 
   /** Hands back the check the walk was given, so the test can ask it what the walk would ask. */
   private BooleanSupplier eligibilityCheckHandedToTheWalk() {
-    List<BooleanSupplier> handed = new ArrayList<>();
-    when(walk.run(eq(RUN_ID), any(), any()))
-        .thenAnswer(
-            invocation -> {
-              handed.add(invocation.getArgument(2));
-              return ContratosMenoresImportSummary.complete(1, 0);
-            });
-    return () -> handed.getFirst().getAsBoolean();
+    walkCompletesEveryOrgano();
+    return () -> eligibilityChecks.getFirst().getAsBoolean();
   }
 
   private static OrganoId organoIdOf(OrganoDeContratacion organo) {
