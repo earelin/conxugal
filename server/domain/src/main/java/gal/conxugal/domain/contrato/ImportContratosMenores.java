@@ -6,7 +6,6 @@ import gal.conxugal.domain.importrun.ImportRunOrganoState;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.domain.importrun.Importer;
-import gal.conxugal.domain.organo.ContratosMenoresImportMode;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.OrganoNotFoundException;
@@ -15,7 +14,6 @@ import jakarta.inject.Singleton;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,10 +36,12 @@ import org.slf4j.LoggerFactory;
  * reason is reportability rather than pacing: it gives the per-Órgano outcomes a well-defined
  * order, so at any moment a run is working on one identifiable Órgano.
  *
- * <p><strong>A failing Órgano does not take the run down with it.</strong> Its row is settled
- * failed with the reason and the run moves to the next; what it and the Órganos before it stored
- * stands. A run of four hundred Órganos that gave up at the fortieth because one source answered
- * badly would be worth far less than the thirty-nine imports it already had.
+ * <p><strong>A failing Órgano does not take the run down with it.</strong> The run moves to the
+ * next; what it and the Órganos before it stored stands. A run of four hundred Órganos that gave
+ * up at the fortieth because one source answered badly would be worth far less than the
+ * thirty-nine imports it already had. Isolating it is {@link ImportCoveredOrgano}'s, which is
+ * also where what one Órgano's turn amounts to is decided — this class only counts what came
+ * back.
  *
  * <p><strong>The verdict is read off the failed rows, not the successful ones.</strong> Nothing
  * failed is a success, whatever else happened: a run whose Órganos were every one skipped, or every
@@ -60,15 +60,15 @@ public class ImportContratosMenores {
 
   private final OrganoRepository organos;
   private final ImportRunRepository importRuns;
-  private final ImportOrganoContratosMenores walk;
+  private final ImportCoveredOrgano coveredOrgano;
 
   public ImportContratosMenores(
       OrganoRepository organos,
       ImportRunRepository importRuns,
-      ImportOrganoContratosMenores walk) {
+      ImportCoveredOrgano coveredOrgano) {
     this.organos = organos;
     this.importRuns = importRuns;
-    this.walk = walk;
+    this.coveredOrgano = coveredOrgano;
   }
 
   /**
@@ -154,17 +154,15 @@ public class ImportContratosMenores {
     List<OrganoId> covered = coveredOrganosOf(runId);
     int failed = 0;
     for (OrganoId organoId : covered) {
-      Optional<Settlement> settlement = settlementFor(runId, organoId);
-      if (settlement.isEmpty()) {
+      Optional<ImportRunOrganoState> settled = coveredOrgano.run(runId, organoId);
+      if (settled.isEmpty()) {
         LOG.warn(
             "Contratos menores run {} stopped holding the import guard while walking Órgano {};"
                 + " what it covered is another import's now, and it settles nothing",
             runId, organoId);
         return new Walked(covered.size(), failed, false);
       }
-      Settlement settled = settlement.get();
-      settleOrgano(runId, organoId, settled);
-      if (settled.state() == ImportRunOrganoState.FAILED) {
+      if (settled.get() == ImportRunOrganoState.FAILED) {
         failed++;
       }
     }
@@ -190,139 +188,6 @@ public class ImportContratosMenores {
                   runId);
               return List.of();
             });
-  }
-
-  /**
-   * How one Órgano ended, and why if the state does not say it on its own. It exists so the walking
-   * and the recording of it stay separate acts — the record is evidence about an import, never a
-   * participant in it.
-   */
-  private record Settlement(ImportRunOrganoState state, @Nullable String reason) {
-
-    /**
-     * Recorded on an Órgano whose history is already loaded. It is neither imported nor failed, and
-     * reporting it as either would be untrue; naming the mode says why nothing was done.
-     */
-    private static final String ALREADY_LOADED =
-        "Nothing to import: this Órgano's history is loaded, and the %s mode does not exist yet"
-            .formatted(ContratosMenoresImportMode.INCREMENTAL);
-
-    /**
-     * The two ways a mark can be withdrawn, told apart on the row. Both leave the Órgano exactly as
-     * it stands, but only one of them read anything at all, and an administrator looking at a
-     * stopped Órgano has no other way to know which happened.
-     */
-    private static final String UNMARKED_BEFORE_ITS_TURN =
-        "Nothing was read: this Órgano stopped being active and marked before the run reached it";
-
-    private static final String UNMARKED_MID_WALK =
-        "Stopped at a batch boundary: this Órgano stopped being active and marked while it was"
-            + " being imported";
-
-    static Settlement succeeded() {
-      return new Settlement(ImportRunOrganoState.SUCCEEDED, null);
-    }
-
-    static Settlement unmarkedBeforeItsTurn() {
-      return new Settlement(ImportRunOrganoState.STOPPED, UNMARKED_BEFORE_ITS_TURN);
-    }
-
-    static Settlement unmarkedMidWalk() {
-      return new Settlement(ImportRunOrganoState.STOPPED, UNMARKED_MID_WALK);
-    }
-
-    static Settlement alreadyLoaded() {
-      return new Settlement(ImportRunOrganoState.SKIPPED, ALREADY_LOADED);
-    }
-
-    static Settlement goneFromTheCatalogue() {
-      return new Settlement(
-          ImportRunOrganoState.FAILED, "This Órgano is no longer in the catalogue");
-    }
-
-    static Settlement failed(String reason) {
-      return new Settlement(ImportRunOrganoState.FAILED, reason);
-    }
-  }
-
-  /**
-   * How one Órgano ended, or nothing at all when the run stopped being the live one while it was
-   * being walked — which is not an ending this Órgano had, and not one to write down.
-   *
-   * <p>Everything the step can throw is caught, not only the source being unavailable, and the
-   * catch covers reading the catalogue as much as walking it. The rule the run owes the rest of its
-   * Órganos is that one of them failing costs only that one, and a momentary failure to read one
-   * row must not abandon the Órganos after it. An Error is deliberately not caught: it says this
-   * process is no longer to be trusted with them either.
-   */
-  private Optional<Settlement> settlementFor(ImportRunId runId, OrganoId organoId) {
-    try {
-      return outcomeFor(runId, organoId);
-    } catch (RuntimeException e) {
-      LOG.warn(
-          "Contratos menores import of Órgano {} failed within run {}; what it stored stands and"
-              + " the run carries on to the Órganos after it",
-          organoId, runId, e);
-      return Optional.of(Settlement.failed(reasonOf(e)));
-    }
-  }
-
-  /**
-   * The mode rule decides what happens to an Órgano, not the trigger that arrived — so a mark, a
-   * manual sweep and a future scheduler all resume a half-loaded Órgano and all leave a loaded one
-   * alone.
-   *
-   * <p>Eligibility is asked again first, because a sweep reaches its four-hundredth Órgano days
-   * after the run enumerated it, and one unmarked in between must have nothing read for it at all.
-   */
-  private Optional<Settlement> outcomeFor(ImportRunId runId, OrganoId organoId) {
-    Optional<OrganoDeContratacion> found = organos.findById(organoId);
-    if (found.isEmpty()) {
-      return Optional.of(Settlement.goneFromTheCatalogue());
-    }
-    OrganoDeContratacion organo = found.get();
-    if (!organo.eligibleForImport()) {
-      return Optional.of(Settlement.unmarkedBeforeItsTurn());
-    }
-    return switch (ContratosMenoresImportMode.of(organo.importStatus())) {
-      case INITIAL, RESUMED -> walked(runId, organo, organoId);
-      case INCREMENTAL -> Optional.of(Settlement.alreadyLoaded());
-    };
-  }
-
-  /**
-   * The walk, and what its ending means to the run. A walk stopped because the Órgano was unmarked
-   * is an ordinary ending and the run carries on; one stopped because the guard went is the run
-   * being over, and nothing further is written to it.
-   */
-  private Optional<Settlement> walked(
-      ImportRunId runId, OrganoDeContratacion organo, OrganoId organoId) {
-    ContratosMenoresImportSummary summary = walk.run(runId, organo, () -> stillEligible(organoId));
-    return switch (summary.stoppedBy()) {
-      case null -> Optional.of(Settlement.succeeded());
-      case UNMARKED -> Optional.of(Settlement.unmarkedMidWalk());
-      case GUARD_LOST -> Optional.empty();
-    };
-  }
-
-  /** Asked at every batch boundary of the walk, which is what makes an unmark stop it. */
-  private boolean stillEligible(OrganoId organoId) {
-    return organos.findById(organoId).filter(OrganoDeContratacion::eligibleForImport).isPresent();
-  }
-
-  /**
-   * Records how one Órgano ended, and never lets that recording cost the run. A settlement write
-   * that failed and was allowed out would abandon every Órgano after this one over a row.
-   */
-  private void settleOrgano(ImportRunId runId, OrganoId organoId, Settlement settlement) {
-    try {
-      importRuns.finishOrgano(runId, organoId, settlement.state(), settlement.reason());
-    } catch (RuntimeException e) {
-      LOG.warn(
-          "Contratos menores import of Órgano {} ended as {} but run {} does not record it; the"
-              + " contracts stand and the run carries on",
-          organoId, settlement.state(), runId, e);
-    }
   }
 
   /**
@@ -354,10 +219,5 @@ public class ImportContratosMenores {
 
   private static OrganoId identityOf(OrganoDeContratacion organo) {
     return Objects.requireNonNull(organo.id(), "a stored Órgano always carries its identity");
-  }
-
-  private static String reasonOf(RuntimeException e) {
-    String message = e.getMessage();
-    return message == null ? e.getClass().getSimpleName() : message;
   }
 }

@@ -4,16 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import gal.conxugal.domain.contrato.ContratosMenoresImportSummary.StopReason;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
@@ -21,8 +18,6 @@ import gal.conxugal.domain.importrun.ImportRunReport;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.domain.importrun.Importer;
-import gal.conxugal.domain.organo.ContratosMenoresImportState;
-import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.OrganoNotFoundException;
@@ -31,16 +26,18 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/**
+ * The run: who it covers, the order they are taken in, and what the whole thing amounts to. What
+ * one Órgano's turn means is {@link ImportCoveredOrgano}'s and is stubbed here.
+ */
 @ExtendWith(MockitoExtension.class)
 class ImportContratosMenoresTest {
 
@@ -57,10 +54,9 @@ class ImportContratosMenoresTest {
   private ImportRunRepository importRuns;
 
   @Mock
-  private ImportOrganoContratosMenores walk;
+  private ImportCoveredOrgano coveredOrgano;
 
-  private final List<OrganoId> walked = new ArrayList<>();
-  private final List<BooleanSupplier> eligibilityChecks = new ArrayList<>();
+  private final List<OrganoId> imported = new ArrayList<>();
 
   // ---------------------------------------------------------------- claiming
 
@@ -145,232 +141,69 @@ class ImportContratosMenoresTest {
     verifyNoInteractions(importRuns);
   }
 
-  // ---------------------------------------------------------------- walking
+  // ---------------------------------------------------------------- the sweep
 
   // Serial, and in the order the run recorded: a run is working on one identifiable Órgano at any
   // moment, which is what makes its per-Órgano outcomes reportable.
   @Test
-  void walks_the_covered_organos_one_after_another_in_the_order_the_run_holds_them() {
+  void imports_the_covered_organos_one_after_another_in_the_order_the_run_holds_them() {
     runCovers(FIRST, SECOND, THIRD);
-    organoIsMarked(FIRST, SECOND, THIRD);
-    walkCompletesEveryOrgano();
+    eachOrganoSettles(organoId -> ImportRunOrganoState.SUCCEEDED);
 
     importContratosMenores().execute(RUN_ID);
 
-    assertThat(walked).containsExactly(FIRST, SECOND, THIRD);
+    assertThat(imported).containsExactly(FIRST, SECOND, THIRD);
   }
 
   @Test
-  void walks_the_organo_whose_import_never_started() {
-    runCovers(FIRST);
-    when(organos.findById(FIRST)).thenReturn(Optional.of(marked(FIRST)));
-    walkCompletesEveryOrgano();
-
-    importContratosMenores().execute(RUN_ID);
-
-    assertThat(walked).containsExactly(FIRST);
-  }
-
-  @Test
-  void resumes_the_organo_whose_history_is_half_loaded() {
-    runCovers(FIRST);
-    when(organos.findById(FIRST))
-        .thenReturn(Optional.of(loaded(FIRST, ContratosMenoresImportStatus.INCOMPLETE)));
-    walkCompletesEveryOrgano();
-
-    importContratosMenores().execute(RUN_ID);
-
-    assertThat(walked).containsExactly(FIRST);
-  }
-
-  // Neither imported nor failed, and saying so is the point: reported as either, a fully loaded
-  // catalogue would read as a nightly failure or as work that never happened.
-  @Test
-  void skips_the_organo_whose_history_is_loaded_naming_the_mode_that_does_not_exist() {
-    runCovers(FIRST);
-    when(organos.findById(FIRST))
-        .thenReturn(Optional.of(loaded(FIRST, ContratosMenoresImportStatus.COMPLETE)));
-
-    importContratosMenores().execute(RUN_ID);
-
-    verify(importRuns)
-        .finishOrgano(
-            eq(RUN_ID),
-            eq(FIRST),
-            eq(ImportRunOrganoState.SKIPPED),
-            argThat(reason -> reason != null && reason.contains("INCREMENTAL")));
-    verifyNoInteractions(walk);
-  }
-
-  // A sweep reaches its last Órgano days after the run enumerated it. One unmarked in between must
-  // have nothing read for it at all, not one page read before the walk notices.
-  @Test
-  void stops_the_organo_unmarked_before_its_turn_without_reading_its_source() {
-    runCovers(FIRST);
-    when(organos.findById(FIRST)).thenReturn(Optional.of(organo(FIRST, true, false)));
-
-    importContratosMenores().execute(RUN_ID);
-
-    verify(importRuns)
-        .finishOrgano(
-            eq(RUN_ID),
-            eq(FIRST),
-            eq(ImportRunOrganoState.STOPPED),
-            argThat(Objects::nonNull));
-    verifyNoInteractions(walk);
-  }
-
-  @Test
-  void settles_the_organo_unmarked_mid_walk_as_stopped_naming_what_stopped_it() {
-    runCovers(FIRST);
-    organoIsMarked(FIRST);
-    walkAnswers(organoId -> ContratosMenoresImportSummary.stopped(100, 0, StopReason.UNMARKED));
-
-    importContratosMenores().execute(RUN_ID);
-
-    verify(importRuns)
-        .finishOrgano(
-            eq(RUN_ID),
-            eq(FIRST),
-            eq(ImportRunOrganoState.STOPPED),
-            argThat(Objects::nonNull));
-  }
-
-  // The two stops read alike on the row without this: one is an administrator's decision about one
-  // Órgano, the other is this run having been replaced, and only the reason tells them apart.
-  @Test
-  void distinguishes_the_organo_unmarked_before_its_turn_from_one_unmarked_mid_walk() {
+  void carries_on_to_the_next_organo_when_one_of_them_failed() {
     runCovers(FIRST, SECOND);
-    when(organos.findById(FIRST)).thenReturn(Optional.of(marked(FIRST)));
-    when(organos.findById(SECOND)).thenReturn(Optional.of(organo(SECOND, true, false)));
-    walkAnswers(organoId -> ContratosMenoresImportSummary.stopped(100, 0, StopReason.UNMARKED));
-    List<String> reasons = new ArrayList<>();
-    recordStopReasonsInto(reasons);
+    eachOrganoSettles(
+        organoId ->
+            organoId.equals(FIRST)
+                ? ImportRunOrganoState.FAILED
+                : ImportRunOrganoState.SUCCEEDED);
 
     importContratosMenores().execute(RUN_ID);
 
-    assertThat(reasons).hasSize(2).doesNotHaveDuplicates();
+    assertThat(imported).containsExactly(FIRST, SECOND);
   }
 
   @Test
-  void settles_the_organo_that_read_its_history_out_as_succeeded() {
-    runCovers(FIRST);
-    organoIsMarked(FIRST);
-    walkCompletesEveryOrgano();
+  void reads_no_organo_when_the_run_it_was_handed_is_no_longer_the_live_one() {
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(false);
 
     importContratosMenores().execute(RUN_ID);
 
-    verify(importRuns).finishOrgano(RUN_ID, FIRST, ImportRunOrganoState.SUCCEEDED, null);
+    verifyNoInteractions(organos, coveredOrgano);
+    verify(importRuns, never()).complete(any(), any(), anyInt(), anyInt());
   }
 
-  // The history floor is an ending of the walk's own, not a fault and not an interruption: what it
-  // read stands, and the Órgano is resumed by a later run.
+  // Defence rather than a reachable state — the guard and the coverage are read off the same row —
+  // but a run that answers no coverage must walk nothing rather than fall through to the catalogue.
   @Test
-  void settles_the_organo_that_reached_the_history_floor_as_succeeded() {
-    runCovers(FIRST);
-    organoIsMarked(FIRST);
-    walkAnswers(organoId -> ContratosMenoresImportSummary.incomplete(100, 0));
+  void reads_no_organo_when_the_run_it_was_handed_is_not_recorded() {
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
+    when(importRuns.findRun(RUN_ID)).thenReturn(Optional.empty());
 
     importContratosMenores().execute(RUN_ID);
 
-    verify(importRuns).finishOrgano(RUN_ID, FIRST, ImportRunOrganoState.SUCCEEDED, null);
+    verifyNoInteractions(organos, coveredOrgano);
   }
 
+  // ------------------------------------------------------------ the guard going
+
+  // The run has been claimed by whoever triggered after this one went quiet. Its record is theirs
+  // now, and this process settling it would report the work the live run is still doing as done.
   @Test
-  void fails_the_organo_that_vanished_from_the_catalogue_before_its_turn() {
-    runCovers(FIRST);
-    when(organos.findById(FIRST)).thenReturn(Optional.empty());
-
-    importContratosMenores().execute(RUN_ID);
-
-    verify(importRuns)
-        .finishOrgano(
-            eq(RUN_ID),
-            eq(FIRST),
-            eq(ImportRunOrganoState.FAILED),
-            argThat(Objects::nonNull));
-  }
-
-  // ------------------------------------------------ the walk's eligibility check
-
-  @Test
-  void tells_the_walk_the_organo_is_still_eligible_while_it_stays_marked() {
-    runCovers(FIRST);
-    organoIsMarked(FIRST);
-    BooleanSupplier stillEligible = eligibilityCheckHandedToTheWalk();
-
-    importContratosMenores().execute(RUN_ID);
-
-    assertThat(stillEligible.getAsBoolean()).isTrue();
-  }
-
-  @Test
-  void tells_the_walk_the_organo_is_no_longer_eligible_once_it_is_unmarked() {
-    runCovers(FIRST);
-    when(organos.findById(FIRST))
-        .thenReturn(Optional.of(marked(FIRST)))
-        .thenReturn(Optional.of(organo(FIRST, true, false)));
-    BooleanSupplier stillEligible = eligibilityCheckHandedToTheWalk();
-
-    importContratosMenores().execute(RUN_ID);
-
-    assertThat(stillEligible.getAsBoolean()).isFalse();
-  }
-
-  @Test
-  void tells_the_walk_the_organo_is_no_longer_eligible_once_it_leaves_the_catalogue() {
-    runCovers(FIRST);
-    when(organos.findById(FIRST))
-        .thenReturn(Optional.of(marked(FIRST)))
-        .thenReturn(Optional.empty());
-    BooleanSupplier stillEligible = eligibilityCheckHandedToTheWalk();
-
-    importContratosMenores().execute(RUN_ID);
-
-    assertThat(stillEligible.getAsBoolean()).isFalse();
-  }
-
-  // ---------------------------------------------------------------- isolation
-
-  @Test
-  void carries_on_to_the_next_organo_when_one_organos_source_fails() {
+  void settles_nothing_at_all_when_the_run_stops_holding_the_guard_mid_sweep() {
     runCovers(FIRST, SECOND);
-    organoIsMarked(FIRST, SECOND);
-    walkFailsOn(FIRST);
+    theRunIsTakenOverAt(FIRST);
 
     importContratosMenores().execute(RUN_ID);
 
-    assertThat(walked).containsExactly(FIRST, SECOND);
-    verify(importRuns).finishOrgano(RUN_ID, SECOND, ImportRunOrganoState.SUCCEEDED, null);
-  }
-
-  @Test
-  void names_the_reason_on_the_organo_whose_source_failed() {
-    runCovers(FIRST);
-    organoIsMarked(FIRST);
-    walkFailsOn(FIRST);
-
-    importContratosMenores().execute(RUN_ID);
-
-    verify(importRuns)
-        .finishOrgano(RUN_ID, FIRST, ImportRunOrganoState.FAILED, "the source is unreachable");
-  }
-
-  // A settlement row is evidence about an import, never a participant in it: a run of four hundred
-  // Órganos must not be abandoned at the first because one row could not be written.
-  @Test
-  void carries_on_when_one_organos_settlement_cannot_be_recorded() {
-    runCovers(FIRST, SECOND);
-    organoIsMarked(FIRST, SECOND);
-    walkCompletesEveryOrgano();
-    doThrow(new IllegalStateException("the run record is unreachable"))
-        .when(importRuns)
-        .finishOrgano(RUN_ID, FIRST, ImportRunOrganoState.SUCCEEDED, null);
-
-    importContratosMenores().execute(RUN_ID);
-
-    assertThat(walked).containsExactly(FIRST, SECOND);
-    verify(importRuns).complete(RUN_ID, ImportRunState.SUCCEEDED, 0, 0);
+    assertThat(imported).containsExactly(FIRST);
+    verify(importRuns, never()).complete(any(), any(), anyInt(), anyInt());
   }
 
   // ---------------------------------------------------------------- verdicts
@@ -378,8 +211,7 @@ class ImportContratosMenoresTest {
   @Test
   void records_the_run_as_succeeded_when_no_covered_organo_failed() {
     runCovers(FIRST, SECOND);
-    organoIsMarked(FIRST, SECOND);
-    walkCompletesEveryOrgano();
+    eachOrganoSettles(organoId -> ImportRunOrganoState.SUCCEEDED);
 
     importContratosMenores().execute(RUN_ID);
 
@@ -389,8 +221,7 @@ class ImportContratosMenoresTest {
   @Test
   void records_the_run_as_failed_when_every_covered_organo_failed() {
     runCovers(FIRST, SECOND);
-    organoIsMarked(FIRST, SECOND);
-    walkFailsOn(FIRST, SECOND);
+    eachOrganoSettles(organoId -> ImportRunOrganoState.FAILED);
 
     importContratosMenores().execute(RUN_ID);
 
@@ -400,8 +231,11 @@ class ImportContratosMenoresTest {
   @Test
   void records_the_run_as_partially_succeeded_when_some_failed_and_some_did_not() {
     runCovers(FIRST, SECOND);
-    organoIsMarked(FIRST, SECOND);
-    walkFailsOn(SECOND);
+    eachOrganoSettles(
+        organoId ->
+            organoId.equals(SECOND)
+                ? ImportRunOrganoState.FAILED
+                : ImportRunOrganoState.SUCCEEDED);
 
     importContratosMenores().execute(RUN_ID);
 
@@ -414,10 +248,7 @@ class ImportContratosMenoresTest {
   @Test
   void records_the_run_as_succeeded_when_every_covered_organo_was_skipped() {
     runCovers(FIRST, SECOND);
-    when(organos.findById(FIRST))
-        .thenReturn(Optional.of(loaded(FIRST, ContratosMenoresImportStatus.COMPLETE)));
-    when(organos.findById(SECOND))
-        .thenReturn(Optional.of(loaded(SECOND, ContratosMenoresImportStatus.COMPLETE)));
+    eachOrganoSettles(organoId -> ImportRunOrganoState.SKIPPED);
 
     importContratosMenores().execute(RUN_ID);
 
@@ -427,8 +258,7 @@ class ImportContratosMenoresTest {
   @Test
   void records_the_run_as_succeeded_when_every_covered_organo_was_stopped() {
     runCovers(FIRST, SECOND);
-    when(organos.findById(FIRST)).thenReturn(Optional.of(organo(FIRST, true, false)));
-    when(organos.findById(SECOND)).thenReturn(Optional.of(organo(SECOND, true, false)));
+    eachOrganoSettles(organoId -> ImportRunOrganoState.STOPPED);
 
     importContratosMenores().execute(RUN_ID);
 
@@ -442,36 +272,7 @@ class ImportContratosMenoresTest {
     importContratosMenores().execute(RUN_ID);
 
     verify(importRuns).complete(RUN_ID, ImportRunState.SUCCEEDED, 0, 0);
-    verifyNoInteractions(organos, walk);
-  }
-
-  // ------------------------------------------------------------ the guard going
-
-  // The run has been claimed by whoever triggered after this one went quiet. Its record is theirs
-  // now, and this process settling it would report the work the live run is still doing as done.
-  @Test
-  void settles_nothing_at_all_when_the_run_stops_holding_the_guard_mid_walk() {
-    runCovers(FIRST, SECOND);
-    organoIsMarked(FIRST);
-    walkAnswers(organoId -> ContratosMenoresImportSummary.stopped(100, 0, StopReason.GUARD_LOST));
-
-    importContratosMenores().execute(RUN_ID);
-
-    assertThat(walked).containsExactly(FIRST);
-    verify(importRuns, never()).finishOrgano(any(), any(), any(), any());
-    verify(importRuns, never()).complete(any(), any(), anyInt(), anyInt());
-  }
-
-  // Asked to execute a run that is already over — a retry, or a redelivered trigger. Without this
-  // it would walk the coverage again and overwrite the verdict and the Órganos it named as failed.
-  @Test
-  void reads_no_organo_when_the_run_it_was_handed_is_no_longer_the_live_one() {
-    when(importRuns.holdsGuard(RUN_ID)).thenReturn(false);
-
-    importContratosMenores().execute(RUN_ID);
-
-    verifyNoInteractions(organos, walk);
-    verify(importRuns, never()).complete(any(), any(), anyInt(), anyInt());
+    verifyNoInteractions(organos, coveredOrgano);
   }
 
   // ---------------------------------------------------------------- settling
@@ -503,22 +304,10 @@ class ImportContratosMenoresTest {
     verify(importRuns).complete(RUN_ID, ImportRunState.SUCCEEDED, 0, 0);
   }
 
-  // Defence rather than a reachable state — the guard and the coverage are read off the same row —
-  // but a run that answers no coverage must walk nothing rather than fall through to the catalogue.
-  @Test
-  void reads_no_organo_when_the_run_it_was_handed_is_not_recorded() {
-    when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
-    when(importRuns.findRun(RUN_ID)).thenReturn(Optional.empty());
-
-    importContratosMenores().execute(RUN_ID);
-
-    verifyNoInteractions(organos, walk);
-  }
-
   // ---------------------------------------------------------------- fixtures
 
   private ImportContratosMenores importContratosMenores() {
-    return new ImportContratosMenores(organos, importRuns, walk);
+    return new ImportContratosMenores(organos, importRuns, coveredOrgano);
   }
 
   private void runCovers(OrganoId... organoIds) {
@@ -544,64 +333,31 @@ class ImportContratosMenoresTest {
                     coverage)));
   }
 
-  private void organoIsMarked(OrganoId... organoIds) {
-    for (OrganoId organoId : organoIds) {
-      when(organos.findById(organoId)).thenReturn(Optional.of(marked(organoId)));
-    }
-  }
-
   /**
-   * The one place the walk is stubbed. Every walk records the Órgano it was for and the eligibility
-   * check it was handed, whatever it goes on to answer — so no test can assert the order Órganos
-   * were walked in, or what the walk was told to ask, against a recording it forgot to set up.
+   * The one place the per-Órgano step is stubbed. Every turn records the Órgano it was for, so no
+   * test can assert the order they were taken in against a recording it forgot to set up.
    */
-  private void walkAnswers(Function<OrganoId, ContratosMenoresImportSummary> answer) {
-    when(walk.run(eq(RUN_ID), any(), any()))
+  private void eachOrganoSettles(Function<OrganoId, ImportRunOrganoState> state) {
+    when(coveredOrgano.run(eq(RUN_ID), any()))
         .thenAnswer(
             invocation -> {
-              OrganoId organoId = organoIdOf(invocation.getArgument(1));
-              walked.add(organoId);
-              eligibilityChecks.add(invocation.getArgument(2));
-              return answer.apply(organoId);
+              OrganoId organoId = invocation.getArgument(1);
+              imported.add(organoId);
+              return Optional.of(state.apply(organoId));
             });
   }
 
-  /** Every walk reads its Órgano's history out. */
-  private void walkCompletesEveryOrgano() {
-    walkAnswers(organoId -> ContratosMenoresImportSummary.complete(1, 0));
-  }
-
-  /** As above, but the named Órganos answer an unreachable source instead. */
-  private void walkFailsOn(OrganoId... failing) {
-    List<OrganoId> unreachable = List.of(failing);
-    walkAnswers(
-        organoId -> {
-          if (unreachable.contains(organoId)) {
-            throw new ContratoMenorSourceUnavailableException("the source is unreachable");
-          }
-          return ContratosMenoresImportSummary.complete(1, 0);
-        });
-  }
-
-  /** Collects the reason recorded on every Órgano settled as stopped. */
-  private void recordStopReasonsInto(List<String> reasons) {
-    doAnswer(
+  /** As above, but the named Órgano's turn finds the run is no longer this process's to use. */
+  private void theRunIsTakenOverAt(OrganoId taken) {
+    when(coveredOrgano.run(eq(RUN_ID), any()))
+        .thenAnswer(
             invocation -> {
-              reasons.add(invocation.getArgument(3));
-              return null;
-            })
-        .when(importRuns)
-        .finishOrgano(eq(RUN_ID), any(), eq(ImportRunOrganoState.STOPPED), any());
-  }
-
-  /** Hands back the check the walk was given, so the test can ask it what the walk would ask. */
-  private BooleanSupplier eligibilityCheckHandedToTheWalk() {
-    walkCompletesEveryOrgano();
-    return () -> eligibilityChecks.getFirst().getAsBoolean();
-  }
-
-  private static OrganoId organoIdOf(OrganoDeContratacion organo) {
-    return Objects.requireNonNull(organo.id());
+              OrganoId organoId = invocation.getArgument(1);
+              imported.add(organoId);
+              return organoId.equals(taken)
+                  ? Optional.empty()
+                  : Optional.of(ImportRunOrganoState.SUCCEEDED);
+            });
   }
 
   private static OrganoDeContratacion marked(OrganoId organoId) {
@@ -612,17 +368,5 @@ class ImportContratosMenoresTest {
       OrganoId organoId, boolean active, boolean importable) {
     return new OrganoDeContratacion(
         organoId, "source-key", "Órgano", active, importable, null, null);
-  }
-
-  private static OrganoDeContratacion loaded(
-      OrganoId organoId, ContratosMenoresImportStatus status) {
-    return new OrganoDeContratacion(
-        organoId,
-        "source-key",
-        "Órgano",
-        true,
-        true,
-        null,
-        new ContratosMenoresImportState(organoId, status, null, T_ZERO));
   }
 }
