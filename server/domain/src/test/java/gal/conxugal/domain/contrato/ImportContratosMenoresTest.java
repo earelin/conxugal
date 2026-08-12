@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import gal.conxugal.domain.importrun.ImportAlreadyRunningException;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
@@ -20,6 +21,7 @@ import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.domain.importrun.Importer;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
+import gal.conxugal.domain.organo.OrganoNotEligibleForImportException;
 import gal.conxugal.domain.organo.OrganoNotFoundException;
 import gal.conxugal.domain.organo.OrganoRepository;
 import java.time.Instant;
@@ -69,9 +71,7 @@ class ImportContratosMenoresTest {
     when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of(FIRST, SECOND)))
         .thenReturn(Optional.of(RUN_ID));
 
-    ContratosMenoresImportClaim claim = importContratosMenores().claimAll();
-
-    assertThat(claim).isEqualTo(ContratosMenoresImportClaim.claimed(RUN_ID));
+    assertThat(importContratosMenores().claimAll()).isEqualTo(RUN_ID);
   }
 
   // A catalogue with nothing marked is an ordinary answer, not a refusal: the run records that it
@@ -81,9 +81,7 @@ class ImportContratosMenoresTest {
     when(organos.findAllByActiveTrueAndImportableTrue()).thenReturn(List.of());
     when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of())).thenReturn(Optional.of(RUN_ID));
 
-    ContratosMenoresImportClaim claim = importContratosMenores().claimAll();
-
-    assertThat(claim.status()).isEqualTo(ContratosMenoresImportClaim.Status.CLAIMED);
+    assertThat(importContratosMenores().claimAll()).isEqualTo(RUN_ID);
   }
 
   @Test
@@ -91,10 +89,10 @@ class ImportContratosMenoresTest {
     when(organos.findAllByActiveTrueAndImportableTrue()).thenReturn(List.of(marked(FIRST)));
     when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of(FIRST))).thenReturn(Optional.empty());
 
-    ContratosMenoresImportClaim claim = importContratosMenores().claimAll();
+    ImportContratosMenores importContratosMenores = importContratosMenores();
 
-    assertThat(claim.status()).isEqualTo(ContratosMenoresImportClaim.Status.ALREADY_RUNNING);
-    assertThat(claim.runId()).isNull();
+    assertThatExceptionOfType(ImportAlreadyRunningException.class)
+        .isThrownBy(importContratosMenores::claimAll);
   }
 
   @Test
@@ -103,9 +101,7 @@ class ImportContratosMenoresTest {
     when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of(SECOND)))
         .thenReturn(Optional.of(RUN_ID));
 
-    ContratosMenoresImportClaim claim = importContratosMenores().claimOrgano(SECOND);
-
-    assertThat(claim).isEqualTo(ContratosMenoresImportClaim.claimed(RUN_ID));
+    assertThat(importContratosMenores().claimOrgano(SECOND)).isEqualTo(RUN_ID);
   }
 
   // The guard is never touched: an ineligible Órgano leaves no run row and no evidence of having
@@ -114,19 +110,23 @@ class ImportContratosMenoresTest {
   void refuses_the_named_organo_that_is_not_marked_without_touching_the_guard() {
     when(organos.findById(FIRST)).thenReturn(Optional.of(organo(FIRST, true, false)));
 
-    ContratosMenoresImportClaim claim = importContratosMenores().claimOrgano(FIRST);
+    ImportContratosMenores importContratosMenores = importContratosMenores();
 
-    assertThat(claim.status()).isEqualTo(ContratosMenoresImportClaim.Status.NOT_ELIGIBLE);
+    assertThatExceptionOfType(OrganoNotEligibleForImportException.class)
+        .isThrownBy(() -> importContratosMenores.claimOrgano(FIRST))
+        .satisfies(refusal -> assertThat(refusal.getOrganoId()).isEqualTo(FIRST));
+
     verifyNoInteractions(importRuns);
   }
 
   @Test
   void refuses_the_named_organo_that_is_no_longer_active() {
     when(organos.findById(FIRST)).thenReturn(Optional.of(organo(FIRST, false, true)));
+    ImportContratosMenores importContratosMenores = importContratosMenores();
 
-    ContratosMenoresImportClaim claim = importContratosMenores().claimOrgano(FIRST);
+    assertThatExceptionOfType(OrganoNotEligibleForImportException.class)
+        .isThrownBy(() -> importContratosMenores.claimOrgano(FIRST));
 
-    assertThat(claim.status()).isEqualTo(ContratosMenoresImportClaim.Status.NOT_ELIGIBLE);
     verifyNoInteractions(importRuns);
   }
 

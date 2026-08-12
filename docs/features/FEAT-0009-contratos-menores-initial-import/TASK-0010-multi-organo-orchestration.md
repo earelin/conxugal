@@ -1,7 +1,7 @@
 ---
 feat: FEAT-0009
 domain: backend
-adrs: [0002, 0017, 0019]
+adrs: [0002, 0011, 0017, 0019]
 status: done
 depends_on: [TASK-0007, TASK-0009]
 ---
@@ -14,24 +14,47 @@ run record that says what happened. Governed by
 [ADR-0002](../../architecture/0002-hexagonal-architecture.md) and
 [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md).
 
-Synchronous and blocking by design: it is a domain use case, and it runs for days.
-[TASK-0011](TASK-0011-triggers-and-run-read.md) is what submits it to an executor and answers
-the trigger immediately.
+Synchronous and blocking by design: it is a domain use case, and it runs for days. What answers a
+trigger in milliseconds is `StartContratosMenoresImport`, the driving-side service this task also
+delivers. [TASK-0011](TASK-0011-triggers-and-run-read.md) is what exposes that over HTTP and turns
+its refusals into responses.
 
 ## Scope
-- Two entry points, because a trigger must answer in milliseconds about a job that runs for
-  days:
+- Two entry points on the use case, because a trigger must answer in milliseconds about a job
+  that runs for days:
   - **claim** — takes the scope (every eligible Órgano, or one named Órgano), evaluates
     eligibility, claims the guard and writes the run row with its covered Órganos enumerated,
-    then returns **the run identifier (`ImportRunId`) or a refusal**. Synchronous and short.
+    then answers **the run identifier (`ImportRunId`)** or refuses. Synchronous and short.
   - **execute** — takes that `ImportRunId` and performs the walks. Long. Taking the typed
     identifier rather than a bare `UUID` is what stops an Órgano's id being passed here
     ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)) — the two travel
     together through every method in this task.
+- **One entry point per kind of import for whoever triggers one**, because a trigger has no use
+  for a half-started import it must remember to finish. Pairing the two — claim, hand the walking
+  over, answer the identity — is `StartContratosMenoresImport`'s, and it lives in `application`
+  rather than in the domain because choosing the thread long work runs on is a driving-side
+  decision ([ADR-0002](../../architecture/0002-hexagonal-architecture.md)): a trigger is what
+  needs an answer now, and a trigger is what knows there is somewhere else to put the work.
+  - **A submission the executor refuses settles the run before it propagates.** A run left
+    claimed but unstarted would hold the system-wide guard until the abandonment bound passed,
+    refusing every import in the meantime for work no thread was ever going to do.
+- **The walking runs on a dedicated single-thread virtual-thread executor**, configured under
+  `micronaut.executors` following the `organos-import` precedent
+  ([ADR-0011](../../architecture/0011-blocking-io-virtual-threads.md)) and injected by name. A
+  multi-day job must not occupy request-serving capacity, and the comment already in
+  `application.yml` about not declaring a `blocking` executor applies unchanged. One thread is
+  enough because the guard admits one import at a time anyway: a second could only ever hold a
+  run the guard had already refused. *Brought forward from TASK-0011, which no longer submits
+  anything itself.*
+- **Refusals are exceptions, not a returned value**, so a caller cannot read past one to an
+  identity that does not exist, and the transport layer maps them the way it already maps every
+  other domain refusal. There are two, and they are separate types because they ask opposite
+  things of an administrator: the guard being held is a matter of timing and asking again later
+  works, while an ineligible Órgano refuses every time until the catalogue or the mark changes.
 - **Eligibility is `active && importable`, evaluated here** and not by each trigger, so the
   manual trigger, the mark trigger and the future scheduler cannot disagree about it. A named
-  Órgano that fails the test yields the **not-eligible** refusal — a different refusal from the
-  guard being held (R20, #34) — and starts no run.
+  Órgano that fails the test is refused as **not eligible** — distinguishably from the guard
+  being held (R20, #34) — and starts no run.
 - Órganos are processed **serially**, one finished before the next begins. R22's reason is
   reportability, not pacing: it gives the per-Órgano outcomes a well-defined order, so at any
   moment a run is working on one identifiable Órgano.
@@ -90,6 +113,14 @@ the trigger immediately.
   only)
 - A single-Órgano scope naming an unmarked or inactive Órgano starts no run and reports
   **not eligible**, distinguishably from the guard refusal. (SPEC-0005 #34)
+- A started import answers its caller with the run identifier **before any Órgano has been
+  read**, and the two refusals are distinguishable by type without reading a message. (SPEC-0005
+  #34; the response those become is TASK-0011's)
+- An import whose walking cannot be handed to the executor leaves no run in progress: the run it
+  claimed is settled before the failure reaches the caller.
+- The configured executor exists under the name the use case asks for and runs what it is handed
+  off the calling thread — asserted against the deployed configuration, because the use case has
+  no trigger yet and nothing else would notice it missing.
 - Unit-tested with the ports stubbed (Mockito) — no database or HTTP — for eligibility,
-  ordering, isolation, the unmark stop and each verdict; the run record's contents are
-  integration-tested against PostgreSQL.
+  ordering, isolation, the unmark stop, the hand-off and each verdict; the run record's contents
+  are integration-tested against PostgreSQL.

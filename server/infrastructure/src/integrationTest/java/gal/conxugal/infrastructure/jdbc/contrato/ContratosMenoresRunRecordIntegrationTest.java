@@ -1,6 +1,7 @@
 package gal.conxugal.infrastructure.jdbc.contrato;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.db.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -12,11 +13,10 @@ import gal.conxugal.domain.contrato.ContratoMenorSource;
 import gal.conxugal.domain.contrato.ContratoMenorSourceEntry;
 import gal.conxugal.domain.contrato.ContratoMenorSourcePage;
 import gal.conxugal.domain.contrato.ContratoMenorSourceUnavailableException;
-import gal.conxugal.domain.contrato.ContratosMenoresImportClaim;
 import gal.conxugal.domain.contrato.ImportContratosMenores;
-import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.organo.OrganoId;
+import gal.conxugal.domain.organo.OrganoNotEligibleForImportException;
 import gal.conxugal.domain.time.Clock;
 import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
@@ -147,9 +147,8 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
     insertOrgano("marked-but-inactive", false, true);
     insertOrgano("active-but-unmarked", true, false);
 
-    ContratosMenoresImportClaim claim = importContratosMenores.claimAll();
+    importContratosMenores.claimAll();
 
-    assertThat(claim.status()).isEqualTo(ContratosMenoresImportClaim.Status.CLAIMED);
     Table coverage = coverageTable();
     assertThat(coverage).hasNumberOfRows(2);
     assertThat(coverage).column("organo_id").containsValues(eligible.value(), alsoEligible.value());
@@ -276,9 +275,9 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
   void single_organo_scope_naming_an_unmarked_organo_records_no_run() throws Exception {
     OrganoId organoId = insertOrgano("unmarked", true, false);
 
-    ContratosMenoresImportClaim claim = importContratosMenores.claimOrgano(organoId);
+    assertThatExceptionOfType(OrganoNotEligibleForImportException.class)
+        .isThrownBy(() -> importContratosMenores.claimOrgano(organoId));
 
-    assertThat(claim.status()).isEqualTo(ContratosMenoresImportClaim.Status.NOT_ELIGIBLE);
     assertThat(runTable()).isEmpty();
     assertThat(coverageTable()).isEmpty();
   }
@@ -301,12 +300,7 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
   }
 
   private void run() {
-    ContratosMenoresImportClaim claim = importContratosMenores.claimAll();
-    ImportRunId runId = claim.runId();
-    if (runId == null) {
-      throw new IllegalStateException("the import guard was already held");
-    }
-    importContratosMenores.execute(runId);
+    importContratosMenores.execute(importContratosMenores.claimAll());
   }
 
   /** One window's worth of history, so the walk reads the Órgano out in a single request. */

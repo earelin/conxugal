@@ -1,5 +1,6 @@
 package gal.conxugal.domain.contrato;
 
+import gal.conxugal.domain.importrun.ImportAlreadyRunningException;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
@@ -8,6 +9,7 @@ import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.domain.importrun.Importer;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
+import gal.conxugal.domain.organo.OrganoNotEligibleForImportException;
 import gal.conxugal.domain.organo.OrganoNotFoundException;
 import gal.conxugal.domain.organo.OrganoRepository;
 import jakarta.inject.Singleton;
@@ -72,11 +74,15 @@ public class ImportContratosMenores {
   }
 
   /**
-   * Claims a run over every eligible Órgano. One covering none is still a run: the catalogue
-   * having nothing marked is an ordinary answer, not a refusal, and it settles as a success that
-   * imported nothing.
+   * Claims a run over every eligible Órgano and answers its identity.
+   *
+   * <p>One covering none is still a run: the catalogue having nothing marked is an ordinary answer,
+   * not a refusal, and it settles as a success that imported nothing.
+   *
+   * @throws ImportAlreadyRunningException if another import holds the guard, in which case nothing
+   *     was claimed
    */
-  public ContratosMenoresImportClaim claimAll() {
+  public ImportRunId claimAll() {
     return claimCovering(
         organos.findAllByActiveTrueAndImportableTrue().stream()
             .map(ImportContratosMenores::identityOf)
@@ -84,28 +90,30 @@ public class ImportContratosMenores {
   }
 
   /**
-   * Claims a run over one named Órgano.
+   * Claims a run over one named Órgano and answers its identity.
    *
    * <p>Eligibility is settled before the guard is touched, so an Órgano that cannot be imported
-   * starts no run and leaves no trace of having asked — and the refusal it answers is the one that
-   * says so, rather than whichever refusal the guard would have given.
+   * claims no run and leaves no trace of having asked — and it is told apart from the guard being
+   * held, because one refusal repeats until the catalogue or the mark changes while the other is a
+   * matter of timing.
    *
    * @throws OrganoNotFoundException if no Órgano has this identity
+   * @throws OrganoNotEligibleForImportException if it is not active in the catalogue and marked
+   * @throws ImportAlreadyRunningException if another import holds the guard
    */
-  public ContratosMenoresImportClaim claimOrgano(OrganoId organoId) {
+  public ImportRunId claimOrgano(OrganoId organoId) {
     OrganoDeContratacion organo =
         organos.findById(organoId).orElseThrow(() -> new OrganoNotFoundException(organoId));
     if (!organo.eligibleForImport()) {
-      return ContratosMenoresImportClaim.notEligible();
+      throw new OrganoNotEligibleForImportException(organoId);
     }
     return claimCovering(List.of(organoId));
   }
 
-  private ContratosMenoresImportClaim claimCovering(List<OrganoId> covered) {
+  private ImportRunId claimCovering(List<OrganoId> covered) {
     return importRuns
         .claim(Importer.CONTRATOS_MENORES, covered)
-        .map(ContratosMenoresImportClaim::claimed)
-        .orElseGet(ContratosMenoresImportClaim::alreadyRunning);
+        .orElseThrow(ImportAlreadyRunningException::new);
   }
 
   /**

@@ -46,6 +46,13 @@
     <Field name="~(organos|coveredOrgano)"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
+  <!-- And once more for the trigger above the orchestrator: a constructor-stored use case trips
+       the same heuristic, for the same want of an immutability marker. -->
+  <Match>
+    <Class name="gal.conxugal.application.contrato.StartContratosMenoresImport"/>
+    <Field name="imports"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
   <!-- And for the batch the walk stores through: OperadorRepository declares insert, same as
        above. -->
   <Match>
