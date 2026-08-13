@@ -23,24 +23,35 @@ const concellos: Termo = { id: 't-4', name: 'Concellos', parentId: null };
 
 const TAXONOMIA = [consellerias, sanidade, educacion, concellos];
 
-const sergas: Organo = { id: 'o-1', name: 'Servizo Galego de Saúde', active: true, termoId: 't-2' };
+const UNMARKED = { importable: false, importState: 'NEVER_STARTED' } as const;
+
+const sergas: Organo = {
+  id: 'o-1',
+  name: 'Servizo Galego de Saúde',
+  active: true,
+  termoId: 't-2',
+  ...UNMARKED,
+};
 const cunqueiro: Organo = {
   id: 'o-2',
   name: 'Hospital Álvaro Cunqueiro',
   active: false,
   termoId: 't-2',
+  ...UNMARKED,
 };
 const vivenda: Organo = {
   id: 'o-3',
   name: 'Instituto Galego da Vivenda e Solo',
   active: true,
   termoId: null,
+  ...UNMARKED,
 };
 const turismo: Organo = {
   id: 'o-4',
   name: 'Axencia de Turismo de Galicia',
   active: false,
   termoId: null,
+  ...UNMARKED,
 };
 
 const CATALOGUE = [sergas, cunqueiro, vivenda, turismo];
@@ -51,7 +62,7 @@ function filedIn(organo: Organo, termoId: string | null): Organo[] {
 }
 
 function mockCatalogue(organos: Organo[]) {
-  return nock(BASE_URL).get('/api/organos').reply(200, organos);
+  return nock(BASE_URL).get('/api/admin/organos').reply(200, organos);
 }
 
 function mockTaxonomia(termos: Termo[]) {
@@ -178,7 +189,10 @@ describe('órgano classification', () => {
 
     expect(rowNames()).toEqual([vivenda.name, turismo.name]);
     expect(
-      screen.getByText(`2 ${strings.admin.organos.countUnclassified.plural}`),
+      screen.getByText(
+        `2 ${strings.admin.organos.countUnclassified.plural} · ` +
+          `0 ${strings.admin.organos.contratosMenores.markedTally.plural}`,
+      ),
     ).toBeInTheDocument();
     // The worklist is the null-termoId slice of the two reads above, not a third
     // request: `disableNetConnect` rejects any other call, and a rejected read
@@ -736,7 +750,7 @@ describe('órgano classification', () => {
 
     // A failed read replaces the whole section, which unmounts the dialog
     // without any of its own close handlers running.
-    nock(BASE_URL).get('/api/organos').reply(500);
+    nock(BASE_URL).get('/api/admin/organos').reply(500);
     nock(BASE_URL).get('/api/organos/taxonomia').reply(500);
     refocusWindow();
     await screen.findByText(strings.admin.organos.errorTitle);

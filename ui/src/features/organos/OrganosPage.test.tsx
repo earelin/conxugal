@@ -17,27 +17,32 @@ const consellerias: Termo = { id: 't-1', name: 'Consellerías', parentId: null }
 const sanidade: Termo = { id: 't-2', name: 'Consellería de Sanidade', parentId: 't-1' };
 const concellos: Termo = { id: 't-3', name: 'Concellos', parentId: null };
 
+const UNMARKED = { importable: false, importState: 'NEVER_STARTED' } as const;
+
 const sergas: Organo = {
   id: 'o-1',
   name: 'Servizo Galego de Saúde',
   active: true,
   termoId: 't-2',
+  ...UNMARKED,
 };
 const cunqueiro: Organo = {
   id: 'o-2',
   name: 'Hospital Álvaro Cunqueiro',
   active: false,
   termoId: 't-2',
+  ...UNMARKED,
 };
 const vivenda: Organo = {
   id: 'o-3',
   name: 'Instituto Galego da Vivenda e Solo',
   active: true,
   termoId: null,
+  ...UNMARKED,
 };
 
 function mockCatalogue(organos: Organo[]) {
-  return nock(BASE_URL).get('/api/organos').reply(200, organos);
+  return nock(BASE_URL).get('/api/admin/organos').reply(200, organos);
 }
 
 function mockTaxonomia(termos: Termo[]) {
@@ -180,7 +185,7 @@ describe('OrganosPage', () => {
 
   it('shows an error with a working retry when the catalogue read fails', async () => {
     const user = userEvent.setup();
-    nock(BASE_URL).get('/api/organos').reply(500);
+    nock(BASE_URL).get('/api/admin/organos').reply(500);
     mockTaxonomia([consellerias, sanidade]);
     renderOrganosPage();
 

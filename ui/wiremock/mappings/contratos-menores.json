@@ -1,0 +1,85 @@
+{
+  "mappings": [
+    {
+      "name": "Mark an Órgano for contratos menores import, which starts a run",
+      "request": {
+        "method": "PUT",
+        "urlPathPattern": "/api/admin/organo/[^/]+/importable"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "runId": "0196f3d2-0c4a-7b1e-9f3a-8d2c5e7a1b40",
+          "refusal": null
+        }
+      }
+    },
+    {
+      "name": "Stop importing an Órgano's contratos menores",
+      "request": {
+        "method": "DELETE",
+        "urlPathPattern": "/api/admin/organo/[^/]+/importable"
+      },
+      "response": { "status": 204 }
+    },
+    {
+      "name": "Trigger a contratos menores import of every marked Órgano",
+      "request": {
+        "method": "POST",
+        "urlPath": "/api/admin/contratos-menores/import"
+      },
+      "response": {
+        "status": 202,
+        "headers": {
+          "Content-Type": "application/json",
+          "Location": "/api/admin/import-run/0196f3d2-0c4a-7b1e-9f3a-8d2c5e7a1b40"
+        },
+        "jsonBody": { "runId": "0196f3d2-0c4a-7b1e-9f3a-8d2c5e7a1b40" }
+      }
+    },
+    {
+      "name": "Read the run a trigger or a mark claimed",
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/admin/import-run/[^/]+"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "0196f3d2-0c4a-7b1e-9f3a-8d2c5e7a1b40",
+          "importer": "CONTRATOS_MENORES",
+          "state": "PARTIALLY_SUCCEEDED",
+          "startedAt": "2026-08-13T06:14:02Z",
+          "finishedAt": "2026-08-13T09:51:37Z",
+          "added": 17980,
+          "refreshed": 96,
+          "coveredOrganos": [
+            {
+              "organoId": "1d8e2a94-5b63-4f27-9c14-6a3f8e5d0c71",
+              "state": "FAILED",
+              "added": 0,
+              "refreshed": 0,
+              "failureReason": "The source became unreachable"
+            },
+            {
+              "organoId": "4b2d7f69-8a30-4e95-c174-3f9b6d2a0e48",
+              "state": "SUCCEEDED",
+              "added": 6402,
+              "refreshed": 12,
+              "failureReason": null
+            },
+            {
+              "organoId": "7e5a0c92-1d63-4b28-f407-6c2e9a5d3b71",
+              "state": "SUCCEEDED",
+              "added": 11578,
+              "refreshed": 84,
+              "failureReason": null
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -12,7 +12,14 @@ const TAXONOMIA: Termo[] = [
 ];
 
 function organo(termoId: string | null, active = true): Organo {
-  return { id: 'o-1', name: 'Servizo Galego de Saúde', active, termoId };
+  return {
+    id: 'o-1',
+    name: 'Servizo Galego de Saúde',
+    active,
+    termoId,
+    importable: false,
+    importState: 'NEVER_STARTED',
+  };
 }
 
 const { roots } = buildTaxonomiaView(TAXONOMIA, []);

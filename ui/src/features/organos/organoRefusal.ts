@@ -1,4 +1,4 @@
-import { isProblemType } from '../../shared/lib/httpError';
+import { isHttpStatus, isProblemType } from '../../shared/lib/httpError';
 import { strings } from '../../shared/lib/strings';
 import type { Refusal } from './termoRefusal';
 
@@ -8,6 +8,7 @@ const PROBLEM_TYPE = {
 } as const;
 
 const copy = strings.admin.organos.assign;
+const markCopy = strings.admin.organos.contratosMenores;
 
 /**
  * The two refusals a placement write can hit, keyed on the problem `type`. Both
@@ -29,4 +30,20 @@ export function placementRefusal(error: unknown): Refusal {
     return { message: copy.termoNotFound };
   }
   return { message: copy.genericError };
+}
+
+/**
+ * The refusals a mark or an unmark can hit. Only one is a rule: the Órgano is no
+ * longer in the catalogue, which no retry fixes — the section has to be re-read.
+ * A refused *import* never arrives here, because the mark applies whether or not
+ * one starts and the server answers it as part of a success.
+ */
+export function markWriteRefusal(error: unknown): Refusal {
+  if (isProblemType(error, PROBLEM_TYPE.organoNotFound)) {
+    return { message: markCopy.write.notFound };
+  }
+  if (isHttpStatus(error, 403)) {
+    return { message: markCopy.write.forbidden };
+  }
+  return { message: markCopy.write.generic };
 }

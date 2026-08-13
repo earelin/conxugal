@@ -6,7 +6,9 @@ import { strings } from '../../shared/lib/strings';
 import { ErrorAlert } from '../../shared/ui/ErrorAlert';
 import { AssignOrganoModal, type AssignTarget } from './AssignOrganoModal';
 import { DeleteTermoModal } from './DeleteTermoModal';
-import { ImportOrganosControl } from './ImportOrganosControl';
+import type { ImportAttempt } from './importAttempt';
+import { ImportToolbar } from './ImportToolbar';
+import { MarkOrganoModal } from './MarkOrganoModal';
 import { MoveTermoModal } from './MoveTermoModal';
 import { useOrganosTaxonomia } from './organos';
 import { RenameTermoModal } from './RenameTermoModal';
@@ -42,6 +44,12 @@ export function OrganosPage() {
   // Ids, not records: the dialog is about whatever the section currently holds
   // under them, and re-resolving each render is what keeps it honest.
   const [assigning, setAssigning] = useState<AssignRequest | null>(null);
+  // The Órgano whose mark is being confirmed, by the same discipline.
+  const [markingId, setMarkingId] = useState<string | null>(null);
+  // The one import this browser asked for, whether the switch or the toolbar
+  // asked. Both feed one banner: a second attempt replaces the first, because
+  // the guard admits one import at a time anyway.
+  const [attempt, setAttempt] = useState<ImportAttempt | null>(null);
   const { view, isPending, isFetching, isError, error, refetch } = useOrganosTaxonomia();
 
   // Resolved once, here, and handed to both panes so they cannot disagree about
@@ -62,6 +70,7 @@ export function OrganosPage() {
   // another admin while the dialog is open, and one that stops resolving simply
   // unmounts it.
   const assignTarget = view && assigning ? resolveAssignTarget(view, assigning) : null;
+  const marking = view?.catalogue.find((organo) => organo.id === markingId) ?? null;
 
   // What the section takes off the screen stays off it. Neither dialog closes
   // through its own handlers when what it is about stops resolving — a failed
@@ -74,6 +83,9 @@ export function OrganosPage() {
   }
   if (assigning !== null && assignTarget === null) {
     setAssigning(null);
+  }
+  if (markingId !== null && marking === null) {
+    setMarkingId(null);
   }
 
   // Every one of these is a control only the open term renders, so the id is
@@ -110,7 +122,7 @@ export function OrganosPage() {
         <Text c="dimmed">{strings.admin.organos.subtitle}</Text>
       </Stack>
 
-      <ImportOrganosControl />
+      <ImportToolbar attempt={attempt} onAttempt={setAttempt} catalogue={view?.catalogue ?? []} />
 
       {/* One read can fail while the other is still in flight; the failure is
           the thing to report, not a spinner alongside it. */}
@@ -149,10 +161,25 @@ export function OrganosPage() {
               unclassified={view.unclassified}
               termoActions={termoActions}
               onAssignOrgano={(organo) => setAssigning({ kind: 'organo', organoId: organo.id })}
+              onMarkOrgano={(organo) => setMarkingId(organo.id)}
               onRefresh={refetch}
             />
           </Grid.Col>
         </Grid>
+      )}
+
+      {/* Mounted only while the Órgano resolves, so a catalogue that stops
+          holding it takes the confirmation down with it. */}
+      {marking && (
+        <MarkOrganoModal
+          opened
+          organo={marking}
+          onMarked={(marked) => {
+            setAttempt(marked);
+            setMarkingId(null);
+          }}
+          onCancel={() => setMarkingId(null)}
+        />
       )}
 
       {/* Mounted only while its target resolves, which is also what drops the

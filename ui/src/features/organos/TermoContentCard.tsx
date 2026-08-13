@@ -3,8 +3,10 @@ import { useState } from 'react';
 
 import { singularOrPlural, type Word } from '../../shared/lib/plural';
 import { strings } from '../../shared/lib/strings';
+import { useUnmarkOrgano } from './contratosMenores';
+import { markedCount } from './importMark';
 import { useClearOrgano } from './organoMutations';
-import { placementRefusal } from './organoRefusal';
+import { markWriteRefusal, placementRefusal } from './organoRefusal';
 import type { Organo } from './organos';
 import { OrganosTable } from './OrganosTable';
 import type { TermoNode } from './taxonomiaTree';
@@ -59,6 +61,8 @@ interface TermoContentCardProps {
   unclassified: Organo[];
   termoActions: TermoActionHandlers;
   onAssignOrgano: (organo: Organo) => void;
+  /** Opens the confirmation the mark asks for; the unmark needs none. */
+  onMarkOrgano: (organo: Organo) => void;
   /** Re-reads the section, which is the only way past a stale-record refusal. */
   onRefresh: () => void;
 }
@@ -68,35 +72,50 @@ export function TermoContentCard({
   unclassified,
   termoActions,
   onAssignOrgano,
+  onMarkOrgano,
   onRefresh,
 }: TermoContentCardProps) {
   const pane = openPath.length > 0 ? termoPane(openPath) : unclassifiedPane(unclassified);
   const count = pane.organos.length;
+  const marked = markedCount(pane.organos);
   const clearOrgano = useClearOrgano();
-  const [clearRefusal, setClearRefusal] = useState<Refusal | null>(null);
+  const unmarkOrgano = useUnmarkOrgano();
+  const [rowRefusal, setRowRefusal] = useState<Refusal | null>(null);
 
   function refresh() {
     // The refusal asked for a re-read; leaving it up afterwards would keep
     // asking for one that has already happened, with no other way to dismiss it.
-    setClearRefusal(null);
+    setRowRefusal(null);
     onRefresh();
   }
 
   // A clear needs no dialog: there is nothing to choose and nothing to confirm,
   // since the Órgano returns to the worklist rather than being deleted. So it
-  // runs from the row and reports here, above the table it changes.
+  // runs from the row and reports here, above the table it changes. An unmark is
+  // the same shape — what it stops is a load, and what is stored stays put — so
+  // only the mark, which costs days, asks first.
   const rowActions = {
     onAssign: onAssignOrgano,
     onClear:
       openPath.length > 0
         ? (organo: Organo) => {
-            setClearRefusal(null);
+            setRowRefusal(null);
             clearOrgano.mutate(organo.id, {
-              onError: (error) => setClearRefusal(placementRefusal(error)),
+              onError: (error) => setRowRefusal(placementRefusal(error)),
             });
           }
         : undefined,
     clearingId: clearOrgano.isPending ? clearOrgano.variables : undefined,
+    mark: {
+      onMark: onMarkOrgano,
+      onUnmark: (organo: Organo) => {
+        setRowRefusal(null);
+        unmarkOrgano.mutate(organo.id, {
+          onError: (error) => setRowRefusal(markWriteRefusal(error)),
+        });
+      },
+      markingId: unmarkOrgano.isPending ? unmarkOrgano.variables : undefined,
+    },
   };
 
   return (
@@ -127,9 +146,9 @@ export function TermoContentCard({
       </Group>
       <Divider my="sm" />
 
-      {clearRefusal && (
+      {rowRefusal && (
         <Box mb="sm">
-          <TermoRefusalAlert refusal={clearRefusal} onRefresh={refresh} />
+          <TermoRefusalAlert refusal={rowRefusal} onRefresh={refresh} />
         </Box>
       )}
 
@@ -140,9 +159,12 @@ export function TermoContentCard({
         actions={rowActions}
       />
 
+      {/* The *listed as marked* half of the mark criterion: derived from the
+          catalogue already on screen, not from a read of its own. */}
       {count > 0 && (
         <Text size="xs" c="dimmed" mt="sm">
-          {count} {singularOrPlural(count, pane.countWord)}
+          {count} {singularOrPlural(count, pane.countWord)} · {marked}{' '}
+          {singularOrPlural(marked, strings.admin.organos.contratosMenores.markedTally)}
         </Text>
       )}
     </Card>

@@ -8,7 +8,7 @@ function termo(id: string, name: string, parentId: string | null = null): Termo 
 }
 
 function organo(id: string, name: string, termoId: string | null, active = true): Organo {
-  return { id, name, active, termoId };
+  return { id, name, active, termoId, importable: false, importState: 'NEVER_STARTED' };
 }
 
 const consellerias = termo('t-1', 'Consellerías');

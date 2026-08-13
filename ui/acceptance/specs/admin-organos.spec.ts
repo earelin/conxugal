@@ -29,18 +29,30 @@ test.describe('Órganos section', () => {
   test('opens on the unclassified worklist and switches to a term', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Sen clasificar' })).toBeVisible();
     await expect(page.getByText('Instituto Galego da Vivenda e Solo')).toBeVisible();
-    await expect(page.getByText('3 órganos sen clasificar')).toBeVisible();
+    await expect(
+      page.getByText('3 órganos sen clasificar · 0 marcados para importar'),
+    ).toBeVisible();
 
     await tree(page).getByText('Consellería de Sanidade').click();
 
     await expect(page.getByRole('heading', { name: 'Consellería de Sanidade' })).toBeVisible();
     await expect(page.getByText('Servizo Galego de Saúde (SERGAS)')).toBeVisible();
-    await expect(page.getByText('3 órganos neste termo')).toBeVisible();
+    await expect(page.getByText('3 órganos neste termo · 2 marcados para importar')).toBeVisible();
     await expect(page.getByText('Instituto Galego da Vivenda e Solo')).toBeHidden();
 
     // An inactive Órgano stays listed rather than being filtered out.
     await expect(page.getByText('Hospital Álvaro Cunqueiro')).toBeVisible();
     await expect(page.getByText('INACTIVO')).toBeVisible();
+
+    // The three import states are three badges, and the half-loaded Órgano is
+    // not one of the two that read as settled.
+    await expect(page.getByText('PARCIAL')).toBeVisible();
+    await expect(page.getByText('IMPORTADO')).toBeVisible();
+    // An inactive Órgano keeps its row with the switch blocked, saying why.
+    await expect(page.getByText('Só activos')).toBeVisible();
+    await expect(
+      page.getByRole('switch', { name: 'Importar contratos menores: Hospital Álvaro Cunqueiro' }),
+    ).toBeDisabled();
   });
 
   test('selects a term with the keyboard alone', async ({ page }) => {
@@ -75,13 +87,24 @@ test.describe('Órganos section', () => {
       expect(await horizontalOverflow(page)).toBe(0);
 
       // The state badge stays readable rather than being ellipsised to "A…".
-      await expect(page.getByText('ACTIVO')).toBeVisible();
+      // Matched whole and case-sensitively against the label the DOM holds —
+      // the uppercase is a text-transform — because the toolbar's scope note
+      // now carries "activos" and a loose match would find that instead.
+      await expect(page.getByText('Activo', { exact: true })).toBeVisible();
+      // So does the import-state badge the new column adds beside it.
+      await expect(page.getByText('Marcado', { exact: true })).toBeVisible();
 
       // Nothing is clipped inside a card either, which a page-level scroll check
       // cannot see: a wrapped two-line term name must not squeeze its count away.
+      // What counts as clipped is text the reader cannot get to: an element that
+      // hides its overflow and holds something to read. A region the reader can
+      // scroll has lost nothing, and a control's own chrome — Mantine sizes a
+      // Switch's track around a thumb that overruns it — was never text.
       const clipped = await page.evaluate(() =>
         Array.from(document.querySelectorAll('body *'))
           .filter((el) => el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1)
+          .filter((el) => ['hidden', 'clip'].includes(getComputedStyle(el).overflowX))
+          .filter((el) => (el.textContent ?? '').trim() !== '')
           .map((el) => el.className.toString()),
       );
       expect(clipped).toEqual([]);

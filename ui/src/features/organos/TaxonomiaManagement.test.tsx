@@ -25,18 +25,27 @@ const innovacion: Termo = { id: 't-4', name: 'Axencia Galega de Innovación', pa
 
 const TAXONOMIA = [consellerias, sanidade, concellos];
 
-const sergas: Organo = { id: 'o-1', name: 'Servizo Galego de Saúde', active: true, termoId: 't-2' };
+const UNMARKED = { importable: false, importState: 'NEVER_STARTED' } as const;
+
+const sergas: Organo = {
+  id: 'o-1',
+  name: 'Servizo Galego de Saúde',
+  active: true,
+  termoId: 't-2',
+  ...UNMARKED,
+};
 const vivenda: Organo = {
   id: 'o-3',
   name: 'Instituto Galego da Vivenda e Solo',
   active: true,
   termoId: null,
+  ...UNMARKED,
 };
 
 const CATALOGUE = [sergas, vivenda];
 
 function mockCatalogue(organos: Organo[]) {
-  return nock(BASE_URL).get('/api/organos').reply(200, organos);
+  return nock(BASE_URL).get('/api/admin/organos').reply(200, organos);
 }
 
 function mockTaxonomia(termos: Termo[]) {
@@ -675,7 +684,7 @@ describe('taxonomía management', () => {
     await user.click(treeAction(copy.rename));
     expect(await nameField()).toHaveValue(sanidade.name);
 
-    nock(BASE_URL).get('/api/organos').reply(500);
+    nock(BASE_URL).get('/api/admin/organos').reply(500);
     nock(BASE_URL).get('/api/organos/taxonomia').reply(500);
     refocusWindow();
     await screen.findByText(strings.admin.organos.errorTitle);
@@ -705,7 +714,7 @@ describe('taxonomía management', () => {
     await user.click(paneAction(copy.delete));
     expect(await screen.findByText(copy.deleteConfirm(sanidade.name))).toBeInTheDocument();
 
-    nock(BASE_URL).get('/api/organos').reply(500);
+    nock(BASE_URL).get('/api/admin/organos').reply(500);
     nock(BASE_URL).get('/api/organos/taxonomia').reply(500);
     refocusWindow();
     await screen.findByText(strings.admin.organos.errorTitle);

@@ -4,12 +4,27 @@ import { useMemo } from 'react';
 import { apiFetch } from '../../shared/lib/httpClient';
 import { buildTaxonomiaView, type TaxonomiaView } from './taxonomiaTree';
 
+/**
+ * How far an Órgano's contratos menores history has been loaded. Three values
+ * rather than two: a never-loaded Órgano and a half-loaded one both fall short
+ * of complete, and collapsing them would let an interrupted import read as up
+ * to date.
+ */
+export type ContratosMenoresImportState = 'NEVER_STARTED' | 'INCOMPLETE' | 'COMPLETE';
+
 export interface Organo {
   id: string;
   name: string;
   active: boolean;
   /** The term this Órgano is filed under; null means unclassified. */
   termoId: string | null;
+  /** Whether an administrator opted this Órgano into contratos menores import. */
+  importable: boolean;
+  /**
+   * How far that import got, independent of the mark: unmarking keeps whatever
+   * state was reached, because the contracts already stored are kept.
+   */
+  importState: ContratosMenoresImportState;
 }
 
 export interface Termo {
@@ -25,8 +40,13 @@ export const SECTION_QUERY_KEY = ['organos'] as const;
 export const ORGANOS_QUERY_KEY = ['organos', 'catalogo'] as const;
 export const TAXONOMIA_QUERY_KEY = ['organos', 'taxonomia'] as const;
 
+/**
+ * The administrator's catalogue rather than the shared one: it is the read that
+ * carries the import mark and the import state, and taking it keeps the section
+ * on one request instead of two.
+ */
 async function fetchOrganos(): Promise<Organo[]> {
-  const response = await apiFetch('/api/organos');
+  const response = await apiFetch('/api/admin/organos');
   return response.json() as Promise<Organo[]>;
 }
 

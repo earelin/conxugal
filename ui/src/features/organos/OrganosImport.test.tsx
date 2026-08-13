@@ -21,12 +21,21 @@ const sanidade: Termo = { id: 't-2', name: 'Consellería de Sanidade', parentId:
 
 const TAXONOMIA = [consellerias, sanidade];
 
-const sergas: Organo = { id: 'o-1', name: 'Servizo Galego de Saúde', active: true, termoId: 't-2' };
+const UNMARKED = { importable: false, importState: 'NEVER_STARTED' } as const;
+
+const sergas: Organo = {
+  id: 'o-1',
+  name: 'Servizo Galego de Saúde',
+  active: true,
+  termoId: 't-2',
+  ...UNMARKED,
+};
 const vivenda: Organo = {
   id: 'o-3',
   name: 'Instituto Galego da Vivenda e Solo',
   active: true,
   termoId: null,
+  ...UNMARKED,
 };
 /** Arrives only in the catalogue read that follows a successful import. */
 const turismo: Organo = {
@@ -34,12 +43,13 @@ const turismo: Organo = {
   name: 'Axencia de Turismo de Galicia',
   active: true,
   termoId: null,
+  ...UNMARKED,
 };
 
 const CATALOGUE = [sergas, vivenda];
 
 function mockCatalogue(organos: Organo[]) {
-  return nock(BASE_URL).get('/api/organos').reply(200, organos);
+  return nock(BASE_URL).get('/api/admin/organos').reply(200, organos);
 }
 
 function mockTaxonomia(termos: Termo[]) {

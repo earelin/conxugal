@@ -3,11 +3,16 @@ import { IconFolderMinus, IconFolderPlus, type TablerIcon } from '@tabler/icons-
 import type { CSSProperties } from 'react';
 
 import { strings } from '../../shared/lib/strings';
+import { type ImportMarkActions, ImportMarkCell } from './ImportMarkCell';
 import type { Organo } from './organos';
 
-// The two right-hand columns take only the width their content needs, so at a
+// The three right-hand columns take only the width their content needs, so at a
 // 360px viewport the name column absorbs the wrapping instead of them.
 const NARROW_COLUMN: CSSProperties = { whiteSpace: 'nowrap', width: '1%' };
+
+// The same, minus the nowrap: CONTRATOS MENORES is far too long a header to hold
+// on one line at 360px, and forcing it would push the table into a page scroll.
+const MARK_COLUMN: CSSProperties = { width: '1%' };
 
 // Mantine ellipsises a Badge's label once its column is squeezed, which turns
 // ACTIVO into "A…". The state has to stay readable at every width.
@@ -27,6 +32,8 @@ export interface OrganoRowActions {
   onClear?: (organo: Organo) => void;
   /** The Órgano whose clear is in flight, so only its own button spins. */
   clearingId?: string;
+  /** The import mark, which every row carries wherever the table is rendered. */
+  mark: ImportMarkActions;
 }
 
 interface RowActionProps {
@@ -80,6 +87,9 @@ function OrganoRow({ organo, actions }: OrganoRowProps) {
           {organo.active ? strings.admin.organos.stateActive : strings.admin.organos.stateInactive}
         </Badge>
       </Table.Td>
+      <Table.Td style={{ ...dimmed, ...MARK_COLUMN }}>
+        <ImportMarkCell organo={organo} actions={actions.mark} />
+      </Table.Td>
       <Table.Td ta="right" style={NARROW_COLUMN}>
         <Group gap="xs" justify="flex-end" wrap="nowrap">
           {actions.onClear === undefined ? (
@@ -123,23 +133,32 @@ export function OrganosTable({ organos, emptyMessage, label, actions }: OrganosT
   }
 
   return (
-    <Table aria-label={label} verticalSpacing="sm">
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th {...COLUMN_HEADER}>{strings.admin.organos.columnOrgano}</Table.Th>
-          <Table.Th {...COLUMN_HEADER} style={NARROW_COLUMN}>
-            {strings.admin.organos.columnState}
-          </Table.Th>
-          <Table.Th {...COLUMN_HEADER} ta="right" style={NARROW_COLUMN}>
-            {strings.admin.organos.columnActions}
-          </Table.Th>
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {organos.map((organo) => (
-          <OrganoRow key={organo.id} organo={organo} actions={actions} />
-        ))}
-      </Table.Tbody>
-    </Table>
+    // A fourth column spends the width the three-column table had left over: at
+    // 360 px the mark, the state badge and the row action together need more
+    // than the card can give, so the table scrolls inside its own region rather
+    // than dragging the whole page sideways. Above `sm` nothing scrolls.
+    <Table.ScrollContainer minWidth={320} type="native">
+      <Table aria-label={label} verticalSpacing="sm">
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th {...COLUMN_HEADER}>{strings.admin.organos.columnOrgano}</Table.Th>
+            <Table.Th {...COLUMN_HEADER} style={NARROW_COLUMN}>
+              {strings.admin.organos.columnState}
+            </Table.Th>
+            <Table.Th {...COLUMN_HEADER} style={MARK_COLUMN}>
+              {strings.admin.organos.columnContratosMenores}
+            </Table.Th>
+            <Table.Th {...COLUMN_HEADER} ta="right" style={NARROW_COLUMN}>
+              {strings.admin.organos.columnActions}
+            </Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {organos.map((organo) => (
+            <OrganoRow key={organo.id} organo={organo} actions={actions} />
+          ))}
+        </Table.Tbody>
+      </Table>
+    </Table.ScrollContainer>
   );
 }
