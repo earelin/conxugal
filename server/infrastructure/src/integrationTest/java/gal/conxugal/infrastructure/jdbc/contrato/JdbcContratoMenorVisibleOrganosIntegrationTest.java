@@ -51,6 +51,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
 
   private static final LocalDate PUBLISHED_ON = LocalDate.of(2026, 3, 14);
   private static final Money AMOUNT = new Money(new BigDecimal("1234.50"));
+  private static final String OPERADOR_NAME = "Servizos Galegos SL";
 
   @Container
   static PostgreSQLContainer<?> postgres = PostgresContainer.create();
@@ -77,7 +78,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   @Test
   void answers_an_organo_holding_one_complete_contract() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorId awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador("B12345678");
     store(contrato(4711L, organoId, PUBLISHED_ON, AMOUNT, awardee));
 
     Set<OrganoId> visible = organosWithVisibleContracts.among(List.of(organoId));
@@ -88,7 +89,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   @Test
   void withholds_an_organo_whose_only_contract_has_no_publication_date() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorId awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador("B12345678");
     store(contrato(4711L, organoId, null, AMOUNT, awardee));
 
     Set<OrganoId> visible = organosWithVisibleContracts.among(List.of(organoId));
@@ -99,7 +100,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   @Test
   void withholds_an_organo_whose_only_contract_has_no_amount() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorId awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador("B12345678");
     store(contrato(4711L, organoId, PUBLISHED_ON, null, awardee));
 
     Set<OrganoId> visible = organosWithVisibleContracts.among(List.of(organoId));
@@ -123,7 +124,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   void withholds_an_organo_holding_no_contract_while_answering_one_that_does() throws Exception {
     OrganoId visibleOrgano = insertOrgano("consorcio-x");
     OrganoId emptyOrgano = insertOrgano("axencia-y");
-    OperadorId awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador("B12345678");
     store(contrato(4711L, visibleOrgano, PUBLISHED_ON, AMOUNT, awardee));
 
     Set<OrganoId> visible =
@@ -135,7 +136,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   @Test
   void answers_an_organo_holding_one_complete_contract_among_anomalous_ones() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorId awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador("B12345678");
     store(
         contrato(4711L, organoId, null, AMOUNT, awardee),
         contrato(4712L, organoId, PUBLISHED_ON, null, awardee),
@@ -146,12 +147,12 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
     assertThat(visible).containsExactly(organoId);
   }
 
-  // Short-circuited rather than sent, because an expanded IN () is a syntax error rather than an
-  // empty answer.
+  // Answered without a round trip, and asserted with a visible contract stored so a short-circuit
+  // that leaked the whole family's answer would show up here rather than reading as empty.
   @Test
   void answers_nothing_for_an_empty_candidate_set() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorId awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador("B12345678");
     store(contrato(4711L, organoId, PUBLISHED_ON, AMOUNT, awardee));
 
     Set<OrganoId> visible = organosWithVisibleContracts.among(List.of());
@@ -165,7 +166,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   void answers_only_about_the_organos_it_was_asked() throws Exception {
     OrganoId asked = insertOrgano("consorcio-x");
     OrganoId notAsked = insertOrgano("axencia-y");
-    OperadorId awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador("B12345678");
     store(
         contrato(4711L, asked, PUBLISHED_ON, AMOUNT, awardee),
         contrato(4712L, notAsked, PUBLISHED_ON, AMOUNT, awardee));
@@ -181,7 +182,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   void an_organo_enters_the_visible_set_when_its_first_complete_contract_is_stored()
       throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorId awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador("B12345678");
     assertThat(organosWithVisibleContracts.among(List.of(organoId))).isEmpty();
 
     store(contrato(4711L, organoId, PUBLISHED_ON, AMOUNT, awardee));
@@ -198,7 +199,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
       OrganoId organoId,
       LocalDate publicationDate,
       Money amount,
-      OperadorId awardee) {
+      OperadorEconomico awardee) {
     return new ContratoMenor(
         sourceId,
         organoId,
@@ -206,33 +207,31 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
         "Subministración de material",
         amount,
         "1 mes",
-        awardee == null ? null : operador(awardee, sourceId));
+        awardee);
   }
 
-  private static OperadorEconomico operador(OperadorId operadorId, long sourceId) {
-    return new OperadorEconomico(
-        operadorId,
-        new FiscalIdentifier("B12345678"),
-        "Servizos Galegos SL",
-        new NomeRank(PUBLISHED_ON, sourceId),
-        Set.of());
-  }
-
-  private OperadorId insertOperador(String fiscalId) throws Exception {
+  // Returns the awardee it stored rather than only its id, so a contract can never be built
+  // against a fiscal identifier the row does not carry.
+  private OperadorEconomico insertOperador(String fiscalId) throws Exception {
     String sql =
         "INSERT INTO operador_economico (id, fiscal_id, name, name_rank_date, name_rank_source_id)"
             + " VALUES (uuidv7(), ?, ?, ?, ?) RETURNING id";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, fiscalId);
-      statement.setString(2, "Servizos Galegos SL");
+      statement.setString(2, OPERADOR_NAME);
       statement.setObject(3, Date.valueOf(PUBLISHED_ON));
       statement.setLong(4, 4711L);
       try (ResultSet resultSet = statement.executeQuery()) {
         if (!resultSet.next()) {
           throw new IllegalStateException("Insert did not return a generated id");
         }
-        return new OperadorId(resultSet.getObject("id", UUID.class));
+        return new OperadorEconomico(
+            new OperadorId(resultSet.getObject("id", UUID.class)),
+            new FiscalIdentifier(fiscalId),
+            OPERADOR_NAME,
+            new NomeRank(PUBLISHED_ON, 4711L),
+            Set.of());
       }
     }
   }

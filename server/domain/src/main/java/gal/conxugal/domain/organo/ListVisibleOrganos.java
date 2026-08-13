@@ -3,7 +3,10 @@ package gal.conxugal.domain.organo;
 import jakarta.inject.Singleton;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Lists the Órganos a reader may be offered: those holding at least one visible contract, of any
@@ -22,6 +25,8 @@ import java.util.Set;
 @Singleton
 public class ListVisibleOrganos {
 
+  private static final Logger LOG = LoggerFactory.getLogger(ListVisibleOrganos.class);
+
   private final OrganoRepository organoRepository;
   private final List<OrganosWithVisibleContracts> contractFamilies;
 
@@ -29,6 +34,13 @@ public class ListVisibleOrganos {
       OrganoRepository organoRepository, List<OrganosWithVisibleContracts> contractFamilies) {
     this.organoRepository = organoRepository;
     this.contractFamilies = List.copyOf(contractFamilies);
+    if (this.contractFamilies.isEmpty()) {
+      // Not a failure the container raises: it injects an empty list rather than refusing, so
+      // without this the read would answer an empty set forever and read as a catalogue nobody
+      // has imported yet.
+      LOG.warn("No contract family implements {} — the visible set can only ever be empty",
+          OrganosWithVisibleContracts.class.getSimpleName());
+    }
   }
 
   public List<OrganoDeContratacion> list() {
@@ -36,10 +48,15 @@ public class ListVisibleOrganos {
     if (catalogue.isEmpty()) {
       return catalogue;
     }
-    Set<OrganoId> visible = visibleAmong(catalogue.stream().map(OrganoDeContratacion::id).toList());
+    Set<OrganoId> visible = visibleAmong(catalogue.stream().map(ListVisibleOrganos::idOf).toList());
     return catalogue.stream()
         .filter(organo -> visible.contains(organo.id()))
         .toList();
+  }
+
+  /** A stored Órgano always carries one, and asking a family about a null would be nonsense. */
+  private static OrganoId idOf(OrganoDeContratacion organo) {
+    return Objects.requireNonNull(organo.id(), "a stored Órgano must carry an id");
   }
 
   private Set<OrganoId> visibleAmong(List<OrganoId> candidates) {

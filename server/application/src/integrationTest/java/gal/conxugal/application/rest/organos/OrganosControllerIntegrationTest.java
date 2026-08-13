@@ -52,6 +52,10 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
   // Mocking a concrete use case still has Micronaut resolve the real constructor's arguments, and
   // this one asks for every contract family — which in this suite means the JDBC adapter, in a
   // context with no datasource. The port is stubbed too, so nothing here reaches for one.
+  //
+  // Replacement is by assignability, so this removes the adapter bean outright and takes
+  // ContratoMenorRepository with it. Nothing in this suite wants one; a test added here that
+  // reaches a contract endpoint will need its own mock rather than a datasource.
   @MockBean(OrganosWithVisibleContracts.class)
   OrganosWithVisibleContracts organosWithVisibleContractsMock() {
     return mock(OrganosWithVisibleContracts.class);

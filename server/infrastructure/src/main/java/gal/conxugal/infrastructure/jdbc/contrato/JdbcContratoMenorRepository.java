@@ -9,7 +9,6 @@ import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.OperadorId;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.OrganosWithVisibleContracts;
-import io.micronaut.data.annotation.Query;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
@@ -23,12 +22,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -88,6 +87,38 @@ public abstract class JdbcContratoMenorRepository
       RETURNING (xmax = 0) AS inserted
       """;
 
+  /**
+   * A semi-join driven from the candidates rather than from the contracts, so the planner is free
+   * to answer each one from an index and stop at its first visible contract. It takes that freedom:
+   * measured over 300k contracts spread across the catalogue, this plans as a nested-loop semi-join
+   * reading exactly one row per candidate, where
+   * {@code SELECT DISTINCT organo_id ... WHERE organo_id IN (...)} sequentially scanned all 300k to
+   * answer a question about a few hundred — 4.5ms against 33ms, on a quarter of the buffers.
+   *
+   * <p><strong>The shape is the planner's choice, not this statement's guarantee.</strong> Against
+   * a catalogue where almost every candidate holds nothing it hash-joins instead, reading the table
+   * once — the same work the aggregate always did, and no worse. What this form removes is the
+   * floor: the aggregate could never do better than a full scan, whatever the data looked like.
+   *
+   * <p>The candidates arrive as one {@code uuid[]} for the same reason the upsert's rows do: one
+   * prepared form whatever the catalogue's size, rather than a statement whose placeholder count —
+   * and so whose plan-cache entry — changes with it.
+   *
+   * <p>The three null checks are the visibility rule itself, and they are stated here rather than
+   * left to an index because this read has no year to scope by: the browsing reads do, which is
+   * what lets their indexes carry only the other two.
+   */
+  private static final String VISIBLE_ORGANOS_SQL =
+      """
+      SELECT candidate.id FROM unnest(?::uuid[]) AS candidate(id)
+      WHERE EXISTS (
+          SELECT 1 FROM contrato_menor
+           WHERE organo_id = candidate.id
+             AND publication_date IS NOT NULL
+             AND amount IS NOT NULL
+             AND operador_economico_id IS NOT NULL)
+      """;
+
   private final JdbcOperations jdbcOperations;
 
   protected JdbcContratoMenorRepository(JdbcOperations jdbcOperations) {
@@ -111,39 +142,21 @@ public abstract class JdbcContratoMenorRepository
   public abstract long countByOrganoId(OrganoId organoId);
 
   /**
-   * An empty candidate set short-circuits rather than reaching the database, where it would
-   * expand to an {@code IN ()} no dialect accepts.
+   * An empty candidate set short-circuits rather than reaching the database, where an array of no
+   * elements would buy a round trip for an answer that is empty by construction.
    */
   @Override
+  @Transactional(readOnly = true)
   public Set<OrganoId> among(Collection<OrganoId> candidates) {
     if (candidates.isEmpty()) {
       return Set.of();
     }
-    return findOrganoIdsWithVisibleContratos(candidates.stream().map(OrganoId::value).toList())
-        .stream()
-        .map(OrganoId::new)
-        .collect(Collectors.toUnmodifiableSet());
+    UUID[] ids = candidates.stream().map(OrganoId::value).toArray(UUID[]::new);
+    return jdbcOperations.prepareStatement(VISIBLE_ORGANOS_SQL, statement -> {
+      statement.setArray(1, statement.getConnection().createArrayOf("uuid", ids));
+      return readOrganoIds(statement);
+    });
   }
-
-  /**
-   * The three null checks are the visibility rule itself, so they are stated here rather than
-   * inherited from an index: the browsing reads scope every selection to a year and get the date
-   * check for free, and this one has no year. It runs on
-   * {@code contrato_menor_organo_id_publication_date_idx}, which leads with the column it filters.
-   *
-   * <p>Identifiers travel as bare {@code UUID}s across this one call because a projected column is
-   * not an entity property, which is where Micronaut Data applies a type converter; {@link #among}
-   * is the typed boundary, and it is two lines away.
-   */
-  @Query(
-      """
-      SELECT DISTINCT organo_id FROM contrato_menor
-      WHERE organo_id IN (:candidates)
-        AND publication_date IS NOT NULL
-        AND amount IS NOT NULL
-        AND operador_economico_id IS NOT NULL
-      """)
-  protected abstract List<UUID> findOrganoIdsWithVisibleContratos(Collection<UUID> candidates);
 
   private static List<ContratoMenor> lastReadingPerSourceId(Collection<ContratoMenor> contratos) {
     Map<Long, ContratoMenor> bySourceId = new LinkedHashMap<>();
@@ -181,6 +194,16 @@ public abstract class JdbcContratoMenorRepository
     statement.setArray(5, connection.createArrayOf("numeric", amounts));
     statement.setArray(6, connection.createArrayOf("text", durations));
     statement.setArray(7, connection.createArrayOf("uuid", operadorIds));
+  }
+
+  private static Set<OrganoId> readOrganoIds(PreparedStatement statement) throws SQLException {
+    Set<OrganoId> visible = new HashSet<>();
+    try (ResultSet rows = statement.executeQuery()) {
+      while (rows.next()) {
+        visible.add(new OrganoId(rows.getObject("id", UUID.class)));
+      }
+    }
+    return Set.copyOf(visible);
   }
 
   private static UpsertCounts countBranches(PreparedStatement statement) throws SQLException {
