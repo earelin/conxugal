@@ -4,17 +4,17 @@ import { useState } from 'react';
 import { isHttpStatus } from '../../shared/lib/httpError';
 import { strings } from '../../shared/lib/strings';
 import { ErrorAlert } from '../../shared/ui/ErrorAlert';
-import { AssignOrganoModal, type AssignTarget } from './AssignOrganoModal';
-import { DeleteTermoModal } from './DeleteTermoModal';
-import type { ImportAttempt } from './importAttempt';
-import { ImportToolbar } from './ImportToolbar';
-import { MarkOrganoModal } from './MarkOrganoModal';
-import { MoveTermoModal } from './MoveTermoModal';
+import { AssignOrganoModal, type AssignTarget } from './catalogo/AssignOrganoModal';
+import { TermoContentCard } from './catalogo/TermoContentCard';
+import type { ImportAttempt } from './imports/importAttempt';
+import { ImportToolbar } from './imports/ImportToolbar';
+import { MarkOrganoModal } from './imports/MarkOrganoModal';
 import { useOrganosTaxonomia } from './organos';
-import { RenameTermoModal } from './RenameTermoModal';
+import { DeleteTermoModal } from './taxonomia/DeleteTermoModal';
+import { MoveTermoModal } from './taxonomia/MoveTermoModal';
+import { RenameTermoModal } from './taxonomia/RenameTermoModal';
+import { TaxonomiaTreeCard } from './taxonomia/TaxonomiaTreeCard';
 import { findTermoPath, type TaxonomiaView } from './taxonomiaTree';
-import { TaxonomiaTreeCard } from './TaxonomiaTreeCard';
-import { TermoContentCard } from './TermoContentCard';
 
 type TermoAction = 'rename' | 'move' | 'delete';
 
