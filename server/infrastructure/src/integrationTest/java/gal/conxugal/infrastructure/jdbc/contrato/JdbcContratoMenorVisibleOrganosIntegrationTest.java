@@ -52,6 +52,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   private static final LocalDate PUBLISHED_ON = LocalDate.of(2026, 3, 14);
   private static final Money AMOUNT = new Money(new BigDecimal("1234.50"));
   private static final String OPERADOR_NAME = "Servizos Galegos SL";
+  private static final String FISCAL_ID = "B12345678";
 
   @Container
   static PostgreSQLContainer<?> postgres = PostgresContainer.create();
@@ -78,7 +79,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   @Test
   void answers_an_organo_holding_one_complete_contract() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorEconomico awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador(FISCAL_ID);
     store(contrato(4711L, organoId, PUBLISHED_ON, AMOUNT, awardee));
 
     Set<OrganoId> visible = organosWithVisibleContracts.among(List.of(organoId));
@@ -89,7 +90,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   @Test
   void withholds_an_organo_whose_only_contract_has_no_publication_date() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorEconomico awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador(FISCAL_ID);
     store(contrato(4711L, organoId, null, AMOUNT, awardee));
 
     Set<OrganoId> visible = organosWithVisibleContracts.among(List.of(organoId));
@@ -100,7 +101,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   @Test
   void withholds_an_organo_whose_only_contract_has_no_amount() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorEconomico awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador(FISCAL_ID);
     store(contrato(4711L, organoId, PUBLISHED_ON, null, awardee));
 
     Set<OrganoId> visible = organosWithVisibleContracts.among(List.of(organoId));
@@ -124,7 +125,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   void withholds_an_organo_holding_no_contract_while_answering_one_that_does() throws Exception {
     OrganoId visibleOrgano = insertOrgano("consorcio-x");
     OrganoId emptyOrgano = insertOrgano("axencia-y");
-    OperadorEconomico awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador(FISCAL_ID);
     store(contrato(4711L, visibleOrgano, PUBLISHED_ON, AMOUNT, awardee));
 
     Set<OrganoId> visible =
@@ -136,7 +137,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   @Test
   void answers_an_organo_holding_one_complete_contract_among_anomalous_ones() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorEconomico awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador(FISCAL_ID);
     store(
         contrato(4711L, organoId, null, AMOUNT, awardee),
         contrato(4712L, organoId, PUBLISHED_ON, null, awardee),
@@ -152,7 +153,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   @Test
   void answers_nothing_for_an_empty_candidate_set() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorEconomico awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador(FISCAL_ID);
     store(contrato(4711L, organoId, PUBLISHED_ON, AMOUNT, awardee));
 
     Set<OrganoId> visible = organosWithVisibleContracts.among(List.of());
@@ -166,7 +167,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   void answers_only_about_the_organos_it_was_asked() throws Exception {
     OrganoId asked = insertOrgano("consorcio-x");
     OrganoId notAsked = insertOrgano("axencia-y");
-    OperadorEconomico awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador(FISCAL_ID);
     store(
         contrato(4711L, asked, PUBLISHED_ON, AMOUNT, awardee),
         contrato(4712L, notAsked, PUBLISHED_ON, AMOUNT, awardee));
@@ -182,7 +183,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
   void an_organo_enters_the_visible_set_when_its_first_complete_contract_is_stored()
       throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    OperadorEconomico awardee = insertOperador("B12345678");
+    OperadorEconomico awardee = insertOperador(FISCAL_ID);
     assertThat(organosWithVisibleContracts.among(List.of(organoId))).isEmpty();
 
     store(contrato(4711L, organoId, PUBLISHED_ON, AMOUNT, awardee));
