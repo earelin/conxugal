@@ -1,4 +1,4 @@
-import { formatHourMinute } from '../../shared/lib/date';
+import { formatDateTime } from '../../shared/lib/date';
 import { isProblemType } from '../../shared/lib/httpError';
 import { formatCount } from '../../shared/lib/number';
 import { singularOrPlural, type Word } from '../../shared/lib/plural';
@@ -19,7 +19,13 @@ const RUN_NOT_FOUND = 'urn:conxugal:problem-type:import-run-not-found';
  * How a banner is coloured. Only `failure` is red: a refused import is an
  * outcome, and a run that stopped advancing is not a fault of the request.
  */
-export type RunTone = 'progress' | 'success' | 'partial' | 'failure' | 'abandoned';
+export type RunTone = 'progress' | 'success' | 'partial' | 'failure' | 'abandoned' | 'unknown';
+
+/** One covered Órgano that failed, kept beside the identity that names it. */
+export interface RunFailure {
+  organoId: string;
+  line: string;
+}
 
 export interface RunReport {
   tone: RunTone;
@@ -27,7 +33,7 @@ export interface RunReport {
   /** Órganos and contracts, never shown for a refusal — there are none. */
   counts: string;
   failuresTitle: string | null;
-  failures: string[];
+  failures: RunFailure[];
   timing: string;
   note: string | null;
 }
@@ -47,8 +53,13 @@ function counted(count: number, word: Word): string {
   return `${formatCount(count)} ${singularOrPlural(count, word)}`;
 }
 
+/**
+ * Dated, not just clocked. A first import runs for days, so the moment a run
+ * started is routinely read on a later one, and a bare `06:14` would be taken
+ * for this morning.
+ */
 function at(iso: string): string {
-  return formatHourMinute(new Date(iso));
+  return formatDateTime(iso);
 }
 
 function contractCounts(run: ImportRun): string {
@@ -60,12 +71,15 @@ function completedOf(run: ImportRun): string {
   return copy.run.completedOf(completed, run.coveredOrganos.length);
 }
 
-function failureLines(run: ImportRun, nameOf: (organoId: string) => string): string[] {
+function failureLines(run: ImportRun, nameOf: (organoId: string) => string): RunFailure[] {
   return run.coveredOrganos
     .filter((organo) => organo.state === 'FAILED')
     .map((organo) => {
       const name = nameOf(organo.organoId);
-      return organo.failureReason === null ? name : `${name} · ${organo.failureReason}`;
+      return {
+        organoId: organo.organoId,
+        line: organo.failureReason === null ? name : `${name} · ${organo.failureReason}`,
+      };
     });
 }
 
@@ -128,13 +142,24 @@ export function describeRun(run: ImportRun, nameOf: (organoId: string) => string
         counts: `${completedOf(run)} · ${contractCounts(run)}`,
         note: copy.run.abandonedNote,
       };
-    default:
+    case 'FAILED':
       return {
         ...base,
         tone: 'failure',
         title: copy.run.failedTitle,
         counts: `${completedOf(run)} · ${contractCounts(run)}`,
         note: copy.run.failedNote,
+      };
+    // A verdict this build does not know. Reported rather than dropped, because
+    // the alternative failure mode is silent — and neutrally rather than red,
+    // because a state we cannot read is not a run we know went wrong.
+    default:
+      return {
+        ...base,
+        tone: 'unknown',
+        title: copy.run.unknownTitle,
+        counts: `${completedOf(run)} · ${contractCounts(run)}`,
+        note: copy.run.unknownNote,
       };
   }
 }

@@ -1,9 +1,9 @@
 import { MantineProvider } from '@mantine/core';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import nock from 'nock';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { theme } from '../../app/theme';
 import { createQueryClient } from '../../shared/lib/queryClient';
@@ -88,20 +88,38 @@ function mockRun(body: ImportRun) {
   return nock(BASE_URL).get(RUN_PATH).reply(200, body);
 }
 
-/** A run read the test finishes on demand, rather than racing a wall-clock delay. */
-function heldRun(body: ImportRun) {
+/**
+ * A reply the test finishes on demand, rather than racing a wall-clock delay:
+ * on a slow enough run `delay()` lands first and the in-flight state under
+ * assertion is never observed.
+ */
+function held(scope: nock.Interceptor, body: unknown) {
   let release = () => {};
   const answered = new Promise<void>((resolve) => {
     release = resolve;
   });
-  nock(BASE_URL)
-    .get(RUN_PATH)
-    .reply(200, (_uri, _requestBody, respond) => {
-      void answered.then(() => {
-        respond(null, body);
-      });
+  scope.reply(200, (_uri, _requestBody, respond) => {
+    void answered.then(() => {
+      respond(null, body);
     });
+  });
+  // Safe to hand out directly: a Promise executor runs synchronously, so the
+  // binding is the resolver rather than the placeholder by the time we return.
   return { release };
+}
+
+function heldRun(body: ImportRun) {
+  return held(nock(BASE_URL).get(RUN_PATH), body);
+}
+
+/** The catalogue import, which holds the same guard the triggers report on. */
+function heldCatalogueImport() {
+  return held(nock(BASE_URL).post('/api/admin/organos/import'), {
+    status: 'SUCCESS',
+    added: 0,
+    refreshed: 0,
+    deactivated: 0,
+  });
 }
 
 function renderOrganosPage() {
@@ -361,8 +379,58 @@ describe('the contratos menores import', () => {
 
     expect(triggerButton()).toBeDisabled();
     expect(catalogueButton()).toBeDisabled();
-    // The reason is stated rather than left to be inferred from a dead button.
-    expect(screen.getAllByText(copy.trigger.guardHeld).length).toBeGreaterThan(0);
+    // Named *on* both buttons, not merely present somewhere on the page: the
+    // in-progress banner carries this sentence too, so an assertion that only
+    // looked for the text would pass with the toolbar saying nothing at all.
+    const describedBy = triggerButton().getAttribute('aria-describedby');
+    expect(document.getElementById(describedBy ?? '')).toHaveTextContent(copy.trigger.guardHeld);
+    expect(catalogueButton()).toHaveAttribute('aria-describedby', describedBy);
+  });
+
+  it('names the guard while the catalogue import holds it, where no banner says it', async () => {
+    const user = userEvent.setup();
+    await renderLoadedSection();
+
+    // The one path with no run banner to supply the sentence. A disabled button
+    // takes no focus and fires no pointer events, so a tooltip could never
+    // reach a reader here — the reason has to be on screen.
+    const held = heldCatalogueImport();
+
+    await user.click(catalogueButton());
+
+    await waitFor(() => {
+      expect(triggerButton()).toBeDisabled();
+    });
+    const guard = screen.getByText(copy.trigger.guardHeld);
+    expect(guard).toBeVisible();
+    expect(triggerButton()).toHaveAttribute('aria-describedby', guard.id);
+
+    held.release();
+
+    await waitFor(() => {
+      expect(triggerButton()).toBeEnabled();
+    });
+    expect(screen.queryByText(copy.trigger.guardHeld)).not.toBeInTheDocument();
+  });
+
+  it('keeps holding both triggers after the in-progress report is closed', async () => {
+    const user = userEvent.setup();
+    await renderLoadedSection();
+
+    mockTrigger();
+    mockRun(run('IN_PROGRESS', { finishedAt: null }));
+
+    await trigger(user);
+    await screen.findByText(copy.run.inProgressTitle);
+
+    await user.click(screen.getByRole('button', { name: copy.run.dismiss }));
+
+    // Closing a report is not forgetting the run behind it: the import is still
+    // going, and the guard it holds does not care whether anyone is looking.
+    expect(screen.queryByText(copy.run.inProgressTitle)).not.toBeInTheDocument();
+    expect(triggerButton()).toBeDisabled();
+    expect(catalogueButton()).toBeDisabled();
+    expect(screen.getByText(copy.trigger.guardHeld)).toBeVisible();
   });
 
   it('releases both triggers once the run it was holding them for has settled', async () => {
@@ -401,6 +469,42 @@ describe('the contratos menores import', () => {
     expect(screen.getByText(innovacion.name)).toBeInTheDocument();
   });
 
+  it('says a refused trigger is refused rather than telling the administrator to retry', async () => {
+    const user = userEvent.setup();
+    await renderLoadedSection();
+
+    nock(BASE_URL).post(IMPORT_PATH).reply(403);
+
+    await trigger(user);
+
+    expect(await screen.findByText(copy.trigger.errorForbidden)).toBeInTheDocument();
+    expect(screen.queryByText(copy.trigger.errorGeneric)).not.toBeInTheDocument();
+  });
+
+  it('keeps a failed trigger reported while its own retry is in flight', async () => {
+    const user = userEvent.setup();
+    await renderLoadedSection();
+
+    nock(BASE_URL).post(IMPORT_PATH).reply(500);
+    await trigger(user);
+    await screen.findByText(copy.trigger.errorGeneric);
+
+    const second = held(nock(BASE_URL).post(IMPORT_PATH), { runId: RUN_ID });
+
+    await user.click(screen.getByRole('button', { name: strings.retry }));
+
+    // The alert must survive the button that lives inside it: an attempt in
+    // flight is not an attempt that never happened, and unmounting the alert
+    // would take the focused element with it.
+    expect(screen.getByText(copy.trigger.errorGeneric)).toBeInTheDocument();
+
+    mockRun(run('SUCCEEDED'));
+    second.release();
+
+    expect(await screen.findByText(copy.run.succeededTitle)).toBeInTheDocument();
+    expect(screen.queryByText(copy.trigger.errorGeneric)).not.toBeInTheDocument();
+  });
+
   it('says a run that no longer exists is gone rather than blaming the network', async () => {
     const user = userEvent.setup();
     await renderLoadedSection();
@@ -419,5 +523,44 @@ describe('the contratos menores import', () => {
     await trigger(user);
 
     expect(await screen.findByText(copy.run.errorNotFound)).toBeInTheDocument();
+
+    // A missing run never comes back, so a report with no way out would sit on
+    // screen until the page was reloaded.
+    await user.click(screen.getByRole('button', { name: copy.run.dismiss }));
+
+    expect(screen.queryByText(copy.run.errorNotFound)).not.toBeInTheDocument();
+  });
+
+  it('reads the elapsed caption in whole hours once minutes stop meaning anything', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await renderLoadedSection();
+
+      mockTrigger();
+      mockRun(run('IN_PROGRESS', { finishedAt: null }));
+
+      await trigger(user);
+      await screen.findByText(copy.run.inProgressTitle);
+      expect(screen.getByText(copy.run.checkedJustNow)).toBeInTheDocument();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(7 * 60_000);
+      });
+      expect(
+        screen.getByText(`${copy.run.checkedAgoPrefix} 7 ${copy.run.checkedAgoUnit}`),
+      ).toBeInTheDocument();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2 * 60 * 60_000);
+      });
+
+      // "hai 127 min" is a number to decode rather than a freshness to feel.
+      expect(
+        screen.getByText(`${copy.run.checkedAgoPrefix} 2 ${copy.run.checkedAgoHourUnit}`),
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

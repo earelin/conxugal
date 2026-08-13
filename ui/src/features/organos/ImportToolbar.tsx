@@ -1,18 +1,20 @@
-import { Alert, Button, Group, type MantineColor, Stack, Text, Tooltip } from '@mantine/core';
+import { Button, Group, Stack, Text } from '@mantine/core';
 import { IconCircleCheck, IconDownload, IconInfoCircle } from '@tabler/icons-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useState } from 'react';
+import { useId, useState } from 'react';
 
 import { isHttpStatus, isProblemType } from '../../shared/lib/httpError';
+import { formatCount } from '../../shared/lib/number';
 import { singularOrPlural, type Word } from '../../shared/lib/plural';
 import { strings } from '../../shared/lib/strings';
 import { ErrorAlert } from '../../shared/ui/ErrorAlert';
+import { StatusAlert } from '../../shared/ui/StatusAlert';
 import { useImportRun, useMarkOrgano, useStartContratosMenoresImport } from './contratosMenores';
-import type { ImportAttempt } from './importAttempt';
-import { markAttempt } from './importAttempt';
+import { type ImportAttempt, markAttempt } from './importAttempt';
 import { type ImportOutcome, useImportOrganos } from './importOrganos';
 import { ImportRunBanner } from './ImportRunBanner';
 import { triggerRefusal } from './importRunOutcome';
+import { markWriteRefusal } from './organoRefusal';
 import { type Organo, ORGANOS_QUERY_KEY } from './organos';
 
 const copy = strings.admin.organos.import;
@@ -22,7 +24,7 @@ const menores = strings.admin.organos.contratosMenores;
 const SOURCE_FAILURE = 'urn:conxugal:problem-type:organo-import-failed';
 
 function counted(count: number, word: Word): string {
-  return `${count} ${singularOrPlural(count, word)}`;
+  return `${formatCount(count)} ${singularOrPlural(count, word)}`;
 }
 
 function outcomeCounts({ added, refreshed, deactivated }: ImportOutcome): string {
@@ -40,40 +42,6 @@ function failureMessage(error: unknown): string {
   return isHttpStatus(error, 403) ? copy.errorForbidden : copy.errorGeneric;
 }
 
-interface StatusAlertProps {
-  color: MantineColor;
-  icon: ReactNode;
-  title: string;
-  children: ReactNode;
-  onDismiss: () => void;
-}
-
-/**
- * A report of what the last import did, announced politely and dismissible.
- *
- * `role="status"` rather than the assertive `role="alert"` Mantine defaults an
- * `Alert` to: this says what an administrator asked to be told and has no
- * business interrupting a screen reader mid-sentence. `ErrorAlert` keeps the
- * assertive role, which is the one case here that earns it. The policy lives in
- * one place because losing it is silent — an alert announced too forcefully
- * looks identical on screen.
- */
-function StatusAlert({ color, icon, title, children, onDismiss }: StatusAlertProps) {
-  return (
-    <Alert
-      color={color}
-      role="status"
-      title={title}
-      icon={icon}
-      withCloseButton
-      closeButtonLabel={copy.dismiss}
-      onClose={onDismiss}
-    >
-      {children}
-    </Alert>
-  );
-}
-
 interface OutcomeAlertProps {
   outcome: ImportOutcome;
   onDismiss: () => void;
@@ -88,6 +56,7 @@ function OutcomeAlert({ outcome, onDismiss, onRetry }: OutcomeAlertProps) {
           color="green"
           icon={<IconCircleCheck size={18} />}
           title={copy.successTitle}
+          closeLabel={copy.dismiss}
           onDismiss={onDismiss}
         >
           {outcomeCounts(outcome)}
@@ -99,6 +68,7 @@ function OutcomeAlert({ outcome, onDismiss, onRetry }: OutcomeAlertProps) {
           color="blue"
           icon={<IconInfoCircle size={18} />}
           title={copy.alreadyRunningTitle}
+          closeLabel={copy.dismiss}
           onDismiss={onDismiss}
         >
           {copy.alreadyRunning}
@@ -114,31 +84,6 @@ function OutcomeAlert({ outcome, onDismiss, onRetry }: OutcomeAlertProps) {
         </ErrorAlert>
       );
   }
-}
-
-/**
- * A trigger that says why it cannot be pressed. Both are held by the same guard,
- * so the reason is stated on hover rather than left to be inferred from a button
- * that simply does not respond.
- */
-function TriggerButton({
-  label,
-  guarded,
-  children,
-}: {
-  label: string;
-  guarded: boolean;
-  children: ReactNode;
-}) {
-  return guarded ? (
-    <Tooltip label={label} multiline w={260} withArrow>
-      {/* The tooltip hangs off a wrapper: a disabled button fires no pointer
-          events, so a tooltip on the control itself would never open. */}
-      <span>{children}</span>
-    </Tooltip>
-  ) : (
-    children
-  );
 }
 
 interface ImportToolbarProps {
@@ -167,6 +112,7 @@ export function ImportToolbar({ attempt, onAttempt, catalogue }: ImportToolbarPr
   const importOrganos = useImportOrganos();
   const startImport = useStartContratosMenoresImport();
   const markOrgano = useMarkOrgano();
+  const guardId = useId();
   const runId = attempt?.kind === 'run' ? attempt.runId : null;
   const run = useImportRun(runId);
 
@@ -175,11 +121,20 @@ export function ImportToolbar({ attempt, onAttempt, catalogue }: ImportToolbarPr
    * from the mutation each render. `mutate` clears the mutation's error, so a
    * derived alert would unmount under the retry button being pressed — taking
    * the focused element with it — and the message would degrade to the generic
-   * one for as long as the second attempt was in flight.
+   * one for as long as the second attempt was in flight. Neither is cleared on
+   * the way *into* an attempt, for the same reason.
    */
   const [failure, setFailure] = useState<string | null>(null);
   const [menoresFailure, setMenoresFailure] = useState<string | null>(null);
+  /**
+   * The attempt whose report has been read and closed. Held as the attempt
+   * itself rather than as a flag, so the next one shows without anything having
+   * to reset this — and, unlike clearing the attempt, closing the report does
+   * not make the section forget that an import is running.
+   */
+  const [dismissed, setDismissed] = useState<ImportAttempt | null>(null);
   const outcome = importOrganos.data;
+  const reported = attempt === dismissed ? null : attempt;
 
   // A run this browser just claimed is running until its read says otherwise:
   // the guard is held from the moment the trigger answered, not from the moment
@@ -198,9 +153,11 @@ export function ImportToolbar({ attempt, onAttempt, catalogue }: ImportToolbarPr
   }
 
   function runMenoresImport() {
-    setMenoresFailure(null);
     startImport.mutate(undefined, {
-      onSuccess: (startedRunId) => onAttempt({ kind: 'run', runId: startedRunId }),
+      onSuccess: (startedRunId) => {
+        setMenoresFailure(null);
+        onAttempt({ kind: 'run', runId: startedRunId });
+      },
       onError: (error) => {
         const refusal = triggerRefusal(error);
         if (refusal === null) {
@@ -213,6 +170,7 @@ export function ImportToolbar({ attempt, onAttempt, catalogue }: ImportToolbarPr
         }
         // A refusal is not a failure: it answers the question that was asked,
         // and the banner is where an answer belongs.
+        setMenoresFailure(null);
         onAttempt({ kind: 'refusal', refusal, organo: null, refusedAt: new Date() });
       },
     });
@@ -231,7 +189,9 @@ export function ImportToolbar({ attempt, onAttempt, catalogue }: ImportToolbarPr
     }
     markOrgano.mutate(organo.id, {
       onSuccess: (result) => onAttempt(markAttempt(result, organo, new Date())),
-      onError: () => setMenoresFailure(menores.trigger.errorGeneric),
+      // The write's own refusals are worth repeating rather than flattening into
+      // "something went wrong": one of them says the Órgano is gone.
+      onError: (error) => setMenoresFailure(markWriteRefusal(error).message),
     });
   }
 
@@ -244,33 +204,42 @@ export function ImportToolbar({ attempt, onAttempt, catalogue }: ImportToolbarPr
 
   return (
     <Stack gap="sm">
-      <Group justify="space-between" align="center" wrap="wrap">
+      <Group justify="space-between" align="flex-start" wrap="wrap">
         <Text size="xs" c="dimmed" maw={420}>
           {menores.scopeNote}
         </Text>
-        <Group gap="sm">
-          <TriggerButton label={menores.trigger.guardHeld} guarded={running}>
+        <Stack gap={4} align="flex-end">
+          <Group gap="sm">
             <Button
               variant="default"
               leftSection={<IconDownload size={16} />}
               loading={startImport.isPending}
               disabled={running}
+              aria-describedby={running ? guardId : undefined}
               onClick={runMenoresImport}
             >
               {startImport.isPending ? menores.trigger.running : menores.trigger.button}
             </Button>
-          </TriggerButton>
-          <TriggerButton label={menores.trigger.guardHeld} guarded={running}>
             <Button
               leftSection={<IconDownload size={16} />}
               loading={importOrganos.isPending}
               disabled={running}
+              aria-describedby={running ? guardId : undefined}
               onClick={runCatalogueImport}
             >
               {importOrganos.isPending ? copy.running : copy.button}
             </Button>
-          </TriggerButton>
-        </Group>
+          </Group>
+          {/* Why both buttons are dead, said on screen rather than on hover: a
+              disabled button takes no focus and fires no pointer events, so a
+              tooltip is the one affordance that could never reach a reader who
+              is not using a mouse. */}
+          {running && (
+            <Text id={guardId} size="xs" c="dimmed" ta="right" maw={360}>
+              {menores.trigger.guardHeld}
+            </Text>
+          )}
+        </Stack>
       </Group>
 
       {failure !== null && (
@@ -302,11 +271,12 @@ export function ImportToolbar({ attempt, onAttempt, catalogue }: ImportToolbarPr
       )}
 
       <ImportRunBanner
-        attempt={attempt}
+        attempt={reported}
         run={run}
         catalogue={catalogue}
         onRetry={retryRefused}
-        onDismiss={() => onAttempt(null)}
+        retrying={startImport.isPending || markOrgano.isPending}
+        onDismiss={() => setDismissed(attempt)}
         onRefresh={refreshRun}
       />
     </Stack>

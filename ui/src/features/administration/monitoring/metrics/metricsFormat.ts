@@ -1,10 +1,4 @@
-import { formatTime } from '../../../../shared/lib/date';
-import { formatCount } from '../../../../shared/lib/number';
 import type { RuntimeMetrics } from './metricsStream';
-
-// Both moved to shared/lib once the Órganos section needed them too, and are
-// re-exported here so this module stays the panel's one formatting import.
-export { formatCount, formatTime };
 
 export function formatPercent(fraction: number): string {
   return `${Math.round(fraction * 100)} %`;

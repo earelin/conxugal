@@ -98,7 +98,27 @@ describe('describeRun', () => {
     const report = describeRun(partial, nameOf);
 
     expect(report.failuresTitle).toBe(copy.run.failedOrganos(1));
-    expect(report.failures).toEqual(['Axencia Galega de Innovación · a fonte non respondeu']);
+    // The identity travels with the line: two Órganos can share a name, and two
+    // failures the same reason, so the line alone is not a key.
+    expect(report.failures).toEqual([
+      { organoId: INNOVACION, line: 'Axencia Galega de Innovación · a fonte non respondeu' },
+    ]);
+  });
+
+  it('keeps two identically-named failures apart by the identity behind them', () => {
+    const twin = 'dddddddd-dddd-7ddd-8ddd-dddddddddddd';
+    const partial = run('PARTIALLY_SUCCEEDED', {
+      coveredOrganos: [
+        covered(INNOVACION, 'FAILED', 'a fonte non respondeu'),
+        covered(twin, 'FAILED', 'a fonte non respondeu'),
+      ],
+    });
+
+    const identities = describeRun(partial, () => 'Axencia Galega de Innovación').failures.map(
+      (failure) => failure.organoId,
+    );
+
+    expect(identities).toEqual([INNOVACION, twin]);
   });
 
   it('falls back to the identity of an Órgano the catalogue can no longer place', () => {
@@ -106,7 +126,19 @@ describe('describeRun', () => {
       coveredOrganos: [covered('cccccccc-cccc-7ccc-8ccc-cccccccccccc', 'FAILED')],
     });
 
-    expect(describeRun(partial, nameOf).failures).toEqual(['cccccccc-cccc-7ccc-8ccc-cccccccccccc']);
+    expect(describeRun(partial, nameOf).failures).toEqual([
+      {
+        organoId: 'cccccccc-cccc-7ccc-8ccc-cccccccccccc',
+        line: 'cccccccc-cccc-7ccc-8ccc-cccccccccccc',
+      },
+    ]);
+  });
+
+  it('reports a verdict it does not know instead of dressing it as a failure', () => {
+    const report = describeRun({ ...run('SUCCEEDED'), state: 'RESUMING' as never }, nameOf);
+
+    expect(report.title).toBe(copy.run.unknownTitle);
+    expect(report.tone).not.toBe('failure');
   });
 
   it('lists neither a stopped nor a skipped Órgano as a failure', () => {

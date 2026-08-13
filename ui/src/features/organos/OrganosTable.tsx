@@ -3,6 +3,7 @@ import { IconFolderMinus, IconFolderPlus, type TablerIcon } from '@tabler/icons-
 import type { CSSProperties } from 'react';
 
 import { strings } from '../../shared/lib/strings';
+import { UNTRUNCATED_LABEL } from '../../shared/ui/badge';
 import { type ImportMarkActions, ImportMarkCell } from './ImportMarkCell';
 import type { Organo } from './organos';
 
@@ -13,10 +14,6 @@ const NARROW_COLUMN: CSSProperties = { whiteSpace: 'nowrap', width: '1%' };
 // The same, minus the nowrap: CONTRATOS MENORES is far too long a header to hold
 // on one line at 360px, and forcing it would push the table into a page scroll.
 const MARK_COLUMN: CSSProperties = { width: '1%' };
-
-// Mantine ellipsises a Badge's label once its column is squeezed, which turns
-// ACTIVO into "A…". The state has to stay readable at every width.
-const UNTRUNCATED_LABEL = { root: { maxWidth: 'none' }, label: { overflow: 'visible' } };
 
 // The admin tables' column-header treatment.
 const COLUMN_HEADER = { tt: 'uppercase', fz: 'xs', c: 'dimmed' } as const;

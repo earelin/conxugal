@@ -1,4 +1,4 @@
-import { Alert, Button, Group, List, type MantineColor, Stack, Text } from '@mantine/core';
+import { Button, Group, List, type MantineColor, Stack, Text } from '@mantine/core';
 import {
   IconAlertTriangle,
   IconCircleCheck,
@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react';
 
 import { formatHourMinute } from '../../shared/lib/date';
 import { strings } from '../../shared/lib/strings';
-import { ErrorAlert } from '../../shared/ui/ErrorAlert';
+import { StatusAlert } from '../../shared/ui/StatusAlert';
 import type { ImportRun } from './contratosMenores';
 import type { ImportAttempt } from './importAttempt';
 import { describeRefusal, describeRun, runReadError, type RunTone } from './importRunOutcome';
@@ -27,39 +27,13 @@ const TONE: Record<RunTone, { color: MantineColor; icon: ReactNode }> = {
   // The one red state: a run in which no Órgano could be imported.
   failure: { color: 'red', icon: <IconAlertTriangle size={18} /> },
   abandoned: { color: 'orange', icon: <IconPlayerPause size={18} /> },
+  unknown: { color: 'gray', icon: <IconInfoCircle size={18} /> },
 };
 
 /** How often the elapsed caption is redrawn; nothing else here moves on its own. */
 const ELAPSED_TICK_MS = 30_000;
 
-interface OutcomeAlertProps {
-  color: MantineColor;
-  icon: ReactNode;
-  title: string;
-  children: ReactNode;
-  onDismiss: () => void;
-}
-
-/**
- * Announced politely, like the catalogue import's own report beside it: this is
- * what an administrator asked to be told, and has no business interrupting a
- * screen reader mid-sentence.
- */
-function OutcomeAlert({ color, icon, title, children, onDismiss }: OutcomeAlertProps) {
-  return (
-    <Alert
-      color={color}
-      role="status"
-      title={title}
-      icon={icon}
-      withCloseButton
-      closeButtonLabel={copy.run.dismiss}
-      onClose={onDismiss}
-    >
-      <Stack gap="xs">{children}</Stack>
-    </Alert>
-  );
-}
+const MINUTES_PER_HOUR = 60;
 
 /**
  * How long ago the run was last read, so a reader can tell fresh from stale
@@ -80,11 +54,21 @@ function CheckedAgo({ readAt }: { readAt: number }) {
 
   const minutes = Math.floor(Math.max(0, now - readAt) / 60_000);
 
+  // A multi-day run left on screen would otherwise reach "hai 4 137 min", which
+  // is a number to decode rather than a freshness a reader can feel.
+  let elapsed: string;
+  if (minutes === 0) {
+    elapsed = copy.run.checkedJustNow;
+  } else if (minutes < MINUTES_PER_HOUR) {
+    elapsed = `${copy.run.checkedAgoPrefix} ${minutes} ${copy.run.checkedAgoUnit}`;
+  } else {
+    const hours = Math.floor(minutes / MINUTES_PER_HOUR);
+    elapsed = `${copy.run.checkedAgoPrefix} ${hours} ${copy.run.checkedAgoHourUnit}`;
+  }
+
   return (
     <Text size="xs" c="dimmed">
-      {minutes === 0
-        ? copy.run.checkedJustNow
-        : `${copy.run.checkedAgoPrefix} ${minutes} ${copy.run.checkedAgoUnit}`}
+      {elapsed}
     </Text>
   );
 }
@@ -96,36 +80,40 @@ function nameOf(catalogue: Organo[], organoId: string): string {
 interface RefusalBannerProps {
   attempt: Extract<ImportAttempt, { kind: 'refusal' }>;
   onRetry: () => void;
+  retrying: boolean;
   onDismiss: () => void;
 }
 
-function RefusalBanner({ attempt, onRetry, onDismiss }: RefusalBannerProps) {
+function RefusalBanner({ attempt, onRetry, retrying, onDismiss }: RefusalBannerProps) {
   const report = describeRefusal(attempt.refusal, attempt.organo?.name ?? null);
 
   // Grey rather than red, and carrying no counts: a refusal is an outcome, and
   // one of these even wrote the mark it was asked for.
   return (
-    <OutcomeAlert
+    <StatusAlert
       color="gray"
       icon={<IconInfoCircle size={18} />}
       title={report.title}
+      closeLabel={copy.run.dismiss}
       onDismiss={onDismiss}
     >
-      <Text size="sm">{report.message}</Text>
-      <Text size="xs" c="dimmed">
-        {report.note}
-      </Text>
-      <Group gap="sm">
+      <Stack gap="xs">
+        <Text size="sm">{report.message}</Text>
         <Text size="xs" c="dimmed">
-          {`${copy.refusal.refusedAtPrefix} ${formatHourMinute(attempt.refusedAt)}`}
+          {report.note}
         </Text>
-        {report.retryable && (
-          <Button size="xs" variant="default" onClick={onRetry}>
-            {strings.retry}
-          </Button>
-        )}
-      </Group>
-    </OutcomeAlert>
+        <Group gap="sm">
+          <Text size="xs" c="dimmed">
+            {`${copy.refusal.refusedAtPrefix} ${formatHourMinute(attempt.refusedAt)}`}
+          </Text>
+          {report.retryable && (
+            <Button size="xs" variant="default" loading={retrying} onClick={onRetry}>
+              {strings.retry}
+            </Button>
+          )}
+        </Group>
+      </Stack>
+    </StatusAlert>
   );
 }
 
@@ -140,6 +128,8 @@ interface ImportRunBannerProps {
   catalogue: Organo[];
   /** Re-issues whatever was refused; the guard is the only refusal worth it. */
   onRetry: () => void;
+  /** Whether that re-issued request is in flight, so it cannot be sent twice. */
+  retrying: boolean;
   onDismiss: () => void;
   /** Re-reads the run and the catalogue a settled run has changed. */
   onRefresh: () => void;
@@ -158,6 +148,7 @@ export function ImportRunBanner({
   run,
   catalogue,
   onRetry,
+  retrying,
   onDismiss,
   onRefresh,
 }: ImportRunBannerProps) {
@@ -166,14 +157,43 @@ export function ImportRunBanner({
   }
 
   if (attempt.kind === 'refusal') {
-    return <RefusalBanner attempt={attempt} onRetry={onRetry} onDismiss={onDismiss} />;
+    return (
+      <RefusalBanner
+        attempt={attempt}
+        onRetry={onRetry}
+        retrying={retrying}
+        onDismiss={onDismiss}
+      />
+    );
   }
 
+  // Dismissible like every other report here: a run that cannot be read is not
+  // a section that failed to load, and leaving an alert nothing can clear on
+  // screen is what a 404 on a run identity would otherwise do for good.
   if (run.isError) {
     return (
-      <ErrorAlert title={copy.run.errorTitle} onRetry={onRefresh} retrying={run.isFetching}>
-        {runReadError(run.error)}
-      </ErrorAlert>
+      <StatusAlert
+        color="red"
+        icon={<IconAlertTriangle size={18} />}
+        title={copy.run.errorTitle}
+        closeLabel={copy.run.dismiss}
+        onDismiss={onDismiss}
+      >
+        <Stack gap="xs">
+          <Text size="sm">{runReadError(run.error)}</Text>
+          <Group>
+            <Button
+              size="xs"
+              variant="default"
+              leftSection={<IconRefresh size={14} />}
+              loading={run.isFetching}
+              onClick={onRefresh}
+            >
+              {strings.retry}
+            </Button>
+          </Group>
+        </Stack>
+      </StatusAlert>
     );
   }
 
@@ -185,43 +205,53 @@ export function ImportRunBanner({
   const tone = TONE[report.tone];
 
   return (
-    <OutcomeAlert color={tone.color} icon={tone.icon} title={report.title} onDismiss={onDismiss}>
-      <Text size="sm">{report.counts}</Text>
+    <StatusAlert
+      color={tone.color}
+      icon={tone.icon}
+      title={report.title}
+      closeLabel={copy.run.dismiss}
+      onDismiss={onDismiss}
+    >
+      <Stack gap="xs">
+        <Text size="sm">{report.counts}</Text>
 
-      {report.failuresTitle && (
-        <Stack gap={2}>
-          <Text size="sm" fw={600}>
-            {report.failuresTitle}
+        {report.failuresTitle && (
+          <Stack gap={2}>
+            <Text size="sm" fw={600}>
+              {report.failuresTitle}
+            </Text>
+            <List size="sm">
+              {report.failures.map((failure) => (
+                // Keyed on the identity the run read carries: two Órganos can
+                // share a name, and two failures the same reason.
+                <List.Item key={failure.organoId}>{failure.line}</List.Item>
+              ))}
+            </List>
+          </Stack>
+        )}
+
+        {report.note && (
+          <Text size="xs" c="dimmed">
+            {report.note}
           </Text>
-          <List size="sm">
-            {report.failures.map((failure) => (
-              <List.Item key={failure}>{failure}</List.Item>
-            ))}
-          </List>
-        </Stack>
-      )}
+        )}
 
-      {report.note && (
-        <Text size="xs" c="dimmed">
-          {report.note}
-        </Text>
-      )}
-
-      <Group gap="sm">
-        <Text size="xs" c="dimmed">
-          {report.timing}
-        </Text>
-        <CheckedAgo readAt={run.dataUpdatedAt} />
-        <Button
-          size="xs"
-          variant="default"
-          leftSection={<IconRefresh size={14} />}
-          loading={run.isFetching}
-          onClick={onRefresh}
-        >
-          {copy.run.refresh}
-        </Button>
-      </Group>
-    </OutcomeAlert>
+        <Group gap="sm">
+          <Text size="xs" c="dimmed">
+            {report.timing}
+          </Text>
+          <CheckedAgo readAt={run.dataUpdatedAt} />
+          <Button
+            size="xs"
+            variant="default"
+            leftSection={<IconRefresh size={14} />}
+            loading={run.isFetching}
+            onClick={onRefresh}
+          >
+            {copy.run.refresh}
+          </Button>
+        </Group>
+      </Stack>
+    </StatusAlert>
   );
 }

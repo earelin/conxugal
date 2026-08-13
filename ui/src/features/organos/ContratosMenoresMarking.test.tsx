@@ -166,6 +166,24 @@ describe('the contratos menores mark', () => {
     expect(within(rowFor(inactive)).getByText(copy.badge.ineligible)).toBeInTheDocument();
   });
 
+  it('says which stored state an unmarked Órgano is holding, reachable from the keyboard', async () => {
+    const user = userEvent.setup();
+    await renderTerm(user);
+
+    // Mantine opens a tooltip on hover alone by default, which would put the
+    // one place *parcial* and *completo* are told apart out of reach of anyone
+    // not using a pointer.
+    switchFor(stale).focus();
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(copy.tooltip.stalePartial);
+
+    await user.tab();
+
+    await waitFor(() => {
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    });
+  });
+
   it('counts the marked Órganos in the caption beside the term total', async () => {
     await renderTerm(userEvent.setup());
 
@@ -240,6 +258,41 @@ describe('the contratos menores mark', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(await within(rowFor(partial)).findByText(copy.badge.stale)).toBeInTheDocument();
     expect(unmark.isDone()).toBe(true);
+  });
+
+  it('says a refused mark on an ineligible Órgano is not the guard being held', async () => {
+    const user = userEvent.setup();
+    await renderTerm(user);
+
+    // The mark applies either way, so the refusal rides a 200 rather than a 409.
+    nock(BASE_URL)
+      .put(markPath(nothing))
+      .reply(200, { runId: null, refusal: 'ORGANO_NOT_ELIGIBLE' });
+    mockCatalogue(
+      CATALOGUE.map((entry) => (entry.id === nothing.id ? { ...entry, importable: true } : entry)),
+    );
+
+    await user.click(switchFor(nothing));
+    await user.click(await screen.findByRole('button', { name: copy.mark.submit }));
+
+    expect(await screen.findByText(copy.refusal.notEligibleMark(nothing.name))).toBeInTheDocument();
+    expect(screen.queryByText(copy.refusal.guardMark(nothing.name))).not.toBeInTheDocument();
+    // Nothing about asking again changes the answer, so nothing offers to.
+    expect(screen.queryByRole('button', { name: strings.retry })).not.toBeInTheDocument();
+  });
+
+  it('says a refused mark is refused rather than telling the administrator to retry', async () => {
+    const user = userEvent.setup();
+    await renderTerm(user);
+
+    nock(BASE_URL).put(markPath(nothing)).reply(403);
+
+    await user.click(switchFor(nothing));
+    await user.click(await screen.findByRole('button', { name: copy.mark.submit }));
+
+    expect(await screen.findByText(copy.write.forbidden)).toBeInTheDocument();
+    expect(screen.getByText(copy.write.errorTitle)).toBeInTheDocument();
+    expect(screen.queryByText(copy.write.generic)).not.toBeInTheDocument();
   });
 
   it('says an Órgano that has left the catalogue cannot be unmarked, and offers the re-read', async () => {

@@ -39,11 +39,12 @@ export function placementRefusal(error: unknown): Refusal {
  * one starts and the server answers it as part of a success.
  */
 export function markWriteRefusal(error: unknown): Refusal {
+  const title = markCopy.write.errorTitle;
   if (isProblemType(error, PROBLEM_TYPE.organoNotFound)) {
-    return { message: markCopy.write.notFound };
+    return { title, message: markCopy.write.notFound };
   }
   if (isHttpStatus(error, 403)) {
-    return { message: markCopy.write.forbidden };
+    return { title, message: markCopy.write.forbidden };
   }
-  return { message: markCopy.write.generic };
+  return { title, message: markCopy.write.generic };
 }

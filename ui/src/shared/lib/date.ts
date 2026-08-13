@@ -23,3 +23,12 @@ export function formatHourMinute(date: Date): string {
     hourCycle: 'h23',
   });
 }
+
+/**
+ * A moment that may not be today. A bare clock reading is only unambiguous
+ * within the day it belongs to, and an import that runs for days is read long
+ * after the day it started on.
+ */
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('gl-ES', { dateStyle: 'short', timeStyle: 'short' });
+}

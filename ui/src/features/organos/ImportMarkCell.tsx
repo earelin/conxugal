@@ -1,14 +1,11 @@
 import { Badge, Flex, type MantineColor, Switch, Text, Tooltip } from '@mantine/core';
 
 import { strings } from '../../shared/lib/strings';
+import { UNTRUNCATED_LABEL } from '../../shared/ui/badge';
 import { markState, type MarkState, markTooltip } from './importMark';
 import type { Organo } from './organos';
 
 const copy = strings.admin.organos.contratosMenores;
-
-// Mantine ellipsises a Badge's label once its column is squeezed, which turns
-// SEN ACTUALIZAR into "S…". The state has to stay readable at every width.
-const UNTRUNCATED_LABEL = { root: { maxWidth: 'none' }, label: { overflow: 'visible' } };
 
 const BADGE: Partial<Record<MarkState, { label: string; color: MantineColor }>> = {
   marked: { label: copy.badge.marked, color: 'indigo' },
@@ -63,7 +60,17 @@ export function ImportMarkCell({
   const state = markState(organo);
 
   return (
-    <Tooltip label={markTooltip(organo, state)} multiline w={260} withArrow>
+    // Mantine opens a tooltip on hover alone by default, which would leave what
+    // an Órgano is holding — the one place *parcial* versus *completo* is said —
+    // reachable by pointer only. `focusin` bubbles, so focusing the switch
+    // inside opens it.
+    <Tooltip
+      label={markTooltip(organo, state)}
+      events={{ hover: true, focus: true, touch: true }}
+      multiline
+      w={260}
+      withArrow
+    >
       {/* Stacks below `sm`: at 360 px a switch and a badge side by side would
           squeeze the Órgano name past wrapping and into a page-wide scroll. */}
       <Flex direction={{ base: 'column', sm: 'row' }} align="center" gap="xs" wrap="nowrap">

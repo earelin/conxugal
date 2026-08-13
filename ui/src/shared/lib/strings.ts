@@ -302,11 +302,11 @@ export const strings = {
             'retómase onde quedou.',
           cancel: 'Cancelar',
           submit: 'Marcar e importar',
-          errorTitle: 'Non se puido marcar o órgano',
         },
         // Shared by the mark and the unmark: both write the same attribute, and
-        // both fail the same two ways.
+        // both fail the same ways.
         write: {
+          errorTitle: 'Non se puido gardar a marca',
           notFound: 'Este órgano xa non está no catálogo. Actualiza a sección.',
           forbidden: 'Non tes permisos para cambiar a marca de importación.',
           generic: 'Non se puido gardar a marca. Téntao de novo máis tarde.',
@@ -331,6 +331,12 @@ export const strings = {
           // Undrawn by the mockups, which predate the verdict: a multi-day
           // import whose process died and so never wrote its own ending.
           abandonedTitle: 'A importación de contratos menores quedou interrompida',
+          // A verdict this build does not know, which means the server moved on
+          // without it. Neutral: an unreadable state is not a failed run.
+          unknownTitle: 'Non se recoñece o estado desta execución',
+          unknownNote:
+            'Pode que a aplicación estea desactualizada respecto do servidor. Recarga a páxina ' +
+            'para obter a versión máis recente.',
 
           scopeCount: { singular: 'órgano no alcance', plural: 'órganos no alcance' },
           coveredCount: { singular: 'órgano cuberto', plural: 'órganos cubertos' },
@@ -346,6 +352,8 @@ export const strings = {
           unfinished: 'sen rematar',
           checkedAgoPrefix: 'Consultado hai',
           checkedAgoUnit: 'min',
+          // Past the hour the minutes stop being a freshness anyone can feel.
+          checkedAgoHourUnit: 'h',
           checkedJustNow: 'Consultado agora mesmo',
           refresh: 'Actualizar',
           dismiss: 'Pechar',
