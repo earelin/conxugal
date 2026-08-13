@@ -1,10 +1,10 @@
 import { Card, Group, Progress, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useId } from 'react';
 
+import { formatCount } from '../../../../shared/lib/number';
 import { strings } from '../../../../shared/lib/strings';
 import { Field } from './Field';
 import {
-  formatCount,
   formatDecimal,
   formatPercent,
   formatSingleMb,

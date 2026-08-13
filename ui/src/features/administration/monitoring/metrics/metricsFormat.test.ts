@@ -4,12 +4,10 @@ import {
   deltaOf,
   errorRate,
   errorRateSeverity,
-  formatCount,
   formatDecimal,
   formatMb,
   formatPercent,
   formatSingleMb,
-  formatTime,
   formatUptime,
   fractionToPercent,
   heapUsageMb,
@@ -22,32 +20,6 @@ import type { RuntimeMetrics } from './metricsStream';
 function sample(overrides: Partial<RuntimeMetrics> = {}): RuntimeMetrics {
   return { timestamp: '2026-07-18T09:30:00Z', ...overrides };
 }
-
-describe('formatCount', () => {
-  it('groups digits into thousands separated by a space', () => {
-    expect(formatCount(15_230)).toBe('15 230');
-  });
-
-  it('adds a separator for every group of three digits in large numbers', () => {
-    expect(formatCount(1_234_567)).toBe('1 234 567');
-  });
-
-  it('does not add a separator for numbers under a thousand', () => {
-    expect(formatCount(42)).toBe('42');
-  });
-
-  it('rounds a fractional input to the nearest integer before grouping', () => {
-    expect(formatCount(1999.6)).toBe('2 000');
-  });
-
-  it('preserves a negative sign while still grouping the digits', () => {
-    expect(formatCount(-15_230)).toBe('-15 230');
-  });
-
-  it('formats zero as a bare 0', () => {
-    expect(formatCount(0)).toBe('0');
-  });
-});
 
 describe('formatPercent', () => {
   it('converts a 0-1 fraction into a rounded percentage string', () => {
@@ -109,26 +81,6 @@ describe('formatDecimal', () => {
     expect(formatDecimal(1234.5)).toBe('1 234,50');
     expect(formatDecimal(1.902)).toBe('1,90');
     expect(formatDecimal(-4.2)).toBe('-4,20');
-  });
-});
-
-describe('formatTime', () => {
-  it('formats a time as zero-padded HH:mm:ss in 24-hour form', () => {
-    const date = new Date(2026, 6, 18, 9, 5, 7);
-
-    expect(formatTime(date)).toBe('09:05:07');
-  });
-
-  it('renders midnight as hour 00 rather than wrapping to 12', () => {
-    const date = new Date(2026, 6, 18, 0, 0, 0);
-
-    expect(formatTime(date)).toBe('00:00:00');
-  });
-
-  it('renders the 23rd hour without converting to 12-hour form', () => {
-    const date = new Date(2026, 6, 18, 23, 59, 59);
-
-    expect(formatTime(date)).toBe('23:59:59');
   });
 });
 

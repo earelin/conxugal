@@ -19,6 +19,7 @@ import {
 } from '@tabler/icons-react';
 import { lazy, type ReactNode, Suspense, useId } from 'react';
 
+import { formatDateTime } from '../../../shared/lib/date';
 import { HttpError } from '../../../shared/lib/httpClient';
 import { strings } from '../../../shared/lib/strings';
 import { type SystemStatus, useSystemStatus } from './systemStatus';
@@ -28,10 +29,6 @@ import { type SystemStatus, useSystemStatus } from './systemStatus';
 const MetricsPanel = lazy(() =>
   import('./metrics').then((module) => ({ default: module.MetricsPanel })),
 );
-
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('gl-ES', { dateStyle: 'short', timeStyle: 'short' });
-}
 
 function formatUptime(uptimeMillis: number): string {
   const totalMinutes = Math.floor(uptimeMillis / 60_000);

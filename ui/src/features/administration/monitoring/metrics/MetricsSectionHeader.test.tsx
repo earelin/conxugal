@@ -3,8 +3,8 @@ import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { theme } from '../../../../app/theme';
+import { formatTime } from '../../../../shared/lib/date';
 import { strings } from '../../../../shared/lib/strings';
-import { formatTime } from './metricsFormat';
 import { MetricsSectionHeader } from './MetricsSectionHeader';
 import type { MetricsStreamState } from './metricsStream';
 

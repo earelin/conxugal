@@ -2,9 +2,10 @@ import { Badge, Card, Group, SimpleGrid, Text } from '@mantine/core';
 import { IconClock } from '@tabler/icons-react';
 import { useId } from 'react';
 
+import { formatCount } from '../../../../shared/lib/number';
 import { strings } from '../../../../shared/lib/strings';
 import { Field } from './Field';
-import { errorRate, errorRateSeverity, formatCount, formatDecimal } from './metricsFormat';
+import { errorRate, errorRateSeverity, formatDecimal } from './metricsFormat';
 import type { RuntimeMetrics } from './metricsStream';
 import { orNoValue } from './orNoValue';
 

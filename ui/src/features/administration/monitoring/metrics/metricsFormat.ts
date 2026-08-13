@@ -1,20 +1,11 @@
 import type { RuntimeMetrics } from './metricsStream';
 
-// The backtracking sonarjs warns about is bounded here: this only ever matches
-// against a rounded Number's own decimal form, never longer than ~21 characters.
-// eslint-disable-next-line sonarjs/super-linear-regex
-const thousandsBoundary = /\B(?=(\d{3})+(?!\d))/g;
-
-export function formatCount(n: number): string {
-  return Math.round(n).toString().replace(thousandsBoundary, ' ');
-}
-
 export function formatPercent(fraction: number): string {
   return `${Math.round(fraction * 100)} %`;
 }
 
 export function formatDecimal(n: number, fractionDigits = 2): string {
-  // Grouping is a space, to match formatCount above; the decimal mark is the
+  // Grouping is a space, to match `formatCount`; the decimal mark is the
   // comma Galician writes. Both are taken from the formatter's own parts rather
   // than patched into its output: which character plays which role depends on
   // the locale data the runtime actually resolves for gl-ES, and a build that
@@ -32,15 +23,6 @@ export function formatDecimal(n: number, fractionDigits = 2): string {
       return part.type === 'decimal' ? ',' : part.value;
     })
     .join('');
-}
-
-export function formatTime(date: Date): string {
-  return date.toLocaleTimeString('gl-ES', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  });
 }
 
 function bytesToMb(bytes: number): number {

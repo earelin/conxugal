@@ -1,10 +1,10 @@
 import { Box, Card, Skeleton, Text } from '@mantine/core';
 import { type ReactNode, useId } from 'react';
 
+import { formatCount } from '../../../../shared/lib/number';
 import { strings } from '../../../../shared/lib/strings';
 import {
   deltaOf,
-  formatCount,
   formatPercent,
   fractionToPercent,
   heapUsageMb,

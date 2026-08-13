@@ -44,9 +44,12 @@ failures before committing changes to this module.
   feature barrel would drag that whole slice into the eager chunk);
   `features/<name>/` owns one buildable feature and exposes only an `index.ts`
   barrel outward — it may group its internals into sub-folders (e.g.
-  `administration/{monitoring,users}/`) for readability, but these are
+  `administration/{monitoring,users}/`, `organos/{catalogo,taxonomia,imports,dialogs}/`)
+  for readability, but these are
   organisational only and not enforced boundaries: `eslint-plugin-boundaries`
-  treats everything under `features/<name>/` as one element; `shared/entities/`
+  treats everything under `features/<name>/` as one element, and the slice root
+  keeps what the sub-folders share — its page, its reads and its view model;
+  `shared/entities/`
   holds cross-feature domain types/reads;
   `shared/ui/` and `shared/lib/` hold presentational primitives and
   framework-free utilities respectively. `eslint-plugin-boundaries`
