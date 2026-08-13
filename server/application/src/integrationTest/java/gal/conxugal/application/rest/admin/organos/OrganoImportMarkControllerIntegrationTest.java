@@ -7,21 +7,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import gal.conxugal.application.contrato.StartContratosMenoresImport;
-import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
-import gal.conxugal.domain.contrato.ContratoMenorRepository;
-import gal.conxugal.domain.contrato.ContratoMenorSource;
+import gal.conxugal.application.rest.admin.support.ContratosMenoresImportTestSupport;
 import gal.conxugal.domain.importrun.ImportAlreadyRunningException;
 import gal.conxugal.domain.importrun.ImportRunId;
-import gal.conxugal.domain.importrun.ImportRunRepository;
-import gal.conxugal.domain.operador.OperadorRepository;
-import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
 import gal.conxugal.domain.organo.MarkOrganoForImport;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.OrganoNotEligibleForImportException;
 import gal.conxugal.domain.organo.OrganoNotFoundException;
-import gal.conxugal.domain.organo.OrganoRepository;
 import gal.conxugal.domain.organo.UnmarkOrganoForImport;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpStatus;
@@ -36,7 +29,7 @@ import org.junit.jupiter.api.Test;
 // Both writes hang off the Órgano's own path rather than /api/admin/organos, so the ADMIN gate
 // a rule shaped around the plural would miss is asserted here per operation.
 @MicronautTest
-class OrganoImportMarkControllerIntegrationTest extends AuthenticationTestSupport {
+class OrganoImportMarkControllerIntegrationTest extends ContratosMenoresImportTestSupport {
 
   private static final OrganoId SANIDADE = new OrganoId(UUID.randomUUID());
   private static final ImportRunId RUN = new ImportRunId(UUID.randomUUID());
@@ -47,9 +40,6 @@ class OrganoImportMarkControllerIntegrationTest extends AuthenticationTestSuppor
   @Inject
   UnmarkOrganoForImport unmarkOrganoForImport;
 
-  @Inject
-  StartContratosMenoresImport startImport;
-
   @MockBean(MarkOrganoForImport.class)
   MarkOrganoForImport markOrganoForImportMock() {
     return mock(MarkOrganoForImport.class);
@@ -58,44 +48,6 @@ class OrganoImportMarkControllerIntegrationTest extends AuthenticationTestSuppor
   @MockBean(UnmarkOrganoForImport.class)
   UnmarkOrganoForImport unmarkOrganoForImportMock() {
     return mock(UnmarkOrganoForImport.class);
-  }
-
-  @MockBean(StartContratosMenoresImport.class)
-  StartContratosMenoresImport startImportMock() {
-    return mock(StartContratosMenoresImport.class);
-  }
-
-  // The mock proxy above still resolves the real constructor's dependencies, and the whole import
-  // hangs off them: the claim, the walk beneath it and the store beneath that all reach adapters
-  // wanting a datasource this suite deliberately runs without.
-  @MockBean(ImportRunRepository.class)
-  ImportRunRepository importRunsMock() {
-    return mock(ImportRunRepository.class);
-  }
-
-  @MockBean(OrganoRepository.class)
-  OrganoRepository organosMock() {
-    return mock(OrganoRepository.class);
-  }
-
-  @MockBean(ContratoMenorRepository.class)
-  ContratoMenorRepository contratosMock() {
-    return mock(ContratoMenorRepository.class);
-  }
-
-  @MockBean(OperadorRepository.class)
-  OperadorRepository operadoresMock() {
-    return mock(OperadorRepository.class);
-  }
-
-  @MockBean(ContratosMenoresImportStateRepository.class)
-  ContratosMenoresImportStateRepository importStatesMock() {
-    return mock(ContratosMenoresImportStateRepository.class);
-  }
-
-  @MockBean(ContratoMenorSource.class)
-  ContratoMenorSource contratoMenorSourceMock() {
-    return mock(ContratoMenorSource.class);
   }
 
   // Called twice on purpose: marking is idempotent, so an admin flicking the switch back on

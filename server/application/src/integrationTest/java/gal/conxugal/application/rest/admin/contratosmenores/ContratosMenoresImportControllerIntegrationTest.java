@@ -2,84 +2,32 @@ package gal.conxugal.application.rest.admin.contratosmenores;
 
 import static gal.conxugal.application.http.error.support.AssertProblem.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import gal.conxugal.application.contrato.StartContratosMenoresImport;
-import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
-import gal.conxugal.domain.contrato.ContratoMenorRepository;
-import gal.conxugal.domain.contrato.ContratoMenorSource;
+import gal.conxugal.application.rest.admin.support.ContratosMenoresImportTestSupport;
 import gal.conxugal.domain.importrun.ImportAlreadyRunningException;
 import gal.conxugal.domain.importrun.ImportRunId;
-import gal.conxugal.domain.importrun.ImportRunRepository;
-import gal.conxugal.domain.operador.OperadorRepository;
-import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.OrganoNotEligibleForImportException;
 import gal.conxugal.domain.organo.OrganoNotFoundException;
-import gal.conxugal.domain.organo.OrganoRepository;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpStatus;
-import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
-import jakarta.inject.Inject;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 // The two triggers, which answer with a run rather than with an outcome: an initial import runs
 // for days, so the response cannot wait for it.
 @MicronautTest
-class ContratosMenoresImportControllerIntegrationTest extends AuthenticationTestSupport {
+class ContratosMenoresImportControllerIntegrationTest extends ContratosMenoresImportTestSupport {
 
   private static final ImportRunId RUN = new ImportRunId(UUID.randomUUID());
   private static final OrganoId SERGAS = new OrganoId(UUID.randomUUID());
   private static final String SWEEP = "/api/admin/contratos-menores/import";
-
-  @Inject
-  StartContratosMenoresImport startImport;
-
-  @MockBean(StartContratosMenoresImport.class)
-  StartContratosMenoresImport startImportMock() {
-    return mock(StartContratosMenoresImport.class);
-  }
-
-  // The mock proxy above still resolves the real constructor's dependencies, and the whole import
-  // hangs off them: the claim, the walk beneath it and the store beneath that all reach adapters
-  // wanting a datasource this suite deliberately runs without. Stubbing the ports they are
-  // declared against is what keeps this a test of the HTTP layer alone.
-  @MockBean(ImportRunRepository.class)
-  ImportRunRepository importRunsMock() {
-    return mock(ImportRunRepository.class);
-  }
-
-  @MockBean(OrganoRepository.class)
-  OrganoRepository organosMock() {
-    return mock(OrganoRepository.class);
-  }
-
-  @MockBean(ContratoMenorRepository.class)
-  ContratoMenorRepository contratosMock() {
-    return mock(ContratoMenorRepository.class);
-  }
-
-  @MockBean(OperadorRepository.class)
-  OperadorRepository operadoresMock() {
-    return mock(OperadorRepository.class);
-  }
-
-  @MockBean(ContratosMenoresImportStateRepository.class)
-  ContratosMenoresImportStateRepository importStatesMock() {
-    return mock(ContratosMenoresImportStateRepository.class);
-  }
-
-  @MockBean(ContratoMenorSource.class)
-  ContratoMenorSource contratoMenorSourceMock() {
-    return mock(ContratoMenorSource.class);
-  }
 
   @Test
   void admin_triggers_sweep_and_gets_the_run_it_started(RequestSpecification spec) {
