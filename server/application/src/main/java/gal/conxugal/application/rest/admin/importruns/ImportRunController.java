@@ -1,7 +1,7 @@
 package gal.conxugal.application.rest.admin.importruns;
 
 import gal.conxugal.domain.importrun.ImportRunId;
-import gal.conxugal.domain.importrun.ImportRunRepository;
+import gal.conxugal.domain.importrun.ReadImportRun;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.PathVariable;
@@ -22,17 +22,17 @@ import java.util.UUID;
 @Secured("ADMIN")
 class ImportRunController {
 
-  private final ImportRunRepository importRuns;
+  private final ReadImportRun readImportRun;
 
-  ImportRunController(ImportRunRepository importRuns) {
-    this.importRuns = importRuns;
+  ImportRunController(ReadImportRun readImportRun) {
+    this.readImportRun = readImportRun;
   }
 
   @Get("/{id}")
   ImportRunResponse run(@PathVariable UUID id) {
     ImportRunId runId = new ImportRunId(id);
-    return importRuns
-        .findRun(runId)
+    return readImportRun
+        .read(runId)
         .map(ImportRunResponse::of)
         .orElseThrow(() -> new ImportRunNotFoundException(runId));
   }

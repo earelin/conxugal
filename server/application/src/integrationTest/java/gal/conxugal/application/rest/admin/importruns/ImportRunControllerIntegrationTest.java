@@ -115,8 +115,8 @@ class ImportRunControllerIntegrationTest extends AuthenticationTestSupport {
     assertThat(response.jsonPath().getInt("refreshed")).isEqualTo(17);
   }
 
-  // ADR-0019: the wrappers stop at this boundary, so the id a trigger returned is the one this
-  // read accepts and answers with — never a {"value": …} around it.
+  // The wrappers stop at this boundary, so the id a trigger returned is the one this read
+  // accepts and answers with — never a {"value": …} around it.
   @Test
   void every_identifier_on_the_wire_is_the_bare_uuid(RequestSpecification spec) {
     Response response =
@@ -132,7 +132,7 @@ class ImportRunControllerIntegrationTest extends AuthenticationTestSupport {
     assertThat(response.jsonPath().getString("id")).isEqualTo(RUN.value().toString());
     assertThat(response.jsonPath().getString("coveredOrganos[0].organoId"))
         .isEqualTo(SERGAS.value().toString());
-    assertThat(response.asString()).doesNotContain("value");
+    assertThat(response.asString()).doesNotContain("\"value\"");
   }
 
   @Test

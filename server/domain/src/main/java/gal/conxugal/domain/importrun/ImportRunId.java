@@ -2,6 +2,7 @@ package gal.conxugal.domain.importrun;
 
 import io.micronaut.data.annotation.TypeDef;
 import io.micronaut.data.model.DataType;
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -10,10 +11,11 @@ import java.util.UUID;
  * here — a claim returns it, a trigger answers with it, the run read is keyed by it — and every
  * one of those hands also holds an Órgano's identifier.
  *
- * <p>{@code toString} is the bare UUID because messages interpolate the id directly.
+ * <p>{@code toString} is the bare UUID because messages interpolate the id directly, and it is
+ * {@link Serializable} because the run read's not-found exception carries one.
  */
 @TypeDef(type = DataType.UUID, converter = ImportRunIdConverter.class)
-public record ImportRunId(UUID value) {
+public record ImportRunId(UUID value) implements Serializable {
 
   public ImportRunId {
     Objects.requireNonNull(value, "value must not be null");

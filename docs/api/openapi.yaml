@@ -750,10 +750,12 @@ paths:
       summary: Mark an Órgano for contratos menores import
       description: >-
         Opt an Órgano into having its contratos menores imported, and ask for that import.
-        Idempotent: marking an already-marked Órgano succeeds and writes nothing. Marking and
-        unmarking are two methods rather than one flag with a body because they are two
-        operations with different rules — an Órgano is never imported unless it was deliberately
-        opted in, and clearing the mark stops a load rather than reversing a field.
+        Marking an already-marked Órgano succeeds and leaves the mark as it is, but it is not
+        without effect: the import is asked for every time, which is what lets an administrator
+        whose mark was refused ask again without unmarking first. Marking and unmarking are two
+        methods rather than one flag with a body because they are two operations with different
+        rules — an Órgano is never imported unless it was deliberately opted in, and clearing
+        the mark stops a load rather than reversing a field.
 
 
         The import covers **this Órgano alone**, never every marked one, and it is asked for
@@ -1012,9 +1014,9 @@ paths:
         triggers answer before the work starts, and this answers for it.
 
 
-        The covered Órganos are listed as the run enumerated them when it was claimed, not as it
-        discovered them, so a run that died partway still names what it was going to cover and
-        which of them failed.
+        The covered Órganos are those the run enumerated when it was claimed rather than those it
+        reached, so a run that died partway still names what it was going to cover and which of
+        them failed. They are ordered by identity; the order a run takes them in is not recorded.
       responses:
         "200":
           description: The run, its verdict, and every Órgano it covers.
@@ -1945,7 +1947,9 @@ components:
           pattern: "^.{1,500}$"
           description: >-
             What the state cannot say: why a `FAILED` Órgano failed, why a `SKIPPED` one was
-            passed over, and which withdrawal stopped a `STOPPED` one. Null otherwise.
+            passed over, and which withdrawal stopped a `STOPPED` one. Null otherwise. A
+            summary on a single line, never the internals of the failure behind it: a reason
+            longer than the bound is truncated, and one that says nothing is null.
 
     ImportRun:
       type: object

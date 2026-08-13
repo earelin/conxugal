@@ -52,12 +52,17 @@
     <Field name="~(claim|execute)"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
+  <!-- And for the read beside them, which stores the port the claim also writes through. -->
+  <Match>
+    <Class name="gal.conxugal.domain.importrun.ReadImportRun"/>
+    <Field name="importRuns"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
   <!-- And for the endpoints that ask for an import or report one: the same want of an
-       immutability marker on a constructor-stored use case, plus ImportRunRepository, which
-       declares writes the run read never makes. -->
+       immutability marker on a constructor-stored use case. -->
   <Match>
     <Class name="~gal\.conxugal\.application\.rest\.admin\.(contratosmenores\.ContratosMenoresImportController|organos\.OrganoImportMarkController|importruns\.ImportRunController)"/>
-    <Field name="~(startImport|importRuns)"/>
+    <Field name="~(startImport|readImportRun)"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
   <!-- And for the batch the walk stores through: OperadorRepository declares insert, same as
