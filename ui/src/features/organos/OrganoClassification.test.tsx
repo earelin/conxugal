@@ -51,7 +51,7 @@ function filedIn(organo: Organo, termoId: string | null): Organo[] {
 }
 
 function mockCatalogue(organos: Organo[]) {
-  return nock(BASE_URL).get('/api/organos').reply(200, organos);
+  return nock(BASE_URL).get('/api/admin/organos').reply(200, organos);
 }
 
 function mockTaxonomia(termos: Termo[]) {
@@ -736,7 +736,7 @@ describe('órgano classification', () => {
 
     // A failed read replaces the whole section, which unmounts the dialog
     // without any of its own close handlers running.
-    nock(BASE_URL).get('/api/organos').reply(500);
+    nock(BASE_URL).get('/api/admin/organos').reply(500);
     nock(BASE_URL).get('/api/organos/taxonomia').reply(500);
     refocusWindow();
     await screen.findByText(strings.admin.organos.errorTitle);
