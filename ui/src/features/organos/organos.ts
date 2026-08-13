@@ -41,9 +41,12 @@ export const ORGANOS_QUERY_KEY = ['organos', 'catalogo'] as const;
 export const TAXONOMIA_QUERY_KEY = ['organos', 'taxonomia'] as const;
 
 /**
- * The administrator's catalogue rather than the shared one: it is the read that
- * carries the import mark and the import state, and taking it keeps the section
- * on one request instead of two.
+ * The `ADMIN`-gated catalogue, not the shared `/api/organos`: this section files the
+ * whole of it — the unclassified, the inactive and the ones holding no contract at
+ * all — while the shared read is scoped to what a reader may browse. The two answer
+ * different questions, so the section asks the one that means what it wants rather
+ * than filtering here. It is also the only read carrying the import mark and the
+ * import state, which the contratos menores column renders.
  */
 async function fetchOrganos(): Promise<Organo[]> {
   const response = await apiFetch('/api/admin/organos');

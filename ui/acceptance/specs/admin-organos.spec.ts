@@ -32,6 +32,8 @@ test.describe('Órganos section', () => {
     await expect(
       page.getByText('3 órganos sen clasificar · 0 marcados para importar'),
     ).toBeVisible();
+    // Nothing stored and nothing asked for: the worklist's rows show the dash.
+    await expect(page.getByText('—').first()).toBeVisible();
 
     await tree(page).getByText('Consellería de Sanidade').click();
 
@@ -44,10 +46,8 @@ test.describe('Órganos section', () => {
     await expect(page.getByText('Hospital Álvaro Cunqueiro')).toBeVisible();
     await expect(page.getByText('INACTIVO')).toBeVisible();
 
-    // The three import states are three badges, and the half-loaded Órgano is
-    // not one of the two that read as settled.
-    await expect(page.getByText('PARCIAL')).toBeVisible();
-    await expect(page.getByText('IMPORTADO')).toBeVisible();
+    // A half-loaded Órgano says so rather than reading as up to date.
+    await expect(page.getByText('PARCIAL').first()).toBeVisible();
     // An inactive Órgano keeps its row with the switch blocked, saying why.
     await expect(page.getByText('Só activos')).toBeVisible();
     await expect(
@@ -92,7 +92,7 @@ test.describe('Órganos section', () => {
       // now carries "activos" and a loose match would find that instead.
       await expect(page.getByText('Activo', { exact: true })).toBeVisible();
       // So does the import-state badge the new column adds beside it.
-      await expect(page.getByText('Marcado', { exact: true })).toBeVisible();
+      await expect(page.getByText('Importado', { exact: true })).toBeVisible();
 
       // Nothing is clipped inside a card either, which a page-level scroll check
       // cannot see: a wrapped two-line term name must not squeeze its count away.

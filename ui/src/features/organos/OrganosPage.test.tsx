@@ -200,11 +200,33 @@ describe('OrganosPage', () => {
     expect(await screen.findByText(vivenda.name)).toBeInTheDocument();
   });
 
-  it('explains a forbidden read rather than showing the generic failure', async () => {
+  it('explains a forbidden taxonomia read rather than showing the generic failure', async () => {
     mockCatalogue([sergas]);
     nock(BASE_URL).get('/api/organos/taxonomia').reply(403);
     renderOrganosPage();
 
     expect(await screen.findByText(strings.admin.organos.errorForbidden)).toBeInTheDocument();
+  });
+
+  it('explains a forbidden catalogue read too, now that it is the ADMIN-gated one', async () => {
+    nock(BASE_URL).get('/api/admin/organos').reply(403);
+    mockTaxonomia([consellerias, sanidade]);
+    renderOrganosPage();
+
+    expect(await screen.findByText(strings.admin.organos.errorForbidden)).toBeInTheDocument();
+  });
+
+  it('reads the admin catalogue and never the shared one, which serves a narrower set', async () => {
+    const admin = mockCatalogue([sergas, cunqueiro, vivenda]);
+    // Registered so the assertion names the shared read rather than resting on
+    // an unmatched-request failure, which any wrong path would produce.
+    const shared = nock(BASE_URL).get('/api/organos').reply(200, []);
+    mockTaxonomia([consellerias, sanidade, concellos]);
+    renderOrganosPage();
+
+    expect(await screen.findByText(vivenda.name)).toBeInTheDocument();
+
+    expect(admin.isDone()).toBe(true);
+    expect(shared.isDone()).toBe(false);
   });
 });
