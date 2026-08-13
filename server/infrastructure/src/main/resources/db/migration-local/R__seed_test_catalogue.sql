@@ -85,3 +85,32 @@ ON CONFLICT (id) DO UPDATE SET
   active = EXCLUDED.active,
   termo_id = EXCLUDED.termo_id,
   importable = EXCLUDED.importable;
+
+-- A settled run, so the run read is exercised beyond its 404 branch. It must never be seeded
+-- in progress: this file runs on every start, and a live run holds the system-wide import guard
+-- until the abandonment bound passes, refusing every import in the meantime. Partially
+-- succeeded is the richest verdict there is, and the covered rows below are what name which
+-- Órgano failed.
+INSERT INTO import_run (id, importer, state, started_at, finished_at, last_advanced_at, added, refreshed)
+VALUES
+  ('eeeeeeee-eeee-7eee-8eee-eeeeeeeeeeee', 'CONTRATOS_MENORES', 'PARTIALLY_SUCCEEDED',
+   TIMESTAMPTZ '2026-01-15T09:14:02Z', TIMESTAMPTZ '2026-01-15T11:40:55Z',
+   TIMESTAMPTZ '2026-01-15T11:40:55Z', 1204, 96)
+ON CONFLICT (id) DO UPDATE SET
+  importer = EXCLUDED.importer,
+  state = EXCLUDED.state,
+  started_at = EXCLUDED.started_at,
+  finished_at = EXCLUDED.finished_at,
+  last_advanced_at = EXCLUDED.last_advanced_at,
+  added = EXCLUDED.added,
+  refreshed = EXCLUDED.refreshed;
+
+INSERT INTO import_run_organo (run_id, organo_id, state, added, refreshed, failure_reason)
+VALUES
+  ('eeeeeeee-eeee-7eee-8eee-eeeeeeeeeeee', 'aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa', 'SUCCEEDED', 1204, 96, NULL),
+  ('eeeeeeee-eeee-7eee-8eee-eeeeeeeeeeee', 'bbbbbbbb-bbbb-7bbb-8bbb-bbbbbbbbbbbb', 'FAILED', 0, 0, 'O produtor de datos non respondeu (proba)')
+ON CONFLICT (run_id, organo_id) DO UPDATE SET
+  state = EXCLUDED.state,
+  added = EXCLUDED.added,
+  refreshed = EXCLUDED.refreshed,
+  failure_reason = EXCLUDED.failure_reason;

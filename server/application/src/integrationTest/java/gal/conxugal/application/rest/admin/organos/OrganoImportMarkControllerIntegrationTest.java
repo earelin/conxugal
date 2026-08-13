@@ -1,14 +1,27 @@
 package gal.conxugal.application.rest.admin.organos;
 
 import static gal.conxugal.application.http.error.support.AssertProblem.assertProblem;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import gal.conxugal.application.contrato.StartContratosMenoresImport;
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
+import gal.conxugal.domain.contrato.ContratoMenorRepository;
+import gal.conxugal.domain.contrato.ContratoMenorSource;
+import gal.conxugal.domain.importrun.ImportAlreadyRunningException;
+import gal.conxugal.domain.importrun.ImportRunId;
+import gal.conxugal.domain.importrun.ImportRunRepository;
+import gal.conxugal.domain.operador.OperadorRepository;
+import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
 import gal.conxugal.domain.organo.MarkOrganoForImport;
 import gal.conxugal.domain.organo.OrganoId;
+import gal.conxugal.domain.organo.OrganoNotEligibleForImportException;
 import gal.conxugal.domain.organo.OrganoNotFoundException;
+import gal.conxugal.domain.organo.OrganoRepository;
 import gal.conxugal.domain.organo.UnmarkOrganoForImport;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpStatus;
@@ -26,12 +39,16 @@ import org.junit.jupiter.api.Test;
 class OrganoImportMarkControllerIntegrationTest extends AuthenticationTestSupport {
 
   private static final OrganoId SANIDADE = new OrganoId(UUID.randomUUID());
+  private static final ImportRunId RUN = new ImportRunId(UUID.randomUUID());
 
   @Inject
   MarkOrganoForImport markOrganoForImport;
 
   @Inject
   UnmarkOrganoForImport unmarkOrganoForImport;
+
+  @Inject
+  StartContratosMenoresImport startImport;
 
   @MockBean(MarkOrganoForImport.class)
   MarkOrganoForImport markOrganoForImportMock() {
@@ -43,10 +60,49 @@ class OrganoImportMarkControllerIntegrationTest extends AuthenticationTestSuppor
     return mock(UnmarkOrganoForImport.class);
   }
 
+  @MockBean(StartContratosMenoresImport.class)
+  StartContratosMenoresImport startImportMock() {
+    return mock(StartContratosMenoresImport.class);
+  }
+
+  // The mock proxy above still resolves the real constructor's dependencies, and the whole import
+  // hangs off them: the claim, the walk beneath it and the store beneath that all reach adapters
+  // wanting a datasource this suite deliberately runs without.
+  @MockBean(ImportRunRepository.class)
+  ImportRunRepository importRunsMock() {
+    return mock(ImportRunRepository.class);
+  }
+
+  @MockBean(OrganoRepository.class)
+  OrganoRepository organosMock() {
+    return mock(OrganoRepository.class);
+  }
+
+  @MockBean(ContratoMenorRepository.class)
+  ContratoMenorRepository contratosMock() {
+    return mock(ContratoMenorRepository.class);
+  }
+
+  @MockBean(OperadorRepository.class)
+  OperadorRepository operadoresMock() {
+    return mock(OperadorRepository.class);
+  }
+
+  @MockBean(ContratosMenoresImportStateRepository.class)
+  ContratosMenoresImportStateRepository importStatesMock() {
+    return mock(ContratosMenoresImportStateRepository.class);
+  }
+
+  @MockBean(ContratoMenorSource.class)
+  ContratoMenorSource contratoMenorSourceMock() {
+    return mock(ContratoMenorSource.class);
+  }
+
   // Called twice on purpose: marking is idempotent, so an admin flicking the switch back on
   // must not see the second call fail.
   @Test
   void admin_marks_organo_and_may_mark_it_again(RequestSpecification spec) {
+    when(startImport.startOrgano(SANIDADE)).thenReturn(RUN);
     String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
 
     given(spec)
@@ -54,14 +110,55 @@ class OrganoImportMarkControllerIntegrationTest extends AuthenticationTestSuppor
     .when()
         .put(markOf(SANIDADE))
     .then()
-        .statusCode(HttpStatus.NO_CONTENT.getCode());
+        .statusCode(HttpStatus.OK.getCode());
 
     given(spec)
         .header(HttpHeaders.COOKIE, sessionCookie)
     .when()
         .put(markOf(SANIDADE))
     .then()
-        .statusCode(HttpStatus.NO_CONTENT.getCode());
+        .statusCode(HttpStatus.OK.getCode());
+  }
+
+  // #5, immediate half: marking with no import running starts one for that Órgano alone and
+  // answers with its run identifier.
+  @Test
+  void mark_with_no_import_running_starts_one_and_answers_with_its_run(
+      RequestSpecification spec) {
+    when(startImport.startOrgano(SANIDADE)).thenReturn(RUN);
+
+    Response response = markAsAdmin(spec);
+
+    assertThat(response.jsonPath().getString("runId")).isEqualTo(RUN.value().toString());
+    assertThat(response.jsonPath().getString("refusal")).isNull();
+  }
+
+  // #33, refused-and-kept half: a mark landing while an import runs is refused rather than
+  // queued, and the mark itself stands — which is why this is a 200 and not a 409.
+  @Test
+  void mark_while_an_import_runs_keeps_the_mark_and_reports_the_refusal(
+      RequestSpecification spec) {
+    when(startImport.startOrgano(SANIDADE)).thenThrow(new ImportAlreadyRunningException());
+
+    Response response = markAsAdmin(spec);
+
+    assertThat(response.jsonPath().getString("runId")).isNull();
+    assertThat(response.jsonPath().getString("refusal")).isEqualTo("IMPORT_ALREADY_RUNNING");
+    // The one thing an assertion on the response cannot show: that the mark was written anyway.
+    verify(markOrganoForImport).mark(SANIDADE);
+  }
+
+  @Test
+  void mark_of_an_ineligible_organo_keeps_the_mark_and_reports_the_refusal(
+      RequestSpecification spec) {
+    when(startImport.startOrgano(SANIDADE))
+        .thenThrow(new OrganoNotEligibleForImportException(SANIDADE));
+
+    Response response = markAsAdmin(spec);
+
+    assertThat(response.jsonPath().getString("runId")).isNull();
+    assertThat(response.jsonPath().getString("refusal")).isEqualTo("ORGANO_NOT_ELIGIBLE");
+    verify(markOrganoForImport).mark(SANIDADE);
   }
 
   @Test
@@ -155,6 +252,19 @@ class OrganoImportMarkControllerIntegrationTest extends AuthenticationTestSuppor
         .delete(markOf(SANIDADE))
     .then()
         .statusCode(HttpStatus.UNAUTHORIZED.getCode());
+  }
+
+  private Response markAsAdmin(RequestSpecification spec) {
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+        .when()
+            .put(markOf(SANIDADE));
+
+    response.then().statusCode(HttpStatus.OK.getCode());
+    return response;
   }
 
   private static String markOf(OrganoId organoId) {
