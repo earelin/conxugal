@@ -198,6 +198,7 @@ export const strings = {
       unclassifiedSubtitle: 'Órganos importados que aínda non teñen termo asignado.',
       columnOrgano: 'Órgano',
       columnState: 'Estado',
+      columnContratosMenores: 'Contratos menores',
       columnActions: 'Accións',
       stateActive: 'Activo',
       stateInactive: 'Inactivo',
@@ -240,6 +241,158 @@ export const strings = {
         // Retrying is not the way out of a refusal, so it does not say to.
         errorForbidden: 'Non tes permisos para lanzar unha importación.',
         errorGeneric: 'Non se puido lanzar a importación. Téntao de novo máis tarde.',
+      },
+      contratosMenores: {
+        scopeNote:
+          'Só se importan os contratos menores dos órganos marcados e activos. ' +
+          'A primeira importación dun órgano pode durar días.',
+
+        // Prefixed with the Órgano's name at the call site: the switch repeats
+        // down the column, so its accessible name has to say which row it is.
+        markLabel: 'Importar contratos menores',
+        markedTally: { singular: 'marcado para importar', plural: 'marcados para importar' },
+
+        // Four badges for five row states, plus the dash for a row with nothing
+        // stored. Two would let a half-loaded Órgano read as up to date.
+        badge: {
+          marked: 'Marcado',
+          partial: 'Parcial',
+          imported: 'Importado',
+          // Kept visible because unmarking retains the contracts: a dash here
+          // would draw an Órgano holding a million rows like one never touched.
+          stale: 'Sen actualizar',
+          none: '—',
+          // Not a badge but the disabled switch's reason, on screen rather than
+          // only on hover — a tooltip never fires on a disabled control.
+          ineligible: 'Só activos',
+        },
+        tooltip: {
+          none: 'Non se importa ningún contrato menor deste órgano.',
+          marked: 'Elixible, pero a primeira importación aínda non gardou ningún contrato.',
+          partial:
+            'Gárdase o que xa se importou e tamén por onde continuar; ' +
+            'a seguinte importación retoma desde aí.',
+          imported: 'Está todo o historial que a fonte publicaba no momento da importación.',
+          // Which of the two stored states it holds, so *resumable* versus
+          // *completo* stays reachable without a fifth badge.
+          stalePartial:
+            'Consérvase o importado, que está incompleto, pero ningunha execución volve a ' +
+            'este órgano.',
+          staleComplete:
+            'Consérvase o historial completo, pero ningunha execución volve a este órgano.',
+          ineligible:
+            'Só se importan os órganos activos. O interruptor queda desactivado mentres o ' +
+            'órgano non estea no catálogo activo.',
+        },
+
+        mark: {
+          title: 'Importar contratos menores',
+          intro: (name: string) => `Vas marcar ${name} para importar os seus contratos menores.`,
+          costDuration:
+            'A primeira importación descarga todo o historial publicado deste órgano e pode ' +
+            'durar días.',
+          costGuard:
+            'Mentres se executa, non se poderá lanzar ningunha outra importación, nin sequera ' +
+            'a do catálogo.',
+          costRecentFirst:
+            'Empeza polas publicacións máis recentes, así que o máis consultado aparece desde ' +
+            'as primeiras horas.',
+          costReversible:
+            'Podes deixar de importar cando queiras: o xa gardado consérvase e a importación ' +
+            'retómase onde quedou.',
+          cancel: 'Cancelar',
+          submit: 'Marcar e importar',
+        },
+        // Shared by the mark and the unmark: both write the same attribute, and
+        // both fail the same ways.
+        write: {
+          errorTitle: 'Non se puido gardar a marca',
+          notFound: 'Este órgano xa non está no catálogo. Actualiza a sección.',
+          forbidden: 'Non tes permisos para cambiar a marca de importación.',
+          generic: 'Non se puido gardar a marca. Téntao de novo máis tarde.',
+        },
+
+        trigger: {
+          button: 'Importar contratos menores',
+          running: 'Importando…',
+          // Named as the reason both triggers are disabled, so the guard is
+          // stated rather than left to be discovered.
+          guardHeld: 'Mentres dura, ningunha outra importación pode comezar — nin a do catálogo.',
+          errorTitle: 'Non se puido lanzar a importación de contratos menores',
+          errorForbidden: 'Non tes permisos para lanzar unha importación.',
+          errorGeneric: 'Non se puido lanzar a importación. Téntao de novo máis tarde.',
+        },
+
+        run: {
+          inProgressTitle: 'Importación de contratos menores en curso',
+          succeededTitle: 'Importación de contratos menores rematada',
+          partialTitle: 'Importación de contratos menores rematada parcialmente',
+          failedTitle: 'A importación de contratos menores fallou',
+          // Undrawn by the mockups, which predate the verdict: a multi-day
+          // import whose process died and so never wrote its own ending.
+          abandonedTitle: 'A importación de contratos menores quedou interrompida',
+          // A verdict this build does not know, which means the server moved on
+          // without it. Neutral: an unreadable state is not a failed run.
+          unknownTitle: 'Non se recoñece o estado desta execución',
+          unknownNote:
+            'Pode que a aplicación estea desactualizada respecto do servidor. Recarga a páxina ' +
+            'para obter a versión máis recente.',
+
+          scopeCount: { singular: 'órgano no alcance', plural: 'órganos no alcance' },
+          coveredCount: { singular: 'órgano cuberto', plural: 'órganos cubertos' },
+          completedOf: (completed: number, total: number) =>
+            `${completed} de ${total} órganos completados`,
+          added: { singular: 'contrato engadido', plural: 'contratos engadidos' },
+          refreshed: { singular: 'actualizado', plural: 'actualizados' },
+          failedOrganos: (count: number) =>
+            count === 1 ? 'Fallou 1 órgano' : `Fallaron ${count} órganos`,
+
+          startedAtPrefix: 'Comezou ás',
+          finishedAtPrefix: 'rematou ás',
+          unfinished: 'sen rematar',
+          checkedAgoPrefix: 'Consultado hai',
+          checkedAgoUnit: 'min',
+          // Past the hour the minutes stop being a freshness anyone can feel.
+          checkedAgoHourUnit: 'h',
+          checkedJustNow: 'Consultado agora mesmo',
+          refresh: 'Actualizar',
+          dismiss: 'Pechar',
+
+          succeededNote:
+            'Ata que exista o refresco periódico, estes órganos non se actualizan sós.',
+          failedNote: 'Os contratos xa gardados consérvanse; volver disparala retoma onde quedou.',
+          abandonedNote:
+            'O proceso deixou de avanzar e nunca escribiu o seu remate. Os contratos xa ' +
+            'gardados consérvanse; volver disparala retoma onde quedou.',
+
+          errorTitle: 'Non se puido consultar a execución',
+          errorNotFound: 'Xa non existe ningunha execución con ese identificador.',
+          errorGeneric: 'Téntao de novo máis tarde.',
+        },
+
+        // Neither refusal is an error: nothing broke, and one of them even wrote
+        // what it was asked to. Both are grey, and neither carries counts.
+        refusal: {
+          markKeptTitle: 'Marcouse o órgano, pero non se iniciou ningunha importación',
+          noImportTitle: 'Non se iniciou ningunha importación',
+          refusedAtPrefix: 'Rexeitada ás',
+
+          guardMark: (name: string) =>
+            `Xa se está a executar outra importación. A marca de ${name} quedou gardada.`,
+          guardTrigger:
+            'Xa se está a executar outra importación, así que non comezou ningunha nova.',
+          guardNote:
+            'Mentres non exista o refresco periódico, ningún proceso a retoma: hai que volver ' +
+            'disparala.',
+
+          notEligibleMark: (name: string) =>
+            `${name} está inactivo: só se importan os órganos activos e marcados.`,
+          notEligibleTrigger:
+            'Non hai ningún órgano activo e marcado, así que non había nada que importar.',
+          notEligibleNote:
+            'O catálogo desactiva un órgano cando deixa de publicarse; volverá ser elixible se ' +
+            'reaparece.',
+        },
       },
       termo: {
         cancel: 'Cancelar',

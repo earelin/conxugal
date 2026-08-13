@@ -4,12 +4,27 @@ import { useMemo } from 'react';
 import { apiFetch } from '../../shared/lib/httpClient';
 import { buildTaxonomiaView, type TaxonomiaView } from './taxonomiaTree';
 
+/**
+ * How far an Órgano's contratos menores history has been loaded. Three values
+ * rather than two: a never-loaded Órgano and a half-loaded one both fall short
+ * of complete, and collapsing them would let an interrupted import read as up
+ * to date.
+ */
+export type ContratosMenoresImportState = 'NEVER_STARTED' | 'INCOMPLETE' | 'COMPLETE';
+
 export interface Organo {
   id: string;
   name: string;
   active: boolean;
   /** The term this Órgano is filed under; null means unclassified. */
   termoId: string | null;
+  /** Whether an administrator opted this Órgano into contratos menores import. */
+  importable: boolean;
+  /**
+   * How far that import got, independent of the mark: unmarking keeps whatever
+   * state was reached, because the contracts already stored are kept.
+   */
+  importState: ContratosMenoresImportState;
 }
 
 export interface Termo {
@@ -30,8 +45,8 @@ export const TAXONOMIA_QUERY_KEY = ['organos', 'taxonomia'] as const;
  * whole of it — the unclassified, the inactive and the ones holding no contract at
  * all — while the shared read is scoped to what a reader may browse. The two answer
  * different questions, so the section asks the one that means what it wants rather
- * than filtering here. The admin read carries an import mark and an import state as
- * well, which nothing here renders yet.
+ * than filtering here. It is also the only read carrying the import mark and the
+ * import state, which the contratos menores column renders.
  */
 async function fetchOrganos(): Promise<Organo[]> {
   const response = await apiFetch('/api/admin/organos');
