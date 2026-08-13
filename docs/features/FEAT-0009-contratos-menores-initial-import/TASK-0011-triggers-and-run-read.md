@@ -1,7 +1,7 @@
 ---
 feat: FEAT-0009
 domain: backend
-adrs: [0002, 0005, 0006, 0010, 0011, 0012, 0017, 0019, 0020]
+adrs: [0002, 0005, 0006, 0010, 0012, 0017, 0019, 0020]
 status: todo
 depends_on: [TASK-0002, TASK-0010]
 ---
@@ -31,13 +31,10 @@ rows**.
   | Read one run | `GET /api/admin/import-run/{id}` | 200 |
 
 - **A trigger is asynchronous.** An initial import runs for days, so no trigger can carry R20's
-  outcome in its response: each calls TASK-0010's claim, returns `202` with the run's identifier
-  (and a `Location` pointing at the run read), and submits the execution.
-- **Execution runs on a dedicated single-thread virtual-thread executor**, configured under
-  `micronaut.executors` following the `organos-import` precedent
-  ([ADR-0011](../../architecture/0011-blocking-io-virtual-threads.md)). A multi-day job must not
-  occupy request-serving capacity, and the comment already in `application.yml` about not
-  declaring a `blocking` executor applies unchanged.
+  outcome in its response: each calls TASK-0010's `StartContratosMenoresImport` and returns `202`
+  with the run's identifier and a `Location` pointing at the run read. Pairing the claim with the
+  walk, and the executor the walk is handed to, are TASK-0010's — a controller here only asks for
+  an import and reports what it was told.
 - **The two refusals are `409` with distinct problem types**, because nothing was written and
   the request genuinely did not happen:
 
@@ -50,12 +47,19 @@ rows**.
   The `409` documents **which** types it can carry: a client that can only read the status
   cannot tell *wait* from *mark the Órgano*, which is exactly the distinction #34 requires and
   the UI renders differently.
+
+  TASK-0010 raises both refusals as exceptions, so the `POST` triggers need only let them out:
+  each gets an `@Error` handler beside the ones already mapping `OrganoNotFoundException` and
+  the taxonomía refusals. **The `PUT` below must catch the same two**, which is the one place the
+  two endpoints disagree about what a refusal means.
 - **`PUT /api/admin/organo/{id}/importable` changes shape, and not to a `409`.** The mark is
   written whether or not an import starts, so the response becomes `200` with a body carrying
   the run identifier when one started, or the refusal reason when none did. A `409` here would
   tell the client the mark did not apply — the opposite of SPEC-0005 #33's first clause, where
   a mark landing while an import runs is *refused rather than queued*, the mark itself
-  standing. The mark triggers a **single-Órgano** import, never a sweep.
+  standing. So this endpoint catches what the `POST` triggers deliberately do not: a refusal
+  escaping to the shared handler here would answer `409` and violate that clause. The mark
+  triggers a **single-Órgano** import, never a sweep.
   `DELETE` is unchanged at `204`; it stops a run for that Órgano through TASK-0010's
   batch-boundary check, not synchronously.
 - **`GET /api/admin/import-run/{id}`** returns the run's verdict — in progress, succeeded,

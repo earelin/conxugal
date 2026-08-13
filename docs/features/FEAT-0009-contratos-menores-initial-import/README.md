@@ -81,9 +81,11 @@ layout of
   [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md) — one row per run with
   its per-Órgano coverage — the **derived-abandoned read rule** that keeps a dead run from
   wedging the system, and the **system-wide single-import guard** that reads both (R22).
-- **Domain (use case):** `ImportContratosMenores` — for each eligible Órgano in turn, walk its
-  history in date windows, upsert each batch idempotently, advance the state, and stop cleanly
-  when the Órgano is unmarked mid-run (R3, R5, R9, R11, R12, R23).
+- **Domain (use cases):** `ClaimContratosMenoresImport` decides who a run covers and whether it
+  may start; `ExecuteContratosMenoresImport` walks them one at a time and settles the verdict;
+  `ImportCoveredOrgano` takes one Órgano's turn — walk its history in date windows, upsert each
+  batch idempotently, advance the state, and stop cleanly when the Órgano is unmarked mid-run
+  (R3, R5, R9, R11, R12, R23).
 - **Infrastructure:** migrations for the mark, the contratos menores table, the per-Órgano
   import state and the run record; their Micronaut Data JDBC repositories; and the
   contratosdegalicia.gal adapter behind `ContratoMenorSource`.
@@ -145,7 +147,7 @@ flowchart LR
         organosUi["admin Órganos section: mark control"]
     end
     subgraph domain["domain"]
-        useCase["ImportContratosMenores"]
+        useCase["Claim / Execute ContratosMenoresImport"]
         organoState["per-Órgano import state + mode rule (R8)"]
         guard["single-import guard (R22)"]
         contrato["ContratoMenor"]

@@ -57,6 +57,16 @@ public record OrganoDeContratacion(
   }
 
   /**
+   * Whether this Órgano's contratos menores are to be imported: present in the published catalogue
+   * <em>and</em> marked by an administrator. The pair is answered here rather than by each caller,
+   * so a trigger, a run picking an Órgano up and a walk asking whether to carry on cannot disagree
+   * about what makes one eligible.
+   */
+  public boolean eligibleForImport() {
+    return active && importable;
+  }
+
+  /**
    * How far this Órgano's contratos menores history has been loaded. No state row means the
    * import never started, and answering that here is what stops each caller reading the absence
    * its own way — a half-loaded Órgano must never be mistaken for one that is up to date.

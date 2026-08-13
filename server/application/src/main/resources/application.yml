@@ -21,6 +21,13 @@ micronaut:
       type: scheduled
       core-pool-size: 1
       virtual: true
+    # One thread, because the guard admits one import at a time anyway: a second thread could
+    # only ever hold a run the guard had already refused. A contratos menores import occupies
+    # its thread for days, which is why it cannot be the one serving requests.
+    contratos-menores-import:
+      type: fixed
+      number-of-threads: 1
+      virtual: true
   http:
     services:
       contratosdegalicia:

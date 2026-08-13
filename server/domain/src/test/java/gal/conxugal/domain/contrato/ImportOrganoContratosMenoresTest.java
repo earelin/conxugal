@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import gal.conxugal.domain.contrato.ContratosMenoresImportSummary.StopReason;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.money.Money;
@@ -31,8 +32,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
 import java.util.stream.LongStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -88,7 +91,7 @@ class ImportOrganoContratosMenoresTest {
     storeAcceptsEverything();
     sourcePublishes(3, Map.of(FIRST_WINDOW_START, entries(1), SECOND_WINDOW_START, entries(2)));
 
-    walk().run(RUN_ID, organo());
+    walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(requestedSlices)
         .containsExactly(
@@ -106,7 +109,7 @@ class ImportOrganoContratosMenoresTest {
     storeAcceptsEverything();
     sourcePublishes(99, Map.of());
 
-    walk().run(RUN_ID, organo());
+    walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(requestedSlices)
         .allSatisfy(
@@ -125,7 +128,7 @@ class ImportOrganoContratosMenoresTest {
     storeAcceptsEverything();
     sourcePublishes(99, Map.of());
 
-    walk().run(RUN_ID, organo());
+    walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(requestedSlices)
         .element(0)
@@ -140,7 +143,7 @@ class ImportOrganoContratosMenoresTest {
     sourcePublishes(
         250, Map.of(FIRST_WINDOW_START, entries(150), SECOND_WINDOW_START, entries(100)));
 
-    walk().run(RUN_ID, organo());
+    walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(requestedSlices)
         .containsExactly(
@@ -157,7 +160,7 @@ class ImportOrganoContratosMenoresTest {
     storeAcceptsEverything();
     sourcePublishes(2, Map.of(FIRST_WINDOW_START, entries(1), THIRD_WINDOW_START, entries(1)));
 
-    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(requestedSlices)
         .extracting(Slice::from)
@@ -172,7 +175,7 @@ class ImportOrganoContratosMenoresTest {
     storeAcceptsEverything();
     sourcePublishes(1, Map.of(LocalDate.of(2024, 12, 11), entries(1)));
 
-    walk().run(RUN_ID, organo());
+    walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(requestedSlices)
         .containsExactly(new Slice(LocalDate.of(2024, 12, 11), LocalDate.of(2025, 3, 10), 0));
@@ -185,7 +188,7 @@ class ImportOrganoContratosMenoresTest {
     storeAcceptsEverything();
     sourcePublishes(0, Map.of());
 
-    walk().run(RUN_ID, organo());
+    walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(createdState.get())
         .isEqualTo(ContratosMenoresImportState.startedAt(ORGANO_ID, T_ZERO));
@@ -198,7 +201,7 @@ class ImportOrganoContratosMenoresTest {
     storeAcceptsEverything();
     sourcePublishes(0, Map.of());
 
-    walk().run(RUN_ID, organo());
+    walk().run(RUN_ID, organo(), () -> true);
 
     verify(importStates, never()).insert(any());
   }
@@ -210,7 +213,7 @@ class ImportOrganoContratosMenoresTest {
     storeAcceptsEverything();
     sourcePublishes(1, Map.of(FIRST_WINDOW_START, entries(1)));
 
-    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(1, 0));
     verify(importStates).updateState(ORGANO_ID, ContratosMenoresImportStatus.COMPLETE);
@@ -224,7 +227,7 @@ class ImportOrganoContratosMenoresTest {
     sourcePublishes(99, Map.of());
     LocalDate floor = LocalDate.of(2026, 1, 1);
 
-    ContratosMenoresImportSummary summary = walkFrom(floor).run(RUN_ID, organo());
+    ContratosMenoresImportSummary summary = walkFrom(floor).run(RUN_ID, organo(), () -> true);
 
     assertThat(summary.status()).isEqualTo(ContratosMenoresImportStatus.INCOMPLETE);
     assertThat(requestedSlices)
@@ -240,7 +243,7 @@ class ImportOrganoContratosMenoresTest {
     storeAcceptsEverything();
     sourcePublishes(0, Map.of());
 
-    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(0, 0));
     assertThat(requestedSlices).containsExactly(new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 0));
@@ -268,7 +271,7 @@ class ImportOrganoContratosMenoresTest {
           return new ContratoMenorSourcePage(published, recordsTotal.get());
         });
 
-    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(2, 0));
   }
@@ -280,7 +283,7 @@ class ImportOrganoContratosMenoresTest {
     storeAcceptsEverything();
     sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
-    walk().run(RUN_ID, organo());
+    walk().run(RUN_ID, organo(), () -> true);
 
     verify(importRuns).advance(RUN_ID, ORGANO_ID, 100, 0);
     verify(importRuns).advance(RUN_ID, ORGANO_ID, 50, 0);
@@ -297,7 +300,7 @@ class ImportOrganoContratosMenoresTest {
     cursorWritesAreRecorded();
     sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
-    walk().run(RUN_ID, organo());
+    walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(cursorWrites).containsExactly(T_ZERO_DAY, FIRST_WINDOW_START);
   }
@@ -312,7 +315,7 @@ class ImportOrganoContratosMenoresTest {
     OrganoDeContratacion organo = organo();
 
     assertThatExceptionOfType(ContratoMenorSourceUnavailableException.class)
-        .isThrownBy(() -> walk.run(RUN_ID, organo));
+        .isThrownBy(() -> walk.run(RUN_ID, organo, () -> true));
 
     verify(importStates, never()).updateState(any(), any());
   }
@@ -327,7 +330,7 @@ class ImportOrganoContratosMenoresTest {
         .when(importRuns)
         .advance(any(), any(), anyInt(), anyInt());
 
-    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(1, 0));
   }
@@ -342,7 +345,7 @@ class ImportOrganoContratosMenoresTest {
     when(contratos.countByOrganoId(ORGANO_ID)).thenAnswer(invocation -> stored.get());
     sourcePublishes(1, Map.of(FIRST_WINDOW_START, entries(1)));
 
-    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(0, 1));
   }
@@ -357,7 +360,7 @@ class ImportOrganoContratosMenoresTest {
     storeAcceptsEverything();
     sourcePublishes(1, Map.of(FIRST_WINDOW_START, entries(1)));
 
-    walk().run(RUN_ID, organo());
+    walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(handedToTheStore).isEqualTo(entries(1));
   }
@@ -374,9 +377,10 @@ class ImportOrganoContratosMenoresTest {
         .thenAnswer(invocation -> new UpsertCounts(sizeOfBatch(invocation), 0));
     sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
-    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
-    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.incomplete(100, 0));
+    assertThat(summary)
+        .isEqualTo(ContratosMenoresImportSummary.stopped(100, 0, StopReason.GUARD_LOST));
     assertThat(requestedSlices).containsExactly(new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 0));
     // The batch's contracts stand; the cursor stays where the batch before it left it, so the
     // window is re-read whole on resumption rather than half-skipped.
@@ -394,9 +398,10 @@ class ImportOrganoContratosMenoresTest {
         .thenAnswer(invocation -> new UpsertCounts(sizeOfBatch(invocation), 0));
     sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
 
-    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
-    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.incomplete(100, 0));
+    assertThat(summary)
+        .isEqualTo(ContratosMenoresImportSummary.stopped(100, 0, StopReason.GUARD_LOST));
     assertThat(requestedSlices).containsExactly(new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 0));
     verify(importRuns).advance(RUN_ID, ORGANO_ID, 100, 0);
     verify(importStates, never()).updateState(any(), any());
@@ -407,10 +412,64 @@ class ImportOrganoContratosMenoresTest {
     neverStarted();
     when(importRuns.holdsGuard(RUN_ID)).thenReturn(false);
 
-    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
-    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.incomplete(0, 0));
+    assertThat(summary)
+        .isEqualTo(ContratosMenoresImportSummary.stopped(0, 0, StopReason.GUARD_LOST));
     verifyNoInteractions(contratoMenorSource, batch, contratos);
+  }
+
+  // The mark is withdrawn while the first batch is in flight. The check sits at the very bottom of
+  // the batch, so that batch is stored *and* recorded before the walk gives up — anything else
+  // would leave contracts committed with neither a cursor nor a count to show for them.
+  @Test
+  void stops_at_the_batch_boundary_when_the_organo_stops_being_eligible() {
+    neverStarted();
+    runIsLive();
+    when(batch.store(anyList(), eq(ORGANO_ID)))
+        .thenAnswer(invocation -> new UpsertCounts(sizeOfBatch(invocation), 0));
+    sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
+
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), unmarkedAfterBatch(1));
+
+    assertThat(summary)
+        .isEqualTo(ContratosMenoresImportSummary.stopped(100, 0, StopReason.UNMARKED));
+    assertThat(requestedSlices).containsExactly(new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 0));
+    verify(importRuns).advance(RUN_ID, ORGANO_ID, 100, 0);
+  }
+
+  // The withdrawal lands on the batch that exhausts the window, which is the batch after which the
+  // walk would have tested its stored count and could have marked the Órgano loaded. It must not:
+  // an Órgano marked loaded on a history it was told to stop reading is never resumed.
+  @Test
+  void leaves_the_organo_incomplete_when_it_is_unmarked_on_the_batch_that_ends_the_window() {
+    neverStarted();
+    runIsLive();
+    when(batch.store(anyList(), eq(ORGANO_ID)))
+        .thenAnswer(invocation -> new UpsertCounts(sizeOfBatch(invocation), 0));
+    cursorWritesAreRecorded();
+    sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
+
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), unmarkedAfterBatch(2));
+
+    assertThat(summary)
+        .isEqualTo(ContratosMenoresImportSummary.stopped(150, 0, StopReason.UNMARKED));
+    assertThat(cursorWrites).containsExactly(T_ZERO_DAY, FIRST_WINDOW_START);
+    verify(importStates, never()).updateState(any(), any());
+    verifyNoInteractions(contratos);
+  }
+
+  @Test
+  void asks_whether_the_organo_is_still_eligible_once_per_batch() {
+    neverStarted();
+    runIsLive();
+    storeAcceptsEverything();
+    sourcePublishes(150, Map.of(FIRST_WINDOW_START, entries(150)));
+    AtomicInteger asks = new AtomicInteger();
+
+    walk().run(RUN_ID, organo(), () -> asks.incrementAndGet() > 0);
+
+    assertThat(asks).hasValue(2);
   }
 
   // A walk resuming from a cursor an earlier one left at the floor has read every window there is.
@@ -420,7 +479,7 @@ class ImportOrganoContratosMenoresTest {
   void asks_the_source_for_nothing_when_it_resumes_from_the_history_floor() {
     resumesFrom(HISTORY_FLOOR);
 
-    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo());
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(summary).isEqualTo(ContratosMenoresImportSummary.incomplete(0, 0));
     verifyNoInteractions(contratoMenorSource, batch, contratos, importRuns);
@@ -439,6 +498,12 @@ class ImportOrganoContratosMenoresTest {
         importRuns,
         clock,
         new ContratosMenoresImportConfiguration(historyFloor));
+  }
+
+  /** Answers true until the boundary that follows batch {@code batch}, where the mark is gone. */
+  private static BooleanSupplier unmarkedAfterBatch(int batch) {
+    AtomicInteger boundaries = new AtomicInteger();
+    return () -> boundaries.incrementAndGet() < batch;
   }
 
   private void neverStarted() {

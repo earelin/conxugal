@@ -49,6 +49,59 @@ class OrganoDeContratacionTest {
   }
 
   @Test
+  void an_organo_whose_history_is_loaded_reports_it_complete() {
+    OrganoId id = new OrganoId(UUID.randomUUID());
+    OrganoDeContratacion organo =
+        new OrganoDeContratacion(
+            id,
+            "consorcio",
+            "Consorcio Galego",
+            true,
+            true,
+            null,
+            new ContratosMenoresImportState(
+                id,
+                ContratosMenoresImportStatus.COMPLETE,
+                null,
+                Instant.parse("2026-08-06T09:00:00Z")));
+
+    assertThat(organo.importStatus()).isEqualTo(ContratosMenoresImportStatus.COMPLETE);
+  }
+
+  // Eligibility is the pair, and each half is asserted alone because either one standing in for
+  // both is a mistake nothing else would catch: reading only the mark imports Órganos the source
+  // has dropped, and reading only the catalogue imports every Órgano in it.
+  @Test
+  void is_eligible_for_import_when_active_and_marked() {
+    assertThat(organoThatIs(true, true).eligibleForImport()).isTrue();
+  }
+
+  @Test
+  void is_not_eligible_for_import_when_active_but_not_marked() {
+    assertThat(organoThatIs(true, false).eligibleForImport()).isFalse();
+  }
+
+  @Test
+  void is_not_eligible_for_import_when_marked_but_no_longer_active() {
+    assertThat(organoThatIs(false, true).eligibleForImport()).isFalse();
+  }
+
+  @Test
+  void is_not_eligible_for_import_when_neither_active_nor_marked() {
+    assertThat(organoThatIs(false, false).eligibleForImport()).isFalse();
+  }
+
+  // Discovery marks nothing, so the Órgano the catalogue import creates is not one to import
+  // contratos menores for until an administrator says so.
+  @Test
+  void newly_discovered_organo_is_not_eligible_for_import() {
+    OrganoDeContratacion organo =
+        new OrganoDeContratacion("xunta-consorcio-galego", "Consorcio Galego");
+
+    assertThat(organo.eligibleForImport()).isFalse();
+  }
+
+  @Test
   void allows_null_id_before_being_persisted() {
     OrganoDeContratacion organo =
         new OrganoDeContratacion(
@@ -155,6 +208,19 @@ class OrganoDeContratacionTest {
         .contains(one, other);
   }
 
+  // The identity comparison reaches for the other Órgano's id, so what it does with something that
+  // has none at all is worth stating rather than inferring from the instanceof.
+  @Test
+  void matches_neither_null_nor_something_that_is_not_an_organo() {
+    OrganoDeContratacion organo =
+        new OrganoDeContratacion(
+            new OrganoId(UUID.randomUUID()), "xunta-consorcio-galego", "Consorcio Galego", true,
+            false, null);
+
+    assertThat(organo).isNotEqualTo(null);
+    assertThat(organo).isNotEqualTo("xunta-consorcio-galego");
+  }
+
   @Test
   void an_undiscovered_organo_matches_no_catalogued_one_in_either_direction() {
     OrganoDeContratacion undiscovered =
@@ -166,5 +232,15 @@ class OrganoDeContratacionTest {
 
     assertThat(undiscovered).isNotEqualTo(catalogued);
     assertThat(catalogued).isNotEqualTo(undiscovered);
+  }
+
+  private static OrganoDeContratacion organoThatIs(boolean active, boolean importable) {
+    return new OrganoDeContratacion(
+        new OrganoId(UUID.randomUUID()),
+        "xunta-consorcio-galego",
+        "Consorcio Galego",
+        active,
+        importable,
+        null);
   }
 }

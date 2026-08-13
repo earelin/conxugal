@@ -1,6 +1,7 @@
 package gal.conxugal.domain.contrato;
 
 import gal.conxugal.commons.time.Dates;
+import gal.conxugal.domain.contrato.ContratosMenoresImportSummary.StopReason;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportState;
@@ -13,6 +14,8 @@ import jakarta.inject.Singleton;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Objects;
+import java.util.function.BooleanSupplier;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,16 +119,22 @@ public class ImportOrganoContratosMenores {
    * the run advance after it in transactions of their own. One transaction around the walk would
    * hold a multi-day write open and make a bookkeeping failure roll imported contracts back.
    *
+   * @param stillEligible asked at every batch boundary, and the only way this walk can be stopped
+   *     from outside: answering false ends it there, keeping everything stored and leaving the
+   *     Órgano incomplete so a later mark resumes it rather than restarting it. It is a required
+   *     argument rather than one with a default, because a caller able to leave it out is a caller
+   *     able to leave a walk running for days after the mark behind it was withdrawn
    * @throws ContratoMenorSourceUnavailableException if the source becomes unreachable or answers
    *     something unusable — everything stored up to then stands, and the cursor is left where the
    *     walk reached
    */
-  public ContratosMenoresImportSummary run(ImportRunId runId, OrganoDeContratacion organo) {
+  public ContratosMenoresImportSummary run(
+      ImportRunId runId, OrganoDeContratacion organo, BooleanSupplier stillEligible) {
     OrganoId organoId =
         Objects.requireNonNull(organo.id(), "organo must be stored before its contracts are");
     Target target = new Target(runId, organoId, organo.sourceKey());
     ContratosMenoresImportState state = stateOf(organoId);
-    return walk(target, resumePointOf(state));
+    return walk(target, resumePointOf(state), stillEligible);
   }
 
   /**
@@ -164,15 +173,17 @@ public class ImportOrganoContratosMenores {
   /**
    * How one window ended: what it stored, and the count the source reported as it was read.
    *
-   * <p>{@code mayContinue} is false when the run stopped holding the guard part-way through the
-   * window. The pages already stored stand and are counted here, but nothing beyond that window is
-   * this walk's to read — and {@code recordsTotal} then says nothing, because the window it would
-   * have been judged against was never read out.
+   * <p>{@code stoppedBy} is present when the window was cut off part-way. The pages already stored
+   * stand and are counted here, but nothing beyond that window is this walk's to read — and {@code
+   * recordsTotal} then says nothing, because the window it would have been judged against was never
+   * read out.
    */
-  private record WindowRead(int added, int refreshed, long recordsTotal, boolean mayContinue) {}
+  private record WindowRead(
+      int added, int refreshed, long recordsTotal, @Nullable StopReason stoppedBy) {}
 
   /** Window by window, newest first, until one of the three endings arrives. */
-  private ContratosMenoresImportSummary walk(Target target, LocalDate resumePoint) {
+  private ContratosMenoresImportSummary walk(
+      Target target, LocalDate resumePoint, BooleanSupplier stillEligible) {
     LocalDate historyFloor = configuration.historyFloor();
     LocalDate windowEnd = resumePoint;
     int added = 0;
@@ -183,11 +194,12 @@ public class ImportOrganoContratosMenores {
     // whole history.
     while (windowEnd.isAfter(historyFloor)) {
       LocalDate windowStart = Dates.latest(windowEnd.minusDays(WINDOW_DAYS), historyFloor);
-      WindowRead read = readWindow(target, windowStart, windowEnd);
+      WindowRead read = readWindow(target, windowStart, windowEnd, stillEligible);
       added += read.added();
       refreshed += read.refreshed();
-      if (!read.mayContinue()) {
-        return ContratosMenoresImportSummary.incomplete(added, refreshed);
+      StopReason stoppedBy = read.stoppedBy();
+      if (stoppedBy != null) {
+        return ContratosMenoresImportSummary.stopped(added, refreshed, stoppedBy);
       }
       if (contratos.countByOrganoId(target.organoId()) >= read.recordsTotal()) {
         // Not best-effort, unlike the progress writes: a completion mark that failed silently
@@ -222,8 +234,17 @@ public class ImportOrganoContratosMenores {
    * last-advanced stamp — so a walk that asked only before fetching would be reading a liveness it
    * had just written itself, and a stall long enough to lose the guard would be invisible to it.
    * Between those two points the answer is still the one the stalled request left behind.
+   *
+   * <p><strong>Eligibility is asked once a page, at the very bottom.</strong> That reasoning does
+   * not carry over: the mark is written by an administrator rather than by this walk, so nothing
+   * here can answer its own question. What matters instead is that the batch is wholly settled
+   * first — asked before the progress write, a withdrawn mark would leave the batch's contracts
+   * committed while its cursor and its counts were not. Asked only at the top of the loop it would
+   * never be evaluated after a window's last page, and the walk would go on to test the stored
+   * count and could mark an Órgano complete on a history it was told to stop reading.
    */
-  private WindowRead readWindow(Target target, LocalDate windowStart, LocalDate windowEnd) {
+  private WindowRead readWindow(
+      Target target, LocalDate windowStart, LocalDate windowEnd, BooleanSupplier stillEligible) {
     int added = 0;
     int refreshed = 0;
     int offset = 0;
@@ -231,7 +252,7 @@ public class ImportOrganoContratosMenores {
     boolean lastPage = false;
     while (!lastPage) {
       if (!importRuns.holdsGuard(target.runId())) {
-        return stoppedShort(target, added, refreshed);
+        return guardLost(target, added, refreshed);
       }
       ContratoMenorSourcePage page =
           contratoMenorSource.fetchPage(
@@ -242,12 +263,15 @@ public class ImportOrganoContratosMenores {
       added += counts.added();
       refreshed += counts.refreshed();
       if (!importRuns.holdsGuard(target.runId())) {
-        return stoppedShort(target, added, refreshed);
+        return guardLost(target, added, refreshed);
       }
       recordProgress(target, lastPage ? windowStart : windowEnd, counts);
       offset += page.entries().size();
+      if (!stillEligible.getAsBoolean()) {
+        return noLongerEligible(target, added, refreshed);
+      }
     }
-    return new WindowRead(added, refreshed, recordsTotal, true);
+    return new WindowRead(added, refreshed, recordsTotal, null);
   }
 
   /**
@@ -255,12 +279,25 @@ public class ImportOrganoContratosMenores {
    * batches before it stored stands, and the cursor is left where the last of them put it — the
    * conservative pair, so the window is re-read on resumption and nothing is stored twice.
    */
-  private WindowRead stoppedShort(Target target, int added, int refreshed) {
+  private WindowRead guardLost(Target target, int added, int refreshed) {
     LOG.warn(
         "Contratos menores walk of Órgano {} stopped: its run {} no longer holds the import guard,"
             + " so another import may already have claimed it",
         target.organoId(), target.runId());
-    return new WindowRead(added, refreshed, 0, false);
+    return new WindowRead(added, refreshed, 0, StopReason.GUARD_LOST);
+  }
+
+  /**
+   * The window abandoned at a batch boundary, because the Órgano stopped being one to import. Every
+   * batch it read stands and the cursor points at the last of them, which is what makes a later
+   * mark resume this Órgano rather than start it again.
+   */
+  private WindowRead noLongerEligible(Target target, int added, int refreshed) {
+    LOG.info(
+        "Contratos menores walk of Órgano {} stopped at a batch boundary: it is no longer active"
+            + " and marked for import, and run {} leaves it where it reached",
+        target.organoId(), target.runId());
+    return new WindowRead(added, refreshed, 0, StopReason.UNMARKED);
   }
 
   /**

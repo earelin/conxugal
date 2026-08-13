@@ -337,6 +337,28 @@ class JdbcOrganoRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(organoRepository.findById(id).orElseThrow().importable()).isTrue();
   }
 
+  // The join has no visible failure: without it the state simply arrives absent, every Órgano
+  // reads as never started, and an import walks a history it already holds from the top instead
+  // of skipping it. Nothing else asserts it, so this is what stands between that and production.
+  @Test
+  void findById_carries_the_contratos_menores_import_state() throws Exception {
+    OrganoId id = insertOrgano("consorcio-x", "Consorcio X", true, true, null);
+    insertImportState(id, "COMPLETE");
+
+    assertThat(organoRepository.findById(id).orElseThrow().importStatus())
+        .isEqualTo(ContratosMenoresImportStatus.COMPLETE);
+  }
+
+  // Left, not inner: an Órgano whose import never started must still be found, or the very first
+  // import of every Órgano would be reading an empty answer.
+  @Test
+  void findById_finds_the_organo_whose_import_never_started() throws Exception {
+    OrganoId id = insertOrgano("consorcio-x", "Consorcio X", true, true, null);
+
+    assertThat(organoRepository.findById(id).orElseThrow().importStatus())
+        .isEqualTo(ContratosMenoresImportStatus.NEVER_STARTED);
+  }
+
   // findById carrying the mark is not enough for the administrator's catalogue: that read is
   // this one, and a column reaching the record through the member read alone would leave every
   // row on screen showing an Órgano as unmarked.

@@ -196,7 +196,7 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
     execute("DELETE FROM import_run_organo");
 
     ContratosMenoresImportSummary summary =
-        importContratosMenores.run(runId, organo(organoId));
+        importContratosMenores.run(runId, organo(organoId), () -> true);
 
     assertThat(summary.status()).isEqualTo(ContratosMenoresImportStatus.COMPLETE);
     assertThat(contratoTable()).hasNumberOfRows(3);
@@ -273,8 +273,7 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
 
     ContratosMenoresImportSummary second = walk(organoId);
 
-    assertThat(second)
-        .isEqualTo(new ContratosMenoresImportSummary(0, 1, ContratosMenoresImportStatus.COMPLETE));
+    assertThat(second).isEqualTo(ContratosMenoresImportSummary.complete(0, 1));
     Table contratos = contratoTable();
     assertThat(contratos).hasNumberOfRows(3);
     assertThat(contratos).row(0).value("obxecto").isEqualTo("Servizos eléctricos");
@@ -308,7 +307,7 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
     unreachableWindow = THIRD_WINDOW_START;
     ImportRunId runId = claim(organoId);
     assertThatExceptionOfType(ContratoMenorSourceUnavailableException.class)
-        .isThrownBy(() -> importContratosMenores.run(runId, organo(organoId)));
+        .isThrownBy(() -> importContratosMenores.run(runId, organo(organoId), () -> true));
     importRuns.complete(runId, ImportRunState.FAILED, 0, 0);
     assertThat(contratoTable()).hasNumberOfRows(2);
     unreachableWindow = null;
@@ -317,7 +316,7 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
   private ContratosMenoresImportSummary walk(OrganoId organoId) {
     ImportRunId runId = claim(organoId);
     ContratosMenoresImportSummary summary =
-        importContratosMenores.run(runId, organo(organoId));
+        importContratosMenores.run(runId, organo(organoId), () -> true);
     importRuns.complete(runId, ImportRunState.SUCCEEDED, 0, 0);
     return summary;
   }

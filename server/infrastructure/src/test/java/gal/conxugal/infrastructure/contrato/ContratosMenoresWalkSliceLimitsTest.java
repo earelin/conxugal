@@ -102,7 +102,7 @@ class ContratosMenoresWalkSliceLimitsTest {
   private boolean theAdapterRefusesSomeWindowFrom(LocalDate startDay) {
     resumePoint = startDay;
     try {
-      walk().run(RUN_ID, organo());
+      walk().run(RUN_ID, organo(), () -> true);
       return false;
     } catch (IllegalArgumentException e) {
       return true;
