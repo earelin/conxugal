@@ -1,0 +1,17 @@
+{
+  "name": "contratosdegalicia contratos menores table, answering that every Órgano published none",
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/api/v1/organismos/[^/]+/contratosmenores/table"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "recordsTotal": 0,
+      "data": []
+    }
+  }
+}

@@ -102,3 +102,23 @@ parameters = { "path.id" = { dictionary = "disposable-termos" } }
 [[operations]]
 include-path = "/api/admin/users/{id}/enabled"
 parameters = { "path.id" = "55555555-5555-7555-8555-555555555555" }
+
+# The seeded run, so the read reaches its 200 branch and the covered-Órgano rows it exists to
+# report. Generated UUIDs only ever name a run that does not exist.
+[[operations]]
+include-path = "/api/admin/import-run/{id}"
+parameters = { "path.id" = "eeeeeeee-eeee-7eee-8eee-eeeeeeeeeeee" }
+
+# The marked, active Órgano, so the trigger is answered rather than 404'd. It reaches the real
+# claim: contratosdegalicia is stubbed to report that every Órgano published no contratos
+# menores, so the walk it starts ends on its first page instead of running for days and holding
+# the import guard against the rest of the run.
+[[operations]]
+include-name = "POST /api/admin/organo/{id}/contratos-menores/import"
+parameters = { "path.id" = "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa" }
+
+# Only the PUT. The DELETE on the same path keeps its generated ids, which is what stops the two
+# from taking turns marking and unmarking the fixture every other request.
+[[operations]]
+include-name = "PUT /api/admin/organo/{id}/importable"
+parameters = { "path.id" = "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa" }

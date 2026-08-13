@@ -17,7 +17,8 @@ info:
     current-user lookup), FEAT-0005 (real-time metrics), FEAT-0006 (the Órganos de Contratación
     catalogue import trigger), FEAT-0007 (the Órganos catalogue and taxonomía reads, and the
     administration of the taxonomía and of each Órgano's placement in it), and FEAT-0009 (the
-    contratos menores import mark and the administrator's catalogue read that carries it).
+    contratos menores import mark and the administrator's catalogue read that carries it, the
+    two import triggers, and the read that reports what a run amounted to).
 
 servers:
   - url: /
@@ -34,6 +35,9 @@ tags:
     description: >-
       The Órganos de Contratación catalogue, the taxonomía of terms it is classified into, and the
       catalogue import.
+  - name: imports
+    description: >-
+      Triggering a contratos menores import, and reading what one run amounted to.
 
 security:
   - cookieSession: []
@@ -745,18 +749,26 @@ paths:
       operationId: markOrganoImportable
       summary: Mark an Órgano for contratos menores import
       description: >-
-        Opt an Órgano into having its contratos menores imported. Idempotent: marking an
-        already-marked Órgano succeeds and writes nothing. Marking and unmarking are two methods
-        rather than one flag with a body because they are two operations with different rules —
-        an Órgano is never imported unless it was deliberately opted in, and clearing the mark
-        stops a load rather than reversing a field. Marking does not start an import yet; the
-        importer does not exist, and this response grows to say whether a run started when it
-        does.
+        Opt an Órgano into having its contratos menores imported, and ask for that import.
+        Marking an already-marked Órgano succeeds and leaves the mark as it is, but it is not
+        without effect: the import is asked for every time, which is what lets an administrator
+        whose mark was refused ask again without unmarking first. Marking and unmarking are two
+        methods rather than one flag with a body because they are two operations with different
+        rules — an Órgano is never imported unless it was deliberately opted in, and clearing
+        the mark stops a load rather than reversing a field.
+
+
+        The import covers **this Órgano alone**, never every marked one, and it is asked for
+        after the mark is written. **A refusal is answered `200`, not `409`**, and this is the
+        one place the mark and the triggers disagree: the mark applies whether or not an import
+        starts, so a `409` would tell the client the write did not happen when it did. The body
+        says which of the two occurred — `runId` when a run started, `refusal` when none did —
+        and the Órgano reads as marked either way.
       responses:
-        "204":
+        "200":
           description: >-
-            The Órgano is marked. The mark is visible in the next `GET /api/admin/organos` as the
-            Órgano's `importable`.
+            The Órgano is marked, visible in the next `GET /api/admin/organos` as the Órgano's
+            `importable`. The body says whether marking also started an import.
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
@@ -764,6 +776,10 @@ paths:
               $ref: "#/components/headers/RateLimitRemaining"
             RateLimit-Reset:
               $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarkOutcome"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -819,6 +835,212 @@ paths:
           description: >-
             No Órgano exists with that id; nothing is written. Carries the problem type
             `urn:conxugal:problem-type:organo-not-found`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/admin/contratos-menores/import:
+    post:
+      tags: [imports]
+      operationId: startContratosMenoresImport
+      summary: Import the contratos menores of every marked Órgano
+      description: >-
+        Start an import covering every Órgano that is active in the catalogue and marked
+        importable. Eligibility is evaluated here rather than by the caller, so this trigger, the
+        single-Órgano trigger and the mark cannot disagree about which Órganos are in scope.
+
+
+        **This answers before the import runs.** An initial import walks years of history for
+        every covered Órgano and takes days, so no trigger can carry its outcome: this returns
+        the identifier of the run doing the work and a `Location` pointing at the read that
+        reports it. Nothing about the outcome — not even whether the first Órgano succeeded — is
+        known by the time this responds.
+
+
+        At most one import runs at a time across the whole system, this one and the catalogue
+        import alike, so a trigger arriving while another holds that guard starts nothing and is
+        refused rather than queued.
+      responses:
+        "202":
+          description: >-
+            A run was claimed and the import is under way. `GET /api/admin/import-run/{id}` on
+            the returned identifier reports its progress and, in time, its verdict.
+          headers:
+            Location:
+              $ref: "#/components/headers/ImportRunLocation"
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportRunStarted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: >-
+            Another import already holds the system-wide guard; no run was claimed and nothing
+            was written. Carries the problem type
+            `urn:conxugal:problem-type:import-already-running`. This is a matter of timing —
+            asking again once the running import finishes works.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/admin/organo/{id}/contratos-menores/import:
+    parameters:
+      - $ref: "#/components/parameters/OrganoId"
+    post:
+      tags: [imports]
+      operationId: startOrganoContratosMenoresImport
+      summary: Import one Órgano's contratos menores
+      description: >-
+        Start an import covering the named Órgano alone. Asynchronous on the same terms as the
+        sweep above: it answers with the run's identifier and a `Location` pointing at the run
+        read, never with the outcome.
+
+
+        **The two refusals are different problems and carry different types.** A `409` with
+        `urn:conxugal:problem-type:import-already-running` says another import holds the guard,
+        which asking again later resolves. A `409` with
+        `urn:conxugal:problem-type:organo-not-eligible` says this Órgano is inactive in the
+        catalogue, unmarked, or both — a refusal that repeats until the catalogue or the mark
+        changes. An administrator told only that an import is running would wait for one that is
+        never going to start.
+      responses:
+        "202":
+          description: >-
+            A run was claimed for this Órgano and the import is under way. `GET
+            /api/admin/import-run/{id}` on the returned identifier reports it.
+          headers:
+            Location:
+              $ref: "#/components/headers/ImportRunLocation"
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportRunStarted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            No Órgano exists with that id; nothing was started. Carries the problem type
+            `urn:conxugal:problem-type:organo-not-found` — distinct from the Órgano existing but
+            not being eligible, which is a `409`.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: >-
+            Nothing was started, for one of two reasons the body tells apart:
+            `urn:conxugal:problem-type:import-already-running` when another import holds the
+            guard, and `urn:conxugal:problem-type:organo-not-eligible` when the Órgano is not
+            active and marked. A client that can only read the status cannot tell *wait* from
+            *mark the Órgano*.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/admin/import-run/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ImportRunId"
+    get:
+      tags: [imports]
+      operationId: readImportRun
+      summary: Read what one import run amounted to
+      description: >-
+        The run's verdict, when it ran, what it counted, and every Órgano it set out to cover
+        with that Órgano's own state and counts. This is where a trigger's outcome is read: the
+        triggers answer before the work starts, and this answers for it.
+
+
+        The covered Órganos are those the run enumerated when it was claimed rather than those it
+        reached, so a run that died partway still names what it was going to cover and which of
+        them failed. They are ordered by identity; the order a run takes them in is not recorded.
+      responses:
+        "200":
+          description: The run, its verdict, and every Órgano it covers.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportRun"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: >-
+            No run exists with that id. Carries the problem type
+            `urn:conxugal:problem-type:import-run-not-found`.
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
@@ -986,8 +1208,23 @@ components:
       schema:
         type: string
         format: uuid
+    ImportRunId:
+      name: id
+      in: path
+      required: true
+      description: The import run's UUID identity, as a trigger returned it.
+      schema:
+        type: string
+        format: uuid
 
   headers:
+    ImportRunLocation:
+      description: The run read for the run just claimed, `/api/admin/import-run/{id}`.
+      schema:
+        type: string
+        format: uri-reference
+        maxLength: 200
+        pattern: "^/api/admin/import-run/[0-9a-fA-F-]{36}$"
     RateLimitLimit:
       description: The number of requests allowed in the current rate-limit window.
       schema:
@@ -1619,6 +1856,185 @@ components:
           maximum: 100000
           example: 1
           description: Previously-stored Órganos absent from this import, marked inactive.
+
+    ImportRunStarted:
+      type: object
+      description: >-
+        The identity of the run a trigger claimed. It is all a trigger can answer with — the
+        import it started has not done anything yet — and it is the id `GET
+        /api/admin/import-run/{id}` accepts verbatim.
+      required: [runId]
+      example:
+        runId: "0196f3d2-0c4a-7b1e-9f3a-8d2c5e7a1b40"
+      properties:
+        runId:
+          type: string
+          format: uuid
+          example: "0196f3d2-0c4a-7b1e-9f3a-8d2c5e7a1b40"
+          description: The run's identity.
+
+    MarkOutcome:
+      type: object
+      description: >-
+        What marking an Órgano did: the mark, which is always written, plus the fate of the
+        import it asked for. Exactly one of `runId` and `refusal` is non-null — a run started, or
+        it did not and this says why. The mark stands in both cases, which is why a refusal here
+        is not a `409`.
+      required: [runId, refusal]
+      example:
+        runId: "0196f3d2-0c4a-7b1e-9f3a-8d2c5e7a1b40"
+        refusal: null
+      properties:
+        runId:
+          type: [string, "null"]
+          format: uuid
+          example: "0196f3d2-0c4a-7b1e-9f3a-8d2c5e7a1b40"
+          description: >-
+            The run importing this Órgano alone — never a sweep of every marked one. Null when no
+            import started.
+        refusal:
+          type: [string, "null"]
+          enum: [IMPORT_ALREADY_RUNNING, ORGANO_NOT_ELIGIBLE, null]
+          example: null
+          description: >-
+            Why no import started, or null when one did. `IMPORT_ALREADY_RUNNING` is a matter of
+            timing and resolves itself; `ORGANO_NOT_ELIGIBLE` means the Órgano is inactive in the
+            catalogue and repeats until that changes. They are the same two refusals the triggers
+            report as problem types.
+
+    ImportRunOrgano:
+      type: object
+      description: >-
+        One Órgano a run covers, and how it fared. `STOPPED` and `SKIPPED` are not failures — an
+        Órgano is stopped when its mark was withdrawn, keeping everything already stored, and
+        skipped when its history is already complete and there is no incremental mode to run yet.
+      required: [organoId, state, added, refreshed, failureReason]
+      example:
+        organoId: "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa"
+        state: "SUCCEEDED"
+        added: 1204
+        refreshed: 96
+        failureReason: null
+      properties:
+        organoId:
+          type: string
+          format: uuid
+          example: "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa"
+          description: The covered Órgano's identity.
+        state:
+          type: string
+          enum: [PENDING, IN_PROGRESS, SUCCEEDED, FAILED, STOPPED, SKIPPED]
+          example: "SUCCEEDED"
+          description: >-
+            How this Órgano fared. `PENDING` is where every covered Órgano starts: the list is
+            enumerated when the run is claimed rather than as the run reaches them.
+        added:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 2147483647
+          example: 1204
+          description: Contratos menores new to the store, read for this Órgano by this run.
+        refreshed:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 2147483647
+          example: 96
+          description: Contratos menores already stored, re-read by this run and updated in place.
+        failureReason:
+          type: [string, "null"]
+          pattern: "^.{1,500}$"
+          description: >-
+            What the state cannot say: why a `FAILED` Órgano failed, why a `SKIPPED` one was
+            passed over, and which withdrawal stopped a `STOPPED` one. Null otherwise. A
+            summary on a single line, never the internals of the failure behind it: a reason
+            longer than the bound is truncated, and one that says nothing is null.
+
+    ImportRun:
+      type: object
+      description: >-
+        One import run as a reader sees it. The counts are unbounded by anything but their type:
+        a single Órgano's initial import runs to hundreds of thousands of contracts, so this is
+        deliberately not `ImportOutcome`, whose verdicts and count range suit the catalogue
+        import alone.
+      required: [id, importer, state, startedAt, finishedAt, added, refreshed, coveredOrganos]
+      example:
+        id: "0196f3d2-0c4a-7b1e-9f3a-8d2c5e7a1b40"
+        importer: "CONTRATOS_MENORES"
+        state: "PARTIALLY_SUCCEEDED"
+        startedAt: "2026-08-13T09:14:02Z"
+        finishedAt: "2026-08-15T21:40:55Z"
+        added: 1204
+        refreshed: 96
+        coveredOrganos:
+          - organoId: "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa"
+            state: "SUCCEEDED"
+            added: 1204
+            refreshed: 96
+            failureReason: null
+          - organoId: "bbbbbbbb-bbbb-7bbb-8bbb-bbbbbbbbbbbb"
+            state: "FAILED"
+            added: 0
+            refreshed: 0
+            failureReason: "The source became unreachable"
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "0196f3d2-0c4a-7b1e-9f3a-8d2c5e7a1b40"
+          description: The run's identity, as the trigger that claimed it returned it.
+        importer:
+          type: string
+          enum: [ORGANOS, CONTRATOS_MENORES]
+          example: "CONTRATOS_MENORES"
+          description: >-
+            Which import produced this run. Recorded so an outcome can say what ran; the guard
+            does not tell them apart, since one live run of either refuses a trigger of either.
+        state:
+          type: string
+          enum: [IN_PROGRESS, SUCCEEDED, PARTIALLY_SUCCEEDED, FAILED, ABANDONED]
+          example: "PARTIALLY_SUCCEEDED"
+          description: >-
+            What the run amounts to. `PARTIALLY_SUCCEEDED` is the ordinary outcome of a run that
+            carried on past an Órgano that failed, and the covered Órganos name which.
+            `ABANDONED` is **derived, never stored**: a run whose process died stops advancing,
+            and past a configured bound it reads as abandoned rather than as still in progress —
+            which is precisely the run an administrator goes looking at.
+        startedAt:
+          type: string
+          format: date-time
+          example: "2026-08-13T09:14:02Z"
+          description: When the run was claimed.
+        finishedAt:
+          type: [string, "null"]
+          format: date-time
+          example: "2026-08-15T21:40:55Z"
+          description: >-
+            When the run settled, or null when it has not. Null for an `ABANDONED` run too:
+            nothing ever wrote its ending, which is what abandonment means.
+        added:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 2147483647
+          example: 1204
+          description: Contratos menores new to the store across every Órgano this run covered.
+        refreshed:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 2147483647
+          example: 96
+          description: Contratos menores this run re-read and updated in place, across every Órgano.
+        coveredOrganos:
+          type: array
+          maxItems: 10000
+          description: >-
+            Every Órgano the run set out to cover, each with its own state and counts. Empty for
+            the catalogue import, which covers no Órganos.
+          items:
+            $ref: "#/components/schemas/ImportRunOrgano"
 
     RuntimeMetrics:
       type: object
