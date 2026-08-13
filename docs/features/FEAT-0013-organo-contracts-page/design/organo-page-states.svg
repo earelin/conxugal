@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="780" viewBox="0 0 1280 780" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <rect width="1280" height="780" fill="#f8f9fa"/>
+
+  <text x="40" y="60" font-size="22" font-weight="700" fill="#212529">A páxina do órgano — estados sen contratos</text>
+  <text x="40" y="84" font-size="13" fill="#868e96">Só se debuxa a área principal; a cabeceira e o panel lateral son os de sempre.</text>
+  <text x="40" y="103" font-size="13" fill="#868e96">Unha soa lectura sostén o nome, as lapelas e o resumo da sección que abre, así que hai un só sitio no que acertar con estes catro estados.</text>
+
+  <!-- ===== A: loading ===== -->
+  <text x="40" y="130" font-size="12" font-weight="600" fill="#495057">Cargando</text>
+  <rect x="40" y="144" width="576" height="250" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="142" width="576" height="250" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="72" y="176" width="286" height="24" rx="6" fill="#f1f3f5"/>
+  <rect x="72" y="232" width="150" height="13" rx="6" fill="#f1f3f5"/>
+  <line x1="72" y1="260" x2="584" y2="260" stroke="#e9ecef"/>
+  <rect x="72" y="286" width="420" height="13" rx="6" fill="#f1f3f5"/>
+  <rect x="72" y="316" width="360" height="13" rx="6" fill="#f1f3f5"/>
+  <rect x="72" y="346" width="248" height="13" rx="6" fill="#f1f3f5"/>
+
+  <!-- ===== B: no contracts at all ===== -->
+  <text x="664" y="130" font-size="12" font-weight="600" fill="#495057">Sen contratos de ningunha familia</text>
+  <rect x="664" y="144" width="576" height="250" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="664" y="142" width="576" height="250" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="696" y="196" font-size="22" font-weight="700" fill="#212529">Servizo Galego de Saúde</text>
+  <g stroke="#adb5bd" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M700 258 h13 l3 4 h13 a3 3 0 0 1 3 3 v18 a3 3 0 0 1 -3 3 h-29 a3 3 0 0 1 -3 -3 v-22 a3 3 0 0 1 3 -3 z"/>
+  </g>
+  <text x="748" y="278" font-size="14" font-weight="500" fill="#495057">Non hai contratos para este órgano.</text>
+  <text x="696" y="312" font-size="12" fill="#868e96">O sistema non garda ningún contrato deste órgano, en ningunha familia. Non</text>
+  <text x="696" y="330" font-size="12" fill="#868e96">se debuxa ningunha barra de lapelas: non hai ningunha que amosar.</text>
+  <text x="696" y="360" font-size="12" fill="#adb5bd">Chégase por unha ligazón gardada; o selector non ofrece este órgano.</text>
+
+  <!-- ===== C: the member read failed ===== -->
+  <text x="40" y="440" font-size="12" font-weight="600" fill="#495057">A lectura do órgano fallou</text>
+  <rect x="40" y="454" width="576" height="250" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="452" width="576" height="250" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="72" y="500" width="512" height="128" rx="8" fill="#fff5f5" stroke="#ffc9c9"/>
+  <g stroke="#e03131" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="96" cy="528" r="9"/>
+    <line x1="96" y1="524" x2="96" y2="529"/>
+    <circle cx="96" cy="532.5" r="0.7" fill="#e03131" stroke="none"/>
+  </g>
+  <text x="116" y="533" font-size="14" font-weight="600" fill="#c92a2a">Non se puido cargar este órgano.</text>
+  <text x="116" y="556" font-size="12" fill="#868e96">Téntao de novo; se persiste, volve máis tarde.</text>
+  <rect x="116" y="572" width="122" height="30" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="177" y="587" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="500" fill="#495057">Tentar de novo</text>
+  <text x="72" y="656" font-size="12" fill="#adb5bd">Nin nome nin lapelas: as tres cousas viñan da mesma resposta, e non chegou.</text>
+
+  <!-- ===== D: unknown id ===== -->
+  <text x="664" y="440" font-size="12" font-weight="600" fill="#495057">Órgano descoñecido (404)</text>
+  <rect x="664" y="454" width="576" height="250" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="664" y="452" width="576" height="250" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <g stroke="#adb5bd" stroke-width="1.7" fill="none" stroke-linecap="round">
+    <circle cx="708" cy="524" r="11"/>
+    <path d="M704 520 a4 4 0 1 1 4 5 v2"/>
+    <circle cx="708" cy="530.5" r="0.8" fill="#adb5bd" stroke="none"/>
+  </g>
+  <text x="732" y="529" font-size="16" font-weight="600" fill="#212529">Non atopamos este órgano.</text>
+  <text x="696" y="566" font-size="12" fill="#868e96">A ligazón pode estar mal, ou o órgano pode xa non existir no catálogo.</text>
+  <text x="696" y="584" font-size="12" fill="#868e96">Escolle un órgano no selector do panel lateral para seguir.</text>
+  <text x="696" y="656" font-size="12" fill="#adb5bd">Un id descoñecido é un 404 do servidor, non unha barra de lapelas baleira.</text>
+
+  <!-- ===== footnote ===== -->
+  <rect x="40" y="714" width="1200" height="56" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="60" y="738" font-size="11.5" fill="#868e96">Os catro din cousas distintas a propósito. «Este órgano non ten contratos» é unha resposta correcta do servidor; «non puiden preguntar» é un fallo</text>
+  <text x="60" y="755" font-size="11.5" fill="#868e96">que se pode reintentar; e «este órgano non existe» é unha terceira cousa. Só o do medio ofrece «Tentar de novo».</text>
+</svg>

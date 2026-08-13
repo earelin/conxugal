@@ -26,9 +26,9 @@ the Órgano current **incrementally**. The two modes differ in cost by
 orders of magnitude — a single large Órgano holds well over a million contracts — so the
 spec treats them as distinct operations with distinct expectations.
 
-Users reach contracts by selecting an Órgano de Contratación — from the taxonomy tree or
-the catalogue list of
-[SPEC-0004](SPEC-0004-import-manage-organos-contratacion.md) — and opening its contracts,
+Users reach contracts by selecting an Órgano de Contratación — from the taxonomy tree of
+[SPEC-0004](SPEC-0004-import-manage-organos-contratacion.md), or by searching it by name —
+and opening its contracts,
 which are presented **split by contract family**: *contratos menores* and *licitacións*.
 This spec delivers the contratos menores family only; licitacións are a separate, future
 spec that fills the other side of the same split. Within contratos menores a user browses
@@ -300,14 +300,36 @@ One decision remains outside this spec:
 
 ### Finding and browsing contracts
 
-- **R14** — Any authenticated user selects an Órgano de Contratación either by browsing the
+- **R14** — Any authenticated user selects an Órgano de Contratación by browsing the
   **read-only taxonomy tree** of SPEC-0004 R9 — which offers a `USER` no control to create,
-  rename, move, delete or reassign anything — or from the **catalogue list** of SPEC-0004
-  R8, and opens that Órgano's contracts. The tree is the surface SPEC-0004 deferred to this
-  spec. Both routes are required because the tree alone is not sufficient: SPEC-0004 R18
-  makes every newly imported Órgano **unclassified**, so an Órgano can be marked, imported
-  and yet absent from the tree. **Every Órgano whose contracts the system holds is
-  reachable**, whether or not it is classified, marked, or still active.
+  rename, move, delete or reassign anything — or by **searching for it by name** (SPEC-0004
+  R19), and opens that Órgano's contracts. The tree is the surface SPEC-0004 deferred to
+  this spec. **Every Órgano holding at least one visible contrato menor is reachable**,
+  whether or not it is classified, marked, or still active.
+
+  **The tree alone is sufficient, and SPEC-0004 R9 is what makes it so** — that requirement
+  owns the rule, and this one depends on it rather than restating it. Two of its properties
+  carry this requirement: an Órgano in no term is reachable from the tree **without being
+  classified first**, so the unclassified state R18 leaves every newly imported Órgano in
+  does not hide it; and a `USER`'s **visible set** is exactly the Órganos holding at least
+  one visible contract of any family. Without the first, this requirement would be
+  unmeetable through the tree — an Órgano could be marked, imported, hold a million
+  contracts and appear nowhere. The second is what makes *reachable* checkable, since what a
+  `USER` can see and what this requirement obliges are then one set approached from either
+  end.
+
+  The name search is a second way to *reach* an Órgano, not a second place to *find* one —
+  it answers a name a user already knows — so reachability rests on the tree, and the search
+  is why a user who knows the name need not walk it. **There is no `USER`-facing catalogue
+  list**, and this spec does not reintroduce one.
+
+  **An Órgano outside the visible set is offered by no route this spec provides.** SPEC-0004
+  R9 scopes the catalogue where it is served rather than where it is drawn, so neither the
+  tree nor the search can lead to one, and no contract list names one. What that rule does
+  **not** do is make an Órgano's identity a secret, and this spec does not add what it
+  withholds: a reader arriving with an identifier by other means is answered truthfully —
+  such an Órgano has no visible contrato menor, so there is nothing to show and R18's rule on
+  an absent section is what governs the result.
 
   There is a third route, and it is stated here with the other two so that no cross-Órgano
   surface has to invent one: **wherever a contract row names its awarding Órgano, following
@@ -371,24 +393,39 @@ One decision remains outside this spec:
   [SPEC-0007](SPEC-0007-monitor-import-runs.md) both cite it rather than defining their own. A
   reader meets several of these lists in one session, and one of them paging differently from
   the rest is a defect they would experience as inconsistency rather than as a design.
-- **R18** — **An Órgano holding no contratos menores shows no contratos menores section at
-  all.** The section appears once at least one contract is stored for that Órgano, and not
-  before — whether it is empty because the Órgano is not being imported (R3), because it was
-  imported and awarded none, or because its initial import has not yet stored anything (R9).
-  An empty section is never rendered.
+- **R18** — **An Órgano holding no visible contratos menores shows no contratos menores
+  section at all.** The section appears once at least one contract of this family is
+  **visible** for that Órgano, and not before. *Visible* rather than *stored* because R13
+  keeps a removed contract stored while removing it from every list: an Órgano all of whose
+  contratos menores have been removed holds contracts and shows no section, exactly as one
+  that never had any. An empty section is never rendered.
 
-  This is a deliberate trade-off, and what it costs is worth stating: absence is silent, so a
-  user cannot tell an Órgano the system does not import from one that was imported and awarded
-  nothing. Both simply have no section. The judgement is that an empty section on the many
-  Órganos that publish no contratos menores at all — 234 of the catalogue's 429 organismos are
-  Concellos, which publish none — is noise on every one of them to disambiguate a question few
-  users are asking. Whether an Órgano is imported remains answerable by an administrator
-  (R4, which owns the mark, and [SPEC-0007](SPEC-0007-monitor-import-runs.md) R15), and if
-  users turn out to
-  need it, exposing it is a later increment rather than something this rule forecloses.
+  **Who this rule protects has changed, and the enumeration follows.** SPEC-0004 R9 keeps an
+  Órgano with no visible contract **of any family** out of a `USER`'s reach entirely, so the
+  three cases this rule used to enumerate — not imported (R3), imported and awarded none,
+  initial import has stored nothing (R9) — no longer describe an Órgano a `USER` can open.
+  For them the rule now governs exactly two cases:
+
+  - an Órgano holding **another family's** contracts but none of this one — the case the R15
+    split exists for, and the only live one once licitacións land;
+  - an Órgano whose contratos menores were **all removed** under R13 while another family's
+    remain.
+
+  For an **administrator**, whose visible set is the whole catalogue, the original three
+  cases all remain reachable and the rule still governs them.
+
+  What the rule costs is still worth stating, and it is now a narrower cost: absence is
+  silent, so where a section is missing a reader cannot tell an unimported family from one
+  imported and empty. The judgement is unchanged — an empty section is noise on every Órgano
+  that has one to disambiguate a question few users are asking — but the 234 Concellos that
+  once carried the argument are no longer the evidence for it, since a `USER` cannot reach
+  them at all. Whether an Órgano is imported remains answerable by an administrator (R4,
+  which owns the mark, and [SPEC-0007](SPEC-0007-monitor-import-runs.md) R15), and if users
+  turn out to need it, exposing it is a later increment rather than something this rule
+  forecloses.
 
   **Once the section is present it is never empty**, because R19 offers only years the Órgano
-  actually has contracts in. What the section must still make plain is that it is
+  actually has visible contracts in. What the section must still make plain is that it is
   **incomplete**: while the **initial import has not finished** what is shown is partial (R9),
   and it says so, because a user must not read a growing list as a complete one.
 
@@ -400,15 +437,23 @@ One decision remains outside this spec:
   they are looking at one.
 
   The year in effect when the section is first opened is the **most recent year for which the
-  Órgano has contracts**, so a user lands on data rather than on a chooser. Only years the
-  Órgano actually has contracts in are offered, so choosing a year can never be the reason a
-  list is empty.
+  Órgano has visible contracts**, so a user lands on data rather than on a chooser. Only years
+  the Órgano actually has visible contracts in are offered — *visible* for R18's reason, so a
+  year emptied entirely by R13's removals stops being offered — and choosing a year can
+  therefore never be the reason a list is empty.
 
-  Alongside those years the chooser offers an **undated** selection wherever the Órgano holds
-  contracts whose publication date cannot be interpreted (R27). Without it a mandatory year
-  would make those contracts unreachable — stored, never shown — which would cost by omission
-  exactly what R27 refuses to cost by rejecting them at import. The selection is offered only
-  when such contracts exist, so it is absent for the Órganos that have none.
+  **Every selection is a year, and nothing else is offered.** A contrato menor whose
+  publication date cannot be interpreted is not a **visible** contract at all (R28), so it is
+  not something a chooser has to reach around: every selection offered is a year, every
+  year offered has contracts in it, and **every contract in one carries both a date and an
+  amount**, so neither sort has a missing value to place.
+
+  > **This reverses an earlier form of this requirement**, which offered an **undated**
+  > selection wherever an Órgano held such contracts, on the reasoning that a mandatory year
+  > would otherwise leave them stored and never shown. R28 answers that cost a different way —
+  > the contracts are withheld from every reader and surfaced to an administrator as anomalies
+  > — which keeps a permanent affordance out of every chooser, and a second case out of every
+  > selection, for a condition the source is not expected to produce at all.
 
   Within that year a user can **sort** by **publication date** or by **amount**, ascending or
   descending. Sorting and counting apply to the **whole year's selection**, not only to the
@@ -418,6 +463,73 @@ One decision remains outside this spec:
   The year is mandatory rather than optional because it is what **bounds the size of every
   paged read** — the constraint R24 relies on when it defers a latency budget. That is why the
   scoping is a requirement here rather than a default a feature might quietly relax.
+
+### Contracts the system stores but does not show
+
+- **R28** — A contrato menor is **incomplete** if any of three things is missing: its
+  **publication date**, its **amount**, or its **awardee** — the operador the published awardee
+  data resolves to under [SPEC-0006](SPEC-0006-operadores-economicos.md) R5. An incomplete
+  contract is an **anomaly**: it is **stored** as it arrived (R27), and it is **not a visible
+  contract**.
+
+  **The three are required for three different reasons**, and stating them separately is what
+  keeps the rule from being read as a preference for tidy rows. A contract with no publication
+  date cannot be placed in the year every selection is scoped to (R19), so there is no list it
+  could appear in. A contract with no amount could be listed and is still refused: the amount is
+  the value this capability exists to expose — a row without one answers none of the questions the
+  Summary describes, cannot carry the VAT label R27 requires of it, and silently understates every
+  total a reader assembles. A contract with no awardee is refused because **who was paid is half
+  of what a contract record is for**: R16 makes the awardee one of the two crossings every row
+  offers, and a public-spending record that states an amount and not a recipient invites the
+  question it exists to answer. The common rule is that **the system does not present a contract
+  it holds only part of**.
+
+  **The awardee differs from the other two in one way that matters.** The date and the amount are
+  values the source either published or did not; the awardee is a value **this system resolves**,
+  and it can be missing for two unlike reasons — the published identifier was unusable (R5), or
+  **the resolution had not yet been built when the contract was stored**. Nothing distinguishes
+  them after the fact, because a stored contract retains no awardee data of its own to re-resolve
+  from. So a contract imported before awardee resolution existed is withheld exactly as an
+  unusable identifier is, and the only route back is a **full historical re-read** of that Órgano
+  (R10), which fetches the published awardee again. **This makes awardee resolution a
+  precondition of importing anything a reader is meant to see**, rather than an enrichment that
+  can follow.
+
+  *Not visible* is the whole of the consequence, and it is deliberately stated in the vocabulary
+  [SPEC-0004](SPEC-0004-import-manage-organos-contratacion.md) R9 already defines — *each
+  contract spec defines what makes one of its contracts visible* — so that it propagates instead
+  of being re-enforced surface by surface. An anomalous contract appears in **no year's
+  selection**, is counted in **no total** a reader is shown, does not make its Órgano show a
+  contratos menores section (R18), and does not by itself put its Órgano in a `USER`'s **visible
+  set**. An Órgano all of whose contratos menores are anomalous is, to a reader, indistinguishable
+  from one holding none.
+
+  **The award is not lost, and it must not be silently lost either.** The contract stays stored,
+  so a later import that publishes the missing value refreshes it in place under R11 and it
+  becomes an ordinary visible contract with no administrator action. What this requirement exists
+  to prevent is the state that withholding alone would create: rows the system holds that
+  **nobody can see**.
+
+  **An administrator can therefore obtain an Órgano's anomalous contratos menores**, each one
+  identifiable, each stating **which value it is missing**, and each carrying the route to its
+  publication at the source, which is where the values it was published under can be read. That
+  is an administrator's view of a data-quality problem, not a reader's view of contracts, and it
+  is the only route by which an anomalous contract is reachable at all.
+
+  > **The administrator's surface is left unbuilt for now**, and criterion #52 is carried as
+  > **unowned** rather than claimed by a feature. The requirement is recorded first so that the
+  > withholding above cannot ship without an obligation to surface what it withholds.
+  >
+  > **The three values are not expected in the same numbers, and that is a risk this note records
+  > rather than resolves.** The source publishes its dates in one fixed form, so undated contracts
+  > should be a handful. A **missing amount is an ordinary blank field**, and nothing here
+  > establishes how often the source leaves it blank. An **unusable fiscal identifier is common
+  > enough that SPEC-0006 R5 exists to define it**, which makes the awardee the most likely of the
+  > three to withhold at scale. If any of them is common, this requirement withholds real awards in
+  > bulk and does so invisibly — which is precisely what makes the administrator's view the thing
+  > that stops being optional. **The population of each is measured, split by cause, before the
+  > withholding is relied on**, and if it is large this requirement is revised rather than quietly
+  > endured.
 
 ### Triggering imports
 
@@ -615,13 +727,16 @@ One decision remains outside this spec:
   operador — not the name that contract was published under — and that operador's fiscal
   identifier in the canonical form SPEC-0006 R3 holds it in.
 
-  None of these narrowings is a reason to **reject** a contract. A published amount or date that
-  cannot
-  be interpreted leaves that value absent, the contract is stored like any other, and it takes no
-  part in the ordering it cannot support, being ordered last when sorting by the value it lacks.
-  A contract with **no date** belongs to no year and is reached through R19's **undated**
-  selection. Discarding such contracts would lose real awards, which is the same reasoning
-  SPEC-0006 applies to an unusable fiscal identifier.
+  None of these narrowings is a reason to **reject** a contract at import, and the two interpreted
+  values behave alike. A published **amount** or **date** that cannot be interpreted — including
+  one the source simply left blank — leaves that value absent and the contract **stored**;
+  discarding it would lose a real award, which is the same reasoning
+  [SPEC-0006](SPEC-0006-operadores-economicos.md) applies to an unusable fiscal identifier.
+
+  **Storing it is not showing it.** A contract missing either value is **incomplete**, and R28
+  withholds it from every reader and surfaces it to an administrator instead. *Stored, never
+  rejected* is a rule about the import; *shown only when complete* is a rule about the reader; the
+  two are decided separately and this requirement settles only the first.
 
 ## Acceptance criteria
 
@@ -654,10 +769,11 @@ One decision remains outside this spec:
    system holds — with no per-contract screen to open for further data.
 10. **(R7)** Every displayed amount, and every total derived from amounts, is labelled as
     including VAT.
-11. **(R7)** A contract whose published awardee data yields no operador under SPEC-0006 R5 is
-    **stored and browsable like any other**, showing every attribute it holds and **no awardee**
-    — since the awardee is held on the operador that award did not produce. It is not rejected,
-    and it offers no awardee route that leads nowhere.
+11. **(R7, R28)** A contract whose published awardee data yields no operador under SPEC-0006 R5 is
+    **stored and not rejected**, holding **no awardee** — since the awardee is held on the operador
+    that award did not produce. It is **not browsable**: R28 makes it an anomaly, so it is withheld
+    from every reader rather than shown without an awardee. Consequently **no list ever renders a
+    row with no awardee**, and no row offers an awardee route that leads nowhere.
 12. **(R8)** An Órgano's initial import yields **every publication the source holds for it,
     back to its earliest published date** — not merely contracts from years before the current
     one, which a run covering only the last few years would also produce.
@@ -689,8 +805,10 @@ One decision remains outside this spec:
     move, delete or reassign anything. *(Also satisfies SPEC-0004 #9 and the deferred half
     of SPEC-0004 #2.)*
 20. **(R14)** An Órgano that is marked and imported but **unclassified** — placed in no
-    taxonomy term — is still reachable and its contracts are still viewable; so is one that
-    has since become inactive but retains contracts under R5.
+    taxonomy term — is still reachable **from the tree, without being classified first**, and
+    its contracts are still viewable; after an administrator files it, it is reached within
+    that term instead. So is one that has since become inactive but retains contracts under
+    R5. Both are also reachable by name search. *(Also satisfies SPEC-0004 #19 and #26.)*
 21. **(R14)** An Órgano's own contratos menores list states no row's awarding Órgano, every
     row on it belonging to the Órgano already open — while still stating each row's awardee,
     under the name SPEC-0006 R4 selects for that operador.
@@ -713,16 +831,20 @@ One decision remains outside this spec:
     clearing a filter, or changing the sort — returns the reader to the first page.
 25. **(R16)** Each contract row offers a way to reach that contract's publication at the
     official source, and a way to reach its awardee's operador where one exists.
-26. **(R18)** An Órgano with no stored contratos menores presents no contratos menores section
-    at all — equally so whether it is unmarked, or marked and imported having awarded none —
-    while an Órgano holding at least one presents the section; and an Órgano whose initial
-    import is still running presents it stating that what is shown is partial, distinguishably
-    from one whose import has completed.
+26. **(R18)** An Órgano with no **visible** contratos menores presents no contratos menores
+    section at all — equally so whether it is unmarked, or marked and imported having awarded
+    none — while an Órgano holding at least one presents the section; and an Órgano whose
+    initial import is still running presents it stating that what is shown is partial,
+    distinguishably from one whose import has completed.
+    > **Taken from an administrator's view**, whose visible set is the whole catalogue: the
+    > unmarked and awarded-none cases describe Órganos SPEC-0004 R9 puts beyond a `USER`'s
+    > reach entirely, so they have no `USER`-facing subject to test. #48 covers the cases a
+    > `USER` can still meet.
 27. **(R19)** An Órgano's contratos menores are always scoped to one publication year: opening
-    the section selects the most recent year the Órgano has contracts in, the years offered are
-    exactly those it has contracts in, no control clears the year to produce an all-years list,
-    and the contracts shown for a chosen year are exactly those whose publication date falls in
-    it. No CPV filter control is present.
+    the section selects the most recent year the Órgano has visible contracts in, the years
+    offered are exactly those it has visible contracts in, no control clears the year to
+    produce an all-years list, and the contracts shown for a chosen year are exactly those
+    whose publication date falls in it. No CPV filter control is present.
 28. **(R19)** Sorting by publication date returns contracts in date order, and sorting by
     amount returns them in amount order, in the chosen direction; the first page after
     sorting descending by amount contains the largest-amount contract of the **whole**
@@ -782,15 +904,15 @@ One decision remains outside this spec:
     is a defect.
 41. **(R27)** A displayed duration is accompanied by an indication that the source frequently
     publishes a per-Órgano default rather than a per-contract value.
-42. **(R27)** A contract whose published amount or publication date cannot be interpreted is
-    **stored rather than rejected at import**, with that value absent, and is ordered last when
-    sorting by the value it lacks; one with no date appears in no year's selection but is
-    reachable through the undated selection of R19, so no stored contract is unreachable. It is
-    *displayed as published* only for the values R27 keeps as published — an uninterpretable
-    date is shown as absent, its published text having not been retained.
-43. **(R19)** An Órgano holding no contract whose publication date resists interpretation is
-    offered **no undated selection at all** — the affordance is absent rather than present and
-    empty, on the same reasoning that keeps an empty section from being rendered.
+42. **(R27, R28)** A contract whose published **amount** or **publication date** cannot be
+    interpreted — including one the source left blank — is **stored rather than rejected at
+    import**, with that value absent and, for the date, its published text not retained. It is
+    then **withheld from browsing** under R28 rather than shown anywhere a reader can reach.
+    Storing it and showing it are decided separately, and only the first happens.
+43. **(R19, R28)** **No selection reaches a contract that has no interpretable publication
+    date.** Every selection offered is a year; no control offers an *undated* selection or any
+    equivalent, for any Órgano — the affordance does not exist rather than being present and
+    empty.
 44. **(R4)** An Órgano that is marked, unmarked, and marked again imports everything published
     while it was unmarked, without re-reading the history it had already stored.
 45. **(R8)** An Órgano that goes un-imported for longer than the incremental window — because
@@ -809,3 +931,37 @@ One decision remains outside this spec:
     without restarting it, an incremental import reads only the recent window, and a historical
     re-read covers the full history of an already-loaded Órgano. No trigger selects a
     historical re-read automatically.
+    > **Criteria below are appended, not inserted.** Numbers are cited from features and
+    > tasks, so a new criterion takes the next free one rather than a place in the sequence.
+48. **(R14)** An Órgano holding **no visible contract of any family** is offered by neither the
+    tree nor the search, and the catalogue read they are built from does not return it.
+    Conversely, once that Órgano's **first** visible contrato menor is stored it is offered by
+    both with no administrator action, and when its **last** visible contract is removed under
+    R13 it stops being. The administration area shows it throughout.
+    *(Also satisfies SPEC-0004 #20 and #21.)*
+49. **(R18)** An Órgano holding **another family's** contracts but no visible contratos
+    menores — including one whose contratos menores were all removed under R13 — is reachable
+    by a `USER` and presents **no contratos menores section**, while the families it does hold
+    are presented normally and its absence causes no error in them. This is the `USER`-facing
+    half of #26 and the reachable half of #22.
+50. **(R28)** A contrato menor missing **any** of its publication date, its amount or its awardee is
+    stored, and is reached by **no** browsing surface: it appears in no year's selection, is counted
+    in no total a reader is shown, does not by itself make its Órgano show a contratos menores
+    section, and does not by itself place its Órgano in a `USER`'s visible set. Conversely **every
+    contract a reader is shown carries all three**, so no list renders any of them as absent. An
+    Órgano **all** of whose contratos menores are anomalous is presented exactly as one holding
+    none.
+51. **(R11, R28)** A later import that supplies a missing **date or amount** for a contract stored
+    as anomalous makes it an ordinary visible contract — appearing in its year, in that year's count
+    and in the section — with **no administrator action**, and without being stored a second time.
+    A contract missing more than one value becomes visible only when all of them arrive.
+52. **(R28)** An administrator can obtain an Órgano's anomalous contratos menores, each one
+    identifiable, each **stating which value it is missing**, and each carrying a route to its
+    publication at the source, and no route other than that view reaches them.
+    > **Unowned:** no feature claims this criterion yet. R28 records the obligation; the
+    > administrator's surface is a later increment, decided against real rows.
+53. **(R10, R28)** A contract stored **before awardee resolution existed** holds no awardee and no
+    awardee data to re-resolve from, so an ordinary re-import does not make it visible; only a
+    **full historical re-read** of its Órgano does, by fetching the published awardee again. This
+    is the one anomaly that does not clear itself, and the reason awardee resolution must precede
+    any import whose contracts a reader is meant to see.

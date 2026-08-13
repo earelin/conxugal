@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <rect width="1280" height="800" fill="#f8f9fa"/>
+
+  <text x="40" y="60" font-size="22" font-weight="700" fill="#212529">O que a sección di sobre si mesma</text>
+  <text x="40" y="84" font-size="13" fill="#868e96">Dous feitos ortogonais, non un estado: os contratos poden estar a medio importar, o órgano pode ter deixado de actualizarse, e ambas as dúas cousas poden ser certas á vez.</text>
+  <text x="40" y="103" font-size="13" fill="#868e96">Ningún dos dous se busca: os tres viñan no resumo que a páxina de arriba lle entrega á sección.</text>
+
+  <!-- ===== A: partial ===== -->
+  <text x="40" y="140" font-size="12" font-weight="600" fill="#495057">A importación inicial aínda non rematou</text>
+  <rect x="40" y="152" width="576" height="230" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="150" width="576" height="230" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="72" y="182" width="512" height="80" rx="8" fill="#edf2ff" stroke="#dbe4ff"/>
+  <g stroke="#3b5bdb" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="96" cy="208" r="9"/>
+    <path d="M96 203 v6 l4 3"/>
+  </g>
+  <text x="116" y="212" font-size="13" font-weight="600" fill="#3b5bdb">Importación en curso</text>
+  <text x="116" y="234" font-size="11.5" fill="#495057">Aínda se están a importar os contratos deste órgano, así que o</text>
+  <text x="116" y="251" font-size="11.5" fill="#495057">que ves aquí está incompleto e medra entre visitas.</text>
+  <text x="72" y="292" font-size="11.5" fill="#868e96">Os anos que o selector ofrece tamén crecen. Como a importación</text>
+  <text x="72" y="309" font-size="11.5" fill="#868e96">percorre do máis novo ao máis vello, o ano por defecto xa é</text>
+  <text x="72" y="326" font-size="11.5" fill="#868e96">significativo desde o primeiro lote e non desde o último.</text>
+  <text x="72" y="356" font-size="11.5" fill="#adb5bd">Non é un indicador de progreso: é un booleano sobre os datos.</text>
+
+  <!-- ===== B: no longer updated ===== -->
+  <text x="664" y="140" font-size="12" font-weight="600" fill="#495057">O órgano xa non se actualiza</text>
+  <rect x="664" y="152" width="576" height="230" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="664" y="150" width="576" height="230" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="696" y="182" width="512" height="80" rx="8" fill="#f8f9fa" stroke="#e9ecef"/>
+  <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="720" cy="208" r="9"/>
+    <line x1="720" y1="204" x2="720" y2="209"/>
+    <circle cx="720" cy="212.5" r="0.7" fill="#868e96" stroke="none"/>
+  </g>
+  <text x="740" y="212" font-size="13" font-weight="600" fill="#495057">Este órgano xa non se actualiza</text>
+  <text x="740" y="234" font-size="11.5" fill="#868e96">Os contratos xa importados seguen aquí e non se retira ningún,</text>
+  <text x="740" y="251" font-size="11.5" fill="#868e96">pero non se engadirán novos.</text>
+  <text x="696" y="292" font-size="11.5" fill="#868e96">Gris, non vermello: é inerte, non un erro — a mesma semántica que</text>
+  <text x="696" y="309" font-size="11.5" fill="#868e96">unha conta desactivada na área de administración.</text>
+  <text x="696" y="339" font-size="11.5" fill="#adb5bd">Di que estes datos xa non se refrescan. Non di que unha</text>
+  <text x="696" y="356" font-size="11.5" fill="#adb5bd">administradora desmarcase o órgano: iso segue sendo dela.</text>
+
+  <!-- ===== C: both at once ===== -->
+  <text x="40" y="424" font-size="12" font-weight="600" fill="#495057">As dúas á vez</text>
+  <rect x="40" y="436" width="576" height="230" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="434" width="576" height="230" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="72" y="466" width="512" height="64" rx="8" fill="#edf2ff" stroke="#dbe4ff"/>
+  <g stroke="#3b5bdb" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="96" cy="486" r="8"/>
+    <path d="M96 482 v5 l3 2"/>
+  </g>
+  <text x="114" y="490" font-size="12.5" font-weight="600" fill="#3b5bdb">Importación en curso</text>
+  <text x="114" y="510" font-size="11" fill="#495057">O que ves está incompleto.</text>
+  <rect x="72" y="542" width="512" height="64" rx="8" fill="#f8f9fa" stroke="#e9ecef"/>
+  <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="96" cy="562" r="8"/>
+    <line x1="96" y1="558" x2="96" y2="563"/>
+    <circle cx="96" cy="566.5" r="0.7" fill="#868e96" stroke="none"/>
+  </g>
+  <text x="114" y="566" font-size="12.5" font-weight="600" fill="#495057">Este órgano xa non se actualiza</text>
+  <text x="114" y="586" font-size="11" fill="#868e96">E non se engadirán novos contratos.</text>
+  <text x="72" y="632" font-size="11.5" fill="#868e96">Un órgano desmarcado a media importación inicial é as dúas cousas.</text>
+  <text x="72" y="649" font-size="11.5" fill="#868e96">Xuntalas nun só estado obrigaría a mentir xusto neste caso.</text>
+
+  <!-- ===== D: loading a page ===== -->
+  <text x="664" y="424" font-size="12" font-weight="600" fill="#495057">Cargando unha páxina</text>
+  <rect x="664" y="436" width="576" height="230" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="664" y="434" width="576" height="230" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="696" y="466" width="96" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="712" y="488" font-size="13" font-weight="500" fill="#212529">2025</text>
+  <path d="M766 480 l5 5 l5 -5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="804" y="466" width="260" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="820" y="488" font-size="12" font-weight="500" fill="#212529">Importe (maior primeiro)</text>
+  <path d="M1038 480 l5 5 l5 -5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="664" y1="520" x2="1240" y2="520" stroke="#f1f3f5"/>
+  <rect x="696" y="540" width="150" height="12" rx="6" fill="#f1f3f5"/>
+  <rect x="880" y="540" width="290" height="12" rx="6" fill="#f1f3f5"/>
+  <rect x="696" y="574" width="120" height="12" rx="6" fill="#f1f3f5"/>
+  <rect x="880" y="574" width="330" height="12" rx="6" fill="#f1f3f5"/>
+  <rect x="696" y="608" width="140" height="12" rx="6" fill="#f1f3f5"/>
+  <rect x="880" y="608" width="250" height="12" rx="6" fill="#f1f3f5"/>
+  <text x="696" y="641" font-size="11.5" fill="#adb5bd">Os controis non se moven: cambiar de páxina non cambia o reconto, o total</text>
+  <text x="696" y="658" font-size="11.5" fill="#adb5bd">de páxinas nin a orde. Só se move a xanela sobre a selección.</text>
+
+  <!-- ===== footnote ===== -->
+  <rect x="40" y="694" width="1200" height="78" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="60" y="720" font-size="12" font-weight="600" fill="#495057">Non hai estado baleiro, e non é un descoido</text>
+  <text x="60" y="742" font-size="11.5" fill="#868e96">O selector ofrece só anos nos que hai contratos visibles, así que ningunha escolla que un lector poida facer produce unha lista baleira. E se o órgano non ten ningún contrato</text>
+  <text x="60" y="759" font-size="11.5" fill="#868e96">visible desta familia non hai resumo, non hai lapela e esta sección non chega a montarse — nunca se debuxa unha sección baleira porque nunca se debuxa unha sección de máis.</text>
+</svg>

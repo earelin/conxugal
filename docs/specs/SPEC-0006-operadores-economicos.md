@@ -353,9 +353,17 @@ One decision has since been taken:
   there), a year here is **optional** and a section opens unfiltered. The bound that makes an
   unfiltered read acceptable there — one Órgano, one year — does not apply to a history that is
   already bounded to one operador, and an operador's whole record across the years is the view
-  this capability exists to give. Contracts whose publication date cannot be interpreted belong
-  to no year and are therefore visible in the unfiltered section and in none of the year
-  filters, which is how they stay reachable without a separate affordance.
+  this capability exists to give.
+
+  **A contract its own family's spec does not treat as visible is absent here too**, in the
+  unfiltered section as much as in every year filter. A contrato menor whose publication date
+  cannot be interpreted is exactly that case —
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R28 withholds it from browsing and
+  surfaces it to an administrator instead — so an operador reached only by such contracts has no
+  visible contract and is unreachable under R7, on the same rule that governs an operador whose
+  contracts have all been removed. An earlier form of this requirement made those contracts
+  reachable *here*, in the unfiltered section, which R28 now settles for the whole system rather
+  than one section at a time.
 - **R11** — Each **family section** of an operador's contract history, and the operadores list
   of R8, are **paginated**, under the same control
   [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R17 defines — first, previous,

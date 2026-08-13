@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="840" viewBox="0 0 1280 840" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <!-- ===== app background & AppShell frame ===== -->
+  <rect width="1280" height="840" fill="#f8f9fa"/>
+  <rect x="0" y="0" width="1280" height="60" fill="#ffffff"/>
+  <rect x="0" y="60" width="260" height="780" fill="#ffffff"/>
+  <line x1="0" y1="60" x2="1280" y2="60" stroke="#dee2e6" stroke-width="1"/>
+  <line x1="260" y1="60" x2="260" y2="840" stroke="#dee2e6" stroke-width="1"/>
+
+  <!-- ===== header ===== -->
+  <g transform="translate(24,12) scale(0.18)">
+    <rect x="0" y="0" width="200" height="200" rx="46" fill="#4c6ef5"/>
+    <path d="M 132 55 A 56 56 0 1 0 132 145" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+    <path d="M 112 100 L 176 100" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round"/>
+    <path d="M 156 80 L 178 100 L 156 120" fill="none" stroke="#fa5252" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="72" y="31" font-size="20" font-weight="700" fill="#212529">conxugal</text>
+  <text x="72" y="47" font-size="11" fill="#868e96">Contratos públicos da Xunta de Galicia</text>
+  <line x1="1148" y1="16" x2="1148" y2="44" stroke="#e9ecef" stroke-width="1"/>
+  <text x="1210" y="26" text-anchor="end" font-size="13" font-weight="500" fill="#495057">xoan.rivas@conxugal.gal</text>
+  <text x="1210" y="42" text-anchor="end" font-size="11" fill="#868e96">Usuario</text>
+  <circle cx="1236" cy="30" r="18" fill="#4c6ef5"/>
+  <text x="1236" y="30" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#ffffff">XR</text>
+
+  <!-- ===== navbar ===== -->
+  <text x="24" y="92" font-size="11" font-weight="600" letter-spacing="0.6" fill="#868e96">ÓRGANO</text>
+  <rect x="12" y="104" width="236" height="44" rx="8" fill="#ffffff" stroke="#4c6ef5" stroke-width="1.5"/>
+  <text x="28" y="131" font-size="13" font-weight="600" fill="#212529">Portos de Galicia</text>
+  <path d="M222 130 l6 -6 l6 6" stroke="#4c6ef5" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="12" y1="166" x2="248" y2="166" stroke="#f1f3f5"/>
+
+  <g transform="translate(0,84)">
+    <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M27 111 L37 102 L47 111 M29.5 108.5 V119 H44.5 V108.5" transform="translate(-3,-1)"/>
+    </g>
+    <text x="52" y="106" font-size="14" fill="#495057">Inicio</text>
+    <g stroke="#868e96" stroke-width="1.6" fill="none">
+      <circle cx="34" cy="149" r="8"/>
+      <line x1="34" y1="147" x2="34" y2="153" stroke-linecap="round"/>
+      <circle cx="34" cy="143.5" r="0.6" fill="#868e96" stroke="none"/>
+    </g>
+    <text x="52" y="154" font-size="14" fill="#495057">Acerca de</text>
+  </g>
+
+  <!-- ===== the page underneath (context only) ===== -->
+  <text x="284" y="112" font-size="26" font-weight="700" fill="#212529">Benvido/a a conxugal</text>
+  <text x="284" y="140" font-size="14" fill="#868e96">Explora, busca e analiza a información de contratos públicos da Xunta de Galicia publicada en contratosdegalicia.gal.</text>
+
+  <!-- ===== the picker dropdown: text typed, so the matches ===== -->
+  <rect x="12" y="161" width="400" height="298" rx="8" fill="#212529" opacity="0.08"/>
+  <rect x="12" y="158" width="400" height="298" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+
+  <!-- filter box, with a query -->
+  <rect x="28" y="174" width="368" height="38" rx="8" fill="#ffffff" stroke="#4c6ef5" stroke-width="1.5"/>
+  <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="48" cy="191" r="5.5"/>
+    <line x1="52" y1="195" x2="56" y2="199"/>
+  </g>
+  <text x="68" y="198" font-size="13" fill="#212529">deputacion</text>
+  <g stroke="#868e96" stroke-width="1.5" stroke-linecap="round">
+    <line x1="371" y1="187" x2="379" y2="195"/>
+    <line x1="379" y1="187" x2="371" y2="195"/>
+  </g>
+  <line x1="12" y1="228" x2="412" y2="228" stroke="#f1f3f5"/>
+
+  <!-- match 1 -->
+  <text x="32" y="250" font-size="14" fill="#212529"><tspan fill="#3b5bdb" font-weight="600">Deputación</tspan> Provincial da Coruña</text>
+  <text x="32" y="267" font-size="11.5" fill="#868e96">Deputacións provinciais</text>
+
+  <!-- match 2 -->
+  <text x="32" y="302" font-size="14" fill="#212529"><tspan fill="#3b5bdb" font-weight="600">Deputación</tspan> Provincial de Lugo</text>
+  <text x="32" y="319" font-size="11.5" fill="#868e96">Deputacións provinciais</text>
+
+  <!-- match 3: active -->
+  <text x="32" y="354" font-size="14" fill="#212529"><tspan fill="#3b5bdb" font-weight="600">Deputación</tspan> Provincial de Ourense</text>
+  <text x="32" y="371" font-size="11.5" fill="#868e96">Deputacións provinciais</text>
+
+  <!-- match 4: same name plus a trailing qualifier, inactive -->
+  <text x="32" y="406" font-size="14" fill="#adb5bd"><tspan fill="#748ffc" font-weight="600">Deputación</tspan> Provincial de Ourense - Turismo</text>
+  <rect x="32" y="415" width="74" height="18" rx="9" fill="#f1f3f5"/>
+  <text x="69" y="424" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" letter-spacing="0.4" fill="#868e96">INACTIVO</text>
+  <text x="116" y="428" font-size="11.5" fill="#868e96">Sen clasificar</text>
+
+  <!-- ===== annotations ===== -->
+  <g stroke="#ced4da" stroke-width="1.2" fill="none" stroke-dasharray="5 4">
+    <path d="M460 230 H436 V193 H412"/>
+    <path d="M460 336 H436 V250 H412"/>
+    <path d="M460 442 H436 V420 H412"/>
+  </g>
+
+  <rect x="460" y="186" width="580" height="88" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="478" y="210" font-size="12" font-weight="600" fill="#495057">A busca é do cliente, sobre a mesma lista (R19)</text>
+  <text x="478" y="231" font-size="11.5" fill="#868e96">Filtra en memoria a lista coa que se constrúe a árbore: sen petición por</text>
+  <text x="478" y="248" font-size="11.5" fill="#868e96">tecla, sen endpoint de busca e sen unha segunda definición de «coincide»</text>
+  <text x="478" y="265" font-size="11.5" fill="#868e96">que poida discrepar do que a árbore amosa (#26).</text>
+
+  <rect x="460" y="292" width="580" height="88" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="478" y="316" font-size="12" font-weight="600" fill="#495057">Parcial, sen distinguir maiúsculas nin acentos (#25)</text>
+  <text x="478" y="337" font-size="11.5" fill="#868e96">«deputacion» atopa «Deputación»: a comparación descompón e retira os</text>
+  <text x="478" y="354" font-size="11.5" fill="#868e96">diacríticos dos dous lados. Un toLowerCase().includes() fallaría</text>
+  <text x="478" y="371" font-size="11.5" fill="#868e96">precisamente con quen coñece o nome, e este catálogo vai cheo de acentos.</text>
+
+  <rect x="460" y="398" width="580" height="88" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="478" y="422" font-size="12" font-weight="600" fill="#495057">Cada coincidencia di se o órgano está inactivo (#23)</text>
+  <text x="478" y="443" font-size="11.5" fill="#868e96">Órganos que só se diferencian nun cualificador final son habituais aquí, así</text>
+  <text x="478" y="460" font-size="11.5" fill="#868e96">que a marca é o que permite distinguilos. Inactivo é un feito sobre a lista de</text>
+  <text x="478" y="477" font-size="11.5" fill="#868e96">orixe, non sobre se hai algo que ver: segue sendo escollible.</text>
+
+  <!-- ===== inset: the no-matches state ===== -->
+  <rect x="460" y="510" width="580" height="264" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="478" y="536" font-size="12" font-weight="600" fill="#495057">Estado: ningunha coincidencia (#24)</text>
+  <text x="478" y="557" font-size="11.5" fill="#868e96">Non é unha pantalla á parte, é o mesmo control cunha consulta que non atopa nada.</text>
+
+  <rect x="478" y="576" width="340" height="150" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="494" y="592" width="308" height="34" rx="8" fill="#ffffff" stroke="#4c6ef5" stroke-width="1.5"/>
+  <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="512" cy="607" r="5"/>
+    <line x1="515.5" y1="610.5" x2="519" y2="614"/>
+  </g>
+  <text x="530" y="613" font-size="13" fill="#212529">sanidde</text>
+  <g stroke="#868e96" stroke-width="1.5" stroke-linecap="round">
+    <line x1="777" y1="604" x2="785" y2="612"/>
+    <line x1="785" y1="604" x2="777" y2="612"/>
+  </g>
+  <line x1="478" y1="642" x2="818" y2="642" stroke="#f1f3f5"/>
+  <text x="498" y="672" font-size="13" fill="#495057">Ningún órgano coincide con «sanidde».</text>
+  <text x="498" y="692" font-size="11.5" fill="#868e96">Revisa a busca ou baléiraa para ver a árbore completa.</text>
+
+  <text x="846" y="600" font-size="11.5" fill="#868e96">Un filtro sen escribir e un filtro que non atopa</text>
+  <text x="846" y="617" font-size="11.5" fill="#868e96">nada non poden renderizar igual: o primeiro</text>
+  <text x="846" y="634" font-size="11.5" fill="#868e96">amosa a árbore, o segundo dío coas súas</text>
+  <text x="846" y="651" font-size="11.5" fill="#868e96">palabras.</text>
+  <text x="846" y="683" font-size="11.5" fill="#868e96">Ningún dos dous cae nunca a unha listaxe</text>
+  <text x="846" y="700" font-size="11.5" fill="#868e96">plana do catálogo.</text>
+</svg>

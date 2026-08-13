@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <rect width="1280" height="800" fill="#f8f9fa"/>
+
+  <text x="80" y="60" font-size="22" font-weight="700" fill="#212529">Anatomía dunha fila</text>
+  <text x="80" y="84" font-size="13" fill="#868e96">Un contrato menor non ten vista de detalle, así que a fila leva todo o que o sistema garda del. Nada se trunca, se corrixe nin se reformata.</text>
+
+  <!-- ===== the row, at scale ===== -->
+  <rect x="80" y="114" width="1120" height="180" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="80" y="112" width="1120" height="180" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+
+  <path d="M80 120 a8 8 0 0 1 8 -8 h1104 a8 8 0 0 1 8 8 v44 h-1120 z" fill="#f8f9fa"/>
+  <line x1="80" y1="164" x2="1200" y2="164" stroke="#e9ecef"/>
+  <text x="104" y="143" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">DATA</text>
+  <text x="250" y="143" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">OBXECTO</text>
+  <text x="650" y="143" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">ADXUDICATARIO</text>
+  <text x="1010" y="135" text-anchor="end" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">IMPORTE</text>
+  <text x="1010" y="151" text-anchor="end" font-size="10" font-weight="600" letter-spacing="0.4" fill="#adb5bd">IVE INCLUÍDO</text>
+  <text x="1030" y="143" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">DURACIÓN</text>
+  <text x="1176" y="143" text-anchor="end" font-size="11" font-weight="600" letter-spacing="0.5" fill="#868e96">FONTE</text>
+
+  <text x="104" y="202" font-size="15" font-weight="500" fill="#212529">12 mar 2025</text>
+  <text x="104" y="226" font-size="12.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#adb5bd">2025/0184621</text>
+  <text x="250" y="202" font-size="15" fill="#212529">Subministración de material funxible de laboratorio</text>
+  <text x="250" y="226" font-size="15" fill="#212529">para o Hospital de Santiago</text>
+  <text x="650" y="202" font-size="15" fill="#212529">CLINILAB GALICIA, S.L.</text>
+  <text x="650" y="226" font-size="12.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#868e96">ESB15234567</text>
+  <text x="1010" y="206" text-anchor="end" font-size="15.5" font-weight="600" fill="#212529">12.480,00 €</text>
+  <text x="1030" y="206" font-size="15" fill="#495057">12 meses</text>
+  <g stroke="#4c6ef5" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1168 197 h-9 v16 h16 v-9 M1170 195 h7 v7 M1177 195 l-9 9"/>
+  </g>
+
+  <!-- markers -->
+  <circle cx="212" cy="197" r="9" fill="#4c6ef5"/>
+  <text x="212" y="197" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">1</text>
+  <circle cx="212" cy="223" r="9" fill="#4c6ef5"/>
+  <text x="212" y="223" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">2</text>
+  <circle cx="259" cy="258" r="9" fill="#4c6ef5"/>
+  <text x="259" y="258" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">3</text>
+  <circle cx="659" cy="258" r="9" fill="#4c6ef5"/>
+  <text x="659" y="258" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">4</text>
+  <circle cx="1000" cy="258" r="9" fill="#4c6ef5"/>
+  <text x="1000" y="258" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">5</text>
+  <circle cx="1044" cy="258" r="9" fill="#4c6ef5"/>
+  <text x="1044" y="258" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">6</text>
+  <circle cx="1167" cy="258" r="9" fill="#4c6ef5"/>
+  <text x="1167" y="258" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">7</text>
+
+  <!-- ===== legend, left column ===== -->
+  <circle cx="89" cy="334" r="9" fill="#4c6ef5"/>
+  <text x="89" y="334" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">1</text>
+  <text x="108" y="338" font-size="13" font-weight="600" fill="#212529">Data de publicación</text>
+  <text x="108" y="360" font-size="11.5" fill="#868e96">Nunca ausente. Un contrato sen data está retido por R28, así que non hai</text>
+  <text x="108" y="377" font-size="11.5" fill="#868e96">ningunha regra que escribir para un valor que falta: nin cero, nin marcador,</text>
+  <text x="108" y="394" font-size="11.5" fill="#868e96">nin raia. Simplemente non pode ocorrer.</text>
+
+  <circle cx="89" cy="428" r="9" fill="#4c6ef5"/>
+  <text x="89" y="428" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">2</text>
+  <text x="108" y="432" font-size="13" font-weight="600" fill="#212529">Identificador do orixe</text>
+  <text x="108" y="454" font-size="11.5" fill="#868e96">O identificador do contrato tal e como o publica a fonte. É tamén o desempate</text>
+  <text x="108" y="471" font-size="11.5" fill="#868e96">de toda ordenación — único no almacén — que fai que a orde sexa total e que</text>
+  <text x="108" y="488" font-size="11.5" fill="#868e96">paxinar signifique algo.</text>
+
+  <circle cx="89" cy="522" r="9" fill="#4c6ef5"/>
+  <text x="89" y="522" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">3</text>
+  <text x="108" y="526" font-size="13" font-weight="600" fill="#212529">Obxecto</text>
+  <text x="108" y="548" font-size="11.5" fill="#868e96">Tal e como se publica: sen truncar, sen cambiar maiúsculas e sen reformatar.</text>
+  <text x="108" y="565" font-size="11.5" fill="#868e96">Un obxecto longo envolve. A calidade do texto da fonte varía moito — ás veces</text>
+  <text x="108" y="582" font-size="11.5" fill="#868e96">é unha categoría orzamentaria — e R27 prohibe melloralo.</text>
+
+  <circle cx="89" cy="616" r="9" fill="#4c6ef5"/>
+  <text x="89" y="616" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">4</text>
+  <text x="108" y="620" font-size="13" font-weight="600" fill="#212529">Adxudicatario</text>
+  <text x="108" y="642" font-size="11.5" fill="#868e96">O nome que SPEC-0006 R4 selecciona e o identificador fiscal canónico que R3</text>
+  <text x="108" y="659" font-size="11.5" fill="#868e96">garda. Texto, non ligazón: a ruta do operador aínda non existe e unha ligazón</text>
+  <text x="108" y="676" font-size="11.5" fill="#868e96">que dá 404 é peor que ningunha. Nunca ausente, pola mesma razón que a data.</text>
+
+  <!-- ===== legend, right column ===== -->
+  <circle cx="669" cy="334" r="9" fill="#4c6ef5"/>
+  <text x="669" y="334" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">5</text>
+  <text x="688" y="338" font-size="13" font-weight="600" fill="#212529">Importe</text>
+  <text x="688" y="360" font-size="11.5" fill="#868e96">Con IVE incluído, e etiquetado como tal aquí e en calquera total derivado del.</text>
+  <text x="688" y="377" font-size="11.5" fill="#868e96">Os limiares legais que definen un contrato menor son sen IVE, así que unha</text>
+  <text x="688" y="394" font-size="11.5" fill="#868e96">cifra sen etiquetar convida xusto á comparación equivocada.</text>
+
+  <circle cx="669" cy="428" r="9" fill="#4c6ef5"/>
+  <text x="669" y="428" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">6</text>
+  <text x="688" y="432" font-size="13" font-weight="600" fill="#212529">Duración</text>
+  <text x="688" y="454" font-size="11.5" fill="#868e96">Marcada como pouco fiable na columna enteira, non só nas filas que</text>
+  <text x="688" y="471" font-size="11.5" fill="#868e96">poderiamos detectar: a fonte publica a miúdo un valor por defecto do órgano</text>
+  <text x="688" y="488" font-size="11.5" fill="#868e96">no canto do prazo do contrato.</text>
+
+  <circle cx="669" cy="522" r="9" fill="#4c6ef5"/>
+  <text x="669" y="522" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="700" fill="#ffffff">7</text>
+  <text x="688" y="526" font-size="13" font-weight="600" fill="#212529">Fonte</text>
+  <text x="688" y="548" font-size="11.5" fill="#868e96">Ligazón absoluta á publicación oficial, composta no servidor a partir do</text>
+  <text x="688" y="565" font-size="11.5" fill="#868e96">identificador. A forma da URL e o servidor viven na configuración, nun só sitio</text>
+  <text x="688" y="582" font-size="11.5" fill="#868e96">onde as probas as poden afirmar, e non no navegador.</text>
+
+  <rect x="660" y="600" width="540" height="92" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="678" y="624" font-size="12" font-weight="600" fill="#495057">O que a fila non di</text>
+  <text x="678" y="646" font-size="11.5" fill="#868e96">Ningún campo indica o órgano adxudicador: toda fila desta lista pertence ao</text>
+  <text x="678" y="663" font-size="11.5" fill="#868e96">órgano que xa está aberto, así que dicilo sería repetilo en cada fila. O terceiro</text>
+  <text x="678" y="680" font-size="11.5" fill="#868e96">percorrido de R14 pídeo, e próbase onde hai filas de varios órganos.</text>
+
+  <!-- ===== footnote ===== -->
+  <rect x="80" y="708" width="1120" height="62" rx="8" fill="#ffffff" stroke="#ced4da" stroke-dasharray="5 4"/>
+  <text x="100" y="734" font-size="11.5" fill="#868e96">Dúas ausencias que un lector notará, ambas deliberadas: non hai filtro de CPV nin busca libre sobre o obxecto. Non están agochadas, non están desactivadas e non</text>
+  <text x="100" y="751" font-size="11.5" fill="#868e96">se anuncian como próximas — simplemente non existe ningún control. A fonte non publica CPV para esta familia, e as outras dúas son ocos que a especificación rexistra.</text>
+</svg>
