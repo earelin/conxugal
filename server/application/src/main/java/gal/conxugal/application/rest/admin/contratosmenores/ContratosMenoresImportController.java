@@ -1,6 +1,7 @@
 package gal.conxugal.application.rest.admin.contratosmenores;
 
 import gal.conxugal.application.contrato.StartContratosMenoresImport;
+import gal.conxugal.application.rest.admin.importruns.ImportRunLocation;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.organo.OrganoId;
 import io.micronaut.http.HttpResponse;
@@ -8,7 +9,6 @@ import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.PathVariable;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.security.annotation.Secured;
-import java.net.URI;
 import java.util.UUID;
 
 /**
@@ -53,7 +53,7 @@ class ContratosMenoresImportController {
    */
   private static HttpResponse<ImportRunStartedResponse> accepted(ImportRunId runId) {
     return HttpResponse
-        .accepted(URI.create("/api/admin/import-run/%s".formatted(runId)))
+        .accepted(ImportRunLocation.of(runId))
         .body(new ImportRunStartedResponse(runId.value()));
   }
 }

@@ -18,7 +18,7 @@ import java.util.UUID;
  * Nothing here re-derives it: a second reader applying that rule could disagree with the guard
  * about whether an import may start, which is the one question the rule exists to settle.
  */
-@Controller("/api/admin/import-run")
+@Controller(ImportRunLocation.PATH)
 @Secured("ADMIN")
 class ImportRunController {
 
