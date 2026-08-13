@@ -9,16 +9,19 @@ info:
     `/login` form (ADR-0005, outside this JSON API) and carried by a session cookie. Most
     operations are restricted to administrators; the exceptions are `GET /api/me` and the two
     Órganos reads (`GET /api/organos` and `GET /api/organos/taxonomia`), available to any
-    authenticated user.
+    authenticated user. `GET /api/organos` serves the **visible set** — the Órganos holding at
+    least one visible contract — to every caller alike; the **whole** catalogue is an
+    administration read, `GET /api/admin/organos`.
 
     This document is the design-first, authoritative contract for the API (ADR-0010): endpoints
     are specified here before they are implemented, and controllers conform to it. It currently
     covers the planned endpoints of FEAT-0004 (user administration, system status, and the
     current-user lookup), FEAT-0005 (real-time metrics), FEAT-0006 (the Órganos de Contratación
     catalogue import trigger), FEAT-0007 (the Órganos catalogue and taxonomía reads, and the
-    administration of the taxonomía and of each Órgano's placement in it), and FEAT-0009 (the
+    administration of the taxonomía and of each Órgano's placement in it), FEAT-0009 (the
     contratos menores import mark and the administrator's catalogue read that carries it, the
-    two import triggers, and the read that reports what a run amounted to).
+    two import triggers, and the read that reports what a run amounted to), and FEAT-0012 (the
+    narrowing of the shared catalogue read to the visible set).
 
 servers:
   - url: /
@@ -1061,21 +1064,28 @@ paths:
     get:
       tags: [organos]
       operationId: listOrganos
-      summary: List the whole Órganos de Contratación catalogue
+      summary: List the Órganos that hold at least one visible contract
       description: >-
-        Every stored Órgano — active and inactive alike — with its name and the term it is filed
-        under, or null when it is unclassified. Available to any authenticated user, `USER` or
-        `ADMIN`: reading the catalogue is not an administration capability. Unfiltered and
-        unpaged, and it takes no query parameters. Callers join this list to `GET
-        /api/organos/taxonomia` on `termoId` = term `id` to build the tree, and filter `termoId` =
-        null for the unclassified set.
+        The **visible set**: every stored Órgano — active and inactive alike — holding at least one
+        visible contract, of **any** contract family, with its name and the term it is filed under,
+        or null when it is unclassified. An Órgano holding none is **not returned at all**, rather
+        than returned for a client to hide. Available to any authenticated user, `USER` or `ADMIN`,
+        and the narrowing applies to **every** caller: it is this path's scoping, not the caller's,
+        so an `ADMIN` reading here receives exactly what a `USER` does. **The whole catalogue is
+        served by `GET /api/admin/organos`**, which is where an administrator's management surfaces
+        read it from. Unfiltered and unpaged, and it takes no query parameters. Callers join this
+        list to `GET /api/organos/taxonomia` on `termoId` = term `id` to build the tree, and filter
+        `termoId` = null for the unclassified set.
       responses:
         "200":
           description: >-
-            The whole catalogue, **ordered by name** under a Galician collation, so accented names
+            The visible set, **ordered by name** under a Galician collation, so accented names
             sort where a Galician reader expects them (`Ávila` before `Avión`, not after
-            `Zamora`). The order is a guarantee callers may rely on and need not re-derive. Empty
-            only when nothing has been imported yet.
+            `Zamora`). The order is a guarantee callers may rely on and need not re-derive.
+            Membership is derived on every read and nothing records it: an Órgano appears as soon
+            as its first visible contract is stored and stops appearing when its last one goes,
+            with no administrator action either way. Empty when nothing visible has been imported
+            yet.
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"

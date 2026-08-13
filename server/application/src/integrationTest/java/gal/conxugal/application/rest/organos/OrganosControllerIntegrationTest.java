@@ -6,9 +6,10 @@ import static org.mockito.Mockito.when;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
-import gal.conxugal.domain.organo.ListOrganos;
+import gal.conxugal.domain.organo.ListVisibleOrganos;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
+import gal.conxugal.domain.organo.OrganosWithVisibleContracts;
 import gal.conxugal.domain.organo.taxonomia.ListTermos;
 import gal.conxugal.domain.organo.taxonomia.Termo;
 import gal.conxugal.domain.organo.taxonomia.TermoId;
@@ -27,7 +28,10 @@ import org.junit.jupiter.api.Test;
 // Every stub below is deliberately handed to the controller out of name order, so what is
 // asserted is that it serves the list verbatim. The order itself is the repository's, under
 // the Galician collation Jdbc{Organo,Termo}RepositoryIntegrationTest asserts against a real
-// database — this suite mocks its domain collaborators and never reaches one.
+// database — this suite mocks its domain collaborators and never reaches one. Which Órganos
+// make up the visible set is settled the same way: ListVisibleOrganosTest and
+// JdbcContratoMenorVisibleOrganosIntegrationTest own the predicate, and what is asserted here is
+// that this path serves that use case rather than the whole catalogue.
 @MicronautTest
 class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
@@ -35,14 +39,22 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
   private static final TermoId HOSPITAIS = new TermoId(UUID.randomUUID());
 
   @Inject
-  ListOrganos listOrganos;
+  ListVisibleOrganos listVisibleOrganos;
 
   @Inject
   ListTermos listTermos;
 
-  @MockBean(ListOrganos.class)
-  ListOrganos listOrganosMock() {
-    return mock(ListOrganos.class);
+  @MockBean(ListVisibleOrganos.class)
+  ListVisibleOrganos listVisibleOrganosMock() {
+    return mock(ListVisibleOrganos.class);
+  }
+
+  // Mocking a concrete use case still has Micronaut resolve the real constructor's arguments, and
+  // this one asks for every contract family — which in this suite means the JDBC adapter, in a
+  // context with no datasource. The port is stubbed too, so nothing here reaches for one.
+  @MockBean(OrganosWithVisibleContracts.class)
+  OrganosWithVisibleContracts organosWithVisibleContractsMock() {
+    return mock(OrganosWithVisibleContracts.class);
   }
 
   @MockBean(ListTermos.class)
@@ -51,10 +63,11 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
   }
 
   @Test
-  void user_reads_every_organo_with_its_name_state_and_placement(RequestSpecification spec) {
+  void user_reads_the_visible_set_with_each_organos_name_state_and_placement(
+      RequestSpecification spec) {
     OrganoId marId = new OrganoId(UUID.randomUUID());
     OrganoId sanidadeId = new OrganoId(UUID.randomUUID());
-    when(listOrganos.list()).thenReturn(
+    when(listVisibleOrganos.list()).thenReturn(
         List.of(
             new OrganoDeContratacion(marId, "mar", "Consellería do Mar", false, false, null),
             new OrganoDeContratacion(sanidadeId, "sanidade", "Consellería de Sanidade", true,
@@ -82,13 +95,24 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
   // suite would fail.
   @Test
   void catalogue_read_withholds_the_import_mark_from_users(RequestSpecification spec) {
-    when(listOrganos.list()).thenReturn(
+    when(listVisibleOrganos.list()).thenReturn(
         List.of(new OrganoDeContratacion(new OrganoId(UUID.randomUUID()), "mar",
             "Consellería do Mar", true, true, null)));
 
     Response response = readAs(spec, TestUserFactory.normalUser(), "/api/organos");
 
     assertThat(response.jsonPath().getMap("[0]")).doesNotContainKey("importable");
+  }
+
+  // Nothing imported yet, or nothing complete enough to show, is an empty body rather than a
+  // fallback to the catalogue — the narrowing has no degenerate case that widens back out.
+  @Test
+  void serves_an_empty_body_when_no_organo_holds_any_visible_contract(RequestSpecification spec) {
+    when(listVisibleOrganos.list()).thenReturn(List.of());
+
+    Response response = readAs(spec, TestUserFactory.normalUser(), "/api/organos");
+
+    assertThat(response.jsonPath().getList("$")).isEmpty();
   }
 
   @Test
@@ -111,7 +135,7 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   @Test
   void admin_reads_both_lists_too(RequestSpecification spec) {
-    when(listOrganos.list()).thenReturn(
+    when(listVisibleOrganos.list()).thenReturn(
         List.of(new OrganoDeContratacion(new OrganoId(UUID.randomUUID()), "sanidade",
             "Consellería de Sanidade", true, false, SANIDADE)));
     when(listTermos.list()).thenReturn(List.of(new Termo(SANIDADE, "Sanidade", null)));
@@ -124,9 +148,24 @@ class OrganosControllerIntegrationTest extends AuthenticationTestSupport {
         .containsExactly("Sanidade");
   }
 
+  // The narrowing is this path's, not the caller's: an ADMIN gets no more here than a USER does,
+  // and reaches the whole catalogue through GET /api/admin/organos instead. A role check on this
+  // endpoint would give one path two meanings, and this is what would fail if one were added.
   @Test
-  void empty_taxonomia_leaves_the_whole_catalogue_unclassified(RequestSpecification spec) {
-    when(listOrganos.list()).thenReturn(
+  void admin_and_user_read_the_same_visible_set(RequestSpecification spec) {
+    when(listVisibleOrganos.list()).thenReturn(
+        List.of(new OrganoDeContratacion(new OrganoId(UUID.randomUUID()), "sanidade",
+            "Consellería de Sanidade", true, false, SANIDADE)));
+
+    Response asUser = readAs(spec, TestUserFactory.normalUser(), "/api/organos");
+    Response asAdmin = readAs(spec, TestUserFactory.adminUser(), "/api/organos");
+
+    assertThat(asAdmin.asString()).isEqualTo(asUser.asString());
+  }
+
+  @Test
+  void empty_taxonomia_leaves_the_whole_visible_set_unclassified(RequestSpecification spec) {
+    when(listVisibleOrganos.list()).thenReturn(
         List.of(
             new OrganoDeContratacion(new OrganoId(UUID.randomUUID()), "mar", "Consellería do Mar",
                 true, false, null),

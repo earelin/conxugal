@@ -8,6 +8,8 @@ import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.OperadorId;
 import gal.conxugal.domain.organo.OrganoId;
+import gal.conxugal.domain.organo.OrganosWithVisibleContracts;
+import io.micronaut.data.annotation.Query;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
@@ -24,7 +26,9 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -53,10 +57,19 @@ import org.jspecify.annotations.Nullable;
  * operador the corrected identifier names. Leaving it out of the update would let a conflicting row
  * keep an awardee its publication no longer names, silently and for good — the caller resolves the
  * awardee on every upsert precisely so that it does not.
+ *
+ * <p>It is also this family's answer to <em>which Órganos hold a visible contract</em>. Visible
+ * means complete, and complete means all three of a publication date, an amount and an awardee:
+ * without a date there is no year's list the contract could appear in, without an amount it
+ * answers none of the questions a reader is here to ask, and without an awardee it names nobody it
+ * was awarded to. A contract missing any one of them is stored as an anomaly and places its
+ * Órgano in nobody's visible set.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public abstract class JdbcContratoMenorRepository
-    implements ContratoMenorRepository, GenericRepository<ContratoMenor, ContratoMenorId> {
+    implements ContratoMenorRepository,
+        OrganosWithVisibleContracts,
+        GenericRepository<ContratoMenor, ContratoMenorId> {
 
   private static final String UPSERT_SQL =
       """
@@ -96,6 +109,41 @@ public abstract class JdbcContratoMenorRepository
 
   @Override
   public abstract long countByOrganoId(OrganoId organoId);
+
+  /**
+   * An empty candidate set short-circuits rather than reaching the database, where it would
+   * expand to an {@code IN ()} no dialect accepts.
+   */
+  @Override
+  public Set<OrganoId> among(Collection<OrganoId> candidates) {
+    if (candidates.isEmpty()) {
+      return Set.of();
+    }
+    return findOrganoIdsWithVisibleContratos(candidates.stream().map(OrganoId::value).toList())
+        .stream()
+        .map(OrganoId::new)
+        .collect(Collectors.toUnmodifiableSet());
+  }
+
+  /**
+   * The three null checks are the visibility rule itself, so they are stated here rather than
+   * inherited from an index: the browsing reads scope every selection to a year and get the date
+   * check for free, and this one has no year. It runs on
+   * {@code contrato_menor_organo_id_publication_date_idx}, which leads with the column it filters.
+   *
+   * <p>Identifiers travel as bare {@code UUID}s across this one call because a projected column is
+   * not an entity property, which is where Micronaut Data applies a type converter; {@link #among}
+   * is the typed boundary, and it is two lines away.
+   */
+  @Query(
+      """
+      SELECT DISTINCT organo_id FROM contrato_menor
+      WHERE organo_id IN (:candidates)
+        AND publication_date IS NOT NULL
+        AND amount IS NOT NULL
+        AND operador_economico_id IS NOT NULL
+      """)
+  protected abstract List<UUID> findOrganoIdsWithVisibleContratos(Collection<UUID> candidates);
 
   private static List<ContratoMenor> lastReadingPerSourceId(Collection<ContratoMenor> contratos) {
     Map<Long, ContratoMenor> bySourceId = new LinkedHashMap<>();
