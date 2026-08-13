@@ -88,17 +88,15 @@ public abstract class JdbcContratoMenorRepository
       """;
 
   /**
-   * A semi-join driven from the candidates rather than from the contracts, so the planner is free
-   * to answer each one from an index and stop at its first visible contract. It takes that freedom:
-   * measured over 300k contracts spread across the catalogue, this plans as a nested-loop semi-join
-   * reading exactly one row per candidate, where
-   * {@code SELECT DISTINCT organo_id ... WHERE organo_id IN (...)} sequentially scanned all 300k to
-   * answer a question about a few hundred — 4.5ms against 33ms, on a quarter of the buffers.
+   * A semi-join driven from the candidates rather than from the contracts, which leaves the planner
+   * free to answer each one from an index and stop at its first visible contract. Its predecessor,
+   * {@code SELECT DISTINCT organo_id ... WHERE organo_id IN (...)}, could not: an aggregate has to
+   * read every qualifying row in a table headed for millions to answer a question about a few
+   * hundred Órganos.
    *
-   * <p><strong>The shape is the planner's choice, not this statement's guarantee.</strong> Against
-   * a catalogue where almost every candidate holds nothing it hash-joins instead, reading the table
-   * once — the same work the aggregate always did, and no worse. What this form removes is the
-   * floor: the aggregate could never do better than a full scan, whatever the data looked like.
+   * <p><strong>The shape is the planner's choice, not this statement's guarantee.</strong> Where
+   * almost no candidate holds anything it hash-joins instead and reads the table once — the work
+   * the aggregate always did, and no worse. What this form removes is the floor, not the ceiling.
    *
    * <p>The candidates arrive as one {@code uuid[]} for the same reason the upsert's rows do: one
    * prepared form whatever the catalogue's size, rather than a statement whose placeholder count —
