@@ -51,7 +51,7 @@ export function useTaxonomia({ enabled = true }: ReadOptions = {}) {
 }
 
 export interface VisibleOrganos {
-  /** The joined view; null unless *both* reads are currently succeeding. */
+  /** The joined view; null until *both* reads have answered at least once. */
   view: TaxonomiaView | null;
   isPending: boolean;
   /** Whether either read is in flight, including a retry of a failed one. */
