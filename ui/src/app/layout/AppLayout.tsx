@@ -63,15 +63,11 @@ export function AppLayout() {
         </Group>
       </AppShell.Header>
 
-      {/* A div, not the `nav` Mantine defaults the navbar to: the panel holds
-          the picker as well as the links, and two nested navigation landmarks
-          — the outer one wrapping a control that is not navigation — is not
-          what a screen reader should be offered. The labelled `nav` below is
-          the only one. */}
+      {/* A div, not the `nav` Mantine defaults the navbar to. The panel holds
+          the Órgano picker as well as the links, and the picker is chrome
+          rather than navigation — so the labelled `nav` below is the only
+          landmark, instead of a second one wrapping both. */}
       <AppShell.Navbar component="div" p="md">
-        {/* Not a nav item and not a link: the picker is chrome that opens an
-            Órgano's contracts, so it sits above the navigation landmark rather
-            than inside it. */}
         {currentUser && (
           <>
             <OrganoPicker
