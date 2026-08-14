@@ -11,8 +11,12 @@ import org.junit.jupiter.api.Test;
 
 class VisibleContratoMenorTest {
 
+  private static final long SOURCE_ID = 42L;
   private static final LocalDate PUBLISHED_ON = LocalDate.of(2025, 3, 14);
+  private static final String OBXECTO = "Subministro";
   private static final Money AMOUNT = new Money(new BigDecimal("3630.00"));
+  private static final String DURATION = "12 meses";
+  private static final String AWARDEE_NAME = "Acme SL";
   private static final FiscalIdentifier AWARDEE_FISCAL_ID = new FiscalIdentifier("B12345678");
 
   @Test
@@ -21,7 +25,7 @@ class VisibleContratoMenorTest {
         .isThrownBy(
             () ->
                 new VisibleContratoMenor(
-                    42L, null, "Subministro", AMOUNT, "12 meses", "Acme SL", AWARDEE_FISCAL_ID));
+                    SOURCE_ID, null, OBXECTO, AMOUNT, DURATION, AWARDEE_NAME, AWARDEE_FISCAL_ID));
   }
 
   @Test
@@ -30,12 +34,12 @@ class VisibleContratoMenorTest {
         .isThrownBy(
             () ->
                 new VisibleContratoMenor(
-                    42L,
+                    SOURCE_ID,
                     PUBLISHED_ON,
-                    "Subministro",
+                    OBXECTO,
                     null,
-                    "12 meses",
-                    "Acme SL",
+                    DURATION,
+                    AWARDEE_NAME,
                     AWARDEE_FISCAL_ID));
   }
 
@@ -45,13 +49,7 @@ class VisibleContratoMenorTest {
         .isThrownBy(
             () ->
                 new VisibleContratoMenor(
-                    42L,
-                    PUBLISHED_ON,
-                    "Subministro",
-                    AMOUNT,
-                    "12 meses",
-                    null,
-                    AWARDEE_FISCAL_ID));
+                    SOURCE_ID, PUBLISHED_ON, OBXECTO, AMOUNT, DURATION, null, AWARDEE_FISCAL_ID));
   }
 
   @Test
@@ -60,14 +58,14 @@ class VisibleContratoMenorTest {
         .isThrownBy(
             () ->
                 new VisibleContratoMenor(
-                    42L, PUBLISHED_ON, "Subministro", AMOUNT, "12 meses", "Acme SL", null));
+                    SOURCE_ID, PUBLISHED_ON, OBXECTO, AMOUNT, DURATION, AWARDEE_NAME, null));
   }
 
   @Test
   void permits_the_two_values_the_source_genuinely_leaves_unpublished() {
     VisibleContratoMenor contrato =
         new VisibleContratoMenor(
-            42L, PUBLISHED_ON, null, AMOUNT, null, "Acme SL", AWARDEE_FISCAL_ID);
+            SOURCE_ID, PUBLISHED_ON, null, AMOUNT, null, AWARDEE_NAME, AWARDEE_FISCAL_ID);
 
     assertThat(contrato.obxecto())
         .isNull();
@@ -79,7 +77,7 @@ class VisibleContratoMenorTest {
   void carries_every_value_exactly_as_it_was_handed_them() {
     VisibleContratoMenor contrato =
         new VisibleContratoMenor(
-            42L, PUBLISHED_ON, "Subministro", AMOUNT, "12 meses", "Acme SL", AWARDEE_FISCAL_ID);
+            SOURCE_ID, PUBLISHED_ON, OBXECTO, AMOUNT, DURATION, AWARDEE_NAME, AWARDEE_FISCAL_ID);
 
     assertThat(contrato)
         .extracting(
@@ -91,6 +89,6 @@ class VisibleContratoMenorTest {
             VisibleContratoMenor::awardeeName,
             VisibleContratoMenor::awardeeFiscalId)
         .containsExactly(
-            42L, PUBLISHED_ON, "Subministro", AMOUNT, "12 meses", "Acme SL", AWARDEE_FISCAL_ID);
+            SOURCE_ID, PUBLISHED_ON, OBXECTO, AMOUNT, DURATION, AWARDEE_NAME, AWARDEE_FISCAL_ID);
   }
 }
