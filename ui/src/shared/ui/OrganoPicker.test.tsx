@@ -88,8 +88,9 @@ function trigger(name: string = copy.placeholder) {
 async function openPicker(options: RenderOptions = {}) {
   const utils = renderPicker(options);
   const user = userEvent.setup();
-  const open = options.path === undefined ? undefined : openOrganoName(options.path);
-  await user.click(trigger(open));
+  // The closed control holds one button, and its accessible name depends on
+  // which Órgano is open — so reach it by role rather than restating the name.
+  await user.click(screen.getByRole('button'));
   return { ...utils, user };
 }
 
@@ -104,11 +105,6 @@ function treeRow(tree: HTMLElement, label: string): HTMLElement {
     throw new Error(`No tree row labelled ${label}`);
   }
   return row;
-}
-
-function openOrganoName(path: string): string {
-  const id = path.split('/')[2];
-  return VIEW.catalogue.find((entry) => entry.id === id)?.name ?? copy.placeholder;
 }
 
 describe('OrganoPicker closed', () => {
