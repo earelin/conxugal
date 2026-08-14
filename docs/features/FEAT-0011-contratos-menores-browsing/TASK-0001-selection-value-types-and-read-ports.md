@@ -2,7 +2,7 @@
 feat: FEAT-0011
 domain: backend
 adrs: [0002, 0019, 0022]
-status: todo
+status: done
 depends_on: []
 ---
 
@@ -48,7 +48,7 @@ HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
     mean aliasing an embedded value and assembling a collection per row, all to reach two fields
     a row shows. The projection is the smaller thing that answers the question.
   - It is `@Introspected` so Micronaut Data can map a result row onto it.
-- **Four methods on the existing `ContratoMenorRepository` port**, one per ordering, each taking
+- **Four methods on a new `BrowseContratosMenores` port**, one per ordering, each taking
   `(OrganoId, YearSelection, Pageable)` and answering `Page<VisibleContratoMenor>`:
   date ascending, date descending, amount ascending, amount descending. Declared here, implemented
   in [TASK-0003](TASK-0003-paged-ordered-counted-reads.md).
@@ -56,6 +56,17 @@ HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
     **arrives without a `Sort`** and the ordering lives in the statement, and each ordering ends
     with the `source_id` tiebreaker **in the direction of the key it breaks**, so the order is
     total and paging denotes.
+  - **A port of its own rather than four more methods on `ContratoMenorRepository`**, and the
+    reason is that the alternative does not compile. `JdbcContratoMenorRepository` is an abstract
+    `@JdbcRepository` implementing that port, and Micronaut Data's annotation processor must
+    implement **every** abstract method it inherits — so four methods declared with their
+    statements deferred to [TASK-0003](TASK-0003-paged-ordered-counted-reads.md), which itself
+    waits on [TASK-0002](TASK-0002-visible-browse-schema-and-indexes.md)'s `publication_year`,
+    would fail annotation processing and leave this task's build red. A port nothing implements
+    yet has no such problem, and it is the shape `OrganosWithVisibleContracts` already takes: that
+    same adapter implements three interfaces, one of them a single-purpose read port. Reading a
+    browse page and writing an import batch are two questions of one table, and only the second
+    of them may ever write.
 - **What is deliberately not here**: no `Sort`, no `@QueryValue`, no problem type, no default
   page size. Those are HTTP vocabulary and belong to
   [TASK-0007](TASK-0007-paged-contracts-endpoint.md); the mapping from a validated `sort` onto
@@ -77,7 +88,7 @@ HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
   `ascending`/`descending`, an empty string — answers empty rather than a default. (SPEC-0005 #28)
 - `VisibleContratoMenor` refuses construction with a null publication date, amount, awardee name
   or awardee fiscal identifier, and permits a null `obxecto` and `duration`. (SPEC-0005 #11, #50)
-- `ContratoMenorRepository` declares four ordering methods returning `Page<VisibleContratoMenor>`,
+- `BrowseContratosMenores` declares four ordering methods returning `Page<VisibleContratoMenor>`,
   and no method taking a `Sort`, a sort key or a direction as a query parameter — the ordering is
   chosen by which method is called. (SPEC-0005 #28)
 - The `domain` module compiles with no reference to `io.micronaut.http`, `Sort`, or any HTTP type

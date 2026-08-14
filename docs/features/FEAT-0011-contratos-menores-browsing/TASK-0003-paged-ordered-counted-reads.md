@@ -21,6 +21,10 @@ statements are also four things a test can stand on.
 
 ## Scope
 
+- `JdbcContratoMenorRepository` adds `BrowseContratosMenores` to the interfaces it implements —
+  the port [TASK-0001](TASK-0001-selection-value-types-and-read-ports.md) declared and nothing has
+  implemented until now, joining `ContratoMenorRepository` and `OrganosWithVisibleContracts` on the
+  same adapter.
 - Four abstract methods on `JdbcContratoMenorRepository`, each `@Query(value = …, countQuery = …)`
   returning `Page<VisibleContratoMenor>`. Every one of them:
   - **filters identically**, and the predicate is the definition of *visible* rather than a filter
