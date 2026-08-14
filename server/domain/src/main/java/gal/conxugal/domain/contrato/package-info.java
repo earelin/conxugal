@@ -9,9 +9,9 @@
  * <p>It also holds the vocabulary a browse read is asked in — a
  * {@link gal.conxugal.domain.contrato.YearSelection}, a
  * {@link gal.conxugal.domain.contrato.SortKey} and a
- * {@link gal.conxugal.domain.contrato.Direction} — the
+ * {@link gal.conxugal.domain.contrato.SortDirection} — the
  * {@link gal.conxugal.domain.contrato.VisibleContratoMenor} row such a read answers with, and the
- * {@link gal.conxugal.domain.contrato.BrowseContratosMenores} port that serves it.
+ * {@link gal.conxugal.domain.contrato.VisibleContratoMenorRepository} port that serves it.
  *
  * <p>{@code @NullMarked}: every type, field, parameter and return value in this package is
  * non-null unless explicitly annotated {@link org.jspecify.annotations.Nullable}.

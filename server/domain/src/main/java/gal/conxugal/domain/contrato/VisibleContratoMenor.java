@@ -24,7 +24,12 @@ import org.jspecify.annotations.Nullable;
  * shows. This is the smaller thing that answers the question, and it holds no identity of its own
  * because a contrato menor has no detail view to address.
  *
- * <p>It is introspected so a result row can be mapped onto it directly.
+ * <p>It is introspected so a result row can be read onto it directly. Introspection settles the
+ * shape and not the conversion: a component inherits a converted type's mapping only where the
+ * aggregate this projects from carries a property of the same name and type. The amount does —
+ * the contract holds one — while the awardee's identifier does not, because the contract reaches
+ * its awardee through a relation rather than holding the value. That one is converted through the
+ * core conversion service instead, which is why its converter carries a second half.
  */
 @Introspected
 public record VisibleContratoMenor(

@@ -6,7 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class DirectionTest {
+class SortDirectionTest {
 
   private static final List<String> NOT_A_DIRECTION =
       Arrays.asList(
@@ -15,14 +15,14 @@ class DirectionTest {
 
   @Test
   void parses_the_ascending_direction_the_contract_publishes_it_as() {
-    assertThat(Direction.parse("asc"))
-        .contains(Direction.ASC);
+    assertThat(SortDirection.parse("asc"))
+        .contains(SortDirection.ASC);
   }
 
   @Test
   void parses_the_descending_direction_the_contract_publishes_it_as() {
-    assertThat(Direction.parse("desc"))
-        .contains(Direction.DESC);
+    assertThat(SortDirection.parse("desc"))
+        .contains(SortDirection.DESC);
   }
 
   /**
@@ -34,13 +34,13 @@ class DirectionTest {
     assertThat(NOT_A_DIRECTION)
         .allSatisfy(
             published ->
-                assertThat(Direction.parse(published))
+                assertThat(SortDirection.parse(published))
                     .isEmpty());
   }
 
   @Test
   void offers_the_two_directions_and_no_third() {
-    assertThat(Direction.values())
-        .containsExactly(Direction.ASC, Direction.DESC);
+    assertThat(SortDirection.values())
+        .containsExactly(SortDirection.ASC, SortDirection.DESC);
   }
 }

@@ -30,7 +30,7 @@ builds.
 
 The design sits in the hexagonal server of
 **[ADR-0002](../../architecture/0002-hexagonal-architecture.md)**: the read use cases are domain,
-the paged queries are driven adapters behind the `BrowseContratosMenores` port, and the endpoints
+the paged queries are driven adapters behind the `VisibleContratoMenorRepository` port, and the endpoints
 are driving entry points under the reserved `/api/` prefix
 (**[ADR-0006](../../architecture/0006-reserved-api-url-prefix.md)**), named per
 **[ADR-0020](../../architecture/0020-actions-as-verbs-in-rest-paths.md)** and the
@@ -79,7 +79,7 @@ its journeys are proved against a stubbed API per
   the Órgano is **no longer being updated** when it is unmarked or inactive — derived from
   FEAT-0009's per-Órgano import state and the catalogue row, and exposed to a `USER` only in that
   narrow form (see *What a `USER` may learn about the import*).
-- **Infrastructure:** the paged, ordered and counted reads behind `BrowseContratosMenores` and the
+- **Infrastructure:** the paged, ordered and counted reads behind `VisibleContratoMenorRepository` and the
   year-facet read the section is built from — plus **the schema those reads need**: a stored
   `publication_year` generated column and the two composite indexes that make all four orderings,
   both counts and the facets index-ordered (see *Indexes*). This replaces the single
@@ -146,8 +146,8 @@ flowchart TB
         direction LR
         listUc["ListContratosMenores"]
         resumoUc["DescribeContratosMenoresSection"]
-        selection["YearSelection · SortKey · Direction"]
-        contratoRepo["BrowseContratosMenores (port)"]
+        selection["YearSelection · SortKey · SortDirection"]
+        contratoRepo["VisibleContratoMenorRepository (port)"]
         stateRepo["ContratosMenoresImportStateRepository (port)"]
         organoRepo["OrganoRepository (port)"]
     end
@@ -747,8 +747,8 @@ accepted — so the whole feature is ready to be cut into task files.
 > demonstrable against imported data until it lands.**
 
 1. **Selection value types + read ports** *(backend)*: `YearSelection` (a year, with no
-   representable absence and no second case), `SortKey` and `Direction` parsed from plain strings, and the
-   `BrowseContratosMenores` port methods for the four orderings, taking a `Pageable` and returning
+   representable absence and no second case), `SortKey` and `SortDirection` parsed from plain strings, and the
+   `VisibleContratoMenorRepository` port methods for the four orderings, taking a `Pageable` and returning
    a `Page`. Pure domain — **the bound `Sort` is not seen here**, since it is an HTTP-bound type and
    its refusal is a 400; task 7 owns that mapping and calls in with these types. Unit-tested,
    including that a selection cannot be built without a year. *(SPEC-0005 #27 no-all-years half)*

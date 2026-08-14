@@ -5,10 +5,15 @@ import io.micronaut.data.model.Page;
 import io.micronaut.data.model.Pageable;
 
 /**
- * Port answering one Órgano's visible contratos menores of one year, one page at a time, in one of
- * four orderings. Implemented by the {@code infrastructure} module, beside the port that stores
- * them: reading a browse page and writing an import batch are two different questions of the same
- * table, and only the second of them may ever write.
+ * Port for reading the contratos menores a reader may be shown. Implemented by the
+ * {@code infrastructure} module, beside the port that stores them: reading a browse page and
+ * writing an import batch are two questions of one table, and separating them is what keeps a
+ * read off a port whose whole design argument is about what a write must never offer.
+ *
+ * <p>Every read here is scoped to one Órgano and one year, and every one carries the same
+ * definition of <em>visible</em> — a contract holding all of its publication date, its amount and
+ * its awardee. That predicate is the definition rather than a filter each statement bolts on, so a
+ * contract missing any of the three reaches no page and no count.
  *
  * <p><b>The ordering is chosen by which method is called</b>, and there is a method per ordering
  * rather than a parameter naming one. The set of orderings is closed — it cannot grow without the
@@ -32,7 +37,7 @@ import io.micronaut.data.model.Pageable;
  *
  * <p>Each answers the count of the <em>whole</em> year alongside the page, not of the page.
  */
-public interface BrowseContratosMenores {
+public interface VisibleContratoMenorRepository {
 
   Page<VisibleContratoMenor> byPublicationDateAscending(
       OrganoId organoId, YearSelection year, Pageable pageable);

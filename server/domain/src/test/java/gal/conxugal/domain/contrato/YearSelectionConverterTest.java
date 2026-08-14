@@ -27,6 +27,22 @@ class YearSelectionConverterTest {
         .isEqualTo(2025);
   }
 
+  /**
+   * The path the year facets travel: a column of years with no aggregate behind it, rebuilt
+   * through the core conversion service rather than as a property of a mapped row.
+   */
+  @Test
+  void converts_the_column_value_the_facet_read_answers_with() {
+    assertThat(converter.convert(2025, YearSelection.class, ConversionContext.DEFAULT))
+        .contains(YearSelection.of(2025));
+  }
+
+  @Test
+  void converts_an_absent_column_value_into_no_selection() {
+    assertThat(converter.convert(null, YearSelection.class, ConversionContext.DEFAULT))
+        .isEmpty();
+  }
+
   @Test
   void round_trips_the_year_through_the_column() {
     YearSelection selection = YearSelection.of(2019);

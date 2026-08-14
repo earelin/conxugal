@@ -21,7 +21,7 @@ statements are also four things a test can stand on.
 
 ## Scope
 
-- `JdbcContratoMenorRepository` adds `BrowseContratosMenores` to the interfaces it implements —
+- `JdbcContratoMenorRepository` adds `VisibleContratoMenorRepository` to the interfaces it implements —
   the port [TASK-0001](TASK-0001-selection-value-types-and-read-ports.md) declared and nothing has
   implemented until now, joining `ContratoMenorRepository` and `OrganosWithVisibleContracts` on the
   same adapter.
@@ -58,10 +58,15 @@ statements are also four things a test can stand on.
     sorted `Pageable`'s ordering to a `@Query` that already has one and emits two;
     [TASK-0005](TASK-0005-list-contratos-menores-use-case.md) is what guarantees none arrives.
 - `VisibleContratoMenor`'s `Money` and `FiscalIdentifier` components map through the `@TypeDef`
-  converters already on those types. If DTO projection cannot carry a converted component, the
-  fallback is a hand-written mapping through `jdbcOperations.prepareStatement` in this same class
-  — the precedent the batch upsert already sets — rather than weakening the projection to raw
-  `BigDecimal` and `String`.
+  converters already on those types, by two different routes:
+  [TASK-0001](TASK-0001-selection-value-types-and-read-ports.md) records that `amount` inherits its
+  mapping from `ContratoMenor`'s own `Money` property while `awardeeFiscalId`, joined in rather
+  than held on the contract, is rebuilt by the `TypeConverter` half that task added. **The
+  integration tests below assert both values on a returned row**, since a converter that failed to
+  apply is the failure mode this arrangement has. If DTO projection turns out not to carry a
+  converted component at all, the fallback is a hand-written mapping through
+  `jdbcOperations.prepareStatement` in this same class — the precedent the batch upsert already
+  sets — rather than weakening the projection to raw `BigDecimal` and `String`.
 - The four statements' `WHERE` and `ORDER BY` stay **byte-identical** to the SQL
   [TASK-0002](TASK-0002-visible-browse-schema-and-indexes.md)'s `EXPLAIN` test pins. If one has to
   change, both change together.

@@ -29,8 +29,15 @@ HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
   - It carries `@TypeDef(type = DataType.INTEGER, converter = YearSelectionConverter.class)` and
     a converter beside it, the pattern `Money` and `FiscalIdentifier` already use
     ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)), so it can be a query
-    parameter on the ports below without unwrapping at the boundary.
-- **`SortKey`** — an enum of `PUBLICATION_DATE` and `AMOUNT`, and **`Direction`** — `ASC` and
+    parameter on the ports below without unwrapping at the boundary. The converter carries **both**
+    halves: the attribute half converts the selection a read is scoped by, and the `TypeConverter`
+    half is what rebuilds each year of
+    [TASK-0004](TASK-0004-year-facets-and-section-state.md)'s facet read, which answers a column of
+    years with no aggregate behind it.
+  - **Building one and parsing one admit the same set**: the constructor refuses a year outside
+    `1000`–`9999`, so `of(0)` is not a selection either. A type claiming a year cannot be asked for
+    anything else would be untrue if its two entry points disagreed about what a year is.
+- **`SortKey`** — an enum of `PUBLICATION_DATE` and `AMOUNT`, and **`SortDirection`** — `ASC` and
   `DESC`. Each has a `parse(String)` answering `Optional`, accepting exactly the spellings the
   contract publishes: `publicationDate` / `amount`, and `asc` / `desc`. Anything else — another
   property, another case, `descending` — answers empty. R19's two sorts are a **closed set**, and
@@ -47,8 +54,16 @@ HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
     hand-written statements [TASK-0003](TASK-0003-paged-ordered-counted-reads.md) needs would
     mean aliasing an embedded value and assembling a collection per row, all to reach two fields
     a row shows. The projection is the smaller thing that answers the question.
-  - It is `@Introspected` so Micronaut Data can map a result row onto it.
-- **Four methods on a new `BrowseContratosMenores` port**, one per ordering, each taking
+  - It is `@Introspected` so a result row can be read onto it. **Introspection settles the shape
+    and not the conversion**, and the difference bites exactly once here: a projection's component
+    inherits a converted type's mapping only where the aggregate it projects from carries a
+    property of the **same name and type**. `amount` does — `ContratoMenor` holds a `Money` — while
+    `awardeeFiscalId` does not, because the contract reaches its awardee through a relation rather
+    than holding the value, so it arrives as bare text. `FiscalIdentifierConverter` therefore gains
+    the `TypeConverter` half `OrganoIdConverter` already carries, and this task adds it rather than
+    leaving [TASK-0003](TASK-0003-paged-ordered-counted-reads.md) to meet it as a failing
+    integration test.
+- **Four methods on a new `VisibleContratoMenorRepository` port**, one per ordering, each taking
   `(OrganoId, YearSelection, Pageable)` and answering `Page<VisibleContratoMenor>`:
   date ascending, date descending, amount ascending, amount descending. Declared here, implemented
   in [TASK-0003](TASK-0003-paged-ordered-counted-reads.md).
@@ -83,12 +98,14 @@ HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
   ([SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) #27, no-all-years half)
 - `YearSelection.parse` accepts a four-digit year and answers empty for an absent, blank,
   non-numeric or otherwise malformed value — including `all` and `undated`. (SPEC-0005 #27)
-- `SortKey.parse` accepts exactly `publicationDate` and `amount`; `Direction.parse` accepts
+- Every year `YearSelection.parse` accepts can be built directly, and every value the constructor
+  refuses cannot be spelled for `parse` — the two admit one set. (SPEC-0005 #27)
+- `SortKey.parse` accepts exactly `publicationDate` and `amount`; `SortDirection.parse` accepts
   exactly `asc` and `desc`. Every other input — a different property name, a different case,
   `ascending`/`descending`, an empty string — answers empty rather than a default. (SPEC-0005 #28)
 - `VisibleContratoMenor` refuses construction with a null publication date, amount, awardee name
   or awardee fiscal identifier, and permits a null `obxecto` and `duration`. (SPEC-0005 #11, #50)
-- `BrowseContratosMenores` declares four ordering methods returning `Page<VisibleContratoMenor>`,
+- `VisibleContratoMenorRepository` declares four ordering methods returning `Page<VisibleContratoMenor>`,
   and no method taking a `Sort`, a sort key or a direction as a query parameter — the ordering is
   chosen by which method is called. (SPEC-0005 #28)
 - The `domain` module compiles with no reference to `io.micronaut.http`, `Sort`, or any HTTP type

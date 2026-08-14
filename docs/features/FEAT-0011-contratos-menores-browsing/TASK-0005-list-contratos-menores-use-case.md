@@ -16,9 +16,9 @@ so it is the place that guarantees none does.
 ## Scope
 
 - `ListContratosMenores` in `gal.conxugal.domain.contrato`, taking an `OrganoId`, a
-  `YearSelection`, a `SortKey`, a `Direction` and a `Pageable`, and answering
+  `YearSelection`, a `SortKey`, a `SortDirection` and a `Pageable`, and answering
   `Page<VisibleContratoMenor>`.
-- **The mapping is a total function over a closed set**: the four `(SortKey, Direction)` pairs
+- **The mapping is a total function over a closed set**: the four `(SortKey, SortDirection)` pairs
   select the four repository methods
   [TASK-0003](TASK-0003-paged-ordered-counted-reads.md) implements. It takes no default branch and
   no fallback — every pair is a case, because both types are enums and the compiler can see the
@@ -45,7 +45,7 @@ so it is the place that guarantees none does.
 
 ## Acceptance criteria
 
-- Each of the four `(SortKey, Direction)` pairs answers with the contracts of the requested year
+- Each of the four `(SortKey, SortDirection)` pairs answers with the contracts of the requested year
   in that ordering, and the four are distinguishable from one another for the same selection.
   ([SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) #27)
 - The page answers the count of the **whole selection**, not of the page: a year of 120 contracts

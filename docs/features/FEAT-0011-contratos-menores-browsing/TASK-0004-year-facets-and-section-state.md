@@ -18,7 +18,12 @@ key and no count.
 
 ## Scope
 
-- **The facet read** on `ContratoMenorRepository`, implemented in `JdbcContratoMenorRepository`:
+- **The facet read** on `VisibleContratoMenorRepository` — the read port
+  [TASK-0001](TASK-0001-selection-value-types-and-read-ports.md) declared, not the store port
+  beside it, since this asks the same Órgano-and-visibility question the four orderings do and
+  `ContratoMenorRepository` is *"the port for storing contratos menores"* by its own javadoc.
+  Unlike task 3's, it is declared and implemented here in one task, so nothing has to wait.
+  Implemented in `JdbcContratoMenorRepository`:
 
   ```sql
   SELECT DISTINCT publication_year
