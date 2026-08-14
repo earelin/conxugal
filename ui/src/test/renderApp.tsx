@@ -24,24 +24,23 @@ export function mockCurrentUser(role: Role) {
     });
 }
 
-export const PICKER_ORGANOS = [
-  { id: 'o-1', name: 'Servizo Galego de Saúde', active: true, termoId: 't-1' },
-  { id: 'o-2', name: 'Instituto Galego da Vivenda e Solo', active: true, termoId: null },
-];
-
-export const PICKER_TERMOS = [{ id: 't-1', name: 'Consellería de Sanidade', parentId: null }];
-
 /**
  * The two reads the navbar picker makes as soon as a session resolves. Any test
  * that mounts the shell with a signed-in user needs them: `nock` fails an
  * unmatched request, and those failures land after the test has torn down.
+ *
+ * One Órgano filed under a term and one unclassified, which is the smallest
+ * pair that renders both halves of the tree.
  */
-export function mockOrganosPicker(organos = PICKER_ORGANOS, termos = PICKER_TERMOS) {
+export function mockOrganosPicker() {
   return nock(BASE_URL)
     .get('/api/organos')
-    .reply(200, organos)
+    .reply(200, [
+      { id: 'o-1', name: 'Servizo Galego de Saúde', active: true, termoId: 't-1' },
+      { id: 'o-2', name: 'Instituto Galego da Vivenda e Solo', active: true, termoId: null },
+    ])
     .get('/api/organos/taxonomia')
-    .reply(200, termos);
+    .reply(200, [{ id: 't-1', name: 'Consellería de Sanidade', parentId: null }]);
 }
 
 export function renderApp(initialPath = '/') {
