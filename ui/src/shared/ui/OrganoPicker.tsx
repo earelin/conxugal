@@ -30,9 +30,19 @@ const copy = strings.organoPicker;
 
 // Term ids and Órgano ids come from different tables, so a row's value says
 // which of the two it is: a term row only opens its branch, an Órgano row
-// opens its contracts.
+// opens its contracts. Every reader of that distinction goes through the two
+// functions below rather than slicing the prefix itself.
 const TERMO = 'termo:';
 const ORGANO = 'organo:';
+
+function isTermo(value: string): boolean {
+  return value.startsWith(TERMO);
+}
+
+/** The Órgano a row stands for, or null when the row is a term. */
+function organoIdOf(value: string): string | null {
+  return value.startsWith(ORGANO) ? value.slice(ORGANO.length) : null;
+}
 
 // Chevron and leaf spacer share this width, which lines labels up across a
 // level whether or not the row has children.
@@ -76,7 +86,7 @@ interface PickerRowProps {
 
 function PickerRow({ payload, onOpen }: PickerRowProps) {
   const { node, expanded, hasChildren, selected, elementProps } = payload;
-  const isTermo = node.value.startsWith(TERMO);
+  const termo = isTermo(node.value);
 
   return (
     <Group
@@ -94,7 +104,7 @@ function PickerRow({ payload, onOpen }: PickerRowProps) {
       style={{ borderRadius: 'var(--mantine-radius-sm)' }}
     >
       <ExpandMarker hasChildren={hasChildren} expanded={expanded} />
-      <Text size="sm" fw={isTermo ? 500 : 400} c={selected ? 'indigo.8' : undefined}>
+      <Text size="sm" fw={termo ? 500 : 400} c={selected ? 'indigo.8' : undefined}>
         {node.label}
       </Text>
       {selected && <IconCheck size={MARKER_SIZE} aria-hidden />}
@@ -142,7 +152,7 @@ function OrganoTree({ data, openId, onOpen, labelledBy }: OrganoTreeProps) {
       return;
     }
     event.preventDefault();
-    if (value.startsWith(TERMO)) {
+    if (isTermo(value)) {
       tree.toggleExpanded(value);
     } else {
       onOpen(value);
@@ -202,10 +212,10 @@ export function OrganoPicker({
   }, [view]);
 
   function open(value: string) {
-    if (!value.startsWith(ORGANO)) {
+    const id = organoIdOf(value);
+    if (id === null) {
       return;
     }
-    const id = value.slice(ORGANO.length);
     // Choosing the Órgano already open closes the dropdown rather than pushing
     // the page the reader is on onto the history stack a second time.
     if (id !== openId) {
