@@ -27,7 +27,7 @@
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
   <Match>
-    <Class name="~gal\.conxugal\.domain\.organo\.(AssignOrganoToTermo|ClearOrganoTermo|ListOrganos|MarkOrganoForImport|UnmarkOrganoForImport)"/>
+    <Class name="~gal\.conxugal\.domain\.organo\.(AssignOrganoToTermo|ClearOrganoTermo|ListOrganos|ListVisibleOrganos|MarkOrganoForImport|UnmarkOrganoForImport)"/>
     <Field name="~(organo|termo)Repository"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>

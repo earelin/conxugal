@@ -9,16 +9,19 @@ info:
     `/login` form (ADR-0005, outside this JSON API) and carried by a session cookie. Most
     operations are restricted to administrators; the exceptions are `GET /api/me` and the two
     Órganos reads (`GET /api/organos` and `GET /api/organos/taxonomia`), available to any
-    authenticated user.
+    authenticated user. `GET /api/organos` serves the **visible set** — the Órganos holding at
+    least one visible contract — to every caller alike; the **whole** catalogue is an
+    administration read, `GET /api/admin/organos`.
 
     This document is the design-first, authoritative contract for the API (ADR-0010): endpoints
     are specified here before they are implemented, and controllers conform to it. It currently
     covers the planned endpoints of FEAT-0004 (user administration, system status, and the
     current-user lookup), FEAT-0005 (real-time metrics), FEAT-0006 (the Órganos de Contratación
     catalogue import trigger), FEAT-0007 (the Órganos catalogue and taxonomía reads, and the
-    administration of the taxonomía and of each Órgano's placement in it), and FEAT-0009 (the
+    administration of the taxonomía and of each Órgano's placement in it), FEAT-0009 (the
     contratos menores import mark and the administrator's catalogue read that carries it, the
-    two import triggers, and the read that reports what a run amounted to).
+    two import triggers, and the read that reports what a run amounted to), and FEAT-0012 (the
+    narrowing of the shared catalogue read to the visible set).
 
 servers:
   - url: /
@@ -264,11 +267,14 @@ paths:
       operationId: listOrganosForAdmin
       summary: List the catalogue as an administrator sees it
       description: >-
-        Every stored Órgano with the same id, name, active state and taxonomía placement `GET
-        /api/organos` serves, **plus its contratos menores import mark and import state**. A
-        second serialisation of an Órgano exists because both are an administrator's facts:
-        seeing which Órganos are marked, and how far each one has loaded, is an administration
-        capability, so neither can be added to the catalogue read any authenticated user may
+        **Every stored Órgano** — the whole catalogue, whether or not it holds a visible contract
+        — each carrying its id, name, active state and taxonomía placement **plus its contratos
+        menores import mark and import state**. This is the read the administration area makes:
+        `GET /api/organos` is narrowed to the visible set, and the Órganos it leaves out are
+        precisely the ones an administrator opens the section to classify and mark. A second
+        serialisation of an Órgano exists because the mark and the state are an administrator's
+        facts: seeing which Órganos are marked, and how far each one has loaded, is an
+        administration capability, so neither can be added to the read any authenticated user may
         make. It carries the placement alongside them so the administration UI swaps one read for
         the other rather than issuing both.
       responses:
@@ -510,8 +516,8 @@ paths:
       description: >-
         Remove a term from the taxonomía. Refused while the term still has child terms — the
         administrator moves or removes them first. The Órganos filed directly in a deleted term
-        return to the unclassified set, arriving in `GET /api/organos` with a null `termoId`; no
-        Órgano is ever deleted.
+        return to the unclassified set, arriving in `GET /api/admin/organos` with a null
+        `termoId`; no Órgano is ever deleted.
       responses:
         "204":
           description: The term was deleted, and any Órganos filed in it are now unclassified.
@@ -660,7 +666,9 @@ paths:
         "204":
           description: >-
             The Órgano is now filed under that term, and under no other. The new placement is
-            visible in the next `GET /api/organos` as the Órgano's `termoId`.
+            visible in the next `GET /api/admin/organos` as the Órgano's `termoId` — the read the
+            administration area makes, and the one that carries an Órgano holding no visible
+            contract, which `GET /api/organos` does not return at all.
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
@@ -707,7 +715,7 @@ paths:
         "204":
           description: >-
             The Órgano is filed under no term. Its `termoId` is null in the next `GET
-            /api/organos`.
+            /api/admin/organos`.
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
@@ -1061,21 +1069,28 @@ paths:
     get:
       tags: [organos]
       operationId: listOrganos
-      summary: List the whole Órganos de Contratación catalogue
+      summary: List the Órganos that hold at least one visible contract
       description: >-
-        Every stored Órgano — active and inactive alike — with its name and the term it is filed
-        under, or null when it is unclassified. Available to any authenticated user, `USER` or
-        `ADMIN`: reading the catalogue is not an administration capability. Unfiltered and
-        unpaged, and it takes no query parameters. Callers join this list to `GET
-        /api/organos/taxonomia` on `termoId` = term `id` to build the tree, and filter `termoId` =
-        null for the unclassified set.
+        The **visible set**: every stored Órgano — active and inactive alike — holding at least one
+        visible contract, of **any** contract family, with its name and the term it is filed under,
+        or null when it is unclassified. An Órgano holding none is **not returned at all**, rather
+        than returned for a client to hide. Available to any authenticated user, `USER` or `ADMIN`,
+        and the narrowing applies to **every** caller: it is this path's scoping, not the caller's,
+        so an `ADMIN` reading here receives exactly what a `USER` does. **The whole catalogue is
+        served by `GET /api/admin/organos`**, which is where an administrator's management surfaces
+        read it from. Unfiltered and unpaged, and it takes no query parameters. Callers join this
+        list to `GET /api/organos/taxonomia` on `termoId` = term `id` to build the tree, and filter
+        `termoId` = null for the unclassified set.
       responses:
         "200":
           description: >-
-            The whole catalogue, **ordered by name** under a Galician collation, so accented names
+            The visible set, **ordered by name** under a Galician collation, so accented names
             sort where a Galician reader expects them (`Ávila` before `Avión`, not after
-            `Zamora`). The order is a guarantee callers may rely on and need not re-derive. Empty
-            only when nothing has been imported yet.
+            `Zamora`). The order is a guarantee callers may rely on and need not re-derive.
+            Membership is derived on every read and nothing records it: an Órgano appears as soon
+            as its first visible contract is stored and stops appearing when its last one goes,
+            with no administrator action either way. Empty when nothing visible has been imported
+            yet.
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
@@ -1599,9 +1614,9 @@ components:
     Organo:
       type: object
       description: >-
-        One Órgano de Contratación of the stored catalogue, with its taxonomía placement.
-        `termoId` is always present, null when unclassified — the absence of a placement is a
-        value callers filter on, not a missing field.
+        One Órgano de Contratación of the visible set, with its taxonomía placement. `termoId` is
+        always present, null when unclassified — the absence of a placement is a value callers
+        filter on, not a missing field.
       required: [id, name, active, termoId]
       example:
         id: "8d1b0f6e-2c5a-4c1e-9a3f-6b7c8d9e0f11"
@@ -1636,10 +1651,12 @@ components:
     AdminOrgano:
       type: object
       description: >-
-        One Órgano de Contratación as an administrator sees it: everything `Organo` carries, plus
+        One Órgano de Contratación as an administrator sees it: every field `Organo` carries, plus
         the contratos menores import mark and the state of that import. Both are deliberately
         absent from `Organo` — a `USER` is not told which Órganos are imported — so this is a
         second serialisation of the same aggregate rather than an extension of the shared one.
+        Which Órganos are serialised this way is the operation's business, not the schema's: the
+        administration read carries the whole catalogue, the shared one only the visible set.
         The mark and the state are independent facts: the mark is what an administrator asked
         for, the state is how far the system got.
       required: [id, name, active, termoId, importable, importState]

@@ -8,6 +8,7 @@ import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.OperadorId;
 import gal.conxugal.domain.organo.OrganoId;
+import gal.conxugal.domain.organo.OrganosWithVisibleContracts;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
@@ -21,9 +22,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
@@ -53,10 +56,19 @@ import org.jspecify.annotations.Nullable;
  * operador the corrected identifier names. Leaving it out of the update would let a conflicting row
  * keep an awardee its publication no longer names, silently and for good — the caller resolves the
  * awardee on every upsert precisely so that it does not.
+ *
+ * <p>It is also this family's answer to <em>which Órganos hold a visible contract</em>. Visible
+ * means complete, and complete means all three of a publication date, an amount and an awardee:
+ * without a date there is no year's list the contract could appear in, without an amount it
+ * answers none of the questions a reader is here to ask, and without an awardee it names nobody it
+ * was awarded to. A contract missing any one of them is stored as an anomaly and places its
+ * Órgano in nobody's visible set.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public abstract class JdbcContratoMenorRepository
-    implements ContratoMenorRepository, GenericRepository<ContratoMenor, ContratoMenorId> {
+    implements ContratoMenorRepository,
+        OrganosWithVisibleContracts,
+        GenericRepository<ContratoMenor, ContratoMenorId> {
 
   private static final String UPSERT_SQL =
       """
@@ -73,6 +85,36 @@ public abstract class JdbcContratoMenorRepository
           duration = EXCLUDED.duration,
           operador_economico_id = EXCLUDED.operador_economico_id
       RETURNING (xmax = 0) AS inserted
+      """;
+
+  /**
+   * A semi-join driven from the candidates rather than from the contracts, which leaves the planner
+   * free to answer each one from an index and stop at its first visible contract. Its predecessor,
+   * {@code SELECT DISTINCT organo_id ... WHERE organo_id IN (...)}, could not: an aggregate has to
+   * read every qualifying row in a table headed for millions to answer a question about a few
+   * hundred Órganos.
+   *
+   * <p><strong>The shape is the planner's choice, not this statement's guarantee.</strong> Where
+   * almost no candidate holds anything it hash-joins instead and reads the table once — the work
+   * the aggregate always did, and no worse. What this form removes is the floor, not the ceiling.
+   *
+   * <p>The candidates arrive as one {@code uuid[]} for the same reason the upsert's rows do: one
+   * prepared form whatever the catalogue's size, rather than a statement whose placeholder count —
+   * and so whose plan-cache entry — changes with it.
+   *
+   * <p>The three null checks are the visibility rule itself, and they are stated here rather than
+   * left to an index because this read has no year to scope by: the browsing reads do, which is
+   * what lets their indexes carry only the other two.
+   */
+  private static final String VISIBLE_ORGANOS_SQL =
+      """
+      SELECT candidate.id FROM unnest(?::uuid[]) AS candidate(id)
+      WHERE EXISTS (
+          SELECT 1 FROM contrato_menor
+           WHERE organo_id = candidate.id
+             AND publication_date IS NOT NULL
+             AND amount IS NOT NULL
+             AND operador_economico_id IS NOT NULL)
       """;
 
   private final JdbcOperations jdbcOperations;
@@ -96,6 +138,23 @@ public abstract class JdbcContratoMenorRepository
 
   @Override
   public abstract long countByOrganoId(OrganoId organoId);
+
+  /**
+   * An empty candidate set short-circuits rather than reaching the database, where an array of no
+   * elements would buy a round trip for an answer that is empty by construction.
+   */
+  @Override
+  @Transactional(readOnly = true)
+  public Set<OrganoId> among(Collection<OrganoId> candidates) {
+    if (candidates.isEmpty()) {
+      return Set.of();
+    }
+    UUID[] ids = candidates.stream().map(OrganoId::value).toArray(UUID[]::new);
+    return jdbcOperations.prepareStatement(VISIBLE_ORGANOS_SQL, statement -> {
+      statement.setArray(1, statement.getConnection().createArrayOf("uuid", ids));
+      return readOrganoIds(statement);
+    });
+  }
 
   private static List<ContratoMenor> lastReadingPerSourceId(Collection<ContratoMenor> contratos) {
     Map<Long, ContratoMenor> bySourceId = new LinkedHashMap<>();
@@ -133,6 +192,16 @@ public abstract class JdbcContratoMenorRepository
     statement.setArray(5, connection.createArrayOf("numeric", amounts));
     statement.setArray(6, connection.createArrayOf("text", durations));
     statement.setArray(7, connection.createArrayOf("uuid", operadorIds));
+  }
+
+  private static Set<OrganoId> readOrganoIds(PreparedStatement statement) throws SQLException {
+    Set<OrganoId> visible = new HashSet<>();
+    try (ResultSet rows = statement.executeQuery()) {
+      while (rows.next()) {
+        visible.add(new OrganoId(rows.getObject("id", UUID.class)));
+      }
+    }
+    return Set.copyOf(visible);
   }
 
   private static UpsertCounts countBranches(PreparedStatement statement) throws SQLException {
