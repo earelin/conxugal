@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 
+import { horizontalOverflow } from '../support/locators';
 import { resetMappings } from '../support/wiremock';
 
 const PLACEHOLDER = 'Escolle un órgano';
@@ -24,12 +25,6 @@ function trigger(page: Page) {
 
 function tree(page: Page) {
   return page.getByRole('tree', { name: 'Órgano' });
-}
-
-async function horizontalOverflow(page: Page): Promise<number> {
-  return page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
 }
 
 test.describe('Órgano picker', () => {
