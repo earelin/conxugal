@@ -18,6 +18,7 @@ import { type KeyboardEvent, useMemo, useState } from 'react';
 
 import { strings } from '../../../shared/lib/strings';
 import { findTermoPath, type TermoNode } from '../../../shared/lib/taxonomiaTree';
+import { SELECTED_ROW_COLOR } from '../../../shared/ui/selection';
 import type { Organo, Termo } from '../organos';
 import { CreateTermoModal } from './CreateTermoModal';
 import { type TermoActionHandlers, TermoActionIcons } from './TermoActionControls';
@@ -66,7 +67,7 @@ function TermoRow({ payload, termo, actions }: TermoRowProps) {
     <Group {...elementProps} gap="xs" justify="space-between" wrap="nowrap" py={4}>
       <Group gap={6} wrap="nowrap">
         <ExpandMarker hasChildren={hasChildren} expanded={expanded} />
-        <Text size="sm" fw={selected ? 600 : 500} c={selected ? 'indigo.8' : undefined}>
+        <Text size="sm" fw={selected ? 600 : 500} c={selected ? SELECTED_ROW_COLOR : undefined}>
           {node.label}
         </Text>
       </Group>
