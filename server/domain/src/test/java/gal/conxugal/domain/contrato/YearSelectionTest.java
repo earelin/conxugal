@@ -99,7 +99,7 @@ class YearSelectionTest {
   }
 
   @Test
-  void parses_every_year_it_can_be_built_with_and_no_other() {
+  void parses_the_years_at_both_ends_of_what_it_can_be_built_with() {
     assertThat(List.of(1000, 2025, 9999))
         .allSatisfy(
             year ->
