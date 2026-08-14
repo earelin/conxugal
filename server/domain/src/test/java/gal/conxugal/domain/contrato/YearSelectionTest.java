@@ -77,16 +77,25 @@ class YearSelectionTest {
   /** {@code of} is the only way in, and it takes a year — so no way in yields an absent one. */
   @Test
   void offers_no_other_factory_or_constant_standing_for_all_years() {
-    Stream<Member> yieldingSelections =
-        Stream.concat(
+    assertThat(staticMembersYieldingSelections())
+        .extracting(Member::getName)
+        .containsExactly("of");
+  }
+
+  /**
+   * Every way the type hands out a selection without being given one: a constant, or a factory.
+   * Both kinds are collected because the criterion refuses both, and an absent-year constant would
+   * be as reachable as an absent-year factory.
+   */
+  private static List<Member> staticMembersYieldingSelections() {
+    return Stream.concat(
             Arrays.stream(YearSelection.class.getDeclaredFields())
                 .filter(field -> field.getType() == YearSelection.class),
             Arrays.stream(YearSelection.class.getDeclaredMethods())
-                .filter(method -> method.getReturnType() == YearSelection.class));
-
-    assertThat(yieldingSelections.filter(member -> Modifier.isStatic(member.getModifiers())))
-        .extracting(Member::getName)
-        .containsExactly("of");
+                .filter(method -> method.getReturnType() == YearSelection.class))
+        .filter(member -> Modifier.isStatic(member.getModifiers()))
+        .map(Member.class::cast)
+        .toList();
   }
 
   @Test
