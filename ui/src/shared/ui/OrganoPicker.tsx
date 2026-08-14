@@ -1,4 +1,5 @@
 import {
+  Badge,
   Box,
   getTreeExpandedState,
   Group,
@@ -6,16 +7,24 @@ import {
   type RenderTreeNodePayload,
   Stack,
   Text,
+  TextInput,
   Tree,
   type TreeNodeData,
   UnstyledButton,
   useTree,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconCheck, IconChevronDown, IconChevronRight, IconSelector } from '@tabler/icons-react';
-import { type KeyboardEvent, type MouseEvent, useId, useMemo } from 'react';
+import {
+  IconCheck,
+  IconChevronDown,
+  IconChevronRight,
+  IconSearch,
+  IconSelector,
+} from '@tabler/icons-react';
+import { type KeyboardEvent, type MouseEvent, useId, useMemo, useState } from 'react';
 import { useMatch, useNavigate } from 'react-router';
 
+import { matches } from '../lib/organoSearch';
 import { strings } from '../lib/strings';
 import {
   type Organo,
@@ -171,6 +180,71 @@ function OrganoTree({ data, openId, onOpen, labelledBy }: OrganoTreeProps) {
   );
 }
 
+interface OrganoMatchesProps {
+  organos: Organo[];
+  /** What was typed, quoted back when nothing matches it. */
+  query: string;
+  onOpen: (id: string) => void;
+  labelledBy: string;
+}
+
+/**
+ * The filter's answer: a flat list of the Órganos whose names hold the query,
+ * or the refusal when none do. It is the same control the tree is, in its other
+ * state — so it offers no paging, no sorting and no count, and it never falls
+ * back to listing the catalogue when it has nothing to say.
+ */
+function OrganoMatches({ organos, query, onOpen, labelledBy }: OrganoMatchesProps) {
+  if (organos.length === 0) {
+    return (
+      <Stack gap={4}>
+        <Text size="sm">{copy.noMatches(query)}</Text>
+        <Text size="xs" c="dimmed">
+          {copy.noMatchesHelp}
+        </Text>
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack
+      component="ul"
+      gap={2}
+      aria-labelledby={labelledBy}
+      style={{ listStyle: 'none', margin: 0, padding: 0 }}
+    >
+      {organos.map((organo) => (
+        <Box component="li" key={organo.id}>
+          <UnstyledButton
+            onClick={() => {
+              onOpen(organo.id);
+            }}
+            w="100%"
+            py={4}
+            px={6}
+            style={{ borderRadius: 'var(--mantine-radius-sm)' }}
+          >
+            <Group gap="xs" wrap="nowrap" justify="space-between">
+              <Text size="sm" c={organo.active ? undefined : 'dimmed'}>
+                {organo.name}
+              </Text>
+              {/* Reading dimmer says nothing to a screen reader, so an inactive
+                  Órgano says so in its text as well. It stays selectable:
+                  inactive is a fact about the catalogue, not about whether
+                  there is anything to see. */}
+              {!organo.active && (
+                <Badge color="gray" variant="light" size="xs">
+                  {copy.inactive}
+                </Badge>
+              )}
+            </Group>
+          </UnstyledButton>
+        </Box>
+      ))}
+    </Stack>
+  );
+}
+
 interface OrganoPickerProps {
   /** The visible set joined to the taxonomía; null until both reads land. */
   view: TaxonomiaView | null;
@@ -188,6 +262,12 @@ interface OrganoPickerProps {
  * filed them under. It offers no control that changes anything — it is a view,
  * not the administration tree with its buttons hidden.
  *
+ * Browsing and searching are two states of this one control over one list, not
+ * two components: with the filter empty the body is the tree, with text in it
+ * the body is the matches. That is what makes the search offer exactly what the
+ * tree shows, in both directions, rather than leaving two implementations to
+ * stay in step.
+ *
  * The reads happen above it. `shared/ui` may not reach `shared/entities`, and
  * the shell that renders the picker on every route is the layer that may.
  */
@@ -199,7 +279,14 @@ export function OrganoPicker({
   onRetry,
   onNavigate,
 }: OrganoPickerProps) {
-  const [opened, { toggle, close }] = useDisclosure();
+  const [query, setQuery] = useState('');
+  // Closing empties the filter: a dropdown reopened still narrowed by a query
+  // the reader has forgotten typing reads as a catalogue missing most of itself.
+  const [opened, { toggle, close }] = useDisclosure(false, {
+    onClose: () => {
+      setQuery('');
+    },
+  });
   const navigate = useNavigate();
   const labelId = useId();
   // Read from the route rather than held here, so the control keeps naming the
@@ -211,11 +298,22 @@ export function OrganoPicker({
     return { data: nodes, shape: treeValues(nodes).join() };
   }, [view]);
 
-  function open(value: string) {
-    const id = organoIdOf(value);
-    if (id === null) {
-      return;
-    }
+  // A blank or whitespace-only filter has asked nothing, so it matches nothing
+  // and the tree stands in for the answer.
+  const trimmed = query.trim();
+  // The catalogue, not the pruned tree and not a second read: filtering the
+  // very list the tree was assembled from is what keeps the two in agreement.
+  const found = useMemo(
+    () =>
+      view === null || trimmed === ''
+        ? []
+        : view.catalogue.filter((organo) => matches(organo.name, trimmed)),
+    [view, trimmed],
+  );
+
+  // The one way an Órgano is chosen, whichever state of the control offered it:
+  // a tree row and a match lead to the same page because they call this.
+  function chooseOrgano(id: string) {
     // Choosing the Órgano already open closes the dropdown rather than pushing
     // the page the reader is on onto the history stack a second time.
     if (id !== openId) {
@@ -223,6 +321,13 @@ export function OrganoPicker({
     }
     close();
     onNavigate();
+  }
+
+  function chooseRow(value: string) {
+    const id = organoIdOf(value);
+    if (id !== null) {
+      chooseOrgano(id);
+    }
   }
 
   const openOrgano = view?.catalogue.find((organo) => organo.id === openId) ?? null;
@@ -260,7 +365,34 @@ export function OrganoPicker({
       );
     }
     return (
-      <OrganoTree key={shape} data={data} openId={openId} onOpen={open} labelledBy={labelId} />
+      <Stack gap="xs">
+        <TextInput
+          value={query}
+          onChange={(event) => {
+            setQuery(event.currentTarget.value);
+          }}
+          placeholder={copy.searchPlaceholder}
+          aria-label={copy.searchPlaceholder}
+          leftSection={<IconSearch size={MARKER_SIZE} aria-hidden />}
+          size="sm"
+        />
+        {trimmed === '' ? (
+          <OrganoTree
+            key={shape}
+            data={data}
+            openId={openId}
+            onOpen={chooseRow}
+            labelledBy={labelId}
+          />
+        ) : (
+          <OrganoMatches
+            organos={found}
+            query={trimmed}
+            onOpen={chooseOrgano}
+            labelledBy={labelId}
+          />
+        )}
+      </Stack>
     );
   }
 

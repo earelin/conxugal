@@ -28,6 +28,10 @@ export const strings = {
   organoPicker: {
     label: 'Órgano',
     placeholder: 'Escolle un órgano',
+    searchPlaceholder: 'Buscar un órgano…',
+    inactive: 'Inactivo',
+    noMatches: (query: string) => `Ningún órgano coincide con «${query}».`,
+    noMatchesHelp: 'Revisa a busca ou baléiraa para ver a árbore completa.',
     empty: 'Aínda non hai órganos con contratos.',
     emptyHelp: 'Cando se importe o primeiro contrato dun órgano, aparecerá aquí.',
     errorTitle: 'Non se puido cargar a lista de órganos.',

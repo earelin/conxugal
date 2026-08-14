@@ -1,14 +1,5 @@
-import { deburr } from 'es-toolkit';
-
+import { foldForSearch } from '../../../shared/lib/organoSearch';
 import { findTermoPath, type TermoNode } from '../../../shared/lib/taxonomiaTree';
-
-/**
- * The form names are compared in. Galician term names are full of accents and
- * nobody types them into a search box, so «educacion» has to find «Educación».
- */
-export function foldForSearch(text: string): string {
-  return deburr(text).toLowerCase();
-}
 
 export interface TermoPickerRow {
   id: string;

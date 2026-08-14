@@ -2,7 +2,7 @@
 feat: FEAT-0012
 domain: frontend
 adrs: [0004, 0015, 0018]
-status: todo
+status: done
 depends_on: [TASK-0003]
 ---
 

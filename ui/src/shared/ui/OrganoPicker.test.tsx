@@ -94,6 +94,15 @@ async function openPicker(options: RenderOptions = {}) {
   return { ...utils, user };
 }
 
+function searchBox() {
+  return screen.getByRole('textbox', { name: copy.searchPlaceholder });
+}
+
+/** The matches the filter offers, which share the tree's accessible name. */
+function matchList() {
+  return screen.getByRole('list', { name: copy.label });
+}
+
 /** A tree row by its own label, ignoring the labels of its descendants. */
 function treeRow(tree: HTMLElement, label: string): HTMLElement {
   // A row's own label is its first child; its descendants live in the nested
@@ -210,12 +219,107 @@ describe('OrganoPicker selection', () => {
   });
 });
 
-describe('OrganoPicker keyboard', () => {
-  it('moves focus into the tree when it opens, and back to the trigger on Escape', async () => {
+describe('OrganoPicker search', () => {
+  it('offers the matching Organos as the reader types, with nothing to submit', async () => {
     const { user } = await openPicker();
 
-    const tree = await screen.findByRole('tree', { name: copy.label });
-    await waitFor(() => expect(tree.contains(document.activeElement)).toBe(true));
+    await user.type(await screen.findByRole('textbox', { name: copy.searchPlaceholder }), 'galega');
+
+    expect(within(matchList()).getByText(innovacion.name)).toBeInTheDocument();
+    expect(within(matchList()).queryByText(cunqueiro.name)).not.toBeInTheDocument();
+    expect(screen.queryByRole('tree')).not.toBeInTheDocument();
+  });
+
+  it('finds a name differing only by accent or case, and one by a fragment inside it', async () => {
+    const { user } = await openPicker();
+
+    await user.type(await screen.findByRole('textbox', { name: copy.searchPlaceholder }), 'ALVARO');
+    expect(within(matchList()).getByText(cunqueiro.name)).toBeInTheDocument();
+
+    await user.clear(searchBox());
+    await user.type(searchBox(), 'galego da');
+    expect(within(matchList()).getByText(vivenda.name)).toBeInTheDocument();
+  });
+
+  it('states that an offered Organo is inactive, and says nothing of an active one', async () => {
+    const { user } = await openPicker();
+
+    // Every fixture holds an «a», so all three are offered at once.
+    await user.type(await screen.findByRole('textbox', { name: copy.searchPlaceholder }), 'a');
+
+    expect(within(matchList()).getAllByRole('listitem')).toHaveLength(3);
+    expect(
+      within(matchList()).getByRole('button', { name: `${cunqueiro.name} ${copy.inactive}` }),
+    ).toBeInTheDocument();
+    expect(within(matchList()).getByRole('button', { name: vivenda.name })).toBeInTheDocument();
+    expect(within(matchList()).getAllByText(copy.inactive)).toHaveLength(1);
+  });
+
+  it('shows the tree for a whitespace-only query, which has asked nothing', async () => {
+    const { user } = await openPicker();
+
+    await user.type(await screen.findByRole('textbox', { name: copy.searchPlaceholder }), '   ');
+
+    expect(screen.getByRole('tree', { name: copy.label })).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: copy.label })).not.toBeInTheDocument();
+    expect(screen.queryByText(copy.noMatchesHelp)).not.toBeInTheDocument();
+  });
+
+  it('says a query matched nothing, quoting it, rather than listing the catalogue', async () => {
+    const { user } = await openPicker();
+
+    await user.type(
+      await screen.findByRole('textbox', { name: copy.searchPlaceholder }),
+      'sanidde',
+    );
+
+    expect(screen.getByText(copy.noMatches('sanidde'))).toBeInTheDocument();
+    expect(screen.getByText(copy.noMatchesHelp)).toBeInTheDocument();
+    expect(screen.queryByRole('tree')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: copy.label })).not.toBeInTheDocument();
+  });
+
+  it('shows the tree again once the filter is emptied', async () => {
+    const { user } = await openPicker();
+
+    await user.type(await screen.findByRole('textbox', { name: copy.searchPlaceholder }), 'galega');
+    await user.clear(searchBox());
+
+    expect(screen.getByRole('tree', { name: copy.label })).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: copy.label })).not.toBeInTheDocument();
+  });
+
+  it('opens a chosen match exactly as choosing it in the tree does', async () => {
+    const { router, onNavigate, user } = await openPicker();
+
+    await user.type(await screen.findByRole('textbox', { name: copy.searchPlaceholder }), 'alvaro');
+    await user.click(within(matchList()).getByText(cunqueiro.name));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/organo/${cunqueiro.id}`));
+    expect(onNavigate).toHaveBeenCalledOnce();
+    await waitFor(() => expect(screen.queryByRole('list')).not.toBeInTheDocument());
+  });
+
+  it('reopens on the tree rather than on a query the reader has forgotten typing', async () => {
+    const { user } = await openPicker();
+
+    await user.type(await screen.findByRole('textbox', { name: copy.searchPlaceholder }), 'galega');
+    await user.keyboard('{Escape}');
+    await user.click(trigger());
+
+    expect(await screen.findByRole('tree', { name: copy.label })).toBeInTheDocument();
+    expect(searchBox()).toHaveValue('');
+  });
+});
+
+describe('OrganoPicker keyboard', () => {
+  it('moves focus into the filter when it opens, and back to the trigger on Escape', async () => {
+    const { user } = await openPicker();
+
+    // The filter is the first thing in the dropdown, so a reader who opened the
+    // control to find a name types straight away; the tree is one Tab further.
+    await waitFor(() => expect(document.activeElement).toBe(searchBox()));
+    expect(screen.getByRole('tree', { name: copy.label })).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
 
