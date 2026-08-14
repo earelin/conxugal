@@ -12,18 +12,16 @@ import { createQueryClient } from '../shared/lib/queryClient';
 
 export const BASE_URL = 'http://localhost:3000';
 
-export function currentUserBody(role: Role) {
-  return {
-    id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-    email: `${role.toLowerCase()}@conxugal.gal`,
-    role,
-    createdAt: '2026-01-15T09:30:00Z',
-    lastLoginAt: '2026-07-10T08:12:00Z',
-  };
-}
-
 export function mockCurrentUser(role: Role) {
-  return nock(BASE_URL).get('/api/me').reply(200, currentUserBody(role));
+  return nock(BASE_URL)
+    .get('/api/me')
+    .reply(200, {
+      id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+      email: `${role.toLowerCase()}@conxugal.gal`,
+      role,
+      createdAt: '2026-01-15T09:30:00Z',
+      lastLoginAt: '2026-07-10T08:12:00Z',
+    });
 }
 
 export const PICKER_ORGANOS = [
