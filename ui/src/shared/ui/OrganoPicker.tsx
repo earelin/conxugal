@@ -4,6 +4,7 @@ import {
   Group,
   Popover,
   type RenderTreeNodePayload,
+  ScrollArea,
   Stack,
   Text,
   Tree,
@@ -25,6 +26,7 @@ import {
 } from '../lib/taxonomiaTree';
 import { ErrorAlert } from './ErrorAlert';
 import { LoadingIndicator } from './LoadingIndicator';
+import { SELECTED_ROW_BG, SELECTED_ROW_COLOR } from './selection';
 
 const copy = strings.organoPicker;
 
@@ -47,6 +49,10 @@ function organoIdOf(value: string): string | null {
 // Chevron and leaf spacer share this width, which lines labels up across a
 // level whether or not the row has children.
 const MARKER_SIZE = 14;
+
+// Relative to the window rather than a pixel count, so the tree still fits
+// under the trigger on a short viewport.
+const MAX_TREE_HEIGHT = '60vh';
 
 function organoNodes(organos: Organo[]): TreeNodeData[] {
   return organos.map((organo) => ({ value: `${ORGANO}${organo.id}`, label: organo.name }));
@@ -98,13 +104,23 @@ function PickerRow({ payload, onOpen }: PickerRowProps) {
       }}
       gap={6}
       wrap="nowrap"
-      py={4}
-      px={6}
-      bg={selected ? 'indigo.0' : undefined}
-      style={{ borderRadius: 'var(--mantine-radius-sm)' }}
+      // Tall enough to read, short enough that its middle meets the elbow of
+      // the guide line, which Mantine pins at a fixed 12 px down the row.
+      py={2}
+      // Only the end side: the row's start padding is the indent, which
+      // Mantine's own label class takes from the level it set on the `li`. Any
+      // padding prop covering the start side — `px`, `p`, `pl`, `ps` — writes
+      // over it and flattens the tree into a single column, and the guide
+      // lines are drawn expecting a row to begin exactly at that offset.
+      pe={6}
+      bg={selected ? SELECTED_ROW_BG : undefined}
+      // On the row rather than the label, so the check inherits it too — the
+      // chevron sets its own colour and is unaffected.
+      c={selected ? SELECTED_ROW_COLOR : undefined}
+      style={{ ...elementProps.style, borderRadius: 'var(--mantine-radius-sm)' }}
     >
       <ExpandMarker hasChildren={hasChildren} expanded={expanded} />
-      <Text size="sm" fw={termo ? 500 : 400} c={selected ? 'indigo.8' : undefined}>
+      <Text size="sm" fw={termo ? 500 : 400}>
         {node.label}
       </Text>
       {selected && <IconCheck size={MARKER_SIZE} aria-hidden />}
@@ -160,14 +176,26 @@ function OrganoTree({ data, openId, onOpen, labelledBy }: OrganoTreeProps) {
   }
 
   return (
-    <Tree
-      data={data}
-      tree={tree}
-      levelOffset="md"
-      aria-labelledby={labelledBy}
-      onKeyDown={actOnFocusedNodeOnEnter}
-      renderNode={(payload) => <PickerRow payload={payload} onOpen={onOpen} />}
-    />
+    // Every branch opens at once, so a large visible set draws a tree taller
+    // than the window it drops into.
+    <ScrollArea.Autosize mah={MAX_TREE_HEIGHT} type="auto">
+      <Tree
+        data={data}
+        tree={tree}
+        levelOffset="md"
+        // The indent alone is a thin signal in a narrow dropdown holding names
+        // long enough to wrap; the lines say which branch a row hangs off even
+        // when its label runs over two rows.
+        withLines
+        // Inset the whole tree rather than each row: a row's own start padding
+        // is its indent, and the guide lines are positioned within the row, so
+        // both shift together and stay aligned with the chevron above them.
+        ps={6}
+        aria-labelledby={labelledBy}
+        onKeyDown={actOnFocusedNodeOnEnter}
+        renderNode={(payload) => <PickerRow payload={payload} onOpen={onOpen} />}
+      />
+    </ScrollArea.Autosize>
   );
 }
 

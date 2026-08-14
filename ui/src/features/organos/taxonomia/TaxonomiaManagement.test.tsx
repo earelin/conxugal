@@ -264,6 +264,21 @@ describe('taxonomía management', () => {
     expect(within(tree()).getByText(innovacion.name)).toBeInTheDocument();
   });
 
+  it('names the open term in the variant that is defined for both colour schemes', async () => {
+    const user = userEvent.setup();
+    mockCatalogue(CATALOGUE);
+    mockTaxonomia(TAXONOMIA);
+    renderOrganosPage();
+
+    await openTermo(user, sanidade.name);
+
+    // The row's background is Mantine's own and changes with the scheme, so a
+    // step off the indigo scale would read against only one of the two.
+    expect(within(treeItemFor(sanidade.name)).getByText(sanidade.name).style.color).toBe(
+      'var(--mantine-color-indigo-light-color)',
+    );
+  });
+
   it('keeps arrow keys on a focused row action instead of walking the tree', async () => {
     const user = userEvent.setup();
     mockCatalogue(CATALOGUE);
