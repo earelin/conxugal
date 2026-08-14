@@ -26,6 +26,7 @@ import {
 } from '../lib/taxonomiaTree';
 import { ErrorAlert } from './ErrorAlert';
 import { LoadingIndicator } from './LoadingIndicator';
+import { SELECTED_ROW_BG, SELECTED_ROW_COLOR } from './selection';
 
 const copy = strings.organoPicker;
 
@@ -48,12 +49,6 @@ function organoIdOf(value: string): string | null {
 // Chevron and leaf spacer share this width, which lines labels up across a
 // level whether or not the row has children.
 const MARKER_SIZE = 14;
-
-// Mantine's `light` variant pair rather than a step off the indigo scale: both
-// sides of it are defined per colour scheme, so the open Órgano keeps its
-// contrast in the dark theme instead of reading as dark blue on near-white.
-const SELECTED_BG = 'var(--mantine-color-indigo-light)';
-const SELECTED_COLOR = 'var(--mantine-color-indigo-light-color)';
 
 // Relative to the window rather than a pixel count, so the tree still fits
 // under the trigger on a short viewport.
@@ -118,10 +113,10 @@ function PickerRow({ payload, onOpen }: PickerRowProps) {
       // over it and flattens the tree into a single column, and the guide
       // lines are drawn expecting a row to begin exactly at that offset.
       pe={6}
-      bg={selected ? SELECTED_BG : undefined}
+      bg={selected ? SELECTED_ROW_BG : undefined}
       // On the row rather than the label, so the check inherits it too — the
       // chevron sets its own colour and is unaffected.
-      c={selected ? SELECTED_COLOR : undefined}
+      c={selected ? SELECTED_ROW_COLOR : undefined}
       style={{ ...elementProps.style, borderRadius: 'var(--mantine-radius-sm)' }}
     >
       <ExpandMarker hasChildren={hasChildren} expanded={expanded} />
