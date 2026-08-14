@@ -3,7 +3,7 @@ import { IconCheck, IconSearch } from '@tabler/icons-react';
 import { type KeyboardEvent, useId, useMemo, useRef, useState } from 'react';
 
 import { strings } from '../../../shared/lib/strings';
-import type { TermoNode } from '../taxonomiaTree';
+import type { TermoNode } from '../../../shared/lib/taxonomiaTree';
 import { buildTermoPickerRows } from './termoSearch';
 
 const copy = strings.admin.organos.assign;

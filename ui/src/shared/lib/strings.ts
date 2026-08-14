@@ -25,6 +25,14 @@ export const strings = {
     logout: 'Pechar sesión',
     logoutError: 'Non foi posible pechar a sesión. Téntao de novo.',
   },
+  organoPicker: {
+    label: 'Órgano',
+    placeholder: 'Escolle un órgano',
+    empty: 'Aínda non hai órganos con contratos.',
+    emptyHelp: 'Cando se importe o primeiro contrato dun órgano, aparecerá aquí.',
+    errorTitle: 'Non se puido cargar a lista de órganos.',
+    errorHelp: 'Téntao de novo; se persiste, volve máis tarde.',
+  },
   home: {
     title: 'Benvido/a a conxugal',
     description:

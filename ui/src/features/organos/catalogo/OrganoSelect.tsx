@@ -9,9 +9,9 @@ import {
 import { useMemo } from 'react';
 
 import { strings } from '../../../shared/lib/strings';
+import type { TermoNode } from '../../../shared/lib/taxonomiaTree';
 import type { Organo } from '../organos';
 import { foldForSearch } from '../taxonomia/termoSearch';
-import type { TermoNode } from '../taxonomiaTree';
 import { organoPlacementLabel } from './organoPlacement';
 
 const copy = strings.admin.organos.assign;

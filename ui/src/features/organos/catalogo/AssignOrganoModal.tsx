@@ -2,18 +2,18 @@ import { Button, Modal, Stack } from '@mantine/core';
 import { useState } from 'react';
 
 import { strings } from '../../../shared/lib/strings';
+import {
+  findTermoPath,
+  type TaxonomiaView,
+  type TermoNode,
+  termoPathLabel,
+} from '../../../shared/lib/taxonomiaTree';
 import { DialogContextBlock } from '../dialogs/DialogContextBlock';
 import { TermoDialogFooter } from '../dialogs/TermoDialogFooter';
 import { TermoRefusalAlert } from '../dialogs/TermoRefusalAlert';
 import type { Organo } from '../organos';
 import type { Refusal } from '../taxonomia/termoRefusal';
 import { TermoTreePicker } from '../taxonomia/TermoTreePicker';
-import {
-  findTermoPath,
-  type TaxonomiaView,
-  type TermoNode,
-  termoPathLabel,
-} from '../taxonomiaTree';
 import { usePlaceOrgano } from './organoMutations';
 import { organoPlacementLabel } from './organoPlacement';
 import { placementRefusal } from './organoRefusal';
@@ -30,7 +30,7 @@ const copy = strings.admin.organos.assign;
 export type AssignTarget = { kind: 'organo'; organo: Organo } | { kind: 'termo'; termo: TermoNode };
 
 interface AssignOrganoFormProps {
-  view: TaxonomiaView;
+  view: TaxonomiaView<Organo>;
   target: AssignTarget;
   onAssigned: () => void;
   onCancel: () => void;
@@ -39,7 +39,7 @@ interface AssignOrganoFormProps {
 }
 
 /** Whether a chosen id is still in the section's current view of the world. */
-function resolves(view: TaxonomiaView, target: AssignTarget, id: string): boolean {
+function resolves(view: TaxonomiaView<Organo>, target: AssignTarget, id: string): boolean {
   return target.kind === 'organo'
     ? findTermoPath(view.roots, id).length > 0
     : view.catalogue.some((organo) => organo.id === id);

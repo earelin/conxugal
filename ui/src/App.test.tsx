@@ -3,12 +3,13 @@ import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { strings } from './shared/lib/strings';
-import { mockCurrentUser, renderApp } from './test/renderApp';
+import { mockCurrentUser, mockOrganosPicker, renderApp } from './test/renderApp';
 
 describe('application shell', () => {
   beforeEach(() => {
     nock.disableNetConnect();
     mockCurrentUser('USER');
+    mockOrganosPicker();
   });
 
   afterEach(() => {

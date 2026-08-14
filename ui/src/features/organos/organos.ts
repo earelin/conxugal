@@ -1,8 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
+import { ORGANOS_KEY_PREFIX, useTaxonomia } from '../../shared/entities/organos';
 import { apiFetch } from '../../shared/lib/httpClient';
-import { buildTaxonomiaView, type TaxonomiaView } from './taxonomiaTree';
+import {
+  buildTaxonomiaView,
+  type Organo as CatalogueOrgano,
+  type TaxonomiaView,
+} from '../../shared/lib/taxonomiaTree';
+
+export type { Termo } from '../../shared/lib/taxonomiaTree';
 
 /**
  * How far an Órgano's contratos menores history has been loaded. Three values
@@ -12,12 +19,13 @@ import { buildTaxonomiaView, type TaxonomiaView } from './taxonomiaTree';
  */
 export type ContratosMenoresImportState = 'NEVER_STARTED' | 'INCOMPLETE' | 'COMPLETE';
 
-export interface Organo {
-  id: string;
-  name: string;
-  active: boolean;
-  /** The term this Órgano is filed under; null means unclassified. */
-  termoId: string | null;
+/**
+ * An Órgano as an administrator sees it: everything the browse catalogue
+ * carries, plus the contratos menores mark and how far that import got. The
+ * shared read serves neither, which is why this is a wider shape over the same
+ * records rather than a second declaration of them.
+ */
+export interface Organo extends CatalogueOrgano {
   /** Whether an administrator opted this Órgano into contratos menores import. */
   importable: boolean;
   /**
@@ -27,18 +35,10 @@ export interface Organo {
   importState: ContratosMenoresImportState;
 }
 
-export interface Termo {
-  id: string;
-  name: string;
-  /** The term this one sits under; null marks a root. */
-  parentId: string | null;
-}
-
-// Both keys share the ['organos'] prefix so a mutation can invalidate the whole
-// section with one call, or either read on its own.
-export const SECTION_QUERY_KEY = ['organos'] as const;
-export const ORGANOS_QUERY_KEY = ['organos', 'catalogo'] as const;
-export const TAXONOMIA_QUERY_KEY = ['organos', 'taxonomia'] as const;
+// The prefix every Órganos read shares, so a mutation can invalidate the whole
+// section with one call, or a single read on its own.
+export const SECTION_QUERY_KEY = ORGANOS_KEY_PREFIX;
+export const ORGANOS_QUERY_KEY = [...ORGANOS_KEY_PREFIX, 'catalogo'] as const;
 
 /**
  * The `ADMIN`-gated catalogue, not the shared `/api/organos`: this section files the
@@ -53,14 +53,9 @@ async function fetchOrganos(): Promise<Organo[]> {
   return response.json() as Promise<Organo[]>;
 }
 
-async function fetchTaxonomia(): Promise<Termo[]> {
-  const response = await apiFetch('/api/organos/taxonomia');
-  return response.json() as Promise<Termo[]>;
-}
-
 export interface OrganosTaxonomia {
   /** The joined view; null unless *both* reads are currently succeeding. */
-  view: TaxonomiaView | null;
+  view: TaxonomiaView<Organo> | null;
   isPending: boolean;
   /** Whether either read is in flight, including a retry of a failed one. */
   isFetching: boolean;
@@ -84,7 +79,9 @@ export interface OrganosTaxonomia {
  */
 export function useOrganosTaxonomia(): OrganosTaxonomia {
   const organos = useQuery({ queryKey: ORGANOS_QUERY_KEY, queryFn: fetchOrganos });
-  const taxonomia = useQuery({ queryKey: TAXONOMIA_QUERY_KEY, queryFn: fetchTaxonomia });
+  // The shared taxonomía read: the browse picker asks for the same list, and
+  // sharing the key is what makes the section's writes refresh it too.
+  const taxonomia = useTaxonomia();
 
   const isError = organos.isError || taxonomia.isError;
 

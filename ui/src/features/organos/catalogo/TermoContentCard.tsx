@@ -3,13 +3,13 @@ import { useState } from 'react';
 
 import { singularOrPlural, type Word } from '../../../shared/lib/plural';
 import { strings } from '../../../shared/lib/strings';
+import type { TermoNode } from '../../../shared/lib/taxonomiaTree';
 import { TermoRefusalAlert } from '../dialogs/TermoRefusalAlert';
 import { useUnmarkOrgano } from '../imports/contratosMenores';
 import { markedCount } from '../imports/importMark';
 import type { Organo } from '../organos';
 import { TermoActionButtons, type TermoActionHandlers } from '../taxonomia/TermoActionControls';
 import type { Refusal } from '../taxonomia/termoRefusal';
-import type { TermoNode } from '../taxonomiaTree';
 import { useClearOrgano } from './organoMutations';
 import { markWriteRefusal, placementRefusal } from './organoRefusal';
 import { OrganosTable } from './OrganosTable';
@@ -43,7 +43,7 @@ function unclassifiedPane(unclassified: Organo[]): Pane {
   };
 }
 
-function termoPane(path: TermoNode[]): Pane {
+function termoPane(path: TermoNode<Organo>[]): Pane {
   const termo = path[path.length - 1];
   return {
     title: termo.name,
@@ -57,7 +57,7 @@ function termoPane(path: TermoNode[]): Pane {
 
 interface TermoContentCardProps {
   /** Root-to-term chain of the open term; empty selects the worklist. */
-  openPath: TermoNode[];
+  openPath: TermoNode<Organo>[];
   unclassified: Organo[];
   termoActions: TermoActionHandlers;
   onAssignOrgano: (organo: Organo) => void;

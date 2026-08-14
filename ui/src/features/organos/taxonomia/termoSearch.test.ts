@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { buildTaxonomiaView } from '../../../shared/lib/taxonomiaTree';
 import type { Organo, Termo } from '../organos';
-import { buildTaxonomiaView } from '../taxonomiaTree';
 import { buildTermoPickerRows, foldForSearch } from './termoSearch';
 
 function termo(id: string, name: string, parentId: string | null = null): Termo {

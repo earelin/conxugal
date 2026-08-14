@@ -1,7 +1,7 @@
 import { Select } from '@mantine/core';
 import { useMemo } from 'react';
 
-import { PATH_SEPARATOR, type TermoNode } from '../taxonomiaTree';
+import { PATH_SEPARATOR, type TermoNode } from '../../../shared/lib/taxonomiaTree';
 
 // Mantine's Select carries string values, and the root is not a term with an id.
 // Term ids are UUIDs, so this sentinel cannot collide with one.

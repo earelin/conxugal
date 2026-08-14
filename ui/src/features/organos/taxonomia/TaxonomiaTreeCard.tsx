@@ -17,8 +17,8 @@ import { IconChevronDown, IconChevronRight, IconInbox, IconPlus } from '@tabler/
 import { type KeyboardEvent, useMemo, useState } from 'react';
 
 import { strings } from '../../../shared/lib/strings';
+import { findTermoPath, type TermoNode } from '../../../shared/lib/taxonomiaTree';
 import type { Organo, Termo } from '../organos';
-import { findTermoPath, type TermoNode } from '../taxonomiaTree';
 import { CreateTermoModal } from './CreateTermoModal';
 import { type TermoActionHandlers, TermoActionIcons } from './TermoActionControls';
 

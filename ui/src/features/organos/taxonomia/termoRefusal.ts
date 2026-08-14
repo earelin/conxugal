@@ -1,6 +1,6 @@
 import { isProblemType } from '../../../shared/lib/httpError';
 import { strings } from '../../../shared/lib/strings';
-import { findTermoPath, type TermoNode } from '../taxonomiaTree';
+import { findTermoPath, type TermoNode } from '../../../shared/lib/taxonomiaTree';
 
 const PROBLEM_TYPE = {
   cycle: 'urn:conxugal:problem-type:termo-cycle',
