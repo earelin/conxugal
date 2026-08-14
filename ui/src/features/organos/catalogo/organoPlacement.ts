@@ -1,6 +1,6 @@
 import { strings } from '../../../shared/lib/strings';
+import { findTermoPath, type TermoNode, termoPathLabel } from '../../../shared/lib/taxonomiaTree';
 import type { Organo } from '../organos';
-import { findTermoPath, type TermoNode, termoPathLabel } from '../taxonomiaTree';
 
 /**
  * Where an Órgano sits now, read as one line. Lives beside `taxonomiaTree.ts`

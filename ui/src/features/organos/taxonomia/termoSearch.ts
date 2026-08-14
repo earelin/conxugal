@@ -1,6 +1,6 @@
 import { deburr } from 'es-toolkit';
 
-import { findTermoPath, type TermoNode } from '../taxonomiaTree';
+import { findTermoPath, type TermoNode } from '../../../shared/lib/taxonomiaTree';
 
 /**
  * The form names are compared in. Galician term names are full of accents and

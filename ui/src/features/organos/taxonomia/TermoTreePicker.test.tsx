@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
 
 import { theme } from '../../../app/theme';
 import { strings } from '../../../shared/lib/strings';
+import { buildTaxonomiaView } from '../../../shared/lib/taxonomiaTree';
 import type { Organo, Termo } from '../organos';
-import { buildTaxonomiaView } from '../taxonomiaTree';
 import { TermoTreePicker } from './TermoTreePicker';
 
 const copy = strings.admin.organos.assign;

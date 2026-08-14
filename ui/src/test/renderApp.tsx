@@ -24,10 +24,33 @@ export function mockCurrentUser(role: Role) {
     });
 }
 
+export const PICKER_ORGANOS = [
+  { id: 'o-1', name: 'Servizo Galego de Saúde', active: true, termoId: 't-1' },
+  { id: 'o-2', name: 'Instituto Galego da Vivenda e Solo', active: true, termoId: null },
+];
+
+export const PICKER_TERMOS = [{ id: 't-1', name: 'Consellería de Sanidade', parentId: null }];
+
+/**
+ * The two reads the navbar picker makes as soon as a session resolves. Any test
+ * that mounts the shell with a signed-in user needs them: `nock` fails an
+ * unmatched request, and those failures land after the test has torn down.
+ */
+export function mockOrganosPicker(organos = PICKER_ORGANOS, termos = PICKER_TERMOS) {
+  return nock(BASE_URL)
+    .get('/api/organos')
+    .reply(200, organos)
+    .get('/api/organos/taxonomia')
+    .reply(200, termos);
+}
+
 export function renderApp(initialPath = '/') {
   const router = createMemoryRouter(routes, { initialEntries: [initialPath] });
   return render(
-    <MantineProvider theme={theme}>
+    // `env="test"` turns off Mantine's transitions: an overlay spends its first
+    // frames `display: none`, which hides its contents from every accessible
+    // query for as long as the transition runs.
+    <MantineProvider theme={theme} env="test">
       <QueryClientProvider client={createQueryClient()}>
         <RouterProvider router={router} />
       </QueryClientProvider>

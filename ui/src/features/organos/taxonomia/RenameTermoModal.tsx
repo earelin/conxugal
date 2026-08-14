@@ -1,9 +1,9 @@
 import { Button, Modal, Stack, TextInput } from '@mantine/core';
 
 import { strings } from '../../../shared/lib/strings';
+import type { TermoNode } from '../../../shared/lib/taxonomiaTree';
 import { TermoDialogFooter } from '../dialogs/TermoDialogFooter';
 import { TermoRefusalAlert } from '../dialogs/TermoRefusalAlert';
-import type { TermoNode } from '../taxonomiaTree';
 import { useRenameTermo } from './termoMutations';
 import type { TermoNameValues } from './termoName';
 import { useTermoNameForm } from './termoNameForm';

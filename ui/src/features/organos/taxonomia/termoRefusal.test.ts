@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { HttpError, ProblemError } from '../../../shared/lib/httpClient';
 import { strings } from '../../../shared/lib/strings';
-import type { TermoNode } from '../taxonomiaTree';
+import type { TermoNode } from '../../../shared/lib/taxonomiaTree';
 import {
   cycleRefusal,
   deleteRefusal,

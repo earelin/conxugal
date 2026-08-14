@@ -2,9 +2,9 @@ import { Button, Modal, Stack, Text } from '@mantine/core';
 import { useState } from 'react';
 
 import { strings } from '../../../shared/lib/strings';
+import type { TermoNode } from '../../../shared/lib/taxonomiaTree';
 import { TermoDialogFooter } from '../dialogs/TermoDialogFooter';
 import { TermoRefusalAlert } from '../dialogs/TermoRefusalAlert';
-import type { TermoNode } from '../taxonomiaTree';
 import { useDeleteTermo } from './termoMutations';
 import { deleteRefusal, hasChildrenRefusal, type Refusal } from './termoRefusal';
 

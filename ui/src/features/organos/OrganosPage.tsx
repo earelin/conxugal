@@ -3,18 +3,18 @@ import { useState } from 'react';
 
 import { isHttpStatus } from '../../shared/lib/httpError';
 import { strings } from '../../shared/lib/strings';
+import { findTermoPath, type TaxonomiaView } from '../../shared/lib/taxonomiaTree';
 import { ErrorAlert } from '../../shared/ui/ErrorAlert';
 import { AssignOrganoModal, type AssignTarget } from './catalogo/AssignOrganoModal';
 import { TermoContentCard } from './catalogo/TermoContentCard';
 import type { ImportAttempt } from './imports/importAttempt';
 import { ImportToolbar } from './imports/ImportToolbar';
 import { MarkOrganoModal } from './imports/MarkOrganoModal';
-import { useOrganosTaxonomia } from './organos';
+import { type Organo, useOrganosTaxonomia } from './organos';
 import { DeleteTermoModal } from './taxonomia/DeleteTermoModal';
 import { MoveTermoModal } from './taxonomia/MoveTermoModal';
 import { RenameTermoModal } from './taxonomia/RenameTermoModal';
 import { TaxonomiaTreeCard } from './taxonomia/TaxonomiaTreeCard';
-import { findTermoPath, type TaxonomiaView } from './taxonomiaTree';
 
 type TermoAction = 'rename' | 'move' | 'delete';
 
@@ -24,7 +24,10 @@ type TermoRequest = { termoId: string; action: TermoAction };
 /** Which half of the assign pair the entry point settled, held as an id. */
 type AssignRequest = { kind: 'organo'; organoId: string } | { kind: 'termo'; termoId: string };
 
-function resolveAssignTarget(view: TaxonomiaView, request: AssignRequest): AssignTarget | null {
+function resolveAssignTarget(
+  view: TaxonomiaView<Organo>,
+  request: AssignRequest,
+): AssignTarget | null {
   if (request.kind === 'organo') {
     const organo = view.catalogue.find((candidate) => candidate.id === request.organoId);
     return organo ? { kind: 'organo', organo } : null;

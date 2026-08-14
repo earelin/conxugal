@@ -1,6 +1,7 @@
 import {
   AppShell,
   Burger,
+  Divider,
   Group,
   NavLink as MantineNavLink,
   Stack,
@@ -11,7 +12,9 @@ import { useDisclosure } from '@mantine/hooks';
 import { NavLink, Outlet } from 'react-router';
 
 import { useCurrentUser } from '../../shared/entities/currentUser';
+import { useVisibleOrganos } from '../../shared/entities/organos';
 import { strings } from '../../shared/lib/strings';
+import { OrganoPicker } from '../../shared/ui/OrganoPicker';
 import { visibleNavSections } from '../nav';
 import { UserMenu } from './UserMenu';
 
@@ -24,6 +27,10 @@ export function AppLayout() {
   const [opened, { toggle, close }] = useDisclosure();
   const { data: currentUser } = useCurrentUser();
   const sections = visibleNavSections(currentUser?.role);
+  // One condition gates the read and the render alike: a disabled query reports
+  // `isPending` for as long as it stays off, so a picker mounted before the
+  // session resolves would sit on a spinner that never ends.
+  const organos = useVisibleOrganos({ enabled: currentUser !== undefined });
 
   return (
     <AppShell
@@ -57,6 +64,23 @@ export function AppLayout() {
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
+        {/* Not a nav item and not a link: the picker is chrome that opens an
+            Órgano's contracts, so it sits above the navigation landmark rather
+            than inside it. */}
+        {currentUser && (
+          <>
+            <OrganoPicker
+              view={organos.view}
+              isPending={organos.isPending}
+              isFetching={organos.isFetching}
+              isError={organos.isError}
+              onRetry={organos.refetch}
+              onNavigate={close}
+            />
+            <Divider my="md" />
+          </>
+        )}
+
         <nav aria-label="Navegación principal">
           <Stack gap="lg">
             {sections.map((section) => (

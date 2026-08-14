@@ -1,23 +1,41 @@
-import type { Organo, Termo } from './organos';
-
-export interface TermoNode {
+/**
+ * An Órgano as every surface over the taxonomía needs it. The reads that carry
+ * more — the administration catalogue and its import mark — declare their own
+ * shape extending this one, which is what the type parameter below preserves.
+ */
+export interface Organo {
   id: string;
   name: string;
-  children: TermoNode[];
-  /** Órganos filed directly in this term, never those of its descendants. */
-  organos: Organo[];
+  active: boolean;
+  /** The term this Órgano is filed under; null means unclassified. */
+  termoId: string | null;
 }
 
-export interface TaxonomiaView {
-  roots: TermoNode[];
-  unclassified: Organo[];
+export interface Termo {
+  id: string;
+  name: string;
+  /** The term this one sits under; null marks a root. */
+  parentId: string | null;
+}
+
+export interface TermoNode<O extends Organo = Organo> {
+  id: string;
+  name: string;
+  children: TermoNode<O>[];
+  /** Órganos filed directly in this term, never those of its descendants. */
+  organos: O[];
+}
+
+export interface TaxonomiaView<O extends Organo = Organo> {
+  roots: TermoNode<O>[];
+  unclassified: O[];
   /**
    * The whole catalogue as the server sent it. Kept alongside the tree because a
    * picker over every Órgano wants them in name order; reassembling the list
    * from `roots` and `unclassified` would order it by position in the taxonomía
    * instead, and re-sorting is what this module refuses to do.
    */
-  catalogue: Organo[];
+  catalogue: O[];
 }
 
 export const PATH_SEPARATOR = ' › ';
@@ -42,16 +60,24 @@ export function termoPathLabel(path: TermoNode[]): string {
  * between them and leave an edge pointing at a term that is no longer in the
  * taxonomía. Such an edge is dropped, never the record it came from: an Órgano
  * surfaces as unclassified and a term as a root.
+ *
+ * Every term is returned, including the ones holding nothing: a term an
+ * administrator has just created has to appear in the management tree the
+ * moment it is made. A surface that wants the empty branches gone prunes them
+ * itself, with `pruneEmptyTermos`.
  */
-export function buildTaxonomiaView(termos: Termo[], organos: Organo[]): TaxonomiaView {
-  const nodesById = new Map<string, TermoNode>(
+export function buildTaxonomiaView<O extends Organo>(
+  termos: Termo[],
+  organos: O[],
+): TaxonomiaView<O> {
+  const nodesById = new Map<string, TermoNode<O>>(
     termos.map((termo) => [
       termo.id,
       { id: termo.id, name: termo.name, children: [], organos: [] },
     ]),
   );
 
-  const unclassified: Organo[] = [];
+  const unclassified: O[] = [];
   for (const organo of organos) {
     const node = organo.termoId === null ? undefined : nodesById.get(organo.termoId);
     if (node) {
@@ -61,7 +87,7 @@ export function buildTaxonomiaView(termos: Termo[], organos: Organo[]): Taxonomi
     }
   }
 
-  const roots: TermoNode[] = [];
+  const roots: TermoNode<O>[] = [];
   for (const termo of termos) {
     const node = nodesById.get(termo.id);
     if (!node) {
@@ -79,7 +105,7 @@ export function buildTaxonomiaView(termos: Termo[], organos: Organo[]): Taxonomi
 }
 
 /** The chain of terms from a root down to `id`, empty when no term matches. */
-export function findTermoPath(roots: TermoNode[], id: string): TermoNode[] {
+export function findTermoPath<O extends Organo>(roots: TermoNode<O>[], id: string): TermoNode<O>[] {
   for (const root of roots) {
     if (root.id === id) {
       return [root];
@@ -90,4 +116,21 @@ export function findTermoPath(roots: TermoNode[], id: string): TermoNode[] {
     }
   }
   return [];
+}
+
+/**
+ * The tree without the terms holding nothing: a term survives when its own
+ * Órgano list is non-empty or any descendant survives the same test. The
+ * recursion is the whole point — a single-level check would drop exactly the
+ * intermediate terms a deep taxonomía is made of, and with them the branch
+ * leading to a term that does hold something.
+ *
+ * It copies rather than filtering in place: what it is handed is built from a
+ * cached read another surface renders whole.
+ */
+export function pruneEmptyTermos<O extends Organo>(roots: TermoNode<O>[]): TermoNode<O>[] {
+  return roots.flatMap((node) => {
+    const children = pruneEmptyTermos(node.children);
+    return node.organos.length > 0 || children.length > 0 ? [{ ...node, children }] : [];
+  });
 }
