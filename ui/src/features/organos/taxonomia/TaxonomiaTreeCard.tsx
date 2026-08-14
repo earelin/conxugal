@@ -45,6 +45,11 @@ function indexById(nodes: TermoNode[], byId: Map<string, TermoNode>): Map<string
 // across a level whether or not the term has children.
 const MARKER_SIZE = 14;
 
+// The selected row's background is Mantine's own, which is a light grey in one
+// colour scheme and a dark one in the other; a fixed step off the indigo scale
+// would read against only one of them.
+const SELECTED_COLOR = 'var(--mantine-color-indigo-light-color)';
+
 function ExpandMarker({ hasChildren, expanded }: { hasChildren: boolean; expanded: boolean }) {
   if (!hasChildren) {
     return <Box w={MARKER_SIZE} />;
@@ -66,7 +71,7 @@ function TermoRow({ payload, termo, actions }: TermoRowProps) {
     <Group {...elementProps} gap="xs" justify="space-between" wrap="nowrap" py={4}>
       <Group gap={6} wrap="nowrap">
         <ExpandMarker hasChildren={hasChildren} expanded={expanded} />
-        <Text size="sm" fw={selected ? 600 : 500} c={selected ? 'indigo.8' : undefined}>
+        <Text size="sm" fw={selected ? 600 : 500} c={selected ? SELECTED_COLOR : undefined}>
           {node.label}
         </Text>
       </Group>

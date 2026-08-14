@@ -16,6 +16,12 @@ const INDENT_STEP = 20;
 const BASE_INDENT = 12;
 const PANEL_HEIGHT = 288;
 
+// Mantine's `light` variant pair rather than a step off the indigo scale: both
+// sides of it are defined per colour scheme, so the chosen term keeps its
+// contrast in the dark theme instead of reading as dark blue on near-white.
+const SELECTED_BG = 'var(--mantine-color-indigo-light)';
+const SELECTED_COLOR = 'var(--mantine-color-indigo-light-color)';
+
 /** Where a key moves focus within the list, or null when it is not ours. */
 function nextIndex(key: string, current: number, last: number): number | null {
   switch (key) {
@@ -149,22 +155,20 @@ export function TermoTreePicker({ roots, label, value, onChange, required }: Ter
                   py={6}
                   pr="xs"
                   pl={BASE_INDENT + row.depth * INDENT_STEP}
-                  bg={selected ? 'indigo.0' : undefined}
+                  bg={selected ? SELECTED_BG : undefined}
                   style={{ borderRadius: 'var(--mantine-radius-sm)' }}
                 >
                   <Group gap="xs" justify="space-between" wrap="nowrap">
                     <Text
                       size="sm"
                       fw={selected || row.depth === 0 ? 600 : 400}
-                      c={selected ? 'indigo.8' : undefined}
+                      c={selected ? SELECTED_COLOR : undefined}
                     >
                       {row.name}
                     </Text>
                     {/* A Tabler icon paints its own stroke, so this is a CSS
                         value rather than a Mantine colour token. */}
-                    {selected && (
-                      <IconCheck size={14} color="var(--mantine-color-indigo-8)" aria-hidden />
-                    )}
+                    {selected && <IconCheck size={14} color={SELECTED_COLOR} aria-hidden />}
                   </Group>
                 </UnstyledButton>
               );

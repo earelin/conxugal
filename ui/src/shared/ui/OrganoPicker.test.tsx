@@ -155,6 +155,32 @@ describe('OrganoPicker tree', () => {
     expect(within(tree).getByText('Consellería de Educación')).toBeInTheDocument();
   });
 
+  it('leaves the indent Mantine draws from the level alone on every row', async () => {
+    await openPicker();
+
+    const tree = await screen.findByRole('tree', { name: copy.label });
+    const rows = within(tree)
+      .getAllByRole('treeitem')
+      .map((item) => item.firstElementChild as HTMLElement);
+
+    // The indent is a stylesheet rule keyed on the level Mantine sets per row,
+    // and the setup file never loads Mantine's CSS — so there is no rule here
+    // to measure, only the two ways of breaking it to assert against.
+    for (const row of rows) {
+      // Mantine hands the rule's class to the row through `elementProps`, and
+      // `data-value` arrives on the same spread. Dropping it would cost the
+      // indent and the keyboard focus ring, which the rule also carries.
+      expect(row).toHaveAttribute('data-value');
+      // Any padding prop covering the start side overrides that rule inline
+      // and flattens the tree: `px` writes `padding-inline`, `ps` writes
+      // `padding-inline-start`, and `p`/`pl` write neither but still win.
+      expect(row.style.paddingInline).toBe('');
+      expect(row.style.paddingInlineStart).toBe('');
+      expect(row.style.padding).toBe('');
+      expect(row.style.paddingLeft).toBe('');
+    }
+  });
+
   it('marks the open Organo as selected and leaves its siblings alone', async () => {
     await openPicker({ path: `/organo/${cunqueiro.id}` });
 
@@ -165,6 +191,18 @@ describe('OrganoPicker tree', () => {
 
     expect(selected).toHaveLength(1);
     expect(selected[0]).toHaveTextContent(cunqueiro.name);
+  });
+
+  it('paints the open Organo in the variant that is defined for both colour schemes', async () => {
+    await openPicker({ path: `/organo/${cunqueiro.id}` });
+
+    const tree = await screen.findByRole('tree', { name: copy.label });
+    const row = treeRow(tree, cunqueiro.name).firstElementChild as HTMLElement;
+
+    // A step off the indigo scale is one fixed colour and reads against one
+    // scheme only; the `light` variant pair is redefined per scheme.
+    expect(row.style.background).toBe('var(--mantine-color-indigo-light)');
+    expect(row.style.color).toBe('var(--mantine-color-indigo-light-color)');
   });
 
   it('offers no control that creates, renames, moves, deletes or reassigns anything', async () => {

@@ -236,6 +236,24 @@ describe('TermoTreePicker accessibility', () => {
     expect(within(list()).getAllByRole('option', { selected: true })).toHaveLength(1);
   });
 
+  it('paints the chosen row in the variant that is defined for both colour schemes', () => {
+    renderPicker('t-2');
+
+    const option = optionFor('Consellería de Sanidade');
+
+    // A step off the indigo scale is one fixed colour and reads against one
+    // scheme only; the `light` variant pair is redefined per scheme. The check
+    // is a Tabler icon, which paints the value onto its own stroke.
+    expect(option.style.background).toBe('var(--mantine-color-indigo-light)');
+    expect(within(option).getByText('Consellería de Sanidade').style.color).toBe(
+      'var(--mantine-color-indigo-light-color)',
+    );
+    expect(option.querySelector('svg')).toHaveAttribute(
+      'stroke',
+      'var(--mantine-color-indigo-light-color)',
+    );
+  });
+
   it('announces an empty result in a live region rather than silently', async () => {
     const user = userEvent.setup();
     renderPicker();
