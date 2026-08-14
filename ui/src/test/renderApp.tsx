@@ -12,16 +12,18 @@ import { createQueryClient } from '../shared/lib/queryClient';
 
 export const BASE_URL = 'http://localhost:3000';
 
+export function currentUserBody(role: Role) {
+  return {
+    id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+    email: `${role.toLowerCase()}@conxugal.gal`,
+    role,
+    createdAt: '2026-01-15T09:30:00Z',
+    lastLoginAt: '2026-07-10T08:12:00Z',
+  };
+}
+
 export function mockCurrentUser(role: Role) {
-  return nock(BASE_URL)
-    .get('/api/me')
-    .reply(200, {
-      id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-      email: `${role.toLowerCase()}@conxugal.gal`,
-      role,
-      createdAt: '2026-01-15T09:30:00Z',
-      lastLoginAt: '2026-07-10T08:12:00Z',
-    });
+  return nock(BASE_URL).get('/api/me').reply(200, currentUserBody(role));
 }
 
 export const PICKER_ORGANOS = [
@@ -46,14 +48,18 @@ export function mockOrganosPicker(organos = PICKER_ORGANOS, termos = PICKER_TERM
 
 export function renderApp(initialPath = '/') {
   const router = createMemoryRouter(routes, { initialEntries: [initialPath] });
-  return render(
+  const queryClient = createQueryClient();
+  const utils = render(
     // `env="test"` turns off Mantine's transitions: an overlay spends its first
     // frames `display: none`, which hides its contents from every accessible
     // query for as long as the transition runs.
     <MantineProvider theme={theme} env="test">
-      <QueryClientProvider client={createQueryClient()}>
+      <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>
     </MantineProvider>,
   );
+  // Handed back so a test can ask what the shell has actually asked the server
+  // for, which is not something the rendered output can answer.
+  return { ...utils, queryClient };
 }

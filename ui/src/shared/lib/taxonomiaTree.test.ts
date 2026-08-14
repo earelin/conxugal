@@ -187,12 +187,20 @@ describe('pruneEmptyTermos', () => {
     ).toEqual([]);
   });
 
-  it('leaves the tree it was given untouched', () => {
-    const { roots } = buildTaxonomiaView([consellerias, sanidade, concellos], [sergas]);
+  it('leaves the tree it was given untouched, at every level it prunes', () => {
+    // The administration section renders this same tree from the same cached
+    // read, so a prune that filtered in place would delete terms from it.
+    const { roots } = buildTaxonomiaView([consellerias, sanidade, educacion, concellos], [sergas]);
 
-    pruneEmptyTermos(roots);
+    const pruned = pruneEmptyTermos(roots);
 
+    expect(pruned.map((node) => node.name)).toEqual(['Consellerías']);
+    expect(pruned[0].children.map((node) => node.name)).toEqual(['Consellería de Sanidade']);
     expect(roots.map((node) => node.name)).toEqual(['Consellerías', 'Concellos']);
+    expect(roots[0].children.map((node) => node.name)).toEqual([
+      'Consellería de Sanidade',
+      'Consellería de Educación',
+    ]);
   });
 });
 

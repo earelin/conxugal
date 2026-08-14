@@ -22,7 +22,9 @@ interface ReadOptions {
 // whatever a write touched: the whole area, or a single read.
 export const ORGANOS_KEY_PREFIX = ['organos'] as const;
 export const TAXONOMIA_QUERY_KEY = [...ORGANOS_KEY_PREFIX, 'taxonomia'] as const;
-export const VISIBLE_ORGANOS_QUERY_KEY = [...ORGANOS_KEY_PREFIX, 'visibles'] as const;
+// Not exported: nothing outside this module invalidates the browse read on its
+// own, and the prefix already reaches it.
+const VISIBLE_ORGANOS_QUERY_KEY = [...ORGANOS_KEY_PREFIX, 'visibles'] as const;
 
 async function fetchTaxonomia(): Promise<Termo[]> {
   const response = await apiFetch('/api/organos/taxonomia');
@@ -62,12 +64,13 @@ export interface VisibleOrganos {
  * The browse read: the visible set joined to the taxonomía it is classified
  * into.
  *
- * A failing read nulls `view` rather than letting the join run on half the
- * data. A failed taxonomy fetch reaching the builder as an empty term list
- * would render the whole visible set as one flat unclassified heap, which reads
- * as an answer rather than as the failure it is. Guarding on `data` alone would
- * not be enough — a *refetch* failure leaves react-query's own `data` holding
- * the last good response.
+ * The join runs only when *both* reads hold data, which is the rule that
+ * matters: a taxonomía that has never answered would reach the builder as an
+ * empty term list and render the whole visible set as one flat unclassified
+ * heap — an answer, where the truth is a failure. It deliberately does not also
+ * require the last read to have succeeded, so a refetch that fails keeps the
+ * two last-good lists joinable and leaves the caller to decide whether a stale
+ * view beats no view.
  */
 export function useVisibleOrganos({ enabled = true }: ReadOptions = {}): VisibleOrganos {
   const organos = useQuery({
@@ -77,21 +80,17 @@ export function useVisibleOrganos({ enabled = true }: ReadOptions = {}): Visible
   });
   const taxonomia = useTaxonomia({ enabled });
 
-  const isError = organos.isError || taxonomia.isError;
-
   const view = useMemo(
     () =>
-      organos.data && taxonomia.data && !isError
-        ? buildTaxonomiaView(taxonomia.data, organos.data)
-        : null,
-    [organos.data, taxonomia.data, isError],
+      organos.data && taxonomia.data ? buildTaxonomiaView(taxonomia.data, organos.data) : null,
+    [organos.data, taxonomia.data],
   );
 
   return {
     view,
     isPending: organos.isPending || taxonomia.isPending,
     isFetching: organos.isFetching || taxonomia.isFetching,
-    isError,
+    isError: organos.isError || taxonomia.isError,
     refetch: () => {
       void organos.refetch();
       void taxonomia.refetch();

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { ORGANOS_KEY_PREFIX } from '../../shared/entities/organos';
 import { strings } from '../../shared/lib/strings';
 import { BASE_URL, mockCurrentUser, mockOrganosPicker, renderApp } from '../../test/renderApp';
 
@@ -90,7 +91,7 @@ describe('AppLayout Organo picker', () => {
     expect(await pickerTrigger()).toBeInTheDocument();
   });
 
-  it('places the picker above the primary navigation rather than inside it', async () => {
+  it('places the picker above the primary navigation, and adds no second landmark', async () => {
     mockCurrentUser('USER');
     mockOrganosPicker();
     renderShell();
@@ -100,19 +101,23 @@ describe('AppLayout Organo picker', () => {
 
     expect(nav).not.toContainElement(trigger);
     expect(trigger.compareDocumentPosition(nav)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    // The panel holding both is not itself navigation: a screen reader is
+    // offered one landmark, the labelled one.
+    expect(screen.getAllByRole('navigation')).toHaveLength(1);
   });
 
   it('is absent while the session is unresolved, and reads nothing until it is', async () => {
-    const session = mockCurrentUser('USER');
+    mockCurrentUser('USER');
     const reads = mockOrganosPicker();
-    renderShell();
 
-    // Before /api/me answers there is no picker and, just as importantly, no
-    // request for what it would show.
+    const { queryClient } = renderShell();
+
+    // On mount, with /api/me still unanswered, there is no picker and — the
+    // half a rendering assertion cannot see — no request in flight for what it
+    // would show. An ungated query would already be fetching both.
     expect(screen.queryByText(picker.label)).not.toBeInTheDocument();
-    expect(reads.isDone()).toBe(false);
+    expect(queryClient.isFetching({ queryKey: ORGANOS_KEY_PREFIX })).toBe(0);
 
-    await waitFor(() => expect(session.isDone()).toBe(true));
     expect(await pickerTrigger()).toBeInTheDocument();
     await waitFor(() => expect(reads.isDone()).toBe(true));
   });

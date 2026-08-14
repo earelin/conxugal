@@ -18,6 +18,13 @@ export interface Termo {
   parentId: string | null;
 }
 
+/**
+ * The type parameter carries a caller's wider Órgano through the tree — the
+ * administration catalogue's, which adds the import mark — so one builder
+ * serves both reads. Leaving it defaulted is the way a consumer says it reads
+ * nothing beyond the four fields above; only the code that needs the wider
+ * record names it.
+ */
 export interface TermoNode<O extends Organo = Organo> {
   id: string;
   name: string;

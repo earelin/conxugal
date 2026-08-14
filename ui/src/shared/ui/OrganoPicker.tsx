@@ -13,7 +13,7 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconCheck, IconChevronDown, IconChevronRight, IconSelector } from '@tabler/icons-react';
-import { type KeyboardEvent, useId, useMemo } from 'react';
+import { type KeyboardEvent, type MouseEvent, useId, useMemo } from 'react';
 import { useMatch, useNavigate } from 'react-router';
 
 import { strings } from '../lib/strings';
@@ -56,6 +56,11 @@ function toTreeData(nodes: TermoNode[], organos: Organo[]): TreeNodeData[] {
   return [...termos, ...organoNodes(organos)];
 }
 
+/** Every value in the tree, which is what changes when the taxonomía does. */
+function treeValues(nodes: TreeNodeData[]): string[] {
+  return nodes.flatMap((node) => [node.value, ...treeValues(node.children ?? [])]);
+}
+
 function ExpandMarker({ hasChildren, expanded }: { hasChildren: boolean; expanded: boolean }) {
   if (!hasChildren) {
     return <Box w={MARKER_SIZE} />;
@@ -64,12 +69,23 @@ function ExpandMarker({ hasChildren, expanded }: { hasChildren: boolean; expande
   return <Chevron size={MARKER_SIZE} color="var(--mantine-color-gray-6)" aria-hidden />;
 }
 
-function PickerRow({ node, expanded, hasChildren, selected, elementProps }: RenderTreeNodePayload) {
+interface PickerRowProps {
+  payload: RenderTreeNodePayload;
+  onOpen: (value: string) => void;
+}
+
+function PickerRow({ payload, onOpen }: PickerRowProps) {
+  const { node, expanded, hasChildren, selected, elementProps } = payload;
   const isTermo = node.value.startsWith(TERMO);
 
   return (
     <Group
       {...elementProps}
+      // Mantine's own handler expands the branch; opening the Órgano is ours.
+      onClick={(event: MouseEvent<HTMLDivElement>) => {
+        elementProps.onClick(event);
+        onOpen(node.value);
+      }}
       gap={6}
       wrap="nowrap"
       py={4}
@@ -88,43 +104,48 @@ function PickerRow({ node, expanded, hasChildren, selected, elementProps }: Rend
 
 interface OrganoTreeProps {
   data: TreeNodeData[];
+  /** The Órgano the route has open, marked as selected. */
   openId: string | null;
-  onSelect: (value: string) => void;
+  onOpen: (value: string) => void;
   labelledBy: string;
 }
 
 /**
- * The tree itself, rendered only once there is something to draw. `useTree`
- * fixes its expanded state at the moment it is created and defaults unknown
- * nodes to collapsed, so a tree instance that outlived an empty `data` would
- * open every branch shut.
+ * The tree itself, rendered only once there is something to draw and remounted
+ * whenever the taxonomía changes shape: `useTree` fixes its expanded state when
+ * it is created and defaults nodes it has not seen to collapsed, so a longer
+ * lived instance would show a term that arrived later shut inside an otherwise
+ * open tree.
+ *
+ * Selection here is presentational — the route says which Órgano is open, and
+ * nothing in the tree writes back to it. Opening one runs off the row's own
+ * click and the Enter key instead, because Mantine's keyboard handler applies
+ * range selection whether or not `allowRangeSelection` is set, and a range
+ * would otherwise navigate to whichever Órgano happened to head it.
  */
-function OrganoTree({ data, openId, onSelect, labelledBy }: OrganoTreeProps) {
-  // A fresh array literal would bust useTree's own memo on every render.
+function OrganoTree({ data, openId, onOpen, labelledBy }: OrganoTreeProps) {
   const selectedState = useMemo(() => (openId === null ? [] : [`${ORGANO}${openId}`]), [openId]);
+  const initialExpandedState = useMemo(() => getTreeExpandedState(data, '*'), [data]);
 
-  const tree = useTree({
-    selectedState,
-    initialExpandedState: getTreeExpandedState(data, '*'),
-    onSelectedStateChange: (state) => {
-      if (state.length > 0) {
-        onSelect(state[0]);
-      }
-    },
-  });
+  const tree = useTree({ selectedState, initialExpandedState });
 
   // Mantine's own key handler covers the arrows and Space; there is no Enter
   // branch at all, so without this a keyboard user can walk the tree but never
-  // open anything. The event bubbles from the focused `treeitem`, which carries
-  // the node's value.
-  function selectFocusedNodeOnEnter(event: KeyboardEvent<HTMLUListElement>) {
+  // act on it. The event bubbles from the focused `treeitem`, which carries the
+  // node's value.
+  function actOnFocusedNodeOnEnter(event: KeyboardEvent<HTMLUListElement>) {
     if (event.key !== 'Enter') {
       return;
     }
     const { value } = (event.target as HTMLElement).dataset;
-    if (value !== undefined) {
-      event.preventDefault();
-      onSelect(value);
+    if (value === undefined) {
+      return;
+    }
+    event.preventDefault();
+    if (value.startsWith(TERMO)) {
+      tree.toggleExpanded(value);
+    } else {
+      onOpen(value);
     }
   }
 
@@ -133,17 +154,15 @@ function OrganoTree({ data, openId, onSelect, labelledBy }: OrganoTreeProps) {
       data={data}
       tree={tree}
       levelOffset="md"
-      selectOnClick
-      allowRangeSelection={false}
       aria-labelledby={labelledBy}
-      onKeyDown={selectFocusedNodeOnEnter}
-      renderNode={(payload) => <PickerRow {...payload} />}
+      onKeyDown={actOnFocusedNodeOnEnter}
+      renderNode={(payload) => <PickerRow payload={payload} onOpen={onOpen} />}
     />
   );
 }
 
 interface OrganoPickerProps {
-  /** The visible set joined to the taxonomía; null while pending or failed. */
+  /** The visible set joined to the taxonomía; null until both reads land. */
   view: TaxonomiaView | null;
   isPending: boolean;
   isFetching: boolean;
@@ -177,31 +196,45 @@ export function OrganoPicker({
   // open Órgano on every tab of its page and after a reload.
   const openId = useMatch('/organo/:id/*')?.params.id ?? null;
 
-  const data = useMemo(
-    () => (view === null ? [] : toTreeData(pruneEmptyTermos(view.roots), view.unclassified)),
-    [view],
-  );
+  const { data, shape } = useMemo(() => {
+    const nodes = view === null ? [] : toTreeData(pruneEmptyTermos(view.roots), view.unclassified);
+    return { data: nodes, shape: treeValues(nodes).join() };
+  }, [view]);
 
-  function select(value: string) {
+  function open(value: string) {
     if (!value.startsWith(ORGANO)) {
       return;
     }
-    void navigate(`/organo/${value.slice(ORGANO.length)}`);
+    const id = value.slice(ORGANO.length);
+    // Choosing the Órgano already open closes the dropdown rather than pushing
+    // the page the reader is on onto the history stack a second time.
+    if (id !== openId) {
+      void navigate(`/organo/${id}`);
+    }
     close();
     onNavigate();
   }
 
   const openOrgano = view?.catalogue.find((organo) => organo.id === openId) ?? null;
+  // An id the visible set does not hold — a link shared before an Órgano's last
+  // contract was withdrawn — reads as no selection rather than as a name the
+  // picker cannot offer.
+  const openName =
+    openOrgano?.name ?? (openId !== null && isPending ? strings.loading : copy.placeholder);
 
   function body() {
-    if (isError) {
+    // A refetch that fails leaves the last good view in place: the reader is
+    // mid-browse in a dropdown, and taking the tree away costs more than the
+    // stale placement it would save. Only a failure with nothing to show is
+    // reported, which is the state a fresh session meets.
+    if (isError && view === null) {
       return (
         <ErrorAlert title={copy.errorTitle} onRetry={onRetry} retrying={isFetching}>
           {copy.errorHelp}
         </ErrorAlert>
       );
     }
-    if (isPending || view === null) {
+    if (view === null) {
       return <LoadingIndicator />;
     }
     // Nothing to browse: every Órgano of the visible set is either unclassified
@@ -216,7 +249,9 @@ export function OrganoPicker({
         </Stack>
       );
     }
-    return <OrganoTree data={data} openId={openId} onSelect={select} labelledBy={labelId} />;
+    return (
+      <OrganoTree key={shape} data={data} openId={openId} onOpen={open} labelledBy={labelId} />
+    );
   }
 
   return (
@@ -227,6 +262,12 @@ export function OrganoPicker({
       <Popover
         opened={opened}
         onDismiss={close}
+        // Without both, opening the dropdown leaves focus on the trigger: the
+        // tree is then reachable only by tabbing through the rest of the page,
+        // Escape is inert because Mantine listens for it inside the dropdown,
+        // and the row that unmounts on selection drops focus onto the body.
+        trapFocus
+        returnFocus
         // Wide enough for a third-level Órgano name, narrow enough to stay
         // inside a 360 px viewport once the navbar's padding is spent.
         width={320}
@@ -234,7 +275,7 @@ export function OrganoPicker({
         shadow="md"
         radius="md"
       >
-        <Popover.Target>
+        <Popover.Target popupType="tree">
           <UnstyledButton
             onClick={toggle}
             aria-labelledby={`${labelId} ${labelId}-value`}
@@ -252,7 +293,7 @@ export function OrganoPicker({
                 c={openOrgano ? undefined : 'dimmed'}
                 lineClamp={2}
               >
-                {openOrgano?.name ?? copy.placeholder}
+                {openName}
               </Text>
               <IconSelector size={16} color="var(--mantine-color-gray-6)" aria-hidden />
             </Group>

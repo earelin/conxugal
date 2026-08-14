@@ -6,6 +6,8 @@ const PLACEHOLDER = 'Escolle un órgano';
 const SERGAS = 'Servizo Galego de Saúde (SERGAS)';
 const UNCLASSIFIED = 'Instituto Galego da Vivenda e Solo';
 const INACTIVE = 'Hospital Álvaro Cunqueiro';
+const INACTIVE_ID = '5c3e8a70-9b41-4f06-d285-4a0c7e3b1f59';
+const SERGAS_ID = '7e5a0c92-1d63-4b28-f407-6c2e9a5d3b71';
 
 test.beforeEach(async ({ page }) => {
   await resetMappings();
@@ -65,10 +67,40 @@ test.describe('Órgano picker', () => {
     await trigger(page).click();
     await tree(page).getByText(SERGAS).click();
 
-    await expect(page).toHaveURL(/\/organo\/7e5a0c92-1d63-4b28-f407-6c2e9a5d3b71$/);
-    // FEAT-0013 has not built that page yet, so the shell renders its
+    await expect(page).toHaveURL(new RegExp(`/organo/${SERGAS_ID}$`));
+    // The contracts page does not exist yet, so the shell renders its
     // not-found body — the picker's job ends at the URL.
     await expect(page.getByRole('button', { name: `Órgano ${SERGAS}` })).toBeVisible();
+  });
+
+  test('opens an Órgano from the keyboard alone, and closes on Escape', async ({ page }) => {
+    await trigger(page).focus();
+    await page.keyboard.press('Enter');
+
+    // The dropdown takes focus, so the tree is reachable without tabbing past
+    // the rest of the panel first.
+    await expect(tree(page)).toBeVisible();
+    await expect(tree(page).getByRole('treeitem').first()).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(tree(page)).toBeHidden();
+    await expect(trigger(page)).toBeFocused();
+
+    await page.keyboard.press('Enter');
+    await expect(tree(page).getByRole('treeitem').first()).toBeFocused();
+
+    // Five rows down is the inactive Órgano filed under Consellería de
+    // Sanidade, which is as selectable from the keyboard as any other.
+    for (let step = 0; step < 5; step += 1) {
+      await page.keyboard.press('ArrowDown');
+    }
+    await expect(page.locator('[role=treeitem]:focus')).toHaveAttribute(
+      'data-value',
+      `organo:${INACTIVE_ID}`,
+    );
+
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(new RegExp(`/organo/${INACTIVE_ID}$`));
   });
 
   test('offers no control that changes anything', async ({ page }) => {

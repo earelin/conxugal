@@ -53,8 +53,8 @@ function renderPicker({
   const routes: RouteObject[] = [
     {
       // A splat matches every path: `useMatch` reads the location, not the
-      // route tree, so the picker's selected state needs no /organo route —
-      // which is just as well, since FEAT-0013 has not built one.
+      // route tree, so the picker needs no /organo route to resolve what is
+      // open — which is just as well, since none exists yet.
       path: '*',
       element: (
         <OrganoPicker
@@ -91,6 +91,19 @@ async function openPicker(options: RenderOptions = {}) {
   const open = options.path === undefined ? undefined : openOrganoName(options.path);
   await user.click(trigger(open));
   return { ...utils, user };
+}
+
+/** A tree row by its own label, ignoring the labels of its descendants. */
+function treeRow(tree: HTMLElement, label: string): HTMLElement {
+  // A row's own label is its first child; its descendants live in the nested
+  // list after it, so `textContent` on the row itself would match a parent.
+  const row = within(tree)
+    .getAllByRole('treeitem')
+    .find((item) => item.firstElementChild?.textContent === label);
+  if (row === undefined) {
+    throw new Error(`No tree row labelled ${label}`);
+  }
+  return row;
 }
 
 function openOrganoName(path: string): string {
@@ -178,19 +191,6 @@ describe('OrganoPicker selection', () => {
     await waitFor(() => expect(screen.queryByRole('tree')).not.toBeInTheDocument());
   });
 
-  it('opens the focused Organo on Enter, which Mantine leaves unhandled', async () => {
-    const { router, user } = await openPicker();
-
-    const tree = await screen.findByRole('tree', { name: copy.label });
-    const row = within(tree)
-      .getAllByRole('treeitem')
-      .find((item) => item.textContent === vivenda.name);
-    row?.focus();
-    await user.keyboard('{Enter}');
-
-    await waitFor(() => expect(router.state.location.pathname).toBe(`/organo/${vivenda.id}`));
-  });
-
   it('leaves the reader where they are when a term is chosen', async () => {
     const { router, onNavigate, user } = await openPicker();
 
@@ -198,6 +198,74 @@ describe('OrganoPicker selection', () => {
 
     expect(router.state.location.pathname).toBe('/');
     expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it('stays where it is when the Organo already open is chosen again', async () => {
+    const { router, user } = await openPicker({ path: `/organo/${cunqueiro.id}` });
+
+    const tree = await screen.findByRole('tree', { name: copy.label });
+    await user.click(within(treeRow(tree, cunqueiro.name)).getByText(cunqueiro.name));
+
+    // Re-choosing what is already open closes the dropdown without stacking a
+    // second copy of the same page onto the history.
+    expect(router.state.location.pathname).toBe(`/organo/${cunqueiro.id}`);
+    expect(router.state.historyAction).toBe('POP');
+    await waitFor(() => expect(screen.queryByRole('tree')).not.toBeInTheDocument());
+  });
+});
+
+describe('OrganoPicker keyboard', () => {
+  it('moves focus into the tree when it opens, and back to the trigger on Escape', async () => {
+    const { user } = await openPicker();
+
+    const tree = await screen.findByRole('tree', { name: copy.label });
+    await waitFor(() => expect(tree.contains(document.activeElement)).toBe(true));
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('tree')).not.toBeInTheDocument());
+    expect(document.activeElement).toBe(trigger());
+  });
+
+  it('opens the focused Organo on Enter, which Mantine leaves unhandled', async () => {
+    const { router, user } = await openPicker();
+
+    treeRow(await screen.findByRole('tree', { name: copy.label }), vivenda.name).focus();
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/organo/${vivenda.id}`));
+  });
+
+  it('collapses and reopens a term on Enter rather than doing nothing', async () => {
+    const { router, user } = await openPicker();
+
+    const tree = await screen.findByRole('tree', { name: copy.label });
+    treeRow(tree, 'Consellería de Sanidade').focus();
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => expect(within(tree).queryByText(cunqueiro.name)).not.toBeInTheDocument());
+    expect(router.state.location.pathname).toBe('/');
+
+    await user.keyboard('{Enter}');
+    expect(within(tree).getByText(cunqueiro.name)).toBeInTheDocument();
+  });
+
+  it('never opens an Organo the reader only ranged over with Shift', async () => {
+    const { router, onNavigate, user } = await openPicker();
+
+    // Clicking a term row is what sets Mantine's range anchor, and its
+    // keyboard handler then applies a range whether or not
+    // `allowRangeSelection` is set. The range must not read as a choice: it
+    // heads with whichever Órgano happens to sit above the anchor.
+    const tree = await screen.findByRole('tree', { name: copy.label });
+    const sanidade = treeRow(tree, 'Consellería de Sanidade');
+    await user.click(within(sanidade).getByText('Consellería de Sanidade'));
+    sanidade.focus();
+    await user.keyboard('{Shift>}{ArrowUp}{/Shift}');
+
+    expect(router.state.location.pathname).toBe('/');
+    expect(onNavigate).not.toHaveBeenCalled();
+    expect(screen.getByRole('tree', { name: copy.label })).toBeInTheDocument();
   });
 });
 
