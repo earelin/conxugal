@@ -32,6 +32,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * show. The duplicate case in particular has to bypass the upsert: the upsert's whole job is to
  * absorb a repeated source identifier, so only a direct insert can reach the constraint that
  * makes the rule hold when use-case logic slips.
+ *
+ * <p>The index inventory is not asserted here. This table's indexes are no longer the ones it was
+ * created with, and two classes reading the same catalogue would sooner or later disagree about
+ * it; {@link ContratoMenorVisibleBrowseSchemaIntegrationTest} owns the whole of it, together with
+ * the plans that say what each one is for.
  */
 @MicronautTest(startApplication = false)
 @Testcontainers(disabledWithoutDocker = true)
@@ -96,7 +101,8 @@ class ContratoMenorMigrationIntegrationTest implements TestPropertyProvider {
             "obxecto",
             "amount",
             "duration",
-            "operador_economico_id");
+            "operador_economico_id",
+            "publication_year");
   }
 
   @Test
@@ -135,24 +141,11 @@ class ContratoMenorMigrationIntegrationTest implements TestPropertyProvider {
     assertThat(storedDuration(4711L)).isEqualTo(duration);
   }
 
-  @Test
-  void both_indexes_the_browsing_reads_will_need_are_created_with_the_table() throws Exception {
-    assertThat(indexNames())
-        .contains(
-            "contrato_menor_operador_economico_id_idx",
-            "contrato_menor_organo_id_publication_date_idx");
-  }
-
   private List<String> columnNames() throws SQLException {
     return queryStrings(
         "SELECT column_name FROM information_schema.columns"
             + " WHERE table_name = 'contrato_menor'",
         "column_name");
-  }
-
-  private List<String> indexNames() throws SQLException {
-    return queryStrings(
-        "SELECT indexname FROM pg_indexes WHERE tablename = 'contrato_menor'", "indexname");
   }
 
   private String storedDuration(long sourceId) throws SQLException {
