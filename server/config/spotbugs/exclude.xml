@@ -58,6 +58,15 @@
     <Field name="importRuns"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
+  <!-- And for the read that describes a contratos menores section, which stores the catalogue port
+       both of its flags are derived from. Only that field: the browse port beside it declares
+       reads alone, so the heuristic does not read it as mutable and a genuine leak of it would
+       still report. -->
+  <Match>
+    <Class name="gal.conxugal.domain.contrato.DescribeContratosMenoresSection"/>
+    <Field name="organos"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
   <!-- And for the endpoints that ask for an import or report one: the same want of an
        immutability marker on a constructor-stored use case. -->
   <Match>

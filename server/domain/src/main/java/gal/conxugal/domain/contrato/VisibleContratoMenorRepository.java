@@ -3,6 +3,7 @@ package gal.conxugal.domain.contrato;
 import gal.conxugal.domain.organo.OrganoId;
 import io.micronaut.data.model.Page;
 import io.micronaut.data.model.Pageable;
+import java.util.List;
 
 /**
  * Port for reading the contratos menores a reader may be shown. Implemented by the
@@ -39,4 +40,19 @@ import io.micronaut.data.model.Pageable;
 public interface VisibleContratoMenorRepository {
 
   Page<VisibleContratoMenor> page(OrganoId organoId, YearSelection year, Pageable pageable);
+
+  /**
+   * The years this Órgano has visible contratos menores in, <b>newest first</b> — which is the
+   * order the chooser offers them in and the order the default is read from, so the first entry is
+   * the year a section opens on. An Órgano with none answers an empty list, and that emptiness is
+   * the whole of how <em>this Órgano has no contratos menores section</em> is said: an Órgano
+   * holding only anomalous contracts answers exactly as one holding nothing at all.
+   *
+   * <p><b>Every year it answers is a year.</b> This is the one browse read with no equality test
+   * on the year to withhold an undated contract for free — a contract holding an amount and an
+   * awardee but no date satisfies both browse indexes' predicate and enters them under a null year
+   * — so the statement excludes the null itself, and descending order is why it must: a null would
+   * be offered ahead of every real year, and the section would open on one that is not one.
+   */
+  List<YearSelection> years(OrganoId organoId);
 }

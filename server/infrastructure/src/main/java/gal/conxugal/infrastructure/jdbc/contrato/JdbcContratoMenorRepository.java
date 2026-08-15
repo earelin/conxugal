@@ -14,6 +14,7 @@ import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.OperadorId;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.OrganosWithVisibleContracts;
+import io.micronaut.data.annotation.Query;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.Page;
@@ -77,7 +78,9 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>Reading a browse page joins it here rather than in an adapter of its own: a page of contratos
  * menores and a batch of them are two questions of one table, and the visibility rule they both
- * state is the same rule.
+ * state is the same rule. The years an Órgano has visible contracts in join it for the same
+ * reason, and they are the one place that rule has to be written a second way — a facet read has
+ * no year to test for equality, so it is the only one that must exclude the null year itself.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public abstract class JdbcContratoMenorRepository
@@ -190,6 +193,37 @@ public abstract class JdbcContratoMenorRepository
       """
           + VISIBLE_WHERE;
 
+  /**
+   * <strong>The one browse read that has to exclude the null year itself.</strong> Everywhere else
+   * the year is an equality test, which withholds an undated contract for free; here there is no
+   * equality test to do it. A contract holding an amount and an awardee but no date is an anomaly
+   * all the same, yet it satisfies both browse indexes' partial predicate and enters them under a
+   * null year — and {@code DISTINCT} would answer that null <em>as a year</em>, first, since
+   * {@code DESC} orders nulls ahead of every real one. So the section would open on a year that is
+   * not one, and {@link YearSelection}, which has no representable absence, would refuse it: a
+   * failed read rather than a stray entry in the chooser.
+   *
+   * <p>PostgreSQL turns the conjunct into an index condition, so the index-only scan the schema
+   * test pins is unaffected by carrying it.
+   *
+   * <p>It does not share {@link #VISIBLE_WHERE}: that predicate's year equality is exactly what
+   * this one replaces, so the two are different questions rather than one written twice.
+   *
+   * <p>The Órgano arrives by name rather than as a placeholder, which is what a mapped query takes;
+   * the statement reaching PostgreSQL is the one the schema test pins the plan of, and this read's
+   * own test asserts that character for character rather than trusting the substitution.
+   */
+  private static final String YEAR_FACETS_SQL =
+      """
+      SELECT DISTINCT publication_year
+        FROM contrato_menor
+       WHERE organo_id = :organoId
+         AND publication_year IS NOT NULL
+         AND amount IS NOT NULL
+         AND operador_economico_id IS NOT NULL
+       ORDER BY publication_year DESC
+      """;
+
   // The predicate's two placeholders come first in both statements; the page's paging follows it.
   private static final int ORGANO_PARAMETER = 1;
   private static final int YEAR_PARAMETER = 2;
@@ -229,6 +263,23 @@ public abstract class JdbcContratoMenorRepository
 
   @Override
   public abstract long countByOrganoId(OrganoId organoId);
+
+  /**
+   * <strong>The one read here the framework can map, and the only one.</strong> A column of years
+   * has no aggregate behind it to carry a mapping, so each value is rebuilt through the core
+   * conversion service — the half {@link YearSelection}'s converter carries for exactly this — and
+   * none of what stops the page being projected applies: there is one column, and it is not a
+   * component of a record whose mapping is built outside the container.
+   *
+   * <p><strong>It carries no transaction, and the three methods below it do.</strong> A derived
+   * method has run on a connection of its own rather than in a transaction since Micronaut Data 4,
+   * which is all one statement needs; the hand-written reads are annotated because {@code
+   * jdbcOperations} has to be handed a bound connection, and the paged one because its two
+   * statements share it. {@code countByOrganoId} is derived and unannotated for this same reason.
+   */
+  @Override
+  @Query(YEAR_FACETS_SQL)
+  public abstract List<YearSelection> years(OrganoId organoId);
 
   /**
    * An empty candidate set short-circuits rather than reaching the database, where an array of no
