@@ -39,16 +39,22 @@ class ContratosMenoresSectionTest {
     assertThat(section.years()).containsExactly(THIS_YEAR);
   }
 
-  // The two flags are independent, and the state that proves it is an Órgano unmarked halfway
-  // through its initial import: partial, and no longer being refreshed. One enum would have to
-  // lie about it.
+  // The state that proves the two flags are independent: an Órgano unmarked halfway through its
+  // initial import is partial and no longer being refreshed at once, which one enum would have to
+  // lie about.
   @Test
-  void expresses_partial_and_updating_independently_of_one_another() {
-    assertThat(new ContratosMenoresSection(List.of(THIS_YEAR), true, false))
-        .extracting(ContratosMenoresSection::partial, ContratosMenoresSection::updating)
-        .containsExactly(true, false);
-    assertThat(new ContratosMenoresSection(List.of(THIS_YEAR), true, true))
-        .extracting(ContratosMenoresSection::partial, ContratosMenoresSection::updating)
-        .containsExactly(true, true);
+  void expresses_partial_without_updating() {
+    ContratosMenoresSection section = new ContratosMenoresSection(List.of(THIS_YEAR), true, false);
+
+    assertThat(section.partial()).isTrue();
+    assertThat(section.updating()).isFalse();
+  }
+
+  @Test
+  void expresses_partial_and_updating_together() {
+    ContratosMenoresSection section = new ContratosMenoresSection(List.of(THIS_YEAR), true, true);
+
+    assertThat(section.partial()).isTrue();
+    assertThat(section.updating()).isTrue();
   }
 }
