@@ -10,6 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -33,8 +34,12 @@ class ContratoMenorPublicationYearBackfillIntegrationTest {
   @Container
   static PostgreSQLContainer<?> postgres = PostgresContainer.create();
 
+  /**
+   * The version before the column, which has to be a literal. The second step goes to the latest
+   * instead of naming a version: it proves the same backfill and, from here on, that every
+   * migration added later still applies over rows that were already stored.
+   */
   private static final String BEFORE_THE_COLUMN = "15";
-  private static final String WITH_THE_COLUMN = "16";
 
   private static final UUID ORGANO = UUID.fromString("0192b000-0000-7000-8000-000000000001");
   private static final long DATED = 700001L;
@@ -55,19 +60,19 @@ class ContratoMenorPublicationYearBackfillIntegrationTest {
   @Test
   void the_migration_backfills_every_contract_already_stored_and_leaves_the_undated_one_null()
       throws Exception {
-    migrateTo(BEFORE_THE_COLUMN);
+    migrateTo(MigrationVersion.fromVersion(BEFORE_THE_COLUMN));
     try (Connection connection = openConnection()) {
       execute(connection, SEED_ORGANO, ORGANO);
       execute(connection, SEED_CONTRACTS, DATED, ORGANO, UNDATED, ORGANO);
 
-      migrateTo(WITH_THE_COLUMN);
+      migrateTo(MigrationVersion.LATEST);
 
       assertThat(publicationYearOf(connection, DATED)).isEqualTo(2024);
       assertThat(publicationYearOf(connection, UNDATED)).isNull();
     }
   }
 
-  private static void migrateTo(String version) {
+  private static void migrateTo(MigrationVersion version) {
     Flyway.configure()
         .dataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
         .locations("classpath:db/migration")

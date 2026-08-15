@@ -30,10 +30,15 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Verifies what the browse schema is <em>for</em>: not that two indexes exist, but that the four
- * orderings, the count and the year facets can each be answered from one of them without sorting
+ * Verifies what the browse schema is <em>for</em>: not that three indexes exist, but that the four
+ * orderings, the counts and the year facets can each be answered from one of them without sorting
  * and, where the criterion says so, without touching the table. An index nobody's plan reaches is
- * write cost and nothing else, and only a plan can say which it is.
+ * write cost and nothing else, and only a plan can say which it is — which cuts both ways, and is
+ * why the read that counts an Órgano's contracts <em>whole</em> is here beside the visible ones.
+ *
+ * <p>A plan is not the whole of a claim, though. The year facets are asserted on their
+ * <strong>result</strong> as well, because the rows a null year would offer are in this class's own
+ * fixture and no plan assertion can see them.
  *
  * <p><strong>The statements below read {@code contrato_menor} alone.</strong> The paged read that
  * follows joins {@code operador_economico} for the awardee, and its {@code WHERE} is required to
@@ -55,7 +60,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * map, without which an index-only scan still reports heap fetches and the assertion that matters
  * most would fail for a reason that has nothing to do with the index.
  */
-@MicronautTest(startApplication = false)
+@MicronautTest(startApplication = false, transactional = false)
 @Testcontainers(disabledWithoutDocker = true)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyProvider {
@@ -75,6 +80,7 @@ class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyPro
 
   private static final String DATE_INDEX = "contrato_menor_organo_year_date_idx";
   private static final String AMOUNT_INDEX = "contrato_menor_organo_year_amount_idx";
+  private static final String ORGANO_INDEX = "contrato_menor_organo_id_idx";
   private static final String REPLACED_INDEX = "contrato_menor_organo_id_publication_date_idx";
   private static final String VISIBILITY_PREDICATE =
       "WHERE ((amount IS NOT NULL) AND (operador_economico_id IS NOT NULL))";
@@ -114,17 +120,34 @@ class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyPro
       """
           + VISIBLE_SELECTION;
 
+  /**
+   * The one browse read with no equality test on {@code publication_year}, which is why it is the
+   * one that has to exclude the null itself. A contract holding an amount and an awardee but no
+   * date is an anomaly R28 withholds, yet it satisfies both index predicates and enters both
+   * indexes under a null year — and {@code DISTINCT} would offer that null as a year, first, since
+   * {@code DESC} orders nulls before every real one.
+   */
   private static final String YEAR_FACETS =
       """
       SELECT DISTINCT publication_year
         FROM contrato_menor
        WHERE organo_id = ?
+         AND publication_year IS NOT NULL
          AND amount IS NOT NULL
          AND operador_economico_id IS NOT NULL
        ORDER BY publication_year DESC
       """;
 
-  /** Verbatim from the adapter FEAT-0012 shipped, whose index this migration drops. */
+  /**
+   * The import walk's per-window completion check, counting an Órgano's contracts <em>whole</em>:
+   * it is compared against the total the source publishes, so it counts the anomalous ones too.
+   */
+  private static final String ORGANO_COUNT =
+      """
+      SELECT COUNT(*) FROM contrato_menor WHERE organo_id = ?
+      """;
+
+  /** Verbatim from the Órgano visible-set adapter, whose index this migration drops. */
   private static final String VISIBLE_ORGANOS =
       """
       SELECT candidate.id FROM unnest(?::uuid[]) AS candidate(id)
@@ -192,6 +215,11 @@ class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyPro
     return PostgresContainer.datasourceProperties(postgres);
   }
 
+  // Injected for one reason: Micronaut's Flyway integration migrates on this bean being created,
+  // and every statement below runs against the schema that migration leaves. Nothing here reads
+  // through it — it is a contextual proxy needing an ambient transaction this class deliberately
+  // does not have, and a pooled connection idle in one is exactly what would stop VACUUM marking
+  // pages all-visible.
   @Inject
   DataSource dataSource;
 
@@ -211,15 +239,14 @@ class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyPro
     }
   }
 
-  // The truncate goes through the injected DataSource on purpose: Micronaut Data's proxy shares
-  // one underlying connection with autocommit off, and the commit inside is what leaves it holding
-  // no snapshot — a connection idle in a transaction would stop the next test's VACUUM marking
-  // pages all-visible, and the heap-fetch assertions would fail for a reason unrelated to any
-  // index.
+  // Emptied on the same raw connection, in a finally so that a connection failing to close still
+  // leaves an empty table: without it one broken socket turns into every later test failing on the
+  // seed's unique constraint, pointing nowhere near the cause.
   @AfterEach
   void cleanUp() throws Exception {
-    connection.close();
-    DatabaseCleanup.truncateAllTables(dataSource);
+    try (Connection open = connection) {
+      DatabaseCleanup.truncateAllTables(open);
+    }
   }
 
   @Test
@@ -275,16 +302,43 @@ class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyPro
         .doesNotContain("Sort");
   }
 
-  // The one shipped read whose index this migration drops. It is the date index that has to serve
-  // it, and forced rather than chosen: only that one carries publication_date, so only it can
-  // answer the third null check without fetching the row.
+  // The rows this asserts the absence of are in the fixture and in both indexes: the plan above
+  // cannot see them, and a facet read that offered a null year would open the section on one.
   @Test
-  void the_visible_organos_semi_join_keeps_its_index_when_the_old_one_goes() throws Exception {
-    Array candidates = connection.createArrayOf("uuid", new UUID[] {BUSY_ORGANO, OTHER_ORGANO});
+  void the_year_facets_answer_only_years_the_organo_has_visible_contracts_in() throws Exception {
+    assertThat(yearsOf(BUSY_ORGANO)).containsExactly(2025, 2024);
+  }
 
-    assertThat(planOf(EXPLAIN + VISIBLE_ORGANOS, candidates))
-        .contains("Index Only Scan using " + DATE_INDEX)
+  // The one read that counts an Órgano's contracts whole rather than its visible ones, and so the
+  // one no partial index can answer. It runs once per window of every import walk, against a table
+  // headed for millions.
+  @Test
+  void the_import_completion_count_still_reaches_an_index_after_the_drop() throws Exception {
+    assertThat(planOf(EXPLAIN + ORGANO_COUNT, BUSY_ORGANO))
+        .contains("Index Only Scan using " + ORGANO_INDEX)
         .contains("Heap Fetches: 0");
+  }
+
+  // The one shipped read whose index this migration drops, and the reason the date index carries
+  // publication_date at all: only it can answer the third null check without fetching the row.
+  //
+  // Taken with the whole Órgano index dropped inside the transaction this rolls back, because the
+  // claim is that the partial index *serves* this read — not that the planner always reaches for
+  // it. With both present the planner may prefer the smaller whole index and filter off the heap,
+  // and at this fixture's size it does. That preference is a cost estimate, not a property of the
+  // schema: measured over 540k rows with one Órgano holding 40k contracts and no visible one, the
+  // planner picks the partial index unprompted and reads 13 buffers where the dropped index read
+  // 40 065.
+  @Test
+  void the_partial_date_index_serves_the_visible_organos_semi_join_index_only() throws Exception {
+    Array candidates = connection.createArrayOf("uuid", new UUID[] {BUSY_ORGANO, OTHER_ORGANO});
+    try {
+      assertThat(planWithoutTheWholeOrganoIndex(EXPLAIN + VISIBLE_ORGANOS, candidates))
+          .contains("Index Only Scan using " + DATE_INDEX)
+          .contains("Heap Fetches: 0");
+    } finally {
+      candidates.free();
+    }
   }
 
   // attgenerated rather than information_schema's is_generated, which answers ALWAYS for a virtual
@@ -319,7 +373,8 @@ class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyPro
   @Test
   void the_browse_indexes_replace_the_one_the_first_of_them_subsumes() throws Exception {
     assertThat(indexNames())
-        .contains("contrato_menor_operador_economico_id_idx", DATE_INDEX, AMOUNT_INDEX)
+        .contains(
+            "contrato_menor_operador_economico_id_idx", DATE_INDEX, AMOUNT_INDEX, ORGANO_INDEX)
         .doesNotContain(REPLACED_INDEX);
   }
 
@@ -332,10 +387,23 @@ class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyPro
   }
 
   private String planOf(String sql, Object... parameters) throws SQLException {
+    return plan(false, sql, parameters);
+  }
+
+  private String planWithoutTheWholeOrganoIndex(String sql, Object... parameters)
+      throws SQLException {
+    return plan(true, sql, parameters);
+  }
+
+  private String plan(boolean dropWholeOrganoIndex, String sql, Object... parameters)
+      throws SQLException {
     connection.setAutoCommit(false);
     try (Statement session = connection.createStatement()) {
       session.execute("SET LOCAL enable_seqscan = off");
       session.execute("SET LOCAL enable_bitmapscan = off");
+      if (dropWholeOrganoIndex) {
+        session.execute("DROP INDEX contrato_menor_organo_id_idx");
+      }
       List<String> lines = new ArrayList<>();
       try (PreparedStatement statement = connection.prepareStatement(sql)) {
         bind(statement, parameters);
@@ -368,6 +436,20 @@ class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyPro
       }
     }
     return column;
+  }
+
+  private List<Integer> yearsOf(UUID organoId) throws SQLException {
+    List<Integer> years = new ArrayList<>();
+    try (PreparedStatement statement = connection.prepareStatement(YEAR_FACETS)) {
+      statement.setObject(1, organoId);
+      try (ResultSet rows = statement.executeQuery()) {
+        while (rows.next()) {
+          int year = rows.getInt("publication_year");
+          years.add(rows.wasNull() ? null : year);
+        }
+      }
+    }
+    return years;
   }
 
   private Integer publicationYearOf(long sourceId) throws SQLException {

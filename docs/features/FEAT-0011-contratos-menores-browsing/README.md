@@ -454,15 +454,30 @@ would have us reach the conclusion at exactly the point it becomes expensive to 
 
 **What is created** — one migration, replacing the index V13 created:
 
-Both are **partial**, on `amount IS NOT NULL AND operador_economico_id IS NOT NULL`:
+The first two are **partial**, on `amount IS NOT NULL AND operador_economico_id IS NOT NULL`:
 
-| Index (partial on the visibility predicate) | Serves |
+| Index | Serves |
 | --- | --- |
-| `(organo_id, publication_year, publication_date, source_id)` | date ascending; date descending as a backward scan; every `COUNT`; the year facets as an index-only scan; FEAT-0012's *does this Órgano hold a visible contrato menor* |
-| `(organo_id, publication_year, amount, source_id)` | amount ascending; **amount descending as a backward scan** — including R24's named read |
+| `(organo_id, publication_year, publication_date, source_id)` *partial* | date ascending; date descending as a backward scan; every browse `COUNT`; the year facets as an index-only scan; FEAT-0012's *does this Órgano hold a visible contrato menor* |
+| `(organo_id, publication_year, amount, source_id)` *partial* | amount ascending; **amount descending as a backward scan** — including R24's named read |
+| `(organo_id)` *whole* | the import's per-window completion count |
 
-- **The first replaces `(organo_id, publication_date)` rather than joining it**, since it leads with
-  the same column and answers everything the old one did. That is a rebuild, not a third index.
+- **The two partial indexes do not replace `(organo_id, publication_date)` on their own**, and an
+  earlier draft of this section claimed they did — that the first "answers everything the old one
+  did". It does not, and the difference is *partial*. Every browse read is scoped to the visible
+  set, but **`countByOrganoId` is not**: the import's completion check counts an Órgano's contracts
+  *whole*, anomalies included, because it is compared against the total the source publishes. A
+  count of every row cannot come from an index holding only some, so with only the two partial
+  indexes that read becomes a **sequential scan of a table headed for millions, once per window of
+  every walk** — measured at 1.4M rows: an index-only scan of 13 buffers becomes a 22 967-buffer
+  parallel sequential scan. The third index is what the old one was really doing for that read, and
+  it is narrower than the old one because the date column served nobody.
+- **A whole index on `organo_id` could tempt the planner away from the partial ones**, and at small
+  table sizes it does — it is the smaller index, and the visible-set semi-join can filter the three
+  null checks off the heap instead. That preference is a cost estimate rather than a property of
+  the schema, and it inverts once the data is real: measured over 540k rows with one Órgano holding
+  40k contracts and no visible one, the planner reaches for the partial index unprompted and reads
+  **13 buffers where the dropped index read 40 065**. The trade is recorded rather than assumed.
 - **One index covers both amount directions, and that is R28's doing.** An earlier draft needed
   **two**, because R27 wanted nulls last in both directions and a single B-tree cannot offer that —
   a backward scan of an `ASC` index yields `DESC NULLS FIRST`. Once a null amount stops being a
@@ -471,16 +486,35 @@ Both are **partial**, on `amount IS NOT NULL AND operador_economico_id IS NOT NU
 - **The year facets stay index-only because the index is partial.** `SELECT DISTINCT
   publication_year WHERE organo_id = ?` plus the visibility conjuncts reads the first two columns
   and never touches the table — which would not have held with `operador_economico_id` tested off
-  the heap.
+  the heap. It is index-only, not cheap: PostgreSQL has no loose index scan, so this walks every
+  visible entry of the Órgano rather than skipping between distinct years. For an Órgano the size
+  of SERGAS that is ~25k buffers and ~130 ms, on a read that runs on every load of the contracts
+  page. R24's measurement is where that number gets revisited.
+- **The facets read is the one browse query that must exclude the null year itself**, and it is the
+  only one with no equality test on `publication_year` to do it for free. A contract with an amount
+  and an awardee but **no date** is an anomaly R28 withholds, yet it satisfies both index
+  predicates, enters both indexes under a null year, and `DISTINCT` would offer that null *as a
+  year* — first, since `DESC` orders nulls before every real one. So the statement carries
+  `AND publication_year IS NOT NULL`, which PostgreSQL turns into an index condition and which
+  costs the index-only scan nothing. Without it the chooser opens on a year that is not one, and
+  `YearSelection` — which has no representable absence — refuses it.
 - **`contrato_menor_operador_economico_id_idx` stays as V13 created it.** It serves the foreign key
   and, later, SPEC-0006's operador history; nothing here replaces it.
 
-**What this costs, stated rather than discovered:** two composite indexes on the largest table in
+**What this costs, stated rather than discovered:** three indexes on the largest table in
 the system, maintained on every row of an import that inserts millions through FEAT-0009's batch
 upsert. Import throughput is the price of read latency here, and if the initial import turns out to
 be the thing that hurts, the remedy is operational — build the amount index after the initial load
 rather than before — and belongs to whichever feature meets that problem, with a measurement behind
 it.
+
+**And one cost that is paid once, at deploy.** Adding a stored generated column **rewrites the
+table** under `ACCESS EXCLUSIVE`, and the index builds hold their locks in the same transaction —
+measured at 1.4M rows, about 6 seconds of total lockout and roughly twice the heap in transient
+disk. Flyway runs at boot, so this migration must land **before the table is large and while no
+import is running**: behind a long-running import transaction it would queue, and every reader and
+writer would queue behind it with no bound. The migration sets a `lock_timeout` so a deploy that
+meets that case fails fast rather than closing the service for as long as the import takes.
 
 **None of this sets a latency budget, so R24 is untouched.** Its obligation is to *measure and
 record*, and a budget is still set only by revising the requirement. What changes is what gets
