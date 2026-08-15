@@ -50,6 +50,14 @@ public class DescribeContratosMenoresSection {
    * not exist is answered the same way as one holding nothing: this read draws no distinction the
    * catalogue does not already publish, and refusing here would say more about an unknown
    * identifier than an empty one does.
+   *
+   * <p><b>It is two reads and they take no shared snapshot</b>, the same trade-off the paged read
+   * makes between its page and its count. An import committing between them can leave the flags
+   * describing a state very slightly later than the years beside them — a section that says it is
+   * partial while already offering the year that completed it, which is a section reporting itself
+   * more cautiously than it needed to rather than anything a reader can be misled by. Holding both
+   * in one transaction would buy nothing a reader would notice and would put a transaction
+   * boundary on a read the page above this one does not have either.
    */
   public Optional<ContratosMenoresSection> describe(OrganoId organoId) {
     return organos.findById(organoId).flatMap(organo -> sectionOf(organoId, organo));
