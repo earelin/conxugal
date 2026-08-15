@@ -63,16 +63,23 @@ class DescribeContratosMenoresSectionTest {
 
   /**
    * The facet read withholds an anomalous contract, so an Órgano holding only those answers with
-   * the same empty list one holding nothing answers with — and so with the same absent section.
-   * There is nothing here for a caller to tell the two apart by, which is the requirement rather
-   * than an accident of how this test stubs it.
+   * the same empty list one holding nothing answers with. What matters is not that each is absent
+   * but that the two are <b>the same answer</b> — so both are taken here and compared, rather than
+   * asserted absent one test apart where a later branch on the import status could tell them apart
+   * and both assertions would still hold.
    */
   @Test
-  void answers_no_section_for_an_organo_whose_contracts_are_all_anomalous() {
+  void answers_for_an_organo_whose_contracts_are_all_anomalous_exactly_as_for_one_holding_none() {
     organoIs(marked(ContratosMenoresImportStatus.INCOMPLETE));
     yearsAre();
+    Optional<ContratosMenoresSection> onlyAnomalous = describe();
 
-    assertThat(describe()).isEmpty();
+    organoIs(marked(ContratosMenoresImportStatus.COMPLETE));
+    Optional<ContratosMenoresSection> holdingNone = describe();
+
+    assertThat(onlyAnomalous)
+        .isEqualTo(holdingNone)
+        .isEmpty();
   }
 
   @Test
