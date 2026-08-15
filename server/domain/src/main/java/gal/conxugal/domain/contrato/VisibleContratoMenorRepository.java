@@ -22,16 +22,16 @@ import io.micronaut.data.model.Pageable;
  *   <li><b>The {@link io.micronaut.data.model.Sort} is built from {@link SortKey} and
  *       {@link io.micronaut.data.model.Sort.Order.Direction}, never from a caller's string.</b>
  *       Those two enums are the closed set of orderings offered, and building the sort from them
- *       is what guarantees only a property this system named can appear. The statement is native,
- *       so a property name is appended to it verbatim and unescaped — a sort assembled from raw
- *       input would put a caller's text into the emitted SQL.
+ *       is what guarantees only a property this system named can appear. The statement is native
+ *       and a name reaches it verbatim and unescaped, so a sort assembled from raw input would put
+ *       a caller's text into the emitted SQL. The implementation refuses a name no
+ *       {@link SortKey} could have produced rather than trusting this, but the rule is the caller's
+ *       all the same: an ordering built from anything else is a defect wherever it is caught.
  *   <li><b>The sort ends with the source identifier, in the direction of the key it breaks ties
  *       for.</b> Neither sort key is unique, so without it the order is partial and <em>the next
  *       page</em> denotes nothing; and while either direction would make the order total, only the
- *       matching one is a plain backward scan of what an index already holds.
- *   <li><b>The statement carries no ordering of its own.</b> The framework appends the
- *       {@code Pageable}'s ordering to the end of a native statement, so one that already ordered
- *       would emit two.
+ *       matching one is a plain backward scan of what an index already holds. Nothing below checks
+ *       this: a partial order still answers pages, it just answers different ones each time.
  * </ul>
  *
  * <p>It answers the count of the <em>whole</em> year alongside the page, not of the page.

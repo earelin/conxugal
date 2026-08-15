@@ -24,12 +24,15 @@ import org.jspecify.annotations.Nullable;
  * shows. This is the smaller thing that answers the question, and it holds no identity of its own
  * because a contrato menor has no detail view to address.
  *
- * <p>It is introspected so a result row can be read onto it directly. Introspection settles the
- * shape and not the conversion: a component inherits a converted type's mapping only where the
- * aggregate this projects from carries a property of the same name and type. The amount does —
- * the contract holds one — while the awardee's identifier does not, because the contract reaches
- * its awardee through a relation rather than holding the value. That one is converted through the
- * core conversion service instead, which is why its converter carries a second half.
+ * <p><b>Nothing maps a result row onto it automatically</b>, and that is not for want of trying:
+ * Micronaut Data builds a projection's mapping outside the container, so a component whose type
+ * names an attribute converter — both {@link Money} and
+ * {@link gal.conxugal.domain.operador.FiscalIdentifier} do — fails to read with <em>Converters not
+ * supported</em>. The adapter assembles each row by hand instead. The alternative was to hold the
+ * two as {@code BigDecimal} and {@code String} and move the conversions to every reader, which is
+ * the guarantee this record exists to give rather than a detail of how it is filled.
+ *
+ * <p>It stays introspected for the driving side, which serialises it.
  */
 @Introspected
 public record VisibleContratoMenor(

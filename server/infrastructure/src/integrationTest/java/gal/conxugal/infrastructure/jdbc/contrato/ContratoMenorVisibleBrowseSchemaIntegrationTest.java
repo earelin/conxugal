@@ -3,9 +3,12 @@ package gal.conxugal.infrastructure.jdbc.contrato;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import gal.conxugal.domain.contrato.SortKey;
 import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.data.model.Sort;
+import io.micronaut.data.model.Sort.Order.Direction;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
 import jakarta.inject.Inject;
@@ -40,11 +43,14 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * <strong>result</strong> as well, because the rows a null year would offer are in this class's own
  * fixture and no plan assertion can see them.
  *
- * <p><strong>The statements below read {@code contrato_menor} alone.</strong> The paged read that
- * follows joins {@code operador_economico} for the awardee, and its {@code WHERE} is required to
- * stay byte-identical to the one written here — but the join cannot change what the index has to
- * produce, and leaving it out is what lets the count and the facets be asserted as reaching no
- * heap at all. What that read adds, its own tests prove.
+ * <p><strong>The statements below read {@code contrato_menor} alone, and for the count that is not
+ * a simplification.</strong> The paged read joins {@code operador_economico} for the awardee and
+ * keeps its index scan doing so; its count must not, because the join is a no-op there — {@code
+ * operador_economico_id} references a primary key and the predicate already excludes the null —
+ * and its only effect is to take the planner off the partial index and onto the heap. So the
+ * ordered statements here stand in for the page, sharing only its {@code WHERE}, while
+ * {@code SELECTION_COUNT} <em>is</em> the count, and the read's own test asserts that character for
+ * character.
  *
  * <p>Plans are taken with <strong>sequential and bitmap scans off</strong>. Both are ways of
  * reading a whole selection and sorting it afterwards, and on a selection this size that is
@@ -89,32 +95,56 @@ class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyPro
    * The definition of <em>visible</em>, and the two indexes' partial predicate, written once. The
    * date needs no conjunct: {@code publication_year} is null exactly when {@code publication_date}
    * is, so the equality test already withholds an undated contract.
+   *
+   * <p>The paged read's own statement has to carry this byte for byte, or the plans below describe
+   * a selection nobody makes. It is visible to the package so that read's test can assert it does,
+   * rather than the two being kept in step by hand.
    */
-  private static final String VISIBLE_SELECTION =
+  static final String VISIBLE_WHERE =
       """
-        FROM contrato_menor
        WHERE organo_id = ?
          AND publication_year = ?
          AND amount IS NOT NULL
          AND operador_economico_id IS NOT NULL
       """;
 
+  private static final String VISIBLE_SELECTION =
+      """
+        FROM contrato_menor
+      """
+          + VISIBLE_WHERE;
+
   private static final String SELECTED_COLUMNS =
       """
       SELECT source_id, publication_date, obxecto, amount, duration
       """;
 
-  private static final String DATE_ASCENDING =
-      SELECTED_COLUMNS + VISIBLE_SELECTION + " ORDER BY publication_date, source_id LIMIT 50";
-  private static final String DATE_DESCENDING =
-      SELECTED_COLUMNS + VISIBLE_SELECTION
-          + " ORDER BY publication_date DESC, source_id DESC LIMIT 50";
-  private static final String AMOUNT_ASCENDING =
-      SELECTED_COLUMNS + VISIBLE_SELECTION + " ORDER BY amount, source_id LIMIT 50";
-  private static final String AMOUNT_DESCENDING =
-      SELECTED_COLUMNS + VISIBLE_SELECTION + " ORDER BY amount DESC, source_id DESC LIMIT 50";
+  /**
+   * The four orderings come from {@link BrowseOrdering}, which the paged read's test asserts the
+   * read emits, so the clause whose plan is proved here is the clause that runs.
+   */
+  private static final String DATE_ASCENDING = ordered(SortKey.PUBLICATION_DATE, Direction.ASC);
+  private static final String DATE_DESCENDING = ordered(SortKey.PUBLICATION_DATE, Direction.DESC);
+  private static final String AMOUNT_ASCENDING = ordered(SortKey.AMOUNT, Direction.ASC);
+  private static final String AMOUNT_DESCENDING = ordered(SortKey.AMOUNT, Direction.DESC);
 
-  private static final String SELECTION_COUNT =
+  private static String ordered(SortKey key, Direction direction) {
+    String orderBy =
+        BrowseOrdering.all().stream()
+            .filter(ordering -> ordering.key() == key && ordering.direction() == direction)
+            .findFirst()
+            .orElseThrow()
+            .orderBy();
+    return SELECTED_COLUMNS + VISIBLE_SELECTION + " %s LIMIT 50".formatted(orderBy);
+  }
+
+  /**
+   * The count the paged read runs, character for character rather than merely in spirit: its test
+   * asserts the statement it emits is this string. The read joins {@code operador_economico} for
+   * the awardee and this does not, which is the whole reason the two are pinned separately — the
+   * join is a no-op for a count and costs it the index-only scan below.
+   */
+  static final String SELECTION_COUNT =
       """
       SELECT COUNT(*)
       """
@@ -384,6 +414,37 @@ class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyPro
   void both_browse_indexes_are_partial_on_the_visibility_predicate() throws Exception {
     assertThat(definitionOf(DATE_INDEX)).endsWith(VISIBILITY_PREDICATE);
     assertThat(definitionOf(AMOUNT_INDEX)).endsWith(VISIBILITY_PREDICATE);
+  }
+
+  /**
+   * {@link SortKey} spells column names, because the browse statement is native and takes them as
+   * written. Nothing compiles against the table, so a migration renaming one of these would
+   * otherwise be found by a reader rather than by the build.
+   */
+  @Test
+  void every_column_an_ordering_can_name_exists_on_the_table() throws Exception {
+    List<String> ordered =
+        BrowseOrdering.all().stream()
+            .flatMap(ordering -> ordering.sort().getOrderBy().stream())
+            .map(Sort.Order::getProperty)
+            .distinct()
+            .toList();
+
+    assertThat(ordered).isNotEmpty();
+    assertThat(columnNames()).containsAll(ordered);
+  }
+
+  private List<String> columnNames() throws SQLException {
+    String sql =
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'contrato_menor'";
+    List<String> names = new ArrayList<>();
+    try (PreparedStatement statement = connection.prepareStatement(sql);
+        ResultSet rows = statement.executeQuery()) {
+      while (rows.next()) {
+        names.add(rows.getString(1));
+      }
+    }
+    return names;
   }
 
   private String planOf(String sql, Object... parameters) throws SQLException {

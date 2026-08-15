@@ -124,4 +124,15 @@
     <Class name="~.*Test(\$.*)?"/>
     <Bug pattern="SEC_SIDE_EFFECT_CONSTRUCTOR,NAB_NEEDLESS_BOOLEAN_CONSTANT_CONVERSION,PRMC_POSSIBLY_REDUNDANT_METHOD_CALLS,SEO_SUBOPTIMAL_EXPRESSION_ORDER"/>
   </Match>
+
+  <!-- The plan test builds each statement it EXPLAINs from its own constants, and its four
+       orderings are now rendered from SortKey rather than written out — which is the point, since
+       that is what keeps them the same four the paged read emits, but it also means the analysis
+       can no longer see the statement as a literal. Nothing a caller supplies reaches it: the whole
+       class takes no input. Named to this one class so a statement assembled around a value
+       elsewhere still reports. -->
+  <Match>
+    <Class name="gal.conxugal.infrastructure.jdbc.contrato.ContratoMenorVisibleBrowseSchemaIntegrationTest"/>
+    <Bug pattern="SQL_INJECTION_JDBC"/>
+  </Match>
 </FindBugsFilter>

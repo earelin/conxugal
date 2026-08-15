@@ -401,6 +401,13 @@ two sorts a closed set on the wire rather than only in the domain.
 > domain call. Binding a `Pageable` from the request, accepting a property name as a string, or
 > adding a fifth "dynamic" ordering later all reopen it.
 >
+> Task 3 assembles the `ORDER BY` itself rather than leaving it to the framework, for reasons
+> recorded there, and takes the chance to make this a second line of defence rather than only a
+> rule: the read **refuses any column `SortKey` could not have produced**, deriving that set from
+> `SortKey` itself. A `Sort` from the wrong place now fails the read instead of reaching PostgreSQL.
+> That does not retire the rule above — a refusal at the adapter is a 500, and the 400 this section
+> promises still has to happen before the domain call.
+>
 > **This narrows [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md)'s
 > wording rather than following it.** That record says a `Sort` *"never reaches a repository"*; here
 > one does, carrying the ordering and the tiebreaker, and the guarantee moves from the sort being
@@ -458,7 +465,7 @@ The first two are **partial**, on `amount IS NOT NULL AND operador_economico_id 
 
 | Index | Serves |
 | --- | --- |
-| `(organo_id, publication_year, publication_date, source_id)` *partial* | date ascending; date descending as a backward scan; every browse `COUNT`; the year facets as an index-only scan; FEAT-0012's *does this Órgano hold a visible contrato menor* |
+| `(organo_id, publication_year, publication_date, source_id)` *partial* | date ascending; date descending as a backward scan; every browse `COUNT`, which is why the count joins nothing; the year facets as an index-only scan; FEAT-0012's *does this Órgano hold a visible contrato menor* |
 | `(organo_id, publication_year, amount, source_id)` *partial* | amount ascending; **amount descending as a backward scan** — including R24's named read |
 | `(organo_id)` *whole* | the import's per-window completion count |
 
@@ -566,10 +573,10 @@ the mapping from Micronaut Data's `Page` in the application layer, and the `coun
 on every explicit `@Query` are all recorded there with their costs. What this section fixes is only
 what is **this feature's**: which parameters exist, which are required, and what a row carries.
 
-**One of the ADR's rules bites hardest here and is repeated rather than assumed**: an explicit
-`@Query` returning `Page<T>` fails annotation processing without a `countQuery`, so task 3
-hand-writes one per ordering and keeps each in step with its `WHERE`. That is the price of the four
-explicit statements the total ordering needs, not of the paging contract.
+**The count is the part of the ADR that bites here, and it is repeated rather than assumed**: the
+page and the total are two statements, and a total that disagrees with the pages beneath it is the
+defect they can produce. Task 3 answers it by writing the predicate once and building both around
+it, so there is no second `WHERE` to keep in step.
 
 **Query parameters** on the list read — `page`, `size` and `sort` are ADR-0022's, declared and
 validated by this operation rather than bound from a `Pageable`; `year` is this feature's:
@@ -809,18 +816,20 @@ accepted — so the whole feature is ready to be cut into task files.
    and what a later widening would silently lose.
    Landing before the queries is the point — they are written against these indexes, and an
    `EXPLAIN` assertion is only meaningful once both exist. *Depends on task 1.*
-3. **Paged, ordered and counted reads** *(backend)*: the JDBC implementation of the four orderings
-   — `source_id` tiebreaker **in the direction of the key it breaks**, equality on
-   `publication_year`, and `amount IS NOT NULL AND operador_economico_id IS NOT NULL` — each with
-   its **own `countQuery`** carrying **the same predicate**, which
+3. **Paged, ordered and counted reads** *(backend)*: the JDBC implementation — equality on
+   `publication_year`, and `amount IS NOT NULL AND operador_economico_id IS NOT NULL` — as **one
+   statement carrying no ordering of its own**, with **one count over the same predicate**, which
    [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md) requires of
-   every explicit `@Query` returning a `Page`, and each taking its `Pageable` **sort-stripped**.
+   every paged read. Each of the four orderings arrives as the `Sort` on the `Pageable`, built from
+   the closed set of `SortKey` and `Sort.Order.Direction` and ending with the `source_id`
+   tiebreaker **in the direction of the key it breaks**; the read refuses a column that set could
+   not have produced.
    Integration-tested against PostgreSQL: exhaustive paging over a selection with ties, a year
    boundary that does not leak into its neighbour, the `Page`'s
    count matching the whole selection rather than the page returned, and **a stored contract
    missing its date, one missing its amount, one missing its awardee and one missing all three
-   appearing in no page and in no count** (R28) — the last of which is what catches a `countQuery`
-   that dropped a conjunct.
+   appearing in no page and in no count** (R28) — the last of which is what catches a count that
+   dropped a conjunct.
    *Depends on tasks 1 and 2.* *(SPEC-0005 #23 store half, #27 year-scoping half, #28, #42 ordering half, #50 query half)*
 4. **Year facets and the section's state** *(backend)*: the read returning the years an Órgano
    has **visible** contracts in — `DISTINCT publication_year`, index-only — plus
@@ -1014,11 +1023,15 @@ accepted — so the whole feature is ready to be cut into task files.
   *(SPEC-0005 #41)*
 - **The largest Órgano's busiest year sorted by amount descending** — the read R24 names as the one
   that actually breaks, on the order of **10⁵ rows** given SERGAS's 1.4 million. It is served by
-  `(organo_id, publication_year, amount, source_id)` read **backwards**, so no page of it sorts.
-  Task 2 proves that with an `EXPLAIN` carrying no sort node, and task 12
+  `(organo_id, publication_year, amount, source_id)` read **backwards**, so no page a reader is
+  plausibly on sorts. Task 2 proves that with an `EXPLAIN` carrying no sort node, and task 12
   measures what it actually costs. *(SPEC-0005 #37)*
 - **A deep page of that same selection** — `OFFSET` still walks the rows it skips, which the index
-  makes a walk in order rather than a re-sort per page. Whether that walk is acceptable at 10⁵ rows
-  is exactly what R24 measures and what no index removes; keyset paging is the known remedy and is
+  makes a walk in order rather than a re-sort per page **only while the planner still prefers the
+  index**. Measured on 10⁵ visible rows it holds at offsets up to at least 5 000 and is gone by
+  50 000, where the plan becomes an external merge sort spilling to disk and costs an order of
+  magnitude more than a first page. Whether that matters at all depends on whether anyone reaches
+  page 1 000, which is what R24 measures and what no index removes; keyset paging is the known
+  remedy and is
   not built, because ADR-0022 fixes a positional contract and changing it is that ADR's business,
   not a task's. *(SPEC-0005 #37)*
