@@ -11,6 +11,8 @@ dependencies {
     implementation(libs.slf4j.api)
     annotationProcessor(libs.micronaut.data.processor)
 
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)
     testImplementation(libs.mockito.junit.jupiter)
 }

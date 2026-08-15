@@ -43,4 +43,23 @@ class FiscalIdentifierConverterTest {
   void reads_the_null_column_back_as_no_identifier() {
     assertThat(converter.convertToEntityValue(null, ConversionContext.DEFAULT)).isNull();
   }
+
+  /**
+   * The path a browse row travels: the identifier is joined in from the operador rather than held
+   * on the contract, so a projection reads it as bare text and rebuilds it through the core
+   * conversion service instead of through the attribute half above.
+   */
+  @Test
+  void converts_the_joined_column_into_the_canonical_identifier() {
+    assertThat(converter.convert(" b12345678 ", FiscalIdentifier.class, ConversionContext.DEFAULT))
+        .contains(new FiscalIdentifier("B12345678"));
+  }
+
+  @Test
+  void converts_an_unusable_column_value_into_no_identifier_rather_than_throwing() {
+    assertThat(converter.convert("   ", FiscalIdentifier.class, ConversionContext.DEFAULT))
+        .isEmpty();
+    assertThat(converter.convert(null, FiscalIdentifier.class, ConversionContext.DEFAULT))
+        .isEmpty();
+  }
 }

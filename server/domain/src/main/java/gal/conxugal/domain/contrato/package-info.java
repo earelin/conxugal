@@ -6,6 +6,16 @@
  * {@link gal.conxugal.domain.contrato.ContratoMenorSourcePage} at a time — the only shape the
  * source offers.
  *
+ * <p>It also holds the vocabulary a browse read is asked in that is this family's own — a
+ * {@link gal.conxugal.domain.contrato.YearSelection} and a
+ * {@link gal.conxugal.domain.contrato.SortKey}, the two whose values name contratos menores rather
+ * than pagination. The direction such a read runs in is the pagination library's own
+ * {@link io.micronaut.data.model.Sort.Order.Direction}, since the ordering reaches the store as a
+ * {@link io.micronaut.data.model.Sort} and a second enum would only be mapped onto that one.
+ * Beside them sit the {@link gal.conxugal.domain.contrato.VisibleContratoMenor} row a browse read
+ * answers with and the {@link gal.conxugal.domain.contrato.VisibleContratoMenorRepository} port
+ * that serves it.
+ *
  * <p>{@code @NullMarked}: every type, field, parameter and return value in this package is
  * non-null unless explicitly annotated {@link org.jspecify.annotations.Nullable}.
  */
