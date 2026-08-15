@@ -1,0 +1,141 @@
+# Nightly deep fuzz of the OpenAPI contract (ADR-0021).
+#
+# server-ci.yml runs the same scripts/contract-test.sh on every pull request, deterministically
+# and on a small budget: that gate has to be fast and must never go red on its own. The cost is
+# that it probes one fixed set of inputs forever, so it stops finding anything new after the
+# first green run — the opposite of what property-based generation is for.
+#
+# This workflow is the other half. A fresh seed and a much larger budget every night, where a
+# slow run is free and a surprising failure is the point rather than an interruption. It is a
+# separate file rather than a job in server-ci.yml because the trigger is what differs: folding
+# it in would mean either building and acceptance-testing the whole server nightly for no
+# reason, or gating all three jobs on github.event_name.
+#
+# A failure here is not automatically a regression — it is usually an input no earlier run
+# reached. The seed printed in the job summary replays it exactly.
+name: Contract fuzz
+
+on:
+  schedule:
+    # 03:17 UTC. Off the hour, because the top of the hour is when GitHub's scheduler is most
+    # congested and a nightly job that starts 40 minutes late is a nightly job nobody trusts.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Generation seed (blank draws a random one). Pass a failed run's seed to replay it."
+        required: false
+        type: string
+      max_examples:
+        description: "Test cases generated per operation"
+        required: false
+        default: "1000"
+        type: string
+
+concurrency:
+  group: contract-fuzz
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    # A budget this size is minutes, not hours. The cap is here to stop a generation bug or an
+    # unresponsive instance from holding a runner all day.
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      # ./gradlew :application:dockerBuild also runs the UI's npm build (server/application/build.gradle.kts).
+      # working-directory does not apply to a `uses:` step, so these paths are
+      # relative to the repository root.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ui/package.json
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      # Handles dependency/build caching and Gradle Wrapper checksum validation.
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      # Drawn here rather than inside the script so it is recorded in the log and the job
+      # summary before anything can fail, and so a replay dispatch can hand back the same one.
+      # $RANDOM is 15 bits, which would collide across a year of nightlies; two of them do not.
+      - name: Draw the generation seed
+        id: seed
+        env:
+          REQUESTED_SEED: ${{ inputs.seed }}
+        run: |
+          seed="$REQUESTED_SEED"
+          if [[ -z "$seed" ]]; then
+            seed=$((RANDOM * 32768 + RANDOM))
+          fi
+          echo "seed=$seed" >> "$GITHUB_OUTPUT"
+
+      - name: Build application docker image
+        run: ./gradlew :application:dockerBuild
+
+      - name: Start docker compose (app profile)
+        run: docker compose --profile app up -d --wait
+
+      - name: Wait for the application to be ready
+        run: |
+          curl --fail --silent --show-error \
+            --retry 30 --retry-connrefused --retry-delay 2 \
+            http://localhost:8080/login > /dev/null
+
+      # No acceptance suite ahead of it, so unlike server-ci.yml this run has the instance to
+      # itself and the rows it leaves behind are nobody's problem. It still only gets one pass:
+      # the fixtures it deletes are restored by the seed migration at start-up, not mid-run, so
+      # a second invocation here would begin from a poorer state than the first.
+      - name: Fuzz the API against the OpenAPI contract
+        working-directory: ${{ github.workspace }}
+        env:
+          CONTRACT_TEST_SEED: ${{ steps.seed.outputs.seed }}
+          CONTRACT_TEST_MAX_EXAMPLES: ${{ inputs.max_examples || '1000' }}
+        run: scripts/contract-test.sh
+
+      # Written whatever the outcome: on a failure it is how the run is replayed, and on a pass
+      # it is the record of which inputs were actually covered that night.
+      - name: Record the seed
+        if: always()
+        env:
+          SEED: ${{ steps.seed.outputs.seed }}
+          MAX_EXAMPLES: ${{ inputs.max_examples || '1000' }}
+        run: |
+          {
+            echo "### Contract fuzz"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Seed | \`$SEED\` |"
+            echo "| Max examples | \`$MAX_EXAMPLES\` |"
+            echo
+            echo "Replay this run locally against a freshly started instance:"
+            echo
+            echo '```'
+            echo "CONTRACT_TEST_SEED=$SEED CONTRACT_TEST_MAX_EXAMPLES=$MAX_EXAMPLES scripts/contract-test.sh"
+            echo '```'
+            echo
+            echo "Or re-dispatch this workflow with the same seed."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Dump docker compose logs on failure
+        if: failure()
+        run: docker compose --profile app logs
+
+      - name: Stop docker compose
+        if: always()
+        run: docker compose --profile app down -v

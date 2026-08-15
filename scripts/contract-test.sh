@@ -5,7 +5,8 @@
 #
 # Schemathesis reads the contract, generates requests for every operation it describes,
 # and asserts the live responses match — status codes, content types, response schemas,
-# and the absence of 5xx. A run that only warns fails too: see SCHEMATHESIS_WARNINGS below.
+# and the absence of 5xx. A run that only warns fails too: see SCHEMATHESIS_WARNINGS below,
+# and a run that leaves an operation untouched fails as well: see EXEMPT_OPERATIONS.
 # Configuration (auth header, generation budget, the excluded operation, the rows generated
 # requests are pointed at) lives in schemathesis.toml at the repository root.
 #
@@ -15,12 +16,27 @@
 #
 #   cd server && ./gradlew :application:dockerBuild && docker compose --profile app up -d --wait
 #
+# Two ways to run it, and the difference is generation, not conformance:
+#
+#   scripts/contract-test.sh
+#       The pull-request gate. Deterministic — the same inputs every run, so a red build
+#       reproduces locally and a green one never goes red on its own.
+#
+#   CONTRACT_TEST_SEED=$RANDOM CONTRACT_TEST_MAX_EXAMPLES=1000 scripts/contract-test.sh
+#       The nightly fuzz run (.github/workflows/contract-fuzz.yml). A fresh seed and a much
+#       larger budget, which is what makes property-based generation accumulate coverage
+#       across runs instead of probing one fixed set of inputs forever. It can go red on
+#       inputs no earlier run reached; that is the job. Reproduce a failure by passing back
+#       the seed it prints.
+#
 # Usage: scripts/contract-test.sh
 #
 # Environment:
 #   CONTRACT_TEST_BASE_URL         default http://localhost:8080
 #   CONTRACT_TEST_ADMIN_EMAIL      default root@local
 #   CONTRACT_TEST_ADMIN_PASSWORD   default secret
+#   CONTRACT_TEST_SEED             unset ⇒ deterministic; an integer ⇒ that seed
+#   CONTRACT_TEST_MAX_EXAMPLES     unset ⇒ the budget in schemathesis.toml
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -43,15 +59,58 @@ SCHEMATHESIS_WARNINGS="missing_auth,missing_test_data,missing_deserializer,unuse
 SCHEMATHESIS_WARNINGS="${SCHEMATHESIS_WARNINGS},unsupported_regex,method_not_allowed"
 SCHEMATHESIS_WARNINGS="${SCHEMATHESIS_WARNINGS},constants_extraction"
 
+# The operations this gate accepts as never exercised. Every other operation the contract
+# declares has to come back from the run as tested — a filter in schemathesis.toml that stops
+# matching, or an operation added to the contract that the run never reaches, is otherwise
+# invisible: it makes the suite prove less while it stays green.
+#
+# One entry per line, in the "METHOD /path" form the report names them by, each with the reason
+# it cannot be reached. An entry the contract no longer declares fails the gate too, so the list
+# cannot outlive what it excuses.
+#
+# GET /api/admin/metrics is an unbounded SSE stream, not a JSON body: the request never
+# completes. It is turned off in schemathesis.toml and the contract records the same limitation
+# on the operation itself.
+EXEMPT_OPERATIONS="GET /api/admin/metrics"
+
 BASE_URL="${CONTRACT_TEST_BASE_URL:-http://localhost:8080}"
 ADMIN_EMAIL="${CONTRACT_TEST_ADMIN_EMAIL:-root@local}"
 ADMIN_PASSWORD="${CONTRACT_TEST_ADMIN_PASSWORD:-secret}"
+SEED="${CONTRACT_TEST_SEED:-}"
+MAX_EXAMPLES="${CONTRACT_TEST_MAX_EXAMPLES:-}"
+
+# Deterministic unless a seed is named. The flag has no negation, so schemathesis.toml cannot
+# hold the default and let a caller lift it — which is why the choice is made here.
+GENERATION=()
+if [[ -n "$SEED" ]]; then
+  if [[ ! "$SEED" =~ ^[0-9]+$ ]]; then
+    printf 'CONTRACT_TEST_SEED must be a non-negative integer, got: %s\n' "$SEED" >&2
+    exit 2
+  fi
+  GENERATION+=(--seed "$SEED")
+else
+  GENERATION+=(--generation-deterministic)
+fi
+if [[ -n "$MAX_EXAMPLES" ]]; then
+  if [[ ! "$MAX_EXAMPLES" =~ ^[1-9][0-9]*$ ]]; then
+    printf 'CONTRACT_TEST_MAX_EXAMPLES must be a positive integer, got: %s\n' "$MAX_EXAMPLES" >&2
+    exit 2
+  fi
+  GENERATION+=(--max-examples "$MAX_EXAMPLES")
+fi
 
 bold=$(tput bold 2>/dev/null || true)
 red=$(tput setaf 1 2>/dev/null || true)
 green=$(tput setaf 2 2>/dev/null || true)
 yellow=$(tput setaf 3 2>/dev/null || true)
 reset=$(tput sgr0 2>/dev/null || true)
+
+# World-writable because the image runs as its own unprivileged user, whose uid matches
+# neither a developer's nor the CI runner's.
+REPORT_DIR=$(mktemp -d)
+chmod 777 "$REPORT_DIR"
+trap 'rm -rf "$REPORT_DIR"' EXIT
+JUNIT_REPORT="${REPORT_DIR}/junit.xml"
 
 FAILED=()
 
@@ -98,12 +157,16 @@ log_in() {
 
 # --- Contract conformance ----------------------------------------------------
 run_schemathesis() {
-  section "API contract conformance (schemathesis)"
+  if [[ -n "$SEED" ]]; then
+    section "API contract conformance (schemathesis, seed ${SEED})"
+  else
+    section "API contract conformance (schemathesis, deterministic)"
+  fi
 
   if ! have docker; then
     printf '%sSKIP%s docker not found — install from https://docs.docker.com/engine/install/\n' "$yellow" "$reset"
     FAILED+=("contract-test (tool missing)")
-    return
+    return 1
   fi
 
   # --network host so the container reaches an instance published on the host's
@@ -123,9 +186,12 @@ run_schemathesis() {
     --env CONTRACT_TEST_SESSION \
     --volume "${ROOT}/${OPENAPI_DOC}:/spec/openapi.yaml:ro" \
     --volume "${ROOT}/${CONFIG_FILE}:/spec/schemathesis.toml:ro" \
+    --volume "${REPORT_DIR}:/report" \
     "$SCHEMATHESIS_IMAGE" \
     --config-file /spec/schemathesis.toml \
     run /spec/openapi.yaml --url "$BASE_URL" --warnings "$SCHEMATHESIS_WARNINGS" \
+    --report junit --report-junit-path /report/junit.xml \
+    "${GENERATION[@]}" \
     2>&1 | tee "$output" || status=1
 
   if [[ $status -ne 0 ]]; then
@@ -141,8 +207,80 @@ run_schemathesis() {
   rm -f "$output"
 }
 
+# --- Contract coverage -------------------------------------------------------
+# Conformance is only worth what it covers, and how much it covers is configuration: a
+# schemathesis.toml filter, a phase, an operation the contract grew after this file was last
+# read. The JUnit report names every operation the run actually reached, so the contract's own
+# list of operations is held against it — anything declared but neither reached nor excused by
+# EXEMPT_OPERATIONS fails, as does an excuse for an operation the contract no longer declares.
+#
+# The comparison runs inside the same pinned image, which already carries a Python and a YAML
+# parser, so it adds nothing to what a contributor has to install.
+check_coverage() {
+  section "Contract coverage (every declared operation exercised)"
+
+  if [[ ! -f "$JUNIT_REPORT" ]]; then
+    printf '%sFAIL%s schemathesis wrote no report to compare the contract against\n' "$red" "$reset"
+    FAILED+=("contract-coverage (no report)")
+    return
+  fi
+
+  if docker run --rm --interactive --entrypoint python \
+    --env CONTRACT_TEST_EXEMPT="$EXEMPT_OPERATIONS" \
+    --volume "${ROOT}/${OPENAPI_DOC}:/spec/openapi.yaml:ro" \
+    --volume "${REPORT_DIR}:/report:ro" \
+    "$SCHEMATHESIS_IMAGE" - <<'PYTHON'
+import os
+import sys
+import xml.etree.ElementTree as ElementTree
+
+import yaml
+
+METHODS = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+
+with open("/spec/openapi.yaml", encoding="utf-8") as handle:
+    paths = yaml.safe_load(handle).get("paths") or {}
+declared = {
+    f"{method.upper()} {path}"
+    for path, operations in paths.items()
+    for method in operations
+    if method.lower() in METHODS
+}
+
+exercised, skipped = set(), {}
+for case in ElementTree.parse("/report/junit.xml").getroot().iter("testcase"):
+    reason = case.find("skipped")
+    if reason is None:
+        exercised.add(case.get("name"))
+    else:
+        skipped[case.get("name")] = (reason.text or "skipped").strip()
+
+exempt = {line.strip() for line in os.environ["CONTRACT_TEST_EXEMPT"].splitlines() if line.strip()}
+
+uncovered = sorted(declared - exempt - exercised)
+stale = sorted(exempt - declared)
+for operation in uncovered:
+    print(f"  {operation} — {skipped.get(operation, 'no test case: filtered out of the run')}")
+for operation in stale:
+    print(f"  {operation} — exempt, but the contract no longer declares it")
+print(
+    f"{len(exercised - exempt)} of {len(declared) - len(exempt)} operations exercised"
+    f", {len(exempt)} exempt, {len(declared)} declared"
+)
+sys.exit(1 if uncovered or stale else 0)
+PYTHON
+  then
+    printf '%sOK%s contract coverage\n' "$green" "$reset"
+  else
+    printf '%sFAIL%s the run left operations of the contract untouched\n' "$red" "$reset"
+    FAILED+=("contract-coverage")
+  fi
+}
+
 if log_in; then
-  run_schemathesis
+  if run_schemathesis; then
+    check_coverage
+  fi
 fi
 
 section "Summary"
@@ -151,4 +289,15 @@ if [[ ${#FAILED[@]} -eq 0 ]]; then
   exit 0
 fi
 printf '%sFailed checks:%s %s\n' "$red" "$reset" "${FAILED[*]}"
+
+# A seeded run is the only one whose inputs are not implied by the command itself, and it is
+# the one whose failures are hardest to believe — nobody changed anything, the nightly went
+# red. The seed is what turns it back into a repeatable case, so it is printed where the
+# failure is rather than left in the middle of the schemathesis output above.
+if [[ -n "$SEED" ]]; then
+  printf '\nReproduce this run against a freshly started instance with:\n  %s%s%s\n' \
+    "$bold" \
+    "CONTRACT_TEST_SEED=${SEED}${MAX_EXAMPLES:+ CONTRACT_TEST_MAX_EXAMPLES=${MAX_EXAMPLES}} scripts/contract-test.sh" \
+    "$reset"
+fi
 exit 1
