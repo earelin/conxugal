@@ -1,5 +1,16 @@
 import { type Page } from '@playwright/test';
 
+/**
+ * How far the page overflows its own viewport, which is 0 on every layout this
+ * suite accepts. Measured on the document rather than an element, so a
+ * portalled overlay that pushes the page sideways counts too.
+ */
+export async function horizontalOverflow(page: Page): Promise<number> {
+  return page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+}
+
 /** The app shell's persistent navigation, which every page renders. */
 export function nav(page: Page) {
   return page.getByRole('navigation', { name: 'Navegación principal' });

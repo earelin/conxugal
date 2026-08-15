@@ -3,7 +3,7 @@ import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { strings } from '../shared/lib/strings';
-import { BASE_URL, mockCurrentUser, renderApp } from '../test/renderApp';
+import { BASE_URL, mockCurrentUser, mockOrganosPicker, renderApp } from '../test/renderApp';
 
 function mockSystemStatus() {
   return nock(BASE_URL)
@@ -28,6 +28,7 @@ function mockSystemStatus() {
 describe('AdminRoute', () => {
   beforeEach(() => {
     nock.disableNetConnect();
+    mockOrganosPicker();
   });
 
   afterEach(() => {

@@ -3,7 +3,8 @@ import { IconCheck, IconSearch } from '@tabler/icons-react';
 import { type KeyboardEvent, useId, useMemo, useRef, useState } from 'react';
 
 import { strings } from '../../../shared/lib/strings';
-import type { TermoNode } from '../taxonomiaTree';
+import type { TermoNode } from '../../../shared/lib/taxonomiaTree';
+import { SELECTED_ROW_BG, SELECTED_ROW_COLOR } from '../../../shared/ui/selection';
 import { buildTermoPickerRows } from './termoSearch';
 
 const copy = strings.admin.organos.assign;
@@ -149,22 +150,20 @@ export function TermoTreePicker({ roots, label, value, onChange, required }: Ter
                   py={6}
                   pr="xs"
                   pl={BASE_INDENT + row.depth * INDENT_STEP}
-                  bg={selected ? 'indigo.0' : undefined}
+                  bg={selected ? SELECTED_ROW_BG : undefined}
                   style={{ borderRadius: 'var(--mantine-radius-sm)' }}
                 >
                   <Group gap="xs" justify="space-between" wrap="nowrap">
                     <Text
                       size="sm"
                       fw={selected || row.depth === 0 ? 600 : 400}
-                      c={selected ? 'indigo.8' : undefined}
+                      c={selected ? SELECTED_ROW_COLOR : undefined}
                     >
                       {row.name}
                     </Text>
                     {/* A Tabler icon paints its own stroke, so this is a CSS
                         value rather than a Mantine colour token. */}
-                    {selected && (
-                      <IconCheck size={14} color="var(--mantine-color-indigo-8)" aria-hidden />
-                    )}
+                    {selected && <IconCheck size={14} color={SELECTED_ROW_COLOR} aria-hidden />}
                   </Group>
                 </UnstyledButton>
               );

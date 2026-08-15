@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { strings } from '../../../shared/lib/strings';
+import { buildTaxonomiaView } from '../../../shared/lib/taxonomiaTree';
 import type { Organo, Termo } from '../organos';
-import { buildTaxonomiaView } from '../taxonomiaTree';
 import { organoPlacementLabel } from './organoPlacement';
 
 const TAXONOMIA: Termo[] = [

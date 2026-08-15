@@ -2,9 +2,9 @@ import { Button, Modal, Stack, Text } from '@mantine/core';
 import { useState } from 'react';
 
 import { strings } from '../../../shared/lib/strings';
+import { findTermoPath, type TermoNode } from '../../../shared/lib/taxonomiaTree';
 import { TermoDialogFooter } from '../dialogs/TermoDialogFooter';
 import { TermoRefusalAlert } from '../dialogs/TermoRefusalAlert';
-import { findTermoPath, type TermoNode } from '../taxonomiaTree';
 import { useMoveTermo } from './termoMutations';
 import { TermoParentSelect } from './TermoParentSelect';
 import { cycleRefusal, moveRefusal, type Refusal, wouldCycle } from './termoRefusal';

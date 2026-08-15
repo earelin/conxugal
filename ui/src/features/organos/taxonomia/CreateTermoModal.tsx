@@ -2,10 +2,10 @@ import { Button, Modal, Stack, TextInput } from '@mantine/core';
 import { useState } from 'react';
 
 import { strings } from '../../../shared/lib/strings';
+import type { TermoNode } from '../../../shared/lib/taxonomiaTree';
 import { TermoDialogFooter } from '../dialogs/TermoDialogFooter';
 import { TermoRefusalAlert } from '../dialogs/TermoRefusalAlert';
 import type { Termo } from '../organos';
-import type { TermoNode } from '../taxonomiaTree';
 import { useCreateTermo } from './termoMutations';
 import type { TermoNameValues } from './termoName';
 import { useTermoNameForm } from './termoNameForm';

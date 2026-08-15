@@ -1,7 +1,7 @@
 {
   "mappings": [
     {
-      "name": "List the whole Órganos catalogue, in name order",
+      "name": "List the Órganos of the visible set, in name order",
       "request": {
         "method": "GET",
         "urlPath": "/api/organos"
@@ -11,34 +11,10 @@
         "headers": { "Content-Type": "application/json" },
         "jsonBody": [
           {
-            "id": "0b6d1f52-3a47-4c19-8e25-7f1c4d9a2b60",
-            "name": "Axencia de Turismo de Galicia",
-            "active": true,
-            "termoId": null
-          },
-          {
             "id": "1d8e2a94-5b63-4f27-9c14-6a3f8e5d0c71",
             "name": "Axencia Galega de Innovación",
             "active": true,
             "termoId": "9f4b7c21-8d35-4e69-b012-5a7c3e9f6d84"
-          },
-          {
-            "id": "2f9a4c07-6e18-4b53-8d72-1c5b9f3a7e06",
-            "name": "Concello de Santiago de Compostela",
-            "active": true,
-            "termoId": "c3e8a05f-1b74-4d92-8a36-0f5d7c2b9e41"
-          },
-          {
-            "id": "3a1c6e58-7f29-4d84-b063-2e8a5c1f9d37",
-            "name": "Consorcio Galego de Servizos de Igualdade e Benestar",
-            "active": true,
-            "termoId": null
-          },
-          {
-            "id": "4b2d7f69-8a30-4e95-c174-3f9b6d2a0e48",
-            "name": "Fundación Pública Urxencias Sanitarias de Galicia-061",
-            "active": true,
-            "termoId": "5e1a8b34-2c96-4f07-a5d8-1b4e7f0c3a29"
           },
           {
             "id": "5c3e8a70-9b41-4f06-d285-4a0c7e3b1f59",

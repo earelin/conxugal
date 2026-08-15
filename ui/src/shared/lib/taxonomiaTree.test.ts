@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Organo, Termo } from './organos';
-import { buildTaxonomiaView, findTermoPath, termoPathLabel } from './taxonomiaTree';
+import {
+  buildTaxonomiaView,
+  findTermoPath,
+  type Organo,
+  pruneEmptyTermos,
+  type Termo,
+  termoPathLabel,
+} from './taxonomiaTree';
 
 function termo(id: string, name: string, parentId: string | null = null): Termo {
   return { id, name, parentId };
 }
 
 function organo(id: string, name: string, termoId: string | null, active = true): Organo {
-  return { id, name, active, termoId, importable: false, importState: 'NEVER_STARTED' };
+  return { id, name, active, termoId };
 }
 
 const consellerias = termo('t-1', 'Consellerías');
@@ -132,6 +138,69 @@ describe('findTermoPath', () => {
     const { roots } = buildTaxonomiaView([consellerias, sanidade], []);
 
     expect(findTermoPath(roots, 't-deleted')).toEqual([]);
+  });
+});
+
+describe('pruneEmptyTermos', () => {
+  it('drops a term whose whole subtree holds no Organo', () => {
+    const { roots } = buildTaxonomiaView(
+      [consellerias, sanidade, educacion, innovacion, concellos],
+      [sergas],
+    );
+
+    const pruned = pruneEmptyTermos(roots);
+
+    expect(pruned.map((node) => node.name)).toEqual(['Consellerías']);
+    expect(pruned[0].children.map((node) => node.name)).toEqual(['Consellería de Sanidade']);
+  });
+
+  it('keeps a term whose own Organos are absent but whose descendant has one', () => {
+    const filed = organo('o-5', 'Axencia Galega de Innovación', 't-4');
+
+    const pruned = pruneEmptyTermos(
+      buildTaxonomiaView([consellerias, sanidade, educacion, innovacion], [filed]).roots,
+    );
+
+    // The whole chain down to the Órgano survives, intermediate terms included.
+    expect(pruned.map((node) => node.name)).toEqual(['Consellerías']);
+    expect(pruned[0].children.map((node) => node.name)).toEqual(['Consellería de Educación']);
+    expect(pruned[0].children[0].children.map((node) => node.name)).toEqual([
+      'Axencia Galega de Innovación',
+    ]);
+    expect(pruned[0].children[0].children[0].organos).toEqual([filed]);
+  });
+
+  it('keeps a term that holds Organos of its own and no child terms', () => {
+    const pruned = pruneEmptyTermos(buildTaxonomiaView([concellos], []).roots);
+    const withOrgano = pruneEmptyTermos(
+      buildTaxonomiaView([concellos], [organo('o-6', 'Concello de Santiago', 't-5')]).roots,
+    );
+
+    expect(pruned).toEqual([]);
+    expect(withOrgano.map((node) => node.name)).toEqual(['Concellos']);
+  });
+
+  it('prunes to nothing when no Organo is filed anywhere', () => {
+    expect(pruneEmptyTermos(buildTaxonomiaView([], []).roots)).toEqual([]);
+    expect(
+      pruneEmptyTermos(buildTaxonomiaView([consellerias, sanidade, concellos], [vivenda]).roots),
+    ).toEqual([]);
+  });
+
+  it('leaves the tree it was given untouched, at every level it prunes', () => {
+    // The administration section renders this same tree from the same cached
+    // read, so a prune that filtered in place would delete terms from it.
+    const { roots } = buildTaxonomiaView([consellerias, sanidade, educacion, concellos], [sergas]);
+
+    const pruned = pruneEmptyTermos(roots);
+
+    expect(pruned.map((node) => node.name)).toEqual(['Consellerías']);
+    expect(pruned[0].children.map((node) => node.name)).toEqual(['Consellería de Sanidade']);
+    expect(roots.map((node) => node.name)).toEqual(['Consellerías', 'Concellos']);
+    expect(roots[0].children.map((node) => node.name)).toEqual([
+      'Consellería de Sanidade',
+      'Consellería de Educación',
+    ]);
   });
 });
 

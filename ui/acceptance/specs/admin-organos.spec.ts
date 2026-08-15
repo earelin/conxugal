@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 
+import { horizontalOverflow } from '../support/locators';
 import { resetMappings } from '../support/wiremock';
 
 const DEEPEST_TERM = 'Axencias e entidades instrumentais';
@@ -17,12 +18,6 @@ test.afterAll(async () => {
 
 function tree(page: Page) {
   return page.getByRole('tree', { name: 'Taxonomía' });
-}
-
-async function horizontalOverflow(page: Page): Promise<number> {
-  return page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
 }
 
 test.describe('Órganos section', () => {

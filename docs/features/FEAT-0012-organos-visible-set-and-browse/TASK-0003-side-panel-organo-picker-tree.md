@@ -2,7 +2,7 @@
 feat: FEAT-0012
 domain: frontend
 adrs: [0003, 0004, 0015, 0018]
-status: todo
+status: done
 depends_on: [TASK-0001, TASK-0002]
 ---
 
@@ -68,6 +68,12 @@ renders there.
   - **Open:** a Mantine `Popover` whose body is the tree — terms with a chevron at `fw={500}`,
     their Órganos one indent deeper, **unclassified Órganos at the root** after the root terms and
     without a chevron, all in the name order the two reads arrive in. Nothing here sorts.
+    - **The indent carries Mantine's `withLines` guide lines, and the tree scrolls within
+      `60vh`** — neither is in the mockup, and both were added after the tree first shipped
+      *flat*: a row's own horizontal padding had been overriding the indent, which is a
+      stylesheet rule keyed on the level. At 320 px the names wrap often enough that a 16 px
+      step alone reads ambiguously once it is restored, and every branch opens at once, so a
+      large visible set would otherwise draw a dropdown taller than the window.
   - **No control that creates, renames, moves, deletes or reassigns anything**, and **no count
     badges**: it is a view, not the admin tree with its buttons hidden (SPEC-0004 #9), and the
     per-term counts the admin tree carries are recorded in the design as deliberately absent.

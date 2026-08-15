@@ -1,5 +1,6 @@
+import { TAXONOMIA_QUERY_KEY } from '../../../shared/entities/organos';
 import { apiFetch } from '../../../shared/lib/httpClient';
-import { SECTION_QUERY_KEY, TAXONOMIA_QUERY_KEY, type Termo, useOrganosMutation } from '../organos';
+import { SECTION_QUERY_KEY, type Termo, useOrganosMutation } from '../organos';
 
 const TERMOS_PATH = '/api/admin/organos/taxonomia/termos';
 const TERMO_PATH = '/api/admin/organos/taxonomia/termo';
