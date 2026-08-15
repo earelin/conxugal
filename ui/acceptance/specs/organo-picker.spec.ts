@@ -193,6 +193,24 @@ test.describe('Órgano picker search', () => {
     expect(await requestCountFor('GET', '/api/organos')).toBe(0);
     expect(await requestCountFor('GET', '/api/organos/taxonomia')).toBe(0);
   });
+
+  test('keeps Tab inside the dropdown after the arrows have moved focus', async ({ page }) => {
+    await trigger(page).click();
+    await searchBox(page).fill('a');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+
+    // The tab stop travels with the focus, which is what lets the trap round
+    // the dropdown recognise the focused match as the last thing in it. Left
+    // behind, Tab walks out of the document and Escape — bound on the dropdown
+    // — stops answering, stranding the reader with the picker still open.
+    await page.keyboard.press('Tab');
+
+    await expect(searchBox(page)).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(offered(page)).toBeHidden();
+    await expect(trigger(page)).toBeFocused();
+  });
 });
 
 test.describe('Órgano picker at 360 px', () => {

@@ -26,6 +26,23 @@ function optionsOf(list: RefObject<HTMLElement | null>): HTMLElement[] {
   return element === null ? [] : Array.from(element.querySelectorAll<HTMLElement>(OPTION_SELECTOR));
 }
 
+/**
+ * Focuses one option and moves the tab stop onto it.
+ *
+ * The tab stop has to travel with the focus, not sit on whichever option the
+ * render picked. A focus trap decides whether to intercept Tab by asking
+ * whether the focused element is the last *tabbable* one it can find, and it
+ * finds them by `tabIndex >= 0` — so an option focused by an arrow key while
+ * still at `-1` is invisible to that test, and Tab walks out of the trap
+ * instead of wrapping inside it.
+ */
+function focusOption(options: HTMLElement[], index: number) {
+  for (const [position, option] of options.entries()) {
+    option.tabIndex = position === index ? 0 : -1;
+  }
+  options[index].focus();
+}
+
 /** `onKeyDown` for the list itself: the arrows, Home and End walk the options. */
 export function movesFocusWithin(list: RefObject<HTMLElement | null>) {
   return (event: KeyboardEvent<HTMLElement>) => {
@@ -39,7 +56,7 @@ export function movesFocusWithin(list: RefObject<HTMLElement | null>) {
       return;
     }
     event.preventDefault();
-    options[target].focus();
+    focusOption(options, target);
   };
 }
 
@@ -49,10 +66,10 @@ export function entersListFromSearch(list: RefObject<HTMLElement | null>) {
     if (event.key !== 'ArrowDown') {
       return;
     }
-    const [first] = optionsOf(list);
-    if (first) {
+    const options = optionsOf(list);
+    if (options.length > 0) {
       event.preventDefault();
-      first.focus();
+      focusOption(options, 0);
     }
   };
 }

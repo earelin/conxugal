@@ -1,7 +1,7 @@
-import { Box, Group, Popover, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
+import { Group, Popover, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconSearch, IconSelector } from '@tabler/icons-react';
-import { useId, useMemo, useRef, useState } from 'react';
+import { Activity, useId, useMemo, useRef, useState } from 'react';
 import { useMatch, useNavigate } from 'react-router';
 
 import { matches } from '../../lib/organoSearch';
@@ -164,8 +164,13 @@ export function OrganoPicker({
         {/* Hidden rather than unmounted while the filter has text in it: the
             tree opens every branch when it mounts, so swapping it out would
             cost a reader who collapsed one — and their scroll position with
-            it — for the two keystrokes it took to check a name. */}
-        <Box style={{ display: searching ? 'none' : undefined }}>
+            it — for the two keystrokes it took to check a name.
+
+            `Activity` rather than `display: none`, which hides a tree without
+            sparing it: every keystroke would otherwise reconcile a node per
+            Órgano of the visible set, all of them off screen, because neither
+            Mantine's `TreeNode` nor this tree is memoised. */}
+        <Activity mode={searching ? 'hidden' : 'visible'}>
           <OrganoTree
             key={shape}
             data={data}
@@ -173,7 +178,7 @@ export function OrganoPicker({
             onOpen={chooseRow}
             labelledBy={labelId}
           />
-        </Box>
+        </Activity>
         <OrganoMatches
           id={listId}
           organos={found}

@@ -59,6 +59,23 @@ describe('movesFocusWithin', () => {
     expect(document.activeElement).toBe(options(list)[1]);
   });
 
+  it('moves the tab stop along with the focus, leaving exactly one', () => {
+    // A focus trap decides whether to intercept Tab by looking for the last
+    // element with a non-negative tabIndex. A tab stop left behind on the row
+    // the render chose means the focused one is invisible to that test, and
+    // Tab leaves the trap instead of wrapping inside it.
+    const { list, ref } = listOf(3);
+    const move = movesFocusWithin(ref);
+    options(list)[0].tabIndex = 0;
+    options(list)[0].focus();
+
+    move(press('ArrowDown').event);
+    expect(options(list).map((option) => option.tabIndex)).toEqual([-1, 0, -1]);
+
+    move(press('End').event);
+    expect(options(list).map((option) => option.tabIndex)).toEqual([-1, -1, 0]);
+  });
+
   it('jumps to the ends on Home and End', () => {
     const { list, ref } = listOf(4);
     const move = movesFocusWithin(ref);
@@ -122,13 +139,25 @@ describe('entersListFromSearch', () => {
   });
 
   it('leaves every other key to the search box, ArrowUp included', () => {
-    const { list, ref } = listOf(3);
+    const { ref } = listOf(3);
     const up = press('ArrowUp');
 
     entersListFromSearch(ref)(up.event);
 
-    expect(document.activeElement).not.toBe(options(list)[0]);
+    // Nothing was focused to begin with, so the body still holds it.
+    expect(document.activeElement).toBe(document.body);
     expect(up.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('brings the tab stop with it, so the trap still sees the focused option', () => {
+    const { list, ref } = listOf(3);
+    // The render put the tab stop on the last option, as it would when that is
+    // the one the route has open.
+    options(list)[2].tabIndex = 0;
+
+    entersListFromSearch(ref)(press('ArrowDown').event);
+
+    expect(options(list).map((option) => option.tabIndex)).toEqual([0, -1, -1]);
   });
 
   it('leaves the reader in the search box when the list offers nothing', () => {
