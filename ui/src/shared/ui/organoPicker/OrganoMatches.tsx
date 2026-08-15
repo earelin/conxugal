@@ -29,10 +29,7 @@ const ANNOUNCEMENT: Record<FilterAnswer, string> = {
 interface OrganoMatchesProps {
   id: string;
   organos: Organo[];
-  /**
-   * What was typed, trimmed, and empty while the tree is the answer instead —
-   * which is the whole of what says which of the two states this is in.
-   */
+  /** What was typed, trimmed, and quoted back when nothing matches it. */
   query: string;
   /** The Órgano the route has open, marked as selected here as in the tree. */
   openId: string | null;
