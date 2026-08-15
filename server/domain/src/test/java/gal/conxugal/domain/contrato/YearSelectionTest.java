@@ -10,16 +10,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class YearSelectionTest {
-
-  private static final List<String> NOT_A_YEAR =
-      Arrays.asList(
-          null, "", "   ", " 2025 ", "2025 ", "2025\n", "202", "20255", "0000", "0999", "abcd",
-          "2o25", "-100", "+2025", "2025.0", "20 25", "٢٠٢٥");
-
-  private static final List<String> WORDS_FOR_A_LIST_THAT_DOES_NOT_EXIST =
-      List.of("all", "undated", "todos", "none");
 
   @Test
   void answers_with_the_year_it_was_built_for() {
@@ -33,32 +28,51 @@ class YearSelectionTest {
         .contains(YearSelection.of(1999));
   }
 
-  @Test
-  void refuses_anything_that_is_not_exactly_four_digits() {
-    assertThat(NOT_A_YEAR)
-        .allSatisfy(
-            published ->
-                assertThat(YearSelection.parse(published))
-                    .isEmpty());
+  @ParameterizedTest
+  @ValueSource(ints = {1000, 2025, 9999})
+  void parses_the_years_at_both_ends_of_what_it_can_be_built_with(int year) {
+    assertThat(YearSelection.parse(String.valueOf(year)))
+        .contains(YearSelection.of(year));
   }
 
-  @Test
-  void refuses_the_words_an_all_years_or_undated_list_would_be_asked_for_by() {
-    assertThat(WORDS_FOR_A_LIST_THAT_DOES_NOT_EXIST)
-        .allSatisfy(
-            published ->
-                assertThat(YearSelection.parse(published))
-                    .isEmpty());
+  @ParameterizedTest
+  @NullAndEmptySource
+  @ValueSource(
+      strings = {
+        "   ",
+        " 2025 ",
+        "2025 ",
+        "2025\n",
+        "202",
+        "20255",
+        "0000",
+        "0999",
+        "abcd",
+        "2o25",
+        "-100",
+        "+2025",
+        "2025.0",
+        "20 25",
+        "٢٠٢٥"
+      })
+  void refuses_anything_that_is_not_exactly_four_digits(String published) {
+    assertThat(YearSelection.parse(published))
+        .isEmpty();
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"all", "undated", "todos", "none"})
+  void refuses_the_words_an_all_years_or_undated_list_would_be_asked_for_by(String published) {
+    assertThat(YearSelection.parse(published))
+        .isEmpty();
   }
 
   /** Building one directly and parsing one admit the same set, or the type's claim is untrue. */
-  @Test
-  void refuses_to_be_built_from_something_no_publication_could_carry() {
-    assertThat(List.of(0, -5, 999, 10_000, Integer.MAX_VALUE))
-        .allSatisfy(
-            year ->
-                assertThatIllegalArgumentException()
-                    .isThrownBy(() -> YearSelection.of(year)));
+  @ParameterizedTest
+  @ValueSource(ints = {0, -5, 999, 10_000, Integer.MAX_VALUE})
+  void refuses_to_be_built_from_something_no_publication_could_carry(int year) {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> YearSelection.of(year));
   }
 
   /**
@@ -96,14 +110,5 @@ class YearSelectionTest {
         .filter(member -> Modifier.isStatic(member.getModifiers()))
         .map(Member.class::cast)
         .toList();
-  }
-
-  @Test
-  void parses_the_years_at_both_ends_of_what_it_can_be_built_with() {
-    assertThat(List.of(1000, 2025, 9999))
-        .allSatisfy(
-            year ->
-                assertThat(YearSelection.parse(String.valueOf(year)))
-                    .contains(YearSelection.of(year)));
   }
 }

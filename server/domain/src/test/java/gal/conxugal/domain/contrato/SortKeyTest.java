@@ -2,16 +2,12 @@ package gal.conxugal.domain.contrato;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Arrays;
-import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class SortKeyTest {
-
-  private static final List<String> NOT_A_SORT_KEY =
-      Arrays.asList(
-          null, "", "   ", "obxecto", "duration", "sourceId", "PublicationDate", "publicationdate",
-          "PUBLICATION_DATE", "publication_date", "Amount", "AMOUNT", " amount", "amount ");
 
   @Test
   void parses_the_publication_date_the_contract_publishes_it_as() {
@@ -25,13 +21,26 @@ class SortKeyTest {
         .contains(SortKey.AMOUNT);
   }
 
-  @Test
-  void refuses_every_other_spelling_rather_than_falling_back_to_one_of_the_two() {
-    assertThat(NOT_A_SORT_KEY)
-        .allSatisfy(
-            published ->
-                assertThat(SortKey.parse(published))
-                    .isEmpty());
+  @ParameterizedTest
+  @NullAndEmptySource
+  @ValueSource(
+      strings = {
+        "   ",
+        "obxecto",
+        "duration",
+        "sourceId",
+        "PublicationDate",
+        "publicationdate",
+        "PUBLICATION_DATE",
+        "publication_date",
+        "Amount",
+        "AMOUNT",
+        " amount",
+        "amount "
+      })
+  void refuses_every_other_spelling_rather_than_falling_back_to_one_of_the_two(String published) {
+    assertThat(SortKey.parse(published))
+        .isEmpty();
   }
 
   @Test
