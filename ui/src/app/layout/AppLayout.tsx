@@ -14,7 +14,7 @@ import { NavLink, Outlet } from 'react-router';
 import { useCurrentUser } from '../../shared/entities/currentUser';
 import { useVisibleOrganos } from '../../shared/entities/organos';
 import { strings } from '../../shared/lib/strings';
-import { OrganoPicker } from '../../shared/ui/OrganoPicker';
+import { OrganoPicker } from '../../shared/ui/organoPicker/OrganoPicker';
 import { visibleNavSections } from '../nav';
 import { UserMenu } from './UserMenu';
 

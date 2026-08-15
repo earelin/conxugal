@@ -5,8 +5,8 @@ import { createMemoryRouter, type RouteObject } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { describe, expect, it, vi } from 'vitest';
 
-import { strings } from '../lib/strings';
-import { buildTaxonomiaView, type Organo, type Termo } from '../lib/taxonomiaTree';
+import { strings } from '../../lib/strings';
+import { buildTaxonomiaView, type Organo, type Termo } from '../../lib/taxonomiaTree';
 import { OrganoPicker } from './OrganoPicker';
 
 const copy = strings.organoPicker;
