@@ -10,7 +10,7 @@ import { pruneEmptyTermos, type TaxonomiaView } from '../../lib/taxonomiaTree';
 import { ErrorAlert } from '../ErrorAlert';
 import { LoadingIndicator } from '../LoadingIndicator';
 import { entersListFromSearch } from '../rovingFocus';
-import { MARKER_SIZE } from './dimensions';
+import { SEARCH_ICON_SIZE } from './dimensions';
 import { OrganoMatches } from './OrganoMatches';
 import { OrganoTree } from './OrganoTree';
 import { organoIdOf, toTreeData, treeValues } from './treeData';
@@ -87,6 +87,7 @@ export function OrganoPicker({
         : view.catalogue.filter((organo) => matches(organo.name, trimmed)),
     [view, trimmed],
   );
+  const offersMatches = searching && found.length > 0;
 
   // The one way an Órgano is chosen, whichever state of the control offered it:
   // a tree row and a match lead to the same page because they call this.
@@ -152,9 +153,12 @@ export function OrganoPicker({
           placeholder={copy.searchPlaceholder}
           aria-label={copy.searchLabel}
           // Names the list it narrows, which is the only thing tying the two
-          // together: this is a search over a listbox, not a combobox owning one.
-          aria-controls={listId}
-          leftSection={<IconSearch size={MARKER_SIZE} aria-hidden />}
+          // together: this is a search over a listbox, not a combobox owning
+          // one. Only while that list is actually there — the tree state and
+          // the refusal both hide it, and a reference to a hidden element is
+          // one a screen reader cannot follow.
+          aria-controls={offersMatches ? listId : undefined}
+          leftSection={<IconSearch size={SEARCH_ICON_SIZE} aria-hidden />}
           size="sm"
         />
         {/* Hidden rather than unmounted while the filter has text in it: the

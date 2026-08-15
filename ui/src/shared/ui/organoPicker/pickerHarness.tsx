@@ -113,7 +113,3 @@ export async function search(user: UserEvent, query: string) {
 export function matchList() {
   return screen.getByRole('listbox', { name: copy.label });
 }
-
-export function pickerTree() {
-  return screen.findByRole('tree', { name: copy.label });
-}

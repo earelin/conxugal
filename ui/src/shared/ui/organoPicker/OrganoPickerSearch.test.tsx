@@ -121,6 +121,43 @@ describe('OrganoPicker search', () => {
 
     expect(searchBox()).toHaveAttribute('aria-controls', matchList().id);
   });
+
+  it('points at no list while there is none to point at', async () => {
+    const { user } = await openPicker();
+
+    // The tree is showing, so the listbox the attribute would name is hidden.
+    expect(searchBox()).not.toHaveAttribute('aria-controls');
+
+    await search(user, 'sanidde');
+
+    expect(searchBox()).not.toHaveAttribute('aria-controls');
+  });
+
+  it('marks the open Organo as selected among the matches, as the tree does', async () => {
+    const { user } = await openPicker({ path: `/organo/${cunqueiro.id}` });
+
+    await search(user, 'a');
+
+    const selected = within(matchList()).getAllByRole('option', { selected: true });
+    expect(selected).toHaveLength(1);
+    expect(selected[0]).toHaveTextContent(cunqueiro.name);
+  });
+
+  it('puts the one tab stop on the open Organo rather than on the first match', async () => {
+    const { user } = await openPicker({ path: `/organo/${cunqueiro.id}` });
+
+    await search(user, 'a');
+
+    // Name order puts Cunqueiro second, so a tab stop pinned to the first row
+    // would read as this passing while landing on the wrong Órgano.
+    const options = within(matchList()).getAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual([
+      innovacion.name,
+      `${cunqueiro.name}${copy.inactive}`,
+      vivenda.name,
+    ]);
+    expect(options.map((option) => option.tabIndex)).toEqual([-1, 0, -1]);
+  });
 });
 
 describe('OrganoPicker search keyboard', () => {
