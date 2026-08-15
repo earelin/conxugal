@@ -35,7 +35,7 @@ export const innovacion = organo('o-1', 'Axencia Galega de Innovación', 't-3');
 export const cunqueiro = organo('o-2', 'Hospital Álvaro Cunqueiro', 't-4', false);
 export const vivenda = organo('o-3', 'Instituto Galego da Vivenda e Solo', null);
 
-export const VIEW = buildTaxonomiaView(TERMOS, [innovacion, cunqueiro, vivenda]);
+const VIEW = buildTaxonomiaView(TERMOS, [innovacion, cunqueiro, vivenda]);
 
 export interface RenderOptions {
   view?: typeof VIEW | null;
