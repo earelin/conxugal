@@ -63,6 +63,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * statements by the time PostgreSQL sees them, and a defect in one of the four is invisible from
  * the other three.
  *
+ * <p>The year facets are here too, and they take none of that: one distinct-value read with no
+ * paging, no ordering key and no count. What they need instead is a fixture the plan assertions
+ * beside this class cannot have — a contract holding an amount and an awardee but <em>no date</em>,
+ * which is in both browse indexes under a null year and which a facet read that trusted the index's
+ * own predicate would offer as a year, ahead of every real one.
+ *
  * <p><strong>The emitted SQL is read back rather than assumed.</strong> Every statement the adapter
  * runs is logged, and the log is the only place the assembled clause is visible. It is what proves
  * the things the answers alone cannot distinguish: that each ordering names the columns it should
@@ -92,6 +98,7 @@ class JdbcVisibleContratoMenorRepositoryIntegrationTest implements TestPropertyP
   private static final String QUERY_LOG = "io.micronaut.data.query";
   private static final String PAGE_MARKER = "SELECT contrato_menor.source_id";
   private static final String COUNT_MARKER = "SELECT COUNT(*)";
+  private static final String FACETS_MARKER = "SELECT DISTINCT publication_year";
 
   @Container
   static PostgreSQLContainer<?> postgres = PostgresContainer.create();
@@ -362,6 +369,97 @@ class JdbcVisibleContratoMenorRepositoryIntegrationTest implements TestPropertyP
                   .isEqualTo(new FiscalIdentifier(CANONICAL_FISCAL_ID));
               assertThat(visible.awardeeName()).isEqualTo(OPERADOR_NAME);
             });
+  }
+
+  // ------------------------------------------------------------------------ the year facets
+
+  @Test
+  void offers_the_years_the_organo_has_visible_contracts_in_newest_first() {
+    store(publishedIn(1L, 2023));
+    store(publishedIn(2L, 2025));
+    store(publishedIn(3L, 2024));
+    store(publishedIn(4L, 2025));
+
+    assertThat(visibleContratoMenorRepository.years(browsedOrgano))
+        .containsExactly(YearSelection.of(2025), YearSelection.of(2024), YearSelection.of(2023));
+  }
+
+  @Test
+  void offers_no_year_for_an_organo_holding_no_contracts_at_all() {
+    store(visibleBatch(otherOrgano, 100L, 5));
+
+    assertThat(visibleContratoMenorRepository.years(browsedOrgano)).isEmpty();
+  }
+
+  /**
+   * The facet half of the withholding rule, and the reason it needs its own case: an Órgano whose
+   * only contract of a year is anomalous must not offer that year, or the chooser would open on a
+   * selection that answers nothing.
+   */
+  @Test
+  void offers_no_year_whose_only_contracts_are_anomalous() {
+    store(publishedIn(1L, 2025));
+    store(
+        List.of(
+            contratoAwardedTo(901L, browsedOrgano, LocalDate.of(2023, 4, 1), null, awardee),
+            contratoAwardedTo(
+                902L, browsedOrgano, LocalDate.of(2022, 4, 1), ROUND_AMOUNTS.getFirst(), null)));
+
+    assertThat(visibleContratoMenorRepository.years(browsedOrgano))
+        .containsExactly(YearSelection.of(2025));
+  }
+
+  /**
+   * The conjunct this read alone has to carry. An undated contract holding both an amount and an
+   * awardee enters the browse indexes under a null year, and descending order would offer that
+   * null <em>ahead</em> of every real year — so the section would open on one that is not a year.
+   */
+  @Test
+  void offers_nothing_for_an_organo_whose_contracts_all_lack_publication_dates() {
+    store(
+        List.of(
+            contratoAwardedTo(901L, browsedOrgano, null, ROUND_AMOUNTS.getFirst(), awardee),
+            contratoAwardedTo(902L, browsedOrgano, null, ROUND_AMOUNTS.getLast(), awardee)));
+
+    assertThat(visibleContratoMenorRepository.years(browsedOrgano)).isEmpty();
+  }
+
+  @Test
+  void an_undated_contract_costs_the_dated_ones_none_of_their_years() {
+    store(publishedIn(1L, 2025));
+    store(List.of(contratoAwardedTo(901L, browsedOrgano, null, ROUND_AMOUNTS.getFirst(), awardee)));
+
+    assertThat(visibleContratoMenorRepository.years(browsedOrgano))
+        .containsExactly(YearSelection.of(2025));
+  }
+
+  @Test
+  void offers_only_the_years_of_the_organo_asked_about() {
+    store(publishedIn(1L, 2025));
+    store(List.of(contrato(100L, otherOrgano, LocalDate.of(2019, 3, 2), ROUND_AMOUNTS.getFirst())));
+
+    assertThat(visibleContratoMenorRepository.years(browsedOrgano))
+        .containsExactly(YearSelection.of(2025));
+  }
+
+  /**
+   * The statement whose plan the schema test pins is the statement this read runs, asserted whole
+   * rather than by its predicate: what it must <em>not</em> carry — a join, an alias, a second
+   * ordering — is as load-bearing as what it must, and only byte-identity catches any of them.
+   */
+  @Test
+  void reads_the_facets_with_the_statement_the_schema_test_pins_the_plan_of() {
+    store(publishedIn(1L, 2025));
+
+    visibleContratoMenorRepository.years(browsedOrgano);
+
+    assertThat(lastStatementContaining(FACETS_MARKER))
+        .isEqualTo(ContratoMenorVisibleBrowseSchemaIntegrationTest.YEAR_FACETS);
+  }
+
+  private List<ContratoMenor> publishedIn(long sourceId, int year) {
+    return List.of(
+        contrato(sourceId, browsedOrgano, LocalDate.of(year, 6, 15), ROUND_AMOUNTS.getFirst()));
   }
 
   private Page<VisibleContratoMenor> page(int number, int size, BrowseOrdering ordering) {

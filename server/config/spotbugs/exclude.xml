@@ -46,6 +46,13 @@
     <Field name="~(organos|coveredOrgano)"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
+  <!-- And for the read that describes a contratos menores section, which stores the same catalogue
+       port for the two facts it derives its flags from. -->
+  <Match>
+    <Class name="gal.conxugal.domain.contrato.DescribeContratosMenoresSection"/>
+    <Field name="organos"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
   <!-- And once more for the trigger above them, which stores both use cases. -->
   <Match>
     <Class name="gal.conxugal.application.contrato.StartContratosMenoresImport"/>

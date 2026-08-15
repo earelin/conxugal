@@ -156,8 +156,12 @@ class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyPro
    * date is an anomaly R28 withholds, yet it satisfies both index predicates and enters both
    * indexes under a null year — and {@code DISTINCT} would offer that null as a year, first, since
    * {@code DESC} orders nulls before every real one.
+   *
+   * <p>Visible to the package for the same reason {@link #VISIBLE_WHERE} is: the facet read's own
+   * test asserts the statement it emits is this one, so the statement whose plan is proved here is
+   * the statement that runs.
    */
-  private static final String YEAR_FACETS =
+  static final String YEAR_FACETS =
       """
       SELECT DISTINCT publication_year
         FROM contrato_menor

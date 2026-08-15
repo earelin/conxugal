@@ -2,7 +2,7 @@
 feat: FEAT-0011
 domain: backend
 adrs: [0002]
-status: todo
+status: done
 depends_on: [TASK-0001, TASK-0002]
 ---
 
@@ -79,6 +79,41 @@ key and no count.
   and marked; complete and unmarked; incomplete and marked; incomplete and unmarked; inactive; and
   **no import-state row at all**. Plus an Órgano whose only contracts are anomalous, which must
   answer with no section.
+
+## What building it found
+
+> **Amended in two places, neither of them a change of design.** The section is still derived —
+> presence from the years, `partial` and `updating` orthogonal and produced only where a section
+> is — and every acceptance criterion below is met as written. What changed is which collaborators
+> answer the two flags, and which layer reads a column of years.
+>
+> - **Two ports, not three.** The scope names FEAT-0009's per-Órgano import state and the catalogue
+>   row as two sources and so implies two repositories to read them from. They are already one
+>   read: `OrganoRepository.findById` carries the state on a `LEFT_FETCH` join every other reader
+>   of an Órgano uses, and `OrganoDeContratacion` already answers both of this task's questions —
+>   `importStatus()` reads a missing state row as `NEVER_STARTED`, which is exactly how *never
+>   started* is represented here, and `eligibleForImport()` answers *active and marked* as one
+>   fact. So `partial` is `importStatus() != COMPLETE` and `updating` is `eligibleForImport()`,
+>   both off the aggregate. Injecting `ContratosMenoresImportStateRepository` beside it would
+>   restate both derivations and give this use case its own opinion about what a missing row means
+>   — which is the one thing `importStatus()` exists to stop each caller having.
+>
+>   The unit tests therefore stub **two** ports and still walk every state combination the scope
+>   enumerates, the no-state-row case included: it is an Órgano whose `importState` is null.
+> - **The facet read is the one browse read the framework can map**, and it is a `@Query` rather
+>   than the hand-written statement [TASK-0003](TASK-0003-paged-ordered-counted-reads.md) had to
+>   fall back to. Nothing that stopped the page being projected applies: a column of years is one
+>   column, not a record whose mapping is built outside the container, so each value is rebuilt
+>   through the core conversion service — the `TypeConverter` half
+>   [TASK-0001](TASK-0001-selection-value-types-and-read-ports.md) added for exactly this read, and
+>   which is now exercised by it rather than only by its own unit test.
+>
+>   One detail is worth recording because it cost a red test: a mapped `@Query` binds **named**
+>   parameters, and a `?` in one is not a placeholder but a literal PostgreSQL refuses to bind. The
+>   statement therefore says `:organoId` where [TASK-0002](TASK-0002-visible-browse-schema-and-indexes.md)'s
+>   pinned SQL says `?` — and the statement *emitted* is byte-identical to the pinned one, which is
+>   asserted character for character rather than trusted, exactly as task 3 does for the page and
+>   the count.
 
 ## Acceptance criteria
 
