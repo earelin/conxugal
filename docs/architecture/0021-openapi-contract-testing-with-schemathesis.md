@@ -68,6 +68,14 @@ repository root.
 - **One operation is excluded**, for a reason inherent to it rather than to the tool:
   `GET /api/admin/metrics` is an unbounded SSE stream, not a JSON body, and the contract
   records the same limitation on the operation itself.
+- **An operation the run never reaches fails the build.** How much of the contract is covered
+  is configuration — a `schemathesis.toml` filter, a disabled phase, an operation the contract
+  grew after either was last read — and configuration that quietly narrows the run makes the
+  suite prove less while it stays green. So the run writes a JUnit report naming every
+  operation it reached, and `scripts/contract-test.sh` holds the contract's own list of
+  operations against it: anything declared but neither reached nor named in the script's
+  `EXEMPT_OPERATIONS` fails, as does an exemption for an operation the contract no longer
+  declares. The excluded SSE stream above is the one entry, and it carries its reason.
 - The **stateful phase is disabled**. The contract declares no OpenAPI links, so that phase
   can only guess how operations chain, and the one relationship it reliably discovers is that
   `GET /api/admin/users` hands it the id of the administrator the run authenticates as, which
@@ -111,8 +119,11 @@ contributor setup beyond the Docker daemon the acceptance suite already needs.
 - The image tag is bumped by hand: `.github/dependabot.yml` covers npm, Gradle and GitHub
   Actions, and Dependabot does not read shell scripts.
 - `--network host` makes the script Linux-first.
-- The excluded operation and the disabled stateful phase are real gaps, and the exclusion is
-  configuration a future contributor must remember to revisit.
+- The excluded operation and the disabled stateful phase are real gaps. The exclusion is at
+  least no longer one a future contributor must remember to revisit unprompted — it is written
+  down as an exemption the coverage gate checks, and a second one cannot be added by narrowing
+  a filter, only by stating it. The disabled phase is not covered by that: coverage is counted
+  per operation, and every operation is reached by the phases that remain.
 - The stub is hand-written, so it can drift from what contratosdegalicia.gal actually serves —
   the same weakness [ADR-0018](0018-frontend-acceptance-tests-against-a-stubbed-api.md) records
   of the SPA's stubs, and one this document cannot close for a source that publishes no
