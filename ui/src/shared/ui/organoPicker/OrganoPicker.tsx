@@ -11,6 +11,7 @@ import { ErrorAlert } from '../ErrorAlert';
 import { LoadingIndicator } from '../LoadingIndicator';
 import { entersListFromSearch } from '../rovingFocus';
 import { SEARCH_ICON_SIZE } from './dimensions';
+import { filterAnswer } from './filterAnswer';
 import { OrganoMatches } from './OrganoMatches';
 import { OrganoTree } from './OrganoTree';
 import { organoIdOf, toTreeData, treeValues } from './treeData';
@@ -77,7 +78,6 @@ export function OrganoPicker({
   // A blank or whitespace-only filter has asked nothing, so it matches nothing
   // and the tree stands in for the answer.
   const trimmed = query.trim();
-  const searching = trimmed !== '';
   // The catalogue, not the pruned tree and not a second read: filtering the
   // very list the tree was assembled from is what keeps the two in agreement.
   const found = useMemo(
@@ -87,7 +87,7 @@ export function OrganoPicker({
         : view.catalogue.filter((organo) => matches(organo.name, trimmed)),
     [view, trimmed],
   );
-  const offersMatches = searching && found.length > 0;
+  const answer = filterAnswer(trimmed, found.length);
 
   // The one way an Órgano is chosen, whichever state of the control offered it:
   // a tree row and a match lead to the same page because they call this.
@@ -157,7 +157,7 @@ export function OrganoPicker({
           // one. Only while that list is actually there — the tree state and
           // the refusal both hide it, and a reference to a hidden element is
           // one a screen reader cannot follow.
-          aria-controls={offersMatches ? listId : undefined}
+          aria-controls={answer === 'matches' ? listId : undefined}
           leftSection={<IconSearch size={SEARCH_ICON_SIZE} aria-hidden />}
           size="sm"
         />
@@ -170,7 +170,7 @@ export function OrganoPicker({
             sparing it: every keystroke would otherwise reconcile a node per
             Órgano of the visible set, all of them off screen, because neither
             Mantine's `TreeNode` nor this tree is memoised. */}
-        <Activity mode={searching ? 'hidden' : 'visible'}>
+        <Activity mode={answer === 'tree' ? 'visible' : 'hidden'}>
           <OrganoTree
             key={shape}
             data={data}

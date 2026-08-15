@@ -15,8 +15,16 @@ import type { Organo } from '../../lib/taxonomiaTree';
 import { movesFocusWithin } from '../rovingFocus';
 import { SELECTED_ROW_BG, SELECTED_ROW_COLOR } from '../selection';
 import { MAX_BODY_HEIGHT } from './dimensions';
+import { filterAnswer, type FilterAnswer } from './filterAnswer';
 
 const copy = strings.organoPicker;
+
+// Read aloud when the answer changes, and only then.
+const ANNOUNCEMENT: Record<FilterAnswer, string> = {
+  tree: '',
+  matches: copy.matchesAnnounced,
+  none: copy.noMatchesAnnounced,
+};
 
 interface OrganoMatchesProps {
   id: string;
@@ -47,9 +55,7 @@ export function OrganoMatches({
   labelledBy,
   listRef,
 }: OrganoMatchesProps) {
-  const searching = query !== '';
-  const answer = organos.length === 0 ? copy.noMatchesAnnounced : copy.matchesAnnounced;
-  const announcement = searching ? answer : '';
+  const answer = filterAnswer(query, organos.length);
   // One tab stop, landing on the open Órgano when the query still offers it —
   // derived rather than held, so the filter changing the rows cannot leave a
   // stored index pointing at a row that is gone.
@@ -57,7 +63,7 @@ export function OrganoMatches({
 
   return (
     <>
-      <Box style={{ display: searching && organos.length > 0 ? undefined : 'none' }}>
+      <Box style={{ display: answer === 'matches' ? undefined : 'none' }}>
         <ScrollArea.Autosize mah={MAX_BODY_HEIGHT} type="auto">
           <Box
             ref={listRef}
@@ -108,7 +114,7 @@ export function OrganoMatches({
           </Box>
         </ScrollArea.Autosize>
       </Box>
-      {searching && organos.length === 0 && (
+      {answer === 'none' && (
         <Stack gap={4}>
           <Text size="sm">{copy.noMatches(query)}</Text>
           <Text size="xs" c="dimmed">
@@ -121,7 +127,7 @@ export function OrganoMatches({
           carries its own wording rather than the message above: that one
           quotes the query, and a region quoting the query changes on every
           keystroke, which is re-read each time and interrupts itself. */}
-      <VisuallyHidden role="status">{announcement}</VisuallyHidden>
+      <VisuallyHidden role="status">{ANNOUNCEMENT[answer]}</VisuallyHidden>
     </>
   );
 }
