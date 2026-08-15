@@ -130,9 +130,9 @@ envelope, adding one to the page number and taking `getTotalPages()` for the spa
 the controller sees a `Pageable`, and nothing below it sees the envelope, so the conversion has
 exactly one home and an off-by-one has exactly one place to be.
 
-**`Sort` is never constructed from raw input, and never reaches a repository.** Each operation
-declares a **closed set** of orderings, maps a validated `sort` value onto one of them, and calls
-the repository with an unsorted `Pageable`.
+**`Sort` is never constructed from raw input.** Each operation declares a **closed set** of
+orderings as a pair of enums, refuses any `sort` value outside it, and builds whatever `Sort` it
+needs from those enums alone. **Nothing binds a `Pageable` from the request.**
 
 This is a **security invariant**, not a tidiness rule. Micronaut Data validates property names not
 at all and silently degrades an unrecognised direction to ascending. For a derived query an
@@ -142,8 +142,25 @@ in the emitted SQL. Not binding `Pageable` from the request removes the mechanis
 unvalidated input could reach a query at all, and this rule keeps it removed when someone later
 adds a "dynamic" ordering.
 
-Passing an unsorted `Pageable` also avoids a correctness bug: the framework appends `ORDER BY`
-from a sorted `Pageable` to a `@Query` that already has one, emitting two.
+**The guarantee is the sort's provenance, not its absence.** An enum cannot carry an injection
+payload, so a `Sort` assembled from a validated `SortKey` and direction is as safe as no `Sort` at
+all — and it lets **one** statement serve a closed set of orderings, since the framework appends a
+`Pageable`'s `ORDER BY` at the end of a native statement. A statement whose ordering arrives this
+way must carry **no `ORDER BY` of its own**, or the framework's appended one makes two.
+
+Two obligations travel with a sort built this way, and both belong to whoever builds it:
+
+- **it ends with a unique tiebreaker, in the direction of the key it breaks**, or the order is
+  partial and paging repeats and skips rows;
+- **it is built in exactly one place per read.** A property name that reaches a sort as a string,
+  from anywhere, is the defect this invariant exists to prevent.
+
+> **Amended.** As first accepted, this record said a `Sort` *"never reaches a repository"* and that
+> repositories are called with an unsorted `Pageable`, one statement per ordering. FEAT-0011's
+> browse read showed that the absence was standing in for the real property — where the sort came
+> from — and that insisting on it costs one hand-written statement and one `countQuery` per
+> ordering, four of each, that have to be kept in step. The protection is unchanged; the mechanism
+> is smaller.
 
 **A `@Query` returning `Page<T>` must declare `countQuery`.** Annotation processing fails
 otherwise — *"Query returns a Page and does not specify a 'countQuery' member"*. Derived finders

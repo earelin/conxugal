@@ -3,44 +3,34 @@ package gal.conxugal.domain.contrato;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
-import gal.conxugal.commons.pagination.SortDirection;
+import gal.conxugal.domain.organo.OrganoId;
 import io.micronaut.data.model.Page;
-import io.micronaut.data.model.Sort;
+import io.micronaut.data.model.Pageable;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * Structural, because what the port refuses is the point of it. The ordering is chosen by which
- * method is called, so a fifth method — or a parameter naming an ordering — is how an ordering
- * nobody reviewed, or a property name nobody escaped, would reach a native statement.
+ * Structural, because the port's shape is what the rest of the read rests on. One read, scoped by
+ * an Órgano and a year, answering a page of the whole year's count — everything about the ordering
+ * travels on the {@code Pageable} the caller builds.
  */
 class VisibleContratoMenorRepositoryTest {
 
   private static final String PAGE_OF_VISIBLE_CONTRACTS =
       "%s<%s>".formatted(Page.class.getName(), VisibleContratoMenor.class.getName());
 
-  private static final List<Class<?>> ORDERING_VOCABULARY =
-      List.of(Sort.class, Sort.Order.class, SortKey.class, SortDirection.class);
-
   @Test
-  void declares_one_method_per_ordering_and_no_other() {
+  void declares_one_scoped_read_answering_one_page() {
     assertThat(VisibleContratoMenorRepository.class.getDeclaredMethods())
         .extracting(Method::getName, method -> method.getGenericReturnType().getTypeName())
-        .containsExactlyInAnyOrder(
-            tuple("byPublicationDateAscending", PAGE_OF_VISIBLE_CONTRACTS),
-            tuple("byPublicationDateDescending", PAGE_OF_VISIBLE_CONTRACTS),
-            tuple("byAmountAscending", PAGE_OF_VISIBLE_CONTRACTS),
-            tuple("byAmountDescending", PAGE_OF_VISIBLE_CONTRACTS));
+        .containsExactly(tuple("page", PAGE_OF_VISIBLE_CONTRACTS));
   }
 
   @Test
-  void takes_no_sort_key_or_direction_through_which_an_ordering_could_be_named() {
+  void takes_the_organo_the_year_and_the_page_request_and_nothing_else() {
     assertThat(VisibleContratoMenorRepository.class.getDeclaredMethods())
-        .allSatisfy(
-            method ->
-                assertThat(Arrays.asList(method.getParameterTypes()))
-                    .doesNotContainAnyElementsOf(ORDERING_VOCABULARY));
+        .singleElement()
+        .extracting(Method::getParameterTypes)
+        .isEqualTo(new Class<?>[] {OrganoId.class, YearSelection.class, Pageable.class});
   }
 }

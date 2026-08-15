@@ -6,10 +6,10 @@ status: done
 depends_on: []
 ---
 
-# Selection value types and the four browse ports
+# Selection value types and the browse read port
 
 The domain vocabulary a contratos menores read is asked in — a year, a sort key, a direction —
-the shape a paged read answers with, and the four port methods the orderings are served by.
+the shape a paged read answers with, and the port method that serves it.
 Pure `domain` ([ADR-0002](../../architecture/0002-hexagonal-architecture.md)): no SQL, no
 HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
 [TASK-0005](TASK-0005-list-contratos-menores-use-case.md) and the endpoint is
@@ -37,23 +37,18 @@ HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
   - **Building one and parsing one admit the same set**: the constructor refuses a year outside
     `1000`–`9999`, so `of(0)` is not a selection either. A type claiming a year cannot be asked for
     anything else would be untrue if its two entry points disagreed about what a year is.
-- **`SortKey`** in `gal.conxugal.domain.contrato` — an enum of `PUBLICATION_DATE` and `AMOUNT`, and
-  **`SortDirection`** in **`gal.conxugal.commons.pagination`** — `ASC` and `DESC`. Each has a
-  `parse(String)` answering `Optional`, accepting exactly the spellings the contract publishes:
-  `publicationDate` / `amount`, and `asc` / `desc`. Anything else — another property, another case,
-  `descending` — answers empty. R19's two sorts are a **closed set**, and a parse that quietly
-  widened it is the defect the feature's security invariant is about.
-  - **The two sit in different modules because they are different kinds of thing.** `SortKey`'s
-    values name contratos menores properties and belong to this family. A direction does not: R17's
-    control is a rule three specs share
-    ([ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md)), and
-    `asc`/`desc` parsed once per list is the divergence R17 exists to prevent. `commons` is the only
-    module all three of `domain`, `application` and `infrastructure` may depend on, and each already
-    declares it.
-  - **This stretches [ADR-0013](../../architecture/0013-shared-commons-module.md)**, which says
-    `commons` carries no transport content, and the published spellings are transport. The stretch
-    is recorded in the package's own javadoc rather than hidden, and **ADR-0013 should be amended to
-    permit shared wire vocabulary** — raised as follow-up rather than settled here.
+- **`SortKey`** in `gal.conxugal.domain.contrato` — an enum of `PUBLICATION_DATE` and `AMOUNT`,
+  with a `parse(String)` answering `Optional` and accepting exactly the spellings the contract
+  publishes: `publicationDate` and `amount`. Anything else — another property, another case —
+  answers empty. R19's two sorts are a **closed set**, and a parse that quietly widened it is the
+  defect the feature's security invariant is about.
+  - **No direction type of this feature's own.** The ordering reaches the store as a
+    `io.micronaut.data.model.Sort`, whose `Sort.Order.Direction` is already the closed `ASC`/`DESC`
+    enum a direction needs to be; a second one beside it would exist only to be mapped onto that
+    one. The `asc`/`desc` spellings are parsed where they are a contract — the driving adapter, in
+    [TASK-0007](TASK-0007-paged-contracts-endpoint.md) — rather than in the domain.
+  - `SortKey` stays here because its values name **contratos menores properties**; that is what
+    makes it this family's vocabulary rather than pagination's.
 - **`VisibleContratoMenor`** — the projection a browse read answers with, carrying exactly what
   R16 puts on a row: `sourceId`, `publicationDate`, `obxecto`, `amount` (`Money`), `duration`,
   `awardeeName` and `awardeeFiscalId` (`FiscalIdentifier`). `publicationDate`, `amount`,
@@ -75,14 +70,23 @@ HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
     the `TypeConverter` half `OrganoIdConverter` already carries, and this task adds it rather than
     leaving [TASK-0003](TASK-0003-paged-ordered-counted-reads.md) to meet it as a failing
     integration test.
-- **Four methods on a new `VisibleContratoMenorRepository` port**, one per ordering, each taking
-  `(OrganoId, YearSelection, Pageable)` and answering `Page<VisibleContratoMenor>`:
-  date ascending, date descending, amount ascending, amount descending. Declared here, implemented
-  in [TASK-0003](TASK-0003-paged-ordered-counted-reads.md).
-  - The port's javadoc states the two invariants an implementer must not lose: the `Pageable`
-    **arrives without a `Sort`** and the ordering lives in the statement, and each ordering ends
-    with the `source_id` tiebreaker **in the direction of the key it breaks**, so the order is
-    total and paging denotes.
+- **One method on a new `VisibleContratoMenorRepository` port** — `page(OrganoId, YearSelection,
+  Pageable)` answering `Page<VisibleContratoMenor>`. Declared here, implemented in
+  [TASK-0003](TASK-0003-paged-ordered-counted-reads.md).
+  - **The ordering arrives on the `Pageable`'s `Sort`**, so one statement serves all four orderings
+    rather than four serving one each. The framework appends a native statement's ordering at the
+    end of the SQL, which is what makes one statement enough — and what obliges the statement to
+    carry **no `ORDER BY` of its own**, since one that already ordered would emit two.
+  - The port's javadoc states the three obligations that travel with that `Pageable`, all the
+    caller's because the statement cannot enforce them:
+    - **the `Sort` is built from `SortKey` and `Sort.Order.Direction`, never from a caller's string.** The
+      two enums are the closed set of orderings offered; the statement is native, so a property
+      name is appended verbatim and unescaped, and a sort assembled from raw input would put a
+      caller's text into the emitted SQL. This is where the feature's security invariant now
+      lives — in *what the sort is built from* rather than in the sort being absent;
+    - **it ends with the `source_id` tiebreaker in the direction of the key it breaks**, so the
+      order is total and paging denotes;
+    - **the statement adds no ordering of its own.**
   - **A port of its own rather than four more methods on `ContratoMenorRepository`**, and the
     reason is that the alternative does not compile. `JdbcContratoMenorRepository` is an abstract
     `@JdbcRepository` implementing that port, and Micronaut Data's annotation processor must
@@ -112,14 +116,16 @@ HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
   non-numeric or otherwise malformed value — including `all` and `undated`. (SPEC-0005 #27)
 - Every year `YearSelection.parse` accepts can be built directly, and every value the constructor
   refuses cannot be spelled for `parse` — the two admit one set. (SPEC-0005 #27)
-- `SortKey.parse` accepts exactly `publicationDate` and `amount`; `SortDirection.parse` accepts
-  exactly `asc` and `desc`. Every other input — a different property name, a different case,
-  `ascending`/`descending`, an empty string — answers empty rather than a default. (SPEC-0005 #28)
+- `SortKey.parse` accepts exactly `publicationDate` and `amount`. Every other input — a different
+  property name, a different case, an empty string — answers empty rather than a default. The
+  matching refusal for `asc`/`desc` is [TASK-0007](TASK-0007-paged-contracts-endpoint.md)'s, since
+  no direction type is declared here. (SPEC-0005 #28)
 - `VisibleContratoMenor` refuses construction with a null publication date, amount, awardee name
   or awardee fiscal identifier, and permits a null `obxecto` and `duration`. (SPEC-0005 #11, #50)
-- `VisibleContratoMenorRepository` declares four ordering methods returning `Page<VisibleContratoMenor>`,
-  and no method taking a `Sort`, a sort key or a direction as a query parameter — the ordering is
-  chosen by which method is called. (SPEC-0005 #28)
+- `VisibleContratoMenorRepository` declares one read, `page(OrganoId, YearSelection, Pageable)`,
+  returning `Page<VisibleContratoMenor>` and taking no property name or direction of its own — the
+  ordering reaches it only as the `Sort` its caller built from `SortKey` and
+  `Sort.Order.Direction`. (SPEC-0005 #28)
 - The `domain` module compiles with no reference to `io.micronaut.http`, `Sort`, or any HTTP type
   in these classes.
 - Unit-tested with JUnit and AssertJ; no database and no Micronaut context.

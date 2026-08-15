@@ -155,14 +155,8 @@ flowchart TB
         direction LR
         jdbcReads["paged + counted reads · year facets"]
     end
-    subgraph commons["commons"]
-        direction LR
-        sortDirection["SortDirection<br/>shared by every paginated list"]
-    end
     application --> domain
     infrastructure --> domain
-    application --> commons
-    domain --> commons
 ```
 
 ### Reaching an Órgano is FEAT-0012's, and it meets this feature at one point
@@ -363,13 +357,12 @@ skipped* becomes a property of the query rather than a hope about the data.
 between them — the index does: `ORDER BY publication_date DESC, source_id ASC` is not the reverse
 of anything a B-tree holds and forces a sort, while making both descending is a plain backward scan
 of one index. This is a small rule with a large cost attached to getting it wrong, which is why it
-is written here rather than left to whoever writes the fourth query.
+is written here rather than left to whoever appends the fourth tiebreaker.
 
 That gives a **closed set of four orderings** — date ascending, date descending, amount ascending,
-amount descending — each with its tiebreaker. They are written as four explicit
-queries rather than assembled from a dynamic sort: the set cannot grow without R19 changing, a
-built sort clause is where an unindexed or non-total ordering slips in unreviewed, and four
-statements are each directly testable.
+amount descending — each with its tiebreaker. They are **four `Sort` values built from the two
+enums**, handed to one statement that carries no ordering of its own. The set cannot grow without
+R19 changing, because the only way to name a property is to select a `SortKey`.
 
 **No ordering has a null case, and none writes `NULLS LAST`.** Every contract in a selection
 carries both a date and an amount, because R28 withholds one that does not — so there is no missing
@@ -378,13 +371,17 @@ value for either sort to place. An earlier draft of this feature spent a paragra
 trap and simply no longer reachable here. **The rule that removed it was a product rule, not a
 query fix**, which is the better place for it to have been solved.
 
-**`Sort` is input vocabulary, not something the query is handed.** Adopting Micronaut Data's
-pagination model means the request binder produces a `Pageable` that may carry a `Sort`, and
-Micronaut appends `ORDER BY` from it to a `@Query` — which, on a statement that already carries its
-own ordering and tiebreaker, would emit a second `ORDER BY` and fail. So the use case **maps** the
-bound `Sort` onto one of the four queries and passes the repository a `Pageable` with the sort
-removed (`withoutSort()`). The framework supplies the vocabulary and the offset/limit; the ordering
-stays in the four statements that were written to be total.
+**A `Sort` carries the ordering, and what matters is where it was built.** Micronaut appends a
+`Pageable`'s `ORDER BY` to the end of a native statement, so one statement plus four `Sort` values
+serves what four statements otherwise would — and the statement must therefore carry **no ordering
+of its own**, since one that already ordered would emit two. `ListContratosMenores` is the single
+place a `Sort` is constructed, and it constructs one only from a `SortKey` and a `Sort.Order.Direction`,
+appending the `sourceId` tiebreaker in the matching direction. **Nothing binds a `Pageable` from
+the request**, so no property name ever reaches a sort as text.
+
+That is the distinction the security invariant below turns on: the danger was never a `Sort`
+reaching a query, it was a `Sort` built from **unvalidated input** reaching one. Two enums cannot
+carry an injection payload.
 
 That mapping has to **refuse**, not degrade, and this is the one place the framework's defaults
 work against the requirement. The binder accepts **any** property name, and an unrecognised
@@ -399,9 +396,17 @@ two sorts a closed set on the wire rather than only in the domain.
 > above. For a **native** `@Query` — which these hand-written PostgreSQL statements are — the
 > property name is interpolated into `ORDER BY` **verbatim and unescaped**, so a `Sort` carrying an
 > attacker-supplied property is SQL injection. The design already forecloses it, and the rule is
-> what must survive contact with a task author: **no `Sort` from the request binder ever reaches
-> the repository**, and the refusal happens before the domain call. Adding a fifth "dynamic"
-> ordering later, or passing the bound `Pageable` straight through, reopens it.
+> what must survive contact with a task author: **no `Sort` is ever built from anything but a
+> `SortKey` and a `Sort.Order.Direction`**, and the refusal of an unrecognised `sort` happens before the
+> domain call. Binding a `Pageable` from the request, accepting a property name as a string, or
+> adding a fifth "dynamic" ordering later all reopen it.
+>
+> **This narrows [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md)'s
+> wording rather than following it.** That record says a `Sort` *"never reaches a repository"*; here
+> one does, carrying the ordering and the tiebreaker, and the guarantee moves from the sort being
+> absent to the sort's **provenance**. The protection is the same and the mechanism is one
+> statement instead of four — but it is an amendment to an accepted ADR that two other specs cite,
+> so it is recorded there rather than only here.
 
 ### Paging is by position, and the count is honest
 - A page is `LIMIT`/`OFFSET` over the ordered selection, with the selection's **total** from a
@@ -752,12 +757,12 @@ accepted — so the whole feature is ready to be cut into task files.
 > Every task below is buildable and testable against seeded data without it; **nothing below is
 > demonstrable against imported data until it lands.**
 
-1. **Selection value types + read ports** *(backend)*: `YearSelection` (a year, with no
-   representable absence and no second case), `SortKey` and `commons`' shared `SortDirection`
-   parsed from plain strings, and the
-   `VisibleContratoMenorRepository` port methods for the four orderings, taking a `Pageable` and returning
-   a `Page`. Pure domain — **the bound `Sort` is not seen here**, since it is an HTTP-bound type and
-   its refusal is a 400; task 7 owns that mapping and calls in with these types. Unit-tested,
+1. **Selection value types + read port** *(backend)*: `YearSelection` (a year, with no
+   representable absence and no second case), `SortKey` parsed from a plain string, and the
+   `VisibleContratoMenorRepository` port's single `page` read, taking a `Pageable` and returning
+   a `Page`. Pure domain — **no direction type of its own**, since `Sort.Order.Direction` already
+   is one, and **no `Sort` built here**: task 5 builds it from the two enums and task 7 refuses
+   anything outside them with a 400. Unit-tested,
    including that a selection cannot be built without a year. *(SPEC-0005 #27 no-all-years half)*
 2. **The schema the reads need** *(backend, migration)*: `V16` adding `publication_year` as a
    **stored generated column** over `publication_date`, creating the two composite indexes of the

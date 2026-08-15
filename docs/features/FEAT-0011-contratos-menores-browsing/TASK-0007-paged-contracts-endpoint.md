@@ -43,8 +43,10 @@ mapping from Micronaut Data's `Page` are recorded there and must not be restated
   **required** — R28 withholds a contract without them, so the wire shape has no optionality for a
   client to branch on — and there is **no operador id** and **no awarding Órgano** on the row.
 - **Both conversions live in the controller, and nowhere else.** Inbound: the validated
-  parameters become a `YearSelection`, a `SortKey`, a `SortDirection` and a **0-based, unsorted**
-  `Pageable`. Outbound: the `Page` becomes the 1-based envelope, with `totalPages` taken from
+  parameters become a `YearSelection`, a `SortKey`, a `Sort.Order.Direction` and a **0-based, unsorted**
+  `Pageable` — unsorted because the ordering travels as the two enums and
+  [TASK-0005](TASK-0005-list-contratos-menores-use-case.md) is the one place a `Sort` is built from
+  them, tiebreaker included. Outbound: the `Page` becomes the 1-based envelope, with `totalPages` taken from
   `getTotalPages()` rather than divided again. Nothing above the controller sees a `Pageable` and
   nothing below it sees the envelope.
 - **`sort` is refused, not degraded.** A property other than `publicationDate` or `amount`, or a
