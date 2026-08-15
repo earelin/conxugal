@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { foldForSearch, matches } from './organoSearch';
+import { foldForSearch, matches } from './textSearch';
 
 describe('foldForSearch', () => {
   it('strips accents and case so a typed name matches an accented one', () => {

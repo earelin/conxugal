@@ -8,9 +8,9 @@ import {
 } from '@mantine/core';
 import { useMemo } from 'react';
 
-import { foldForSearch } from '../../../shared/lib/organoSearch';
 import { strings } from '../../../shared/lib/strings';
 import type { TermoNode } from '../../../shared/lib/taxonomiaTree';
+import { foldForSearch } from '../../../shared/lib/textSearch';
 import type { Organo } from '../organos';
 import { organoPlacementLabel } from './organoPlacement';
 

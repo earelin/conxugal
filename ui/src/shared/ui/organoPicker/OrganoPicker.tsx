@@ -4,9 +4,9 @@ import { IconSearch, IconSelector } from '@tabler/icons-react';
 import { Activity, useId, useMemo, useRef, useState } from 'react';
 import { useMatch, useNavigate } from 'react-router';
 
-import { matches } from '../../lib/organoSearch';
 import { strings } from '../../lib/strings';
 import { pruneEmptyTermos, type TaxonomiaView } from '../../lib/taxonomiaTree';
+import { matches } from '../../lib/textSearch';
 import { ErrorAlert } from '../ErrorAlert';
 import { LoadingIndicator } from '../LoadingIndicator';
 import { entersListFromSearch } from '../rovingFocus';

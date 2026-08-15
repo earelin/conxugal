@@ -111,7 +111,30 @@ describe('OrganoPicker search', () => {
 
     await search(user, 'sanidde');
 
-    expect(within(status).getByText(copy.noMatches('sanidde'))).toBeInTheDocument();
+    expect(status).toHaveTextContent(copy.noMatchesAnnounced);
+  });
+
+  it('announces that matches arrived, which is otherwise a silent change', async () => {
+    const { user } = await openPicker();
+
+    await search(user, 'galega');
+
+    expect(screen.getByRole('status')).toHaveTextContent(copy.matchesAnnounced);
+  });
+
+  it('keeps the announcement steady while the query goes on changing', async () => {
+    const { user } = await openPicker();
+    const status = screen.getByRole('status');
+
+    // The message on screen quotes what was typed; the announced one must not,
+    // or every keystroke rewrites the region and is read out over the last.
+    await search(user, 'sanidd');
+    const first = status.textContent;
+    await search(user, 'sanidde');
+
+    expect(status.textContent).toBe(first);
+    expect(status).not.toHaveTextContent('sanidde');
+    expect(screen.getByText(copy.noMatches('sanidde'))).toBeInTheDocument();
   });
 
   it('names the list the filter narrows, so the two are tied together', async () => {

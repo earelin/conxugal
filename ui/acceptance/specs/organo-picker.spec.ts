@@ -232,4 +232,19 @@ test.describe('Órgano picker at 360 px', () => {
     await expect(offered(page).getByText(UNCLASSIFIED)).toBeVisible();
     expect(await horizontalOverflow(page)).toBe(0);
   });
+
+  test('keeps the inactive marker readable beside a name that fills the row', async ({ page }) => {
+    await page.getByRole('button', { name: 'Alternar a navegación' }).click();
+    await trigger(page).click();
+    // The one query offering an inactive Órgano; the row it draws is the
+    // narrowest place the marker has to survive, sharing a nowrap row with a
+    // name long enough to wrap.
+    await searchBox(page).fill('hospital');
+
+    const marker = offered(page).getByText('Inactivo');
+    await expect(marker).toBeVisible();
+    const box = await marker.boundingBox();
+    expect(box?.width ?? 0).toBeGreaterThan(40);
+    expect(await horizontalOverflow(page)).toBe(0);
+  });
 });

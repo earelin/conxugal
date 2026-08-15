@@ -1,4 +1,13 @@
-import { Badge, Box, Group, ScrollArea, Stack, Text, UnstyledButton } from '@mantine/core';
+import {
+  Badge,
+  Box,
+  Group,
+  ScrollArea,
+  Stack,
+  Text,
+  UnstyledButton,
+  VisuallyHidden,
+} from '@mantine/core';
 import type { RefObject } from 'react';
 
 import { strings } from '../../lib/strings';
@@ -39,6 +48,8 @@ export function OrganoMatches({
   listRef,
 }: OrganoMatchesProps) {
   const searching = query !== '';
+  const answer = organos.length === 0 ? copy.noMatchesAnnounced : copy.matchesAnnounced;
+  const announcement = searching ? answer : '';
   // One tab stop, landing on the open Órgano when the query still offers it —
   // derived rather than held, so the filter changing the rows cannot leave a
   // stored index pointing at a row that is gone.
@@ -97,18 +108,20 @@ export function OrganoMatches({
           </Box>
         </ScrollArea.Autosize>
       </Box>
+      {searching && organos.length === 0 && (
+        <Stack gap={4}>
+          <Text size="sm">{copy.noMatches(query)}</Text>
+          <Text size="xs" c="dimmed">
+            {copy.noMatchesHelp}
+          </Text>
+        </Stack>
+      )}
       {/* Always mounted, and never the hidden half of a swap, so a screen
-          reader hears the filter come up empty rather than nothing at all. */}
-      <Box role="status">
-        {searching && organos.length === 0 && (
-          <Stack gap={4}>
-            <Text size="sm">{copy.noMatches(query)}</Text>
-            <Text size="xs" c="dimmed">
-              {copy.noMatchesHelp}
-            </Text>
-          </Stack>
-        )}
-      </Box>
+          reader hears what the filter answered rather than nothing at all. It
+          carries its own wording rather than the message above: that one
+          quotes the query, and a region quoting the query changes on every
+          keystroke, which is re-read each time and interrupts itself. */}
+      <VisuallyHidden role="status">{announcement}</VisuallyHidden>
     </>
   );
 }

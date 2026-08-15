@@ -33,6 +33,12 @@ export const strings = {
     inactive: 'Inactivo',
     noMatches: (query: string) => `Ningún órgano coincide con «${query}».`,
     noMatchesHelp: 'Revisa a busca ou baléiraa para ver a árbore completa.',
+    // Read aloud when the filter's answer changes. Both leave the query out on
+    // purpose: a live region quoting it would be re-read on every keystroke,
+    // interrupting itself letter by letter, where these two are read once and
+    // only when the answer turns from one into the other.
+    matchesAnnounced: 'Hai órganos que coinciden coa busca.',
+    noMatchesAnnounced: 'Ningún órgano coincide coa busca.',
     empty: 'Aínda non hai órganos con contratos.',
     emptyHelp: 'Cando se importe o primeiro contrato dun órgano, aparecerá aquí.',
     errorTitle: 'Non se puido cargar a lista de órganos.',

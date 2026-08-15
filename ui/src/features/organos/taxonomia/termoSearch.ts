@@ -1,5 +1,5 @@
-import { foldForSearch } from '../../../shared/lib/organoSearch';
 import { findTermoPath, type TermoNode } from '../../../shared/lib/taxonomiaTree';
+import { foldForSearch } from '../../../shared/lib/textSearch';
 
 export interface TermoPickerRow {
   id: string;
