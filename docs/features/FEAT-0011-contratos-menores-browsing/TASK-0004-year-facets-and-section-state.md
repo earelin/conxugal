@@ -29,6 +29,7 @@ key and no count.
   SELECT DISTINCT publication_year
     FROM contrato_menor
    WHERE organo_id = :organoId
+     AND publication_year IS NOT NULL
      AND amount IS NOT NULL
      AND operador_economico_id IS NOT NULL
    ORDER BY publication_year DESC
@@ -38,6 +39,17 @@ key and no count.
   order R19's default reads from, so the **first** entry is the year the section opens on. It
   carries the same visibility predicate as every other read here, and it is an **index-only scan**
   because that predicate is the index's own.
+
+  **The `publication_year IS NOT NULL` conjunct is load-bearing, and this is the only read that
+  needs to write it.** Everywhere else the year is an equality test, which excludes an undated
+  contract for free; here there is no equality test to do it. A contract holding an amount and an
+  awardee but **no date** is an anomaly R28 withholds, yet it satisfies the index predicate, enters
+  the index under a null year, and `DISTINCT` would answer that null *as a year* — **first**, since
+  `DESC` orders nulls before every real one. So the section would open on a year that is not one,
+  and `YearSelection`, which has no representable absence, refuses it: a 500 rather than a stray
+  chooser entry. [TASK-0002](TASK-0002-visible-browse-schema-and-indexes.md)'s schema test pins
+  this statement and asserts its **result** as well as its plan, for exactly this reason.
+  PostgreSQL turns the conjunct into an index condition, so the index-only scan is unaffected.
 - **`DescribeContratosMenoresSection`** in `gal.conxugal.domain.contrato` — a use case answering
   `Optional<ContratosMenoresSection>` for an Órgano, where the section is a record of:
   - the offered **years**, newest first;

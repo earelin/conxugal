@@ -54,6 +54,7 @@ testing {
                 implementation(libs.micronaut.test.junit5)
                 implementation(libs.testcontainers.junit.jupiter)
                 implementation(libs.testcontainers.postgresql)
+                implementation(libs.flyway.core)
                 implementation(libs.mockito.junit.jupiter)
                 implementation(libs.assertj.core)
                 implementation(libs.assertj.db)
