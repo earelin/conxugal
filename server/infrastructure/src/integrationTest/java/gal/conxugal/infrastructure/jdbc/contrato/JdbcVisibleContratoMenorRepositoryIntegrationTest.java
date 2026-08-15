@@ -1,6 +1,7 @@
 package gal.conxugal.infrastructure.jdbc.contrato;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -22,6 +23,7 @@ import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.data.model.Page;
 import io.micronaut.data.model.Pageable;
+import io.micronaut.data.model.Sort;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
 import jakarta.inject.Inject;
@@ -122,18 +124,20 @@ class JdbcVisibleContratoMenorRepositoryIntegrationTest implements TestPropertyP
     return BrowseOrdering.all();
   }
 
+  // The capture is installed before anything can throw, so the restore below always has a logger
+  // to put back and never fails ahead of the truncate.
   @BeforeEach
   void seedAndCapture() throws Exception {
-    browsedOrgano = insertOrgano("browsed");
-    otherOrgano = insertOrgano("other");
-    awardee = insertOperador(FISCAL_ID);
-
     queryLog = (Logger) LoggerFactory.getLogger(QUERY_LOG);
     emitted = new ListAppender<>();
     emitted.start();
     queryLog.addAppender(emitted);
     queryLog.setLevel(Level.DEBUG);
     queryLog.setAdditive(false);
+
+    browsedOrgano = insertOrgano("browsed");
+    otherOrgano = insertOrgano("other");
+    awardee = insertOperador(FISCAL_ID);
   }
 
   @AfterEach
@@ -145,28 +149,31 @@ class JdbcVisibleContratoMenorRepositoryIntegrationTest implements TestPropertyP
     DatabaseCleanup.truncateAllTables(dataSource);
   }
 
+  /**
+   * The whole clause, and the paging immediately after it, so that the source identifier is proved
+   * to come <em>last</em> rather than merely to appear.
+   */
   @ParameterizedTest
   @MethodSource("orderings")
-  void appends_the_ordering_it_was_given_and_contributes_none_of_its_own(BrowseOrdering ordering) {
-    store(visibleBatch(browsedOrgano, 1L, 3));
-
-    page(0, 50, ordering);
-
-    assertThat(lastStatementContaining(PAGE_MARKER))
-        .containsIgnoringWhitespaces(ordering.orderBy())
-        .containsOnlyOnce("ORDER BY");
-  }
-
-  @ParameterizedTest
-  @MethodSource("orderings")
-  void names_the_source_identifier_column_last_in_the_direction_of_its_key(
+  void appends_the_whole_ordering_it_was_given_ending_with_the_source_identifier(
       BrowseOrdering ordering) {
     store(visibleBatch(browsedOrgano, 1L, 3));
 
     page(0, 50, ordering);
 
     assertThat(lastStatementContaining(PAGE_MARKER))
-        .containsIgnoringWhitespaces("source_id %s".formatted(ordering.direction()));
+        .containsIgnoringWhitespaces("%s LIMIT ? OFFSET ?".formatted(ordering.orderBy()));
+  }
+
+  @ParameterizedTest
+  @MethodSource("orderings")
+  void contributes_no_ordering_of_its_own(BrowseOrdering ordering) {
+    store(visibleBatch(browsedOrgano, 1L, 3));
+
+    page(0, 50, ordering);
+
+    assertThat(lastStatementContaining(PAGE_MARKER))
+        .containsOnlyOnce("ORDER BY");
   }
 
   /**
@@ -181,20 +188,66 @@ class JdbcVisibleContratoMenorRepositoryIntegrationTest implements TestPropertyP
 
     assertThat(lastStatementContaining(PAGE_MARKER))
         .contains(ContratoMenorVisibleBrowseSchemaIntegrationTest.VISIBLE_WHERE);
+  }
+
+  /**
+   * The count is pinned whole rather than by its predicate, because what it must <em>not</em> carry
+   * matters as much as what it must: the page's join is a no-op for a count and costs it the
+   * index-only scan the schema test proves. Only byte-identity catches a join creeping back in.
+   */
+  @Test
+  void counts_with_the_statement_the_schema_test_pins_the_plan_of() {
+    store(visibleBatch(browsedOrgano, 1L, 3));
+
+    firstPage(50);
+
     assertThat(lastStatementContaining(COUNT_MARKER))
-        .contains(ContratoMenorVisibleBrowseSchemaIntegrationTest.VISIBLE_WHERE);
+        .isEqualTo(ContratoMenorVisibleBrowseSchemaIntegrationTest.SELECTION_COUNT);
   }
 
   @ParameterizedTest
   @MethodSource("orderings")
-  void counts_the_selection_without_the_ordering_the_page_carries(BrowseOrdering ordering) {
+  void counts_the_selection_without_the_ordering_or_the_paging_the_page_carries(
+      BrowseOrdering ordering) {
     store(visibleBatch(browsedOrgano, 1L, 3));
 
     page(0, 50, ordering);
 
     assertThat(lastStatementContaining(COUNT_MARKER))
         .doesNotContain("ORDER BY")
-        .doesNotContain("LIMIT");
+        .doesNotContain("LIMIT")
+        .doesNotContain("JOIN");
+  }
+
+  /**
+   * The refusals are the whole enforcement of the closed set — a native statement takes a name
+   * verbatim — so they are tested rather than trusted. Without these, a later simplification of the
+   * check would leave every other case here green.
+   */
+  @Test
+  void refuses_an_ordering_naming_any_column_no_sort_key_could_have_produced() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> visibleContratoMenorRepository.page(
+            browsedOrgano,
+            BROWSED_YEAR,
+            Pageable.from(0, 50, Sort.of(Sort.Order.asc("obxecto; DROP TABLE contrato_menor")))))
+        .withMessageContaining("obxecto");
+  }
+
+  @Test
+  void refuses_an_unordered_request_rather_than_paging_an_arbitrary_order() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> visibleContratoMenorRepository.page(
+            browsedOrgano, BROWSED_YEAR, Pageable.from(0, 50)));
+  }
+
+  @Test
+  void refuses_an_unpaged_request_rather_than_sending_negative_limits() {
+    BrowseOrdering ordering = BrowseOrdering.all().getFirst();
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> visibleContratoMenorRepository.page(
+            browsedOrgano, BROWSED_YEAR, Pageable.from(ordering.sort())));
   }
 
   @ParameterizedTest
@@ -292,13 +345,12 @@ class JdbcVisibleContratoMenorRepositoryIntegrationTest implements TestPropertyP
   }
 
   /**
-   * The amount inherits its converter from the aggregate's property of the same name and type; the
-   * awardee's identifier has no such property to inherit from and is rebuilt by the conversion
-   * service instead. A converter that failed to apply is this projection's failure mode, so both
-   * routes are asserted on a row rather than only the shape of one.
+   * The two values a row carries as types rather than as columns. The awardee's identifier is
+   * asserted against its canonical form rather than the text stored, because rebuilding it is what
+   * a reader is relying on when the type says {@code FiscalIdentifier} and not {@code String}.
    */
   @Test
-  void reads_the_amount_and_the_awardee_through_the_converters_of_their_types() {
+  void reads_the_amount_and_the_awardee_onto_their_value_types() {
     store(List.of(contrato(1L, browsedOrgano, PUBLISHED_ON, new Money(new BigDecimal("1234.50")))));
 
     assertThat(firstPage(50).getContent())
@@ -394,10 +446,15 @@ class JdbcVisibleContratoMenorRepositoryIntegrationTest implements TestPropertyP
         awardee);
   }
 
+  /**
+   * The statement itself, with the log's own prefix taken off, so an assertion can be about SQL
+   * rather than about how Micronaut Data words a log line.
+   */
   private String lastStatementContaining(String marker) {
     return emitted.list.stream()
         .map(ILoggingEvent::getFormattedMessage)
         .filter(message -> message.contains(marker))
+        .map(message -> message.substring(message.indexOf(marker)))
         .reduce((earlier, later) -> later)
         .orElseThrow(() -> new AssertionError("No statement containing [%s] was logged. Logged: %s"
             .formatted(marker, emitted.list)));

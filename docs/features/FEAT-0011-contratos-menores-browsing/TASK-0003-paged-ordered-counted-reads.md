@@ -116,6 +116,24 @@ statement that ordered as well would emit two `ORDER BY` clauses and fail.
 > obligation on its callers — strictly more than the framework path offered, which interpolates
 > whatever the `Sort` carries.
 >
+> **The count does not join, and that is not a shortcut.** Sharing one whole `FROM … WHERE` between
+> the page and the count reads as the tidier way to keep them honest, and it is wrong: the join is
+> a no-op for a `COUNT(*)` — `operador_economico_id` references a primary key and the predicate
+> already excludes the null — but it takes the planner off the partial index onto a heap scan of
+> every candidate row plus a scan of the whole operador table, roughly doubling the work on every
+> page a reader turns. So the **`WHERE` is shared and the `FROM` is not**, and
+> [TASK-0002](TASK-0002-visible-browse-schema-and-indexes.md)'s `EXPLAIN` of the count is now the
+> statement this read actually emits, asserted character for character rather than in spirit.
+>
+> The page's own join is harmless: it keeps its index scan in all four orderings. Only at offsets in
+> the tens of thousands does the plan fall back to sorting the selection, which is offset paging's
+> behaviour rather than this join's — the same statement without the join does the same thing.
+>
+> The two statements share a connection but not a snapshot: `READ COMMITTED` gives each its own, so
+> an import committing between them can leave a total one row from the pages beneath it. Writing
+> the predicate once removes the *systematic* disagreement — a dropped conjunct — and not this one,
+> which for a browse list is a page that shifts on refresh.
+>
 > The ordering itself moved into `SortKey.ordering(Direction)`, in `domain`. The scope left it to
 > [TASK-0005](TASK-0005-list-contratos-menores-use-case.md), but three places need the same four
 > orderings — that use case, this task's tests, and TASK-0002's `EXPLAIN` test — and a mapping from
@@ -138,5 +156,8 @@ statement that ordered as well would emit two `ORDER BY` clauses and fail.
   `source_id` finds it. (SPEC-0005 #50, query half)
 - The statement carries no `ORDER BY` of its own, and no property name reaching the emitted
   `ORDER BY` comes from anywhere but a `SortKey` or a `Sort.Order.Direction`. (SPEC-0005 #28)
-- The count carries the same `WHERE` and the same join as the page — met by both being the same
-  constant, rather than by a `countQuery` kept in step with a `@Query`. See the amendment above.
+- The count carries the same `WHERE` as the page — met by both being built around the same
+  constant, rather than by a `countQuery` kept in step with a `@Query`. It carries **no join**: the
+  page's join is a no-op for a count and costs it the index-only scan
+  [TASK-0002](TASK-0002-visible-browse-schema-and-indexes.md) exists to provide. See the amendment
+  above.

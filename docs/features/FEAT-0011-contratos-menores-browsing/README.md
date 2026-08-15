@@ -465,7 +465,7 @@ The first two are **partial**, on `amount IS NOT NULL AND operador_economico_id 
 
 | Index | Serves |
 | --- | --- |
-| `(organo_id, publication_year, publication_date, source_id)` *partial* | date ascending; date descending as a backward scan; every browse `COUNT`; the year facets as an index-only scan; FEAT-0012's *does this Órgano hold a visible contrato menor* |
+| `(organo_id, publication_year, publication_date, source_id)` *partial* | date ascending; date descending as a backward scan; every browse `COUNT`, which is why the count joins nothing; the year facets as an index-only scan; FEAT-0012's *does this Órgano hold a visible contrato menor* |
 | `(organo_id, publication_year, amount, source_id)` *partial* | amount ascending; **amount descending as a backward scan** — including R24's named read |
 | `(organo_id)` *whole* | the import's per-window completion count |
 
@@ -1023,11 +1023,15 @@ accepted — so the whole feature is ready to be cut into task files.
   *(SPEC-0005 #41)*
 - **The largest Órgano's busiest year sorted by amount descending** — the read R24 names as the one
   that actually breaks, on the order of **10⁵ rows** given SERGAS's 1.4 million. It is served by
-  `(organo_id, publication_year, amount, source_id)` read **backwards**, so no page of it sorts.
-  Task 2 proves that with an `EXPLAIN` carrying no sort node, and task 12
+  `(organo_id, publication_year, amount, source_id)` read **backwards**, so no page a reader is
+  plausibly on sorts. Task 2 proves that with an `EXPLAIN` carrying no sort node, and task 12
   measures what it actually costs. *(SPEC-0005 #37)*
 - **A deep page of that same selection** — `OFFSET` still walks the rows it skips, which the index
-  makes a walk in order rather than a re-sort per page. Whether that walk is acceptable at 10⁵ rows
-  is exactly what R24 measures and what no index removes; keyset paging is the known remedy and is
+  makes a walk in order rather than a re-sort per page **only while the planner still prefers the
+  index**. Measured on 10⁵ visible rows it holds at offsets up to at least 5 000 and is gone by
+  50 000, where the plan becomes an external merge sort spilling to disk and costs an order of
+  magnitude more than a first page. Whether that matters at all depends on whether anyone reaches
+  page 1 000, which is what R24 measures and what no index removes; keyset paging is the known
+  remedy and is
   not built, because ADR-0022 fixes a positional contract and changing it is that ADR's business,
   not a task's. *(SPEC-0005 #37)*

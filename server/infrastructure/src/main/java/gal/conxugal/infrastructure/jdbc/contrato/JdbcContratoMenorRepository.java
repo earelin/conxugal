@@ -134,20 +134,19 @@ public abstract class JdbcContratoMenorRepository
       """;
 
   /**
-   * The definition of <em>visible</em>, not a filter bolted onto a read. The date needs no
-   * conjunct: {@code publication_year} is null exactly when {@code publication_date} is, so the
-   * equality test already withholds an undated contract. The join alone would already withhold one
-   * with no awardee, and {@code operador_economico_id IS NOT NULL} is written anyway — this has to
-   * match the two browse indexes' partial predicate word for word, or PostgreSQL cannot use them.
+   * The definition of <em>visible</em>, not a filter bolted onto a read, and <strong>the whole of
+   * what the page and the count have in common</strong> — written once so that a total cannot come
+   * to disagree with the pages beneath it by losing a conjunct the page kept.
    *
-   * <p>One constant for both statements below, so a count cannot come to disagree with the pages
-   * beneath it by losing a conjunct the page kept.
+   * <p>The date needs no conjunct: {@code publication_year} is null exactly when {@code
+   * publication_date} is, so the equality test already withholds an undated contract. The other two
+   * are explicit, and {@code operador_economico_id IS NOT NULL} is doing real work here rather than
+   * restating the page's join — the count has no join to lean on. It is also what makes this match
+   * the two browse indexes' partial predicate word for word, without which PostgreSQL cannot use
+   * them.
    */
-  private static final String VISIBLE_SELECTION =
+  private static final String VISIBLE_WHERE =
       """
-        FROM contrato_menor
-        JOIN operador_economico
-          ON operador_economico.id = contrato_menor.operador_economico_id
        WHERE organo_id = ?
          AND publication_year = ?
          AND amount IS NOT NULL
@@ -169,18 +168,43 @@ public abstract class JdbcContratoMenorRepository
              contrato_menor.duration,
              operador_economico.name AS awardee_name,
              operador_economico.fiscal_id AS awardee_fiscal_id
+        FROM contrato_menor
+        JOIN operador_economico
+          ON operador_economico.id = contrato_menor.operador_economico_id
       """
-          + VISIBLE_SELECTION;
+          + VISIBLE_WHERE;
 
-  private static final String VISIBLE_COUNT_SQL = "SELECT COUNT(*)\n" + VISIBLE_SELECTION;
+  /**
+   * <strong>The count does not join</strong>, and that is the difference between reading an index
+   * and reading the table. The join is a no-op for a count — {@code operador_economico_id}
+   * references a primary key and the predicate already excludes the null, so it can neither drop a
+   * row nor duplicate one — but its presence takes the planner off the partial index and onto a
+   * heap scan of every candidate row, plus a scan of the whole operador table, on every page a
+   * reader turns. Sharing the predicate is what keeps the two statements honest with each other;
+   * sharing the {@code FROM} would only make them equally slow.
+   */
+  private static final String VISIBLE_COUNT_SQL =
+      """
+      SELECT COUNT(*)
+        FROM contrato_menor
+      """
+          + VISIBLE_WHERE;
+
+  // The predicate's two placeholders come first in both statements; the page's paging follows it.
+  private static final int ORGANO_PARAMETER = 1;
+  private static final int YEAR_PARAMETER = 2;
+  private static final int LIMIT_PARAMETER = 3;
+  private static final int OFFSET_PARAMETER = 4;
 
   /**
    * Every column a browse ordering may name, taken from {@link SortKey} rather than restated, so
-   * the set cannot come to admit one the closed set of orderings could never produce.
+   * the set cannot come to admit one the closed set of orderings could never produce. Both
+   * directions are walked because nothing obliges a key to name the same column in each.
    */
   private static final Set<String> ORDERABLE_COLUMNS =
-      Arrays.stream(SortKey.values())
-          .flatMap(key -> key.ordering(Sort.Order.Direction.ASC).getOrderBy().stream())
+      Arrays.stream(Sort.Order.Direction.values())
+          .flatMap(direction -> Arrays.stream(SortKey.values())
+              .flatMap(key -> key.ordering(direction).getOrderBy().stream()))
           .map(Sort.Order::getProperty)
           .collect(Collectors.toUnmodifiableSet());
 
@@ -241,16 +265,27 @@ public abstract class JdbcContratoMenorRepository
    * statement a property name is interpolated verbatim and unescaped. {@link #orderBy} therefore
    * refuses any column {@link SortKey} could not have produced, which makes the closed set of
    * orderings a property of this statement rather than an obligation on its callers.
+   *
+   * <p>The total is of the whole selection and is always read: the port offers no page without
+   * one, so a {@code Pageable} asking for none is answered with one anyway. The two statements
+   * share a connection but not a snapshot — under {@code READ COMMITTED} each takes its own — so a
+   * total is accurate as of a moment very slightly after the page it accompanies. An import
+   * committing between them can leave the two describing states one row apart, which for a browse
+   * list is a page that reappears on refresh rather than anything a reader can be misled by.
    */
   @Override
   @Transactional(readOnly = true)
   public Page<VisibleContratoMenor> page(
       OrganoId organoId, YearSelection year, Pageable pageable) {
+    if (pageable.getSize() < 1) {
+      throw new IllegalArgumentException(
+          "A browse read is paged, and this one asks for %d rows".formatted(pageable.getSize()));
+    }
     String sql = VISIBLE_PAGE_SQL + orderBy(pageable.getSort()) + " LIMIT ? OFFSET ?";
     List<VisibleContratoMenor> content = jdbcOperations.prepareStatement(sql, statement -> {
       bindSelection(statement, organoId, year);
-      statement.setInt(3, pageable.getSize());
-      statement.setLong(4, pageable.getOffset());
+      statement.setInt(LIMIT_PARAMETER, pageable.getSize());
+      statement.setLong(OFFSET_PARAMETER, pageable.getOffset());
       return readVisible(statement);
     });
     long total = jdbcOperations.prepareStatement(VISIBLE_COUNT_SQL, statement -> {
@@ -281,8 +316,8 @@ public abstract class JdbcContratoMenorRepository
 
   private static void bindSelection(
       PreparedStatement statement, OrganoId organoId, YearSelection year) throws SQLException {
-    statement.setObject(1, organoId.value());
-    statement.setInt(2, year.year());
+    statement.setObject(ORGANO_PARAMETER, organoId.value());
+    statement.setInt(YEAR_PARAMETER, year.year());
   }
 
   private static List<VisibleContratoMenor> readVisible(PreparedStatement statement)
@@ -306,7 +341,10 @@ public abstract class JdbcContratoMenorRepository
 
   private static long readCount(PreparedStatement statement) throws SQLException {
     try (ResultSet rows = statement.executeQuery()) {
-      return rows.next() ? rows.getLong(1) : 0L;
+      if (!rows.next()) {
+        throw new IllegalStateException("A count answered no row at all");
+      }
+      return rows.getLong(1);
     }
   }
 
