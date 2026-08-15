@@ -93,58 +93,67 @@ class DescribeContratosMenoresSectionTest {
 
   @Test
   void complete_and_marked_is_neither_partial_nor_still_updating() {
-    assertThat(flagsOf(marked(ContratosMenoresImportStatus.COMPLETE)))
-        .containsExactly(false, true);
+    assertFlags(sectionOf(marked(ContratosMenoresImportStatus.COMPLETE)), false, true);
   }
 
   @Test
   void complete_and_unmarked_is_not_partial_and_is_no_longer_updated() {
-    assertThat(flagsOf(unmarked(ContratosMenoresImportStatus.COMPLETE)))
-        .containsExactly(false, false);
+    assertFlags(sectionOf(unmarked(ContratosMenoresImportStatus.COMPLETE)), false, false);
   }
 
   @Test
   void an_incomplete_and_marked_organo_is_partial_and_still_updating() {
-    assertThat(flagsOf(marked(ContratosMenoresImportStatus.INCOMPLETE)))
-        .containsExactly(true, true);
+    assertFlags(sectionOf(marked(ContratosMenoresImportStatus.INCOMPLETE)), true, true);
   }
 
   // The state one status could not express: unmarked halfway through an initial import, so both
   // that what is shown is incomplete and that nothing is going to complete it are true at once.
   @Test
   void an_incomplete_and_unmarked_organo_is_partial_and_no_longer_updated() {
-    assertThat(flagsOf(unmarked(ContratosMenoresImportStatus.INCOMPLETE)))
-        .containsExactly(true, false);
+    assertFlags(sectionOf(unmarked(ContratosMenoresImportStatus.INCOMPLETE)), true, false);
   }
 
   // Inactive is the catalogue's own withdrawal rather than the administrator's, and it stops the
   // refreshing exactly as unmarking does — while leaving how far the import got untouched.
   @Test
   void an_inactive_organo_is_no_longer_updated_though_it_is_still_marked() {
-    assertThat(flagsOf(organo(false, true, ContratosMenoresImportStatus.INCOMPLETE)))
-        .containsExactly(true, false);
+    assertFlags(
+        sectionOf(organo(false, true, ContratosMenoresImportStatus.INCOMPLETE)), true, false);
   }
 
   @Test
   void an_inactive_and_fully_imported_organo_is_neither_partial_nor_updating() {
-    assertThat(flagsOf(organo(false, true, ContratosMenoresImportStatus.COMPLETE)))
-        .containsExactly(false, false);
+    assertFlags(
+        sectionOf(organo(false, true, ContratosMenoresImportStatus.COMPLETE)), false, false);
   }
 
   // Never started has no stored value, so it is the absence of the state row — and it is partial
   // for the same reason an interrupted import is: what is shown is not all there is.
   @Test
   void an_organo_with_no_import_state_row_at_all_is_partial() {
-    assertThat(flagsOf(withNoImportState())).containsExactly(true, true);
+    assertFlags(sectionOf(withNoImportState()), true, true);
   }
 
-  private List<Boolean> flagsOf(OrganoDeContratacion organo) {
+  /**
+   * Each flag is asserted under its own name rather than by its position in a pair, so a failure
+   * names the one that moved — and so a test's name can be read against what it asserts without
+   * counting arguments back to a helper.
+   */
+  private static void assertFlags(
+      ContratosMenoresSection section, boolean partial, boolean updating) {
+    assertThat(section.partial())
+        .as("partial")
+        .isEqualTo(partial);
+    assertThat(section.updating())
+        .as("updating")
+        .isEqualTo(updating);
+  }
+
+  private ContratosMenoresSection sectionOf(OrganoDeContratacion organo) {
     organoIs(organo);
     yearsAre(THIS_YEAR);
 
-    ContratosMenoresSection section = describe().orElseThrow();
-
-    return List.of(section.partial(), section.updating());
+    return describe().orElseThrow();
   }
 
   private Optional<ContratosMenoresSection> describe() {
