@@ -270,10 +270,15 @@ public abstract class JdbcContratoMenorRepository
    * conversion service — the half {@link YearSelection}'s converter carries for exactly this — and
    * none of what stops the page being projected applies: there is one column, and it is not a
    * component of a record whose mapping is built outside the container.
+   *
+   * <p><strong>It carries no transaction, and the three methods below it do.</strong> A derived
+   * method has run on a connection of its own rather than in a transaction since Micronaut Data 4,
+   * which is all one statement needs; the hand-written reads are annotated because {@code
+   * jdbcOperations} has to be handed a bound connection, and the paged one because its two
+   * statements share it. {@code countByOrganoId} is derived and unannotated for this same reason.
    */
   @Override
   @Query(YEAR_FACETS_SQL)
-  @Transactional(readOnly = true)
   public abstract List<YearSelection> years(OrganoId organoId);
 
   /**
