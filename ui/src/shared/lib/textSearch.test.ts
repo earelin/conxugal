@@ -3,37 +3,43 @@ import { describe, expect, it } from 'vitest';
 import { foldForSearch, matches } from './textSearch';
 
 describe('foldForSearch', () => {
-  it('strips accents and case so a typed name matches an accented one', () => {
-    expect(foldForSearch('Educación')).toBe(foldForSearch('EDUCACION'));
-    expect(foldForSearch('Saúde')).toBe('saude');
+  it.each([
+    { text: 'Educación', folded: 'educacion' },
+    { text: 'EDUCACION', folded: 'educacion' },
+    { text: 'Saúde', folded: 'saude' },
+    { text: 'Ávila', folded: 'avila' },
+  ])('folds $text to $folded', ({ text, folded }) => {
+    expect(foldForSearch(text)).toBe(folded);
   });
 });
 
 describe('matches', () => {
-  it('finds an accented name from an unaccented query', () => {
-    expect(matches('Ávila', 'avila')).toBe(true);
-    expect(matches('Servizo Galego de Saúde', 'saude')).toBe(true);
+  it.each([
+    { case: 'unaccented query, accented name', name: 'Ávila', query: 'avila' },
+    { case: 'accented query, unaccented name', name: 'Avila', query: 'Ávila' },
+    { case: 'upper-case query, lower-case name', name: 'Concello de Vigo', query: 'VIGO' },
+    { case: 'lower-case query, upper-case name', name: 'CONCELLO DE VIGO', query: 'vigo' },
+    { case: 'a fragment inside the name', name: 'Instituto Galego da Vivenda', query: 'galego' },
+    {
+      case: 'a fragment spanning two words',
+      name: 'Instituto Galego da Vivenda',
+      query: 'galego da',
+    },
+    // Refusing one is the caller's rule about what a surface shows, not this
+    // function's about what a name holds.
+    { case: 'a blank query, which holds nothing', name: 'Ávila', query: '' },
+  ])('finds a name on $case', ({ name, query }) => {
+    expect(matches(name, query)).toBe(true);
   });
 
-  it('finds an unaccented name from an accented query', () => {
-    expect(matches('Avila', 'Ávila')).toBe(true);
-  });
-
-  it('ignores letter case on either side', () => {
-    expect(matches('Concello de Vigo', 'VIGO')).toBe(true);
-    expect(matches('CONCELLO DE VIGO', 'vigo')).toBe(true);
-  });
-
-  it('finds a name by a fragment inside it, not only by its opening', () => {
-    expect(matches('Instituto Galego da Vivenda e Solo', 'galego')).toBe(true);
-    expect(matches('Instituto Galego da Vivenda e Solo', 'vivenda e')).toBe(true);
-  });
-
-  it('answers false for a query the name does not hold', () => {
-    expect(matches('Servizo Galego de Saúde', 'sanidde')).toBe(false);
-  });
-
-  it('lets a blank query through, leaving it to the caller to refuse one', () => {
-    expect(matches('Ávila', '')).toBe(true);
+  it.each([
+    { case: 'a query the name does not hold', name: 'Servizo Galego de Saúde', query: 'sanidde' },
+    {
+      case: 'a fragment whose words are apart',
+      name: 'Instituto Galego da Vivenda',
+      query: 'galego vivenda',
+    },
+  ])('finds nothing on $case', ({ name, query }) => {
+    expect(matches(name, query)).toBe(false);
   });
 });
