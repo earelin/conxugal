@@ -3,14 +3,22 @@ package gal.conxugal.infrastructure.jdbc.contrato;
 import gal.conxugal.domain.contrato.ContratoMenor;
 import gal.conxugal.domain.contrato.ContratoMenorId;
 import gal.conxugal.domain.contrato.ContratoMenorRepository;
+import gal.conxugal.domain.contrato.SortKey;
 import gal.conxugal.domain.contrato.UpsertCounts;
+import gal.conxugal.domain.contrato.VisibleContratoMenor;
+import gal.conxugal.domain.contrato.VisibleContratoMenorRepository;
+import gal.conxugal.domain.contrato.YearSelection;
 import gal.conxugal.domain.money.Money;
+import gal.conxugal.domain.operador.FiscalIdentifier;
 import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.OperadorId;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.OrganosWithVisibleContracts;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
+import io.micronaut.data.model.Page;
+import io.micronaut.data.model.Pageable;
+import io.micronaut.data.model.Sort;
 import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.GenericRepository;
 import io.micronaut.transaction.annotation.Transactional;
@@ -21,6 +29,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -28,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -63,11 +74,16 @@ import org.jspecify.annotations.Nullable;
  * answers none of the questions a reader is here to ask, and without an awardee it names nobody it
  * was awarded to. A contract missing any one of them is stored as an anomaly and places its
  * Órgano in nobody's visible set.
+ *
+ * <p>Reading a browse page joins it here rather than in an adapter of its own: a page of contratos
+ * menores and a batch of them are two questions of one table, and the visibility rule they both
+ * state is the same rule.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public abstract class JdbcContratoMenorRepository
     implements ContratoMenorRepository,
         OrganosWithVisibleContracts,
+        VisibleContratoMenorRepository,
         GenericRepository<ContratoMenor, ContratoMenorId> {
 
   private static final String UPSERT_SQL =
@@ -117,6 +133,57 @@ public abstract class JdbcContratoMenorRepository
              AND operador_economico_id IS NOT NULL)
       """;
 
+  /**
+   * The definition of <em>visible</em>, not a filter bolted onto a read. The date needs no
+   * conjunct: {@code publication_year} is null exactly when {@code publication_date} is, so the
+   * equality test already withholds an undated contract. The join alone would already withhold one
+   * with no awardee, and {@code operador_economico_id IS NOT NULL} is written anyway — this has to
+   * match the two browse indexes' partial predicate word for word, or PostgreSQL cannot use them.
+   *
+   * <p>One constant for both statements below, so a count cannot come to disagree with the pages
+   * beneath it by losing a conjunct the page kept.
+   */
+  private static final String VISIBLE_SELECTION =
+      """
+        FROM contrato_menor
+        JOIN operador_economico
+          ON operador_economico.id = contrato_menor.operador_economico_id
+       WHERE organo_id = ?
+         AND publication_year = ?
+         AND amount IS NOT NULL
+         AND operador_economico_id IS NOT NULL
+      """;
+
+  /**
+   * <strong>It carries no ordering</strong> — the {@code Pageable}'s is appended to it, so one that
+   * ordered as well would emit two clauses. The awardee's two columns are aliased so that every
+   * column a row is read by is named once, here, rather than the reader below knowing that one of
+   * them is called {@code name} on the other table. None of the seven is ambiguous across the join.
+   */
+  private static final String VISIBLE_PAGE_SQL =
+      """
+      SELECT contrato_menor.source_id,
+             contrato_menor.publication_date,
+             contrato_menor.obxecto,
+             contrato_menor.amount,
+             contrato_menor.duration,
+             operador_economico.name AS awardee_name,
+             operador_economico.fiscal_id AS awardee_fiscal_id
+      """
+          + VISIBLE_SELECTION;
+
+  private static final String VISIBLE_COUNT_SQL = "SELECT COUNT(*)\n" + VISIBLE_SELECTION;
+
+  /**
+   * Every column a browse ordering may name, taken from {@link SortKey} rather than restated, so
+   * the set cannot come to admit one the closed set of orderings could never produce.
+   */
+  private static final Set<String> ORDERABLE_COLUMNS =
+      Arrays.stream(SortKey.values())
+          .flatMap(key -> key.ordering(Sort.Order.Direction.ASC).getOrderBy().stream())
+          .map(Sort.Order::getProperty)
+          .collect(Collectors.toUnmodifiableSet());
+
   private final JdbcOperations jdbcOperations;
 
   protected JdbcContratoMenorRepository(JdbcOperations jdbcOperations) {
@@ -154,6 +221,93 @@ public abstract class JdbcContratoMenorRepository
       statement.setArray(1, statement.getConnection().createArrayOf("uuid", ids));
       return readOrganoIds(statement);
     });
+  }
+
+  /**
+   * The page and the count of the whole selection, from one predicate written once, so a total can
+   * never come to disagree with the pages beneath it by losing a conjunct one of them kept.
+   *
+   * <p><strong>The rows are read by hand rather than projected.</strong> A {@code @Query} answering
+   * {@code Page<VisibleContratoMenor>} is the smaller thing and was the first thing tried, and it
+   * cannot carry this projection: Micronaut Data builds a projection's mapping outside the
+   * container, so the moment a component's type names an {@code AttributeConverter} — the amount's
+   * does, and the awardee's identifier's does — reading a row fails with <em>Converters not
+   * supported</em>. The alternative was a projection of bare {@code BigDecimal} and {@code String},
+   * which would move the two conversions to whoever reads the page and lose the guarantee the
+   * types carry.
+   *
+   * <p>Reading by hand means the ordering is appended here rather than by the framework, and
+   * appending a name to SQL is the one thing this design cannot do carelessly: on a native
+   * statement a property name is interpolated verbatim and unescaped. {@link #orderBy} therefore
+   * refuses any column {@link SortKey} could not have produced, which makes the closed set of
+   * orderings a property of this statement rather than an obligation on its callers.
+   */
+  @Override
+  @Transactional(readOnly = true)
+  public Page<VisibleContratoMenor> page(
+      OrganoId organoId, YearSelection year, Pageable pageable) {
+    String sql = VISIBLE_PAGE_SQL + orderBy(pageable.getSort()) + " LIMIT ? OFFSET ?";
+    List<VisibleContratoMenor> content = jdbcOperations.prepareStatement(sql, statement -> {
+      bindSelection(statement, organoId, year);
+      statement.setInt(3, pageable.getSize());
+      statement.setLong(4, pageable.getOffset());
+      return readVisible(statement);
+    });
+    long total = jdbcOperations.prepareStatement(VISIBLE_COUNT_SQL, statement -> {
+      bindSelection(statement, organoId, year);
+      return readCount(statement);
+    });
+    return Page.of(content, pageable, total);
+  }
+
+  private static String orderBy(Sort sort) {
+    List<Sort.Order> orders = sort.getOrderBy();
+    if (orders.isEmpty()) {
+      throw new IllegalArgumentException("A browse read is ordered, and this one carries no sort");
+    }
+    return orders.stream()
+        .map(JdbcContratoMenorRepository::orderTerm)
+        .collect(Collectors.joining(", ", " ORDER BY ", ""));
+  }
+
+  private static String orderTerm(Sort.Order order) {
+    if (!ORDERABLE_COLUMNS.contains(order.getProperty())) {
+      throw new IllegalArgumentException(
+          "No browse ordering names %s: it can only be one of %s"
+              .formatted(order.getProperty(), ORDERABLE_COLUMNS));
+    }
+    return "%s %s".formatted(order.getProperty(), order.getDirection());
+  }
+
+  private static void bindSelection(
+      PreparedStatement statement, OrganoId organoId, YearSelection year) throws SQLException {
+    statement.setObject(1, organoId.value());
+    statement.setInt(2, year.year());
+  }
+
+  private static List<VisibleContratoMenor> readVisible(PreparedStatement statement)
+      throws SQLException {
+    List<VisibleContratoMenor> visible = new ArrayList<>();
+    try (ResultSet rows = statement.executeQuery()) {
+      while (rows.next()) {
+        visible.add(
+            new VisibleContratoMenor(
+                rows.getLong("source_id"),
+                rows.getObject("publication_date", LocalDate.class),
+                rows.getString("obxecto"),
+                new Money(rows.getBigDecimal("amount")),
+                rows.getString("duration"),
+                rows.getString("awardee_name"),
+                new FiscalIdentifier(rows.getString("awardee_fiscal_id"))));
+      }
+    }
+    return List.copyOf(visible);
+  }
+
+  private static long readCount(PreparedStatement statement) throws SQLException {
+    try (ResultSet rows = statement.executeQuery()) {
+      return rows.next() ? rows.getLong(1) : 0L;
+    }
   }
 
   private static List<ContratoMenor> lastReadingPerSourceId(Collection<ContratoMenor> contratos) {

@@ -2,7 +2,7 @@
 feat: FEAT-0011
 domain: backend
 adrs: [0002, 0008, 0022]
-status: todo
+status: done
 depends_on: [TASK-0001, TASK-0002]
 ---
 
@@ -86,6 +86,41 @@ statement that ordered as well would emit two `ORDER BY` clauses and fail.
     awardee, and **one missing all three** appear in no page and in **no count**, in all four
     orderings. The last is what catches a `countQuery` that dropped a conjunct.
 
+## What building it found
+
+> **Amended.** Two of the scope's expectations did not survive contact with Micronaut Data 5.0.4,
+> and both were branches this task existed to settle. The design is unchanged — one statement, one
+> count over the same predicate, no ordering of its own, the ordering arriving on the `Pageable`
+> from the closed set — and the acceptance criteria below are met as written, bar the last, which
+> named a mechanism rather than a property.
+>
+> - **A `Sort` reaches a native statement verbatim only if the `@Query` says `nativeQuery = true`.**
+>   Left at its default a `@Query` on a JDBC repository is *not* native for this purpose:
+>   `AbstractSqlLikeQueryBuilder.buildPropertyByName` resolves each name against `ContratoMenor`
+>   and appends the column behind it **qualified by the alias it would itself have given the
+>   table** — a name a hand-written statement never introduces, so PostgreSQL refuses it. So the
+>   answer to the scope's open question is *verbatim*, and `SortKey` names columns.
+> - **A DTO projection cannot carry a converted component at all**, which is the fallback the scope
+>   anticipated. Micronaut Data builds a projection's mapping from a `RuntimePersistentEntity`
+>   constructed outside the container (`AbstractSqlRepositoryOperations.resolveDtoPersistentEntity`),
+>   whose `resolveConverter` throws *Converters not supported*. Both of `VisibleContratoMenor`'s
+>   converted components hit it — the amount because it inherits `ContratoMenor`'s mapping, exactly
+>   as [TASK-0001](TASK-0001-selection-value-types-and-read-ports.md) says it does. So the rows are
+>   read through `jdbcOperations.prepareStatement`, the precedent the batch upsert sets, rather than
+>   the projection being weakened to raw `BigDecimal` and `String`.
+>
+> Reading by hand means the adapter appends the ordering rather than the framework, and that is
+> where the two meet: appending a name to SQL is the one thing this design cannot do carelessly, so
+> the adapter **refuses any column `SortKey` could not have produced**, deriving that set from
+> `SortKey` itself. The closed set is now a property of the statement rather than only an
+> obligation on its callers — strictly more than the framework path offered, which interpolates
+> whatever the `Sort` carries.
+>
+> The ordering itself moved into `SortKey.ordering(Direction)`, in `domain`. The scope left it to
+> [TASK-0005](TASK-0005-list-contratos-menores-use-case.md), but three places need the same four
+> orderings — that use case, this task's tests, and TASK-0002's `EXPLAIN` test — and a mapping from
+> a key to a **column name** is the one thing that must not be written twice.
+
 ## Acceptance criteria
 
 - Paging a selection exhaustively in each of the four orderings yields exactly `totalSize`
@@ -103,4 +138,5 @@ statement that ordered as well would emit two `ORDER BY` clauses and fail.
   `source_id` finds it. (SPEC-0005 #50, query half)
 - The statement carries no `ORDER BY` of its own, and no property name reaching the emitted
   `ORDER BY` comes from anywhere but a `SortKey` or a `Sort.Order.Direction`. (SPEC-0005 #28)
-- The `@Query` declares a `countQuery` whose `WHERE` and join match its own.
+- The count carries the same `WHERE` and the same join as the page — met by both being the same
+  constant, rather than by a `countQuery` kept in step with a `@Query`. See the amendment above.

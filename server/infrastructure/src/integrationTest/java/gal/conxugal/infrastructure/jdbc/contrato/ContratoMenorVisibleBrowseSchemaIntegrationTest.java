@@ -3,9 +3,11 @@ package gal.conxugal.infrastructure.jdbc.contrato;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import gal.conxugal.domain.contrato.SortKey;
 import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.data.model.Sort.Order.Direction;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
 import jakarta.inject.Inject;
@@ -89,30 +91,45 @@ class ContratoMenorVisibleBrowseSchemaIntegrationTest implements TestPropertyPro
    * The definition of <em>visible</em>, and the two indexes' partial predicate, written once. The
    * date needs no conjunct: {@code publication_year} is null exactly when {@code publication_date}
    * is, so the equality test already withholds an undated contract.
+   *
+   * <p>The paged read's own statement has to carry this byte for byte, or the plans below describe
+   * a selection nobody makes. It is visible to the package so that read's test can assert it does,
+   * rather than the two being kept in step by hand.
    */
-  private static final String VISIBLE_SELECTION =
+  static final String VISIBLE_WHERE =
       """
-        FROM contrato_menor
        WHERE organo_id = ?
          AND publication_year = ?
          AND amount IS NOT NULL
          AND operador_economico_id IS NOT NULL
       """;
 
+  private static final String VISIBLE_SELECTION =
+      """
+        FROM contrato_menor
+      """
+          + VISIBLE_WHERE;
+
   private static final String SELECTED_COLUMNS =
       """
       SELECT source_id, publication_date, obxecto, amount, duration
       """;
 
-  private static final String DATE_ASCENDING =
-      SELECTED_COLUMNS + VISIBLE_SELECTION + " ORDER BY publication_date, source_id LIMIT 50";
-  private static final String DATE_DESCENDING =
-      SELECTED_COLUMNS + VISIBLE_SELECTION
-          + " ORDER BY publication_date DESC, source_id DESC LIMIT 50";
-  private static final String AMOUNT_ASCENDING =
-      SELECTED_COLUMNS + VISIBLE_SELECTION + " ORDER BY amount, source_id LIMIT 50";
-  private static final String AMOUNT_DESCENDING =
-      SELECTED_COLUMNS + VISIBLE_SELECTION + " ORDER BY amount DESC, source_id DESC LIMIT 50";
+  /**
+   * The four orderings are rendered from the same {@link gal.conxugal.domain.contrato.SortKey} the
+   * paged read's {@code Sort} is built from, rather than written out here, so a plan proved against
+   * one clause cannot come to describe a different one the framework appends.
+   */
+  private static final String DATE_ASCENDING = ordered(SortKey.PUBLICATION_DATE, Direction.ASC);
+  private static final String DATE_DESCENDING = ordered(SortKey.PUBLICATION_DATE, Direction.DESC);
+  private static final String AMOUNT_ASCENDING = ordered(SortKey.AMOUNT, Direction.ASC);
+  private static final String AMOUNT_DESCENDING = ordered(SortKey.AMOUNT, Direction.DESC);
+
+  private static String ordered(SortKey key, Direction direction) {
+    return SELECTED_COLUMNS
+        + VISIBLE_SELECTION
+        + " %s LIMIT 50".formatted(new BrowseOrdering(key, direction).orderBy());
+  }
 
   private static final String SELECTION_COUNT =
       """
