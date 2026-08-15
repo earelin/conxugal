@@ -92,7 +92,7 @@ class DescribeContratosMenoresSectionTest {
   // --------------------------------------------------------------- every combination of the two
 
   @Test
-  void complete_and_marked_is_neither_partial_nor_still_updating() {
+  void complete_and_marked_is_not_partial_and_is_still_updating() {
     assertFlags(sectionOf(marked(ContratosMenoresImportStatus.COMPLETE)), false, true);
   }
 
