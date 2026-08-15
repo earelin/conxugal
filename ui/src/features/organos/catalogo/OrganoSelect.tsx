@@ -10,8 +10,8 @@ import { useMemo } from 'react';
 
 import { strings } from '../../../shared/lib/strings';
 import type { TermoNode } from '../../../shared/lib/taxonomiaTree';
+import { foldForSearch } from '../../../shared/lib/textSearch';
 import type { Organo } from '../organos';
-import { foldForSearch } from '../taxonomia/termoSearch';
 import { organoPlacementLabel } from './organoPlacement';
 
 const copy = strings.admin.organos.assign;

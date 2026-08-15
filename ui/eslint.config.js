@@ -18,7 +18,11 @@ import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-const testFiles = ['**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}'];
+// `*Harness.tsx` is test support rather than a suite: it holds the fixtures and
+// the render helpers its siblings share. It lives beside them rather than in
+// `src/test/` because that directory is the `app` element, and a shared-* test
+// importing it would breach the dependency direction below.
+const testFiles = ['**/*.test.{ts,tsx}', '**/*Harness.tsx', 'src/test/**/*.{ts,tsx}'];
 
 const typescriptResolver = {
   alwaysTryTypes: true,
@@ -68,6 +72,7 @@ export default tseslint.config(
       'boundaries/files': [
         { pattern: 'src/main.tsx', category: 'app-entry' },
         { pattern: '**/*.test.{ts,tsx}', category: 'test' },
+        { pattern: '**/*Harness.tsx', category: 'test' },
       ],
       // acceptance/ drives the built app over HTTP and imports nothing from src, so it
       // sits outside the module graph these rules describe.

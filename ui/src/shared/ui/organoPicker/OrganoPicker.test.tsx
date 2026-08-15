@@ -1,98 +1,20 @@
-import { MantineProvider } from '@mantine/core';
-import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { createMemoryRouter, type RouteObject } from 'react-router';
-import { RouterProvider } from 'react-router/dom';
-import { describe, expect, it, vi } from 'vitest';
+import { screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
-import { strings } from '../lib/strings';
-import { buildTaxonomiaView, type Organo, type Termo } from '../lib/taxonomiaTree';
-import { OrganoPicker } from './OrganoPicker';
-
-const copy = strings.organoPicker;
-
-function termo(id: string, name: string, parentId: string | null = null): Termo {
-  return { id, name, parentId };
-}
-
-function organo(id: string, name: string, termoId: string | null, active = true): Organo {
-  return { id, name, active, termoId };
-}
-
-const TERMOS = [
-  termo('t-1', 'Consellerías'),
-  termo('t-2', 'Consellería de Educación', 't-1'),
-  termo('t-3', 'Axencias e entidades instrumentais', 't-2'),
-  termo('t-4', 'Consellería de Sanidade', 't-1'),
-  termo('t-5', 'Concellos'),
-];
-
-const innovacion = organo('o-1', 'Axencia Galega de Innovación', 't-3');
-const cunqueiro = organo('o-2', 'Hospital Álvaro Cunqueiro', 't-4', false);
-const vivenda = organo('o-3', 'Instituto Galego da Vivenda e Solo', null);
-
-const VIEW = buildTaxonomiaView(TERMOS, [innovacion, cunqueiro, vivenda]);
-
-interface RenderOptions {
-  view?: typeof VIEW | null;
-  isPending?: boolean;
-  isError?: boolean;
-  onRetry?: () => void;
-  onNavigate?: () => void;
-  path?: string;
-}
-
-function renderPicker({
-  view = VIEW,
-  isPending = false,
-  isError = false,
-  onRetry = vi.fn(),
-  onNavigate = vi.fn(),
-  path = '/',
-}: RenderOptions = {}) {
-  const routes: RouteObject[] = [
-    {
-      // A splat matches every path: `useMatch` reads the location, not the
-      // route tree, so the picker needs no /organo route to resolve what is
-      // open — which is just as well, since none exists yet.
-      path: '*',
-      element: (
-        <OrganoPicker
-          view={view}
-          isPending={isPending}
-          isFetching={false}
-          isError={isError}
-          onRetry={onRetry}
-          onNavigate={onNavigate}
-        />
-      ),
-    },
-  ];
-  const router = createMemoryRouter(routes, { initialEntries: [path] });
-  render(
-    // `env="test"` turns off Mantine's transitions, without which the popover
-    // spends its first frames `display: none` and hides its own contents from
-    // every accessible query.
-    <MantineProvider env="test">
-      <RouterProvider router={router} />
-    </MantineProvider>,
-  );
-  return { router, onRetry, onNavigate };
-}
-
-function trigger(name: string = copy.placeholder) {
-  return screen.getByRole('button', { name: `${copy.label} ${name}` });
-}
-
-/** Renders the picker and drops it down, which is where everything below is. */
-async function openPicker(options: RenderOptions = {}) {
-  const utils = renderPicker(options);
-  const user = userEvent.setup();
-  // The closed control holds one button, and its accessible name depends on
-  // which Órgano is open — so reach it by role rather than restating the name.
-  await user.click(screen.getByRole('button'));
-  return { ...utils, user };
-}
+import { strings } from '../../lib/strings';
+import { buildTaxonomiaView } from '../../lib/taxonomiaTree';
+import {
+  copy,
+  cunqueiro,
+  innovacion,
+  openPicker,
+  renderPicker,
+  search,
+  searchBox,
+  TERMOS,
+  trigger,
+  vivenda,
+} from './pickerHarness';
 
 /** A tree row by its own label, ignoring the labels of its descendants. */
 function treeRow(tree: HTMLElement, label: string): HTMLElement {
@@ -212,6 +134,22 @@ describe('OrganoPicker tree', () => {
     expect(within(tree).queryAllByRole('button')).toHaveLength(0);
     expect(within(tree).queryAllByRole('link')).toHaveLength(0);
   });
+  it('keeps the branches the reader collapsed while they check a name', async () => {
+    const { user } = await openPicker();
+
+    const tree = await screen.findByRole('tree', { name: copy.label });
+    treeRow(tree, 'Consellería de Sanidade').focus();
+    await user.keyboard('{Enter}');
+    expect(within(tree).queryByText(cunqueiro.name)).not.toBeInTheDocument();
+
+    await search(user, 'galega');
+    await user.clear(searchBox());
+
+    // The same tree, still collapsed — not a fresh one with every branch open.
+    expect(
+      within(screen.getByRole('tree', { name: copy.label })).queryByText(cunqueiro.name),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe('OrganoPicker selection', () => {
@@ -249,11 +187,13 @@ describe('OrganoPicker selection', () => {
 });
 
 describe('OrganoPicker keyboard', () => {
-  it('moves focus into the tree when it opens, and back to the trigger on Escape', async () => {
+  it('moves focus into the filter when it opens, and back to the trigger on Escape', async () => {
     const { user } = await openPicker();
 
-    const tree = await screen.findByRole('tree', { name: copy.label });
-    await waitFor(() => expect(tree.contains(document.activeElement)).toBe(true));
+    // The filter is the first thing in the dropdown, so a reader who opened the
+    // control to find a name types straight away; the tree is one Tab further.
+    await waitFor(() => expect(document.activeElement).toBe(searchBox()));
+    expect(screen.getByRole('tree', { name: copy.label })).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
 
