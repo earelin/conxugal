@@ -220,10 +220,11 @@ function OrganoTree({ data, openId, onOpen, labelledBy }: OrganoTreeProps) {
 interface OrganoMatchesProps {
   id: string;
   organos: Organo[];
-  /** What was typed, quoted back when nothing matches it. */
+  /**
+   * What was typed, trimmed, and empty while the tree is the answer instead —
+   * which is the whole of what says which of the two states this is in.
+   */
   query: string;
-  /** False while the filter is empty, when the tree is the answer instead. */
-  searching: boolean;
   /** The Órgano the route has open, marked as selected here as in the tree. */
   openId: string | null;
   onOpen: (id: string) => void;
@@ -240,12 +241,12 @@ function OrganoMatches({
   id,
   organos,
   query,
-  searching,
   openId,
   onOpen,
   labelledBy,
   listRef,
 }: OrganoMatchesProps) {
+  const searching = query !== '';
   // One tab stop, landing on the open Órgano when the query still offers it —
   // derived rather than held, so the filter changing the rows cannot leave a
   // stored index pointing at a row that is gone.
@@ -477,7 +478,6 @@ export function OrganoPicker({
           id={listId}
           organos={found}
           query={trimmed}
-          searching={searching}
           openId={openId}
           onOpen={chooseOrgano}
           labelledBy={labelId}
