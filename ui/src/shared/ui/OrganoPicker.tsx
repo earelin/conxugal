@@ -43,7 +43,7 @@ import {
 } from '../lib/taxonomiaTree';
 import { ErrorAlert } from './ErrorAlert';
 import { LoadingIndicator } from './LoadingIndicator';
-import { nextIndex, optionsOf } from './rovingFocus';
+import { entersListFromSearch, movesFocusWithin } from './rovingFocus';
 import { SELECTED_ROW_BG, SELECTED_ROW_COLOR } from './selection';
 
 const copy = strings.organoPicker;
@@ -251,20 +251,6 @@ function OrganoMatches({
   // stored index pointing at a row that is gone.
   const tabbableId = organos.find((organo) => organo.id === openId)?.id ?? organos[0]?.id;
 
-  function moveFocus(event: KeyboardEvent<HTMLDivElement>) {
-    const options = optionsOf(listRef.current);
-    if (options.length === 0) {
-      return;
-    }
-    const focused = options.findIndex((option) => option === document.activeElement);
-    const target = nextIndex(event.key, focused, options.length - 1);
-    if (target === null) {
-      return;
-    }
-    event.preventDefault();
-    options[target].focus();
-  }
-
   return (
     <>
       <Box style={{ display: searching && organos.length > 0 ? undefined : 'none' }}>
@@ -275,7 +261,7 @@ function OrganoMatches({
             role="listbox"
             aria-labelledby={labelledBy}
             tabIndex={-1}
-            onKeyDown={moveFocus}
+            onKeyDown={movesFocusWithin(listRef)}
           >
             {organos.map((organo) => {
               const selected = organo.id === openId;
@@ -424,17 +410,6 @@ export function OrganoPicker({
     }
   }
 
-  function enterListFromSearch(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key !== 'ArrowDown') {
-      return;
-    }
-    const [first] = optionsOf(listRef.current);
-    if (first) {
-      event.preventDefault();
-      first.focus();
-    }
-  }
-
   const openOrgano = view?.catalogue.find((organo) => organo.id === openId) ?? null;
   // An id the visible set does not hold — a link shared before an Órgano's last
   // contract was withdrawn — reads as no selection rather than as a name the
@@ -476,7 +451,7 @@ export function OrganoPicker({
           onChange={(event) => {
             setQuery(event.currentTarget.value);
           }}
-          onKeyDown={enterListFromSearch}
+          onKeyDown={entersListFromSearch(listRef)}
           placeholder={copy.searchPlaceholder}
           aria-label={copy.searchLabel}
           // Names the list it narrows, which is the only thing tying the two
