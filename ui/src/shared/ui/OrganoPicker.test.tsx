@@ -1,6 +1,6 @@
 import { MantineProvider } from '@mantine/core';
 import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { createMemoryRouter, type RouteObject } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -96,6 +96,13 @@ async function openPicker(options: RenderOptions = {}) {
 
 function searchBox() {
   return screen.getByRole('textbox', { name: copy.searchLabel });
+}
+
+/** Types into the filter, waiting for the dropdown to have drawn it first. */
+async function search(user: UserEvent, query: string) {
+  await screen.findByRole('textbox', { name: copy.searchLabel });
+  await user.clear(searchBox());
+  await user.type(searchBox(), query);
 }
 
 /** The matches the filter offers, which share the tree's accessible name. */
@@ -261,7 +268,7 @@ describe('OrganoPicker search', () => {
   it('offers the matching Organos as the reader types, with nothing to submit', async () => {
     const { user } = await openPicker();
 
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), 'galega');
+    await search(user, 'galega');
 
     expect(within(matchList()).getByText(innovacion.name)).toBeInTheDocument();
     expect(within(matchList()).queryByText(cunqueiro.name)).not.toBeInTheDocument();
@@ -271,11 +278,10 @@ describe('OrganoPicker search', () => {
   it('finds a name differing only by accent or case, and one by a fragment inside it', async () => {
     const { user } = await openPicker();
 
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), 'ALVARO');
+    await search(user, 'ALVARO');
     expect(within(matchList()).getByText(cunqueiro.name)).toBeInTheDocument();
 
-    await user.clear(searchBox());
-    await user.type(searchBox(), 'galego da');
+    await search(user, 'galego da');
     expect(within(matchList()).getByText(vivenda.name)).toBeInTheDocument();
   });
 
@@ -283,7 +289,7 @@ describe('OrganoPicker search', () => {
     const { user } = await openPicker();
 
     // Every fixture holds an «a», so all three are offered at once.
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), 'a');
+    await search(user, 'a');
 
     expect(within(matchList()).getAllByRole('option')).toHaveLength(3);
     expect(
@@ -296,7 +302,7 @@ describe('OrganoPicker search', () => {
   it('shows the tree for a whitespace-only query, which has asked nothing', async () => {
     const { user } = await openPicker();
 
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), '   ');
+    await search(user, '   ');
 
     expect(screen.getByRole('tree', { name: copy.label })).toBeInTheDocument();
     expect(screen.queryByRole('listbox', { name: copy.label })).not.toBeInTheDocument();
@@ -306,7 +312,7 @@ describe('OrganoPicker search', () => {
   it('says a query matched nothing, quoting it, rather than listing the catalogue', async () => {
     const { user } = await openPicker();
 
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), 'sanidde');
+    await search(user, 'sanidde');
 
     expect(screen.getByText(copy.noMatches('sanidde'))).toBeInTheDocument();
     expect(screen.getByText(copy.noMatchesHelp)).toBeInTheDocument();
@@ -317,7 +323,7 @@ describe('OrganoPicker search', () => {
   it('shows the tree again once the filter is emptied', async () => {
     const { user } = await openPicker();
 
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), 'galega');
+    await search(user, 'galega');
     await user.clear(searchBox());
 
     expect(screen.getByRole('tree', { name: copy.label })).toBeInTheDocument();
@@ -327,7 +333,7 @@ describe('OrganoPicker search', () => {
   it('opens a chosen match exactly as choosing it in the tree does', async () => {
     const { router, onNavigate, user } = await openPicker();
 
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), 'alvaro');
+    await search(user, 'alvaro');
     await user.click(within(matchList()).getByText(cunqueiro.name));
 
     await waitFor(() => expect(router.state.location.pathname).toBe(`/organo/${cunqueiro.id}`));
@@ -338,7 +344,7 @@ describe('OrganoPicker search', () => {
   it('reopens on the tree rather than on a query the reader has forgotten typing', async () => {
     const { user } = await openPicker();
 
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), 'galega');
+    await search(user, 'galega');
     await user.keyboard('{Escape}');
     await user.click(trigger());
 
@@ -354,7 +360,7 @@ describe('OrganoPicker search', () => {
     const status = screen.getByRole('status');
     expect(status).toBeEmptyDOMElement();
 
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), 'sanidde');
+    await search(user, 'sanidde');
 
     expect(within(status).getByText(copy.noMatches('sanidde'))).toBeInTheDocument();
   });
@@ -362,7 +368,7 @@ describe('OrganoPicker search', () => {
   it('names the list the filter narrows, so the two are tied together', async () => {
     const { user } = await openPicker();
 
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), 'galega');
+    await search(user, 'galega');
 
     expect(searchBox()).toHaveAttribute('aria-controls', matchList().id);
   });
@@ -375,7 +381,7 @@ describe('OrganoPicker search', () => {
     await user.keyboard('{Enter}');
     expect(within(tree).queryByText(cunqueiro.name)).not.toBeInTheDocument();
 
-    await user.type(searchBox(), 'galega');
+    await search(user, 'galega');
     await user.clear(searchBox());
 
     // The same tree, still collapsed — not a fresh one with every branch open.
@@ -389,7 +395,7 @@ describe('OrganoPicker search keyboard', () => {
   it('walks the matches from the filter box with the arrows alone', async () => {
     const { user } = await openPicker();
 
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), 'a');
+    await search(user, 'a');
     await user.keyboard('{ArrowDown}');
 
     const options = within(matchList()).getAllByRole('option');
@@ -408,7 +414,7 @@ describe('OrganoPicker search keyboard', () => {
   it('holds the whole list to one tab stop, so the filter stays a Tab away', async () => {
     const { user } = await openPicker();
 
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), 'a');
+    await search(user, 'a');
 
     const options = within(matchList()).getAllByRole('option');
     expect(options.map((option) => option.tabIndex)).toEqual([0, -1, -1]);
@@ -417,7 +423,7 @@ describe('OrganoPicker search keyboard', () => {
   it('opens the focused match on Enter, as a button does', async () => {
     const { router, user } = await openPicker();
 
-    await user.type(await screen.findByRole('textbox', { name: copy.searchLabel }), 'alvaro');
+    await search(user, 'alvaro');
     await user.keyboard('{ArrowDown}{Enter}');
 
     await waitFor(() => expect(router.state.location.pathname).toBe(`/organo/${cunqueiro.id}`));
