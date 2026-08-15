@@ -3,6 +3,7 @@ package gal.conxugal.domain.contrato;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import gal.conxugal.commons.pagination.SortDirection;
 import io.micronaut.data.model.Page;
 import io.micronaut.data.model.Sort;
 import java.lang.reflect.Method;

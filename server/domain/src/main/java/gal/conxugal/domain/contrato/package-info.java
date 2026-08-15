@@ -6,12 +6,14 @@
  * {@link gal.conxugal.domain.contrato.ContratoMenorSourcePage} at a time — the only shape the
  * source offers.
  *
- * <p>It also holds the vocabulary a browse read is asked in — a
- * {@link gal.conxugal.domain.contrato.YearSelection}, a
- * {@link gal.conxugal.domain.contrato.SortKey} and a
- * {@link gal.conxugal.domain.contrato.SortDirection} — the
- * {@link gal.conxugal.domain.contrato.VisibleContratoMenor} row such a read answers with, and the
- * {@link gal.conxugal.domain.contrato.VisibleContratoMenorRepository} port that serves it.
+ * <p>It also holds the vocabulary a browse read is asked in that is this family's own — a
+ * {@link gal.conxugal.domain.contrato.YearSelection} and a
+ * {@link gal.conxugal.domain.contrato.SortKey}, the two whose values name contratos menores rather
+ * than pagination; the direction such a read runs in is
+ * {@link gal.conxugal.commons.pagination.SortDirection}, shared with every other paginated list.
+ * Beside them sit the {@link gal.conxugal.domain.contrato.VisibleContratoMenor} row a browse read
+ * answers with and the {@link gal.conxugal.domain.contrato.VisibleContratoMenorRepository} port
+ * that serves it.
  *
  * <p>{@code @NullMarked}: every type, field, parameter and return value in this package is
  * non-null unless explicitly annotated {@link org.jspecify.annotations.Nullable}.

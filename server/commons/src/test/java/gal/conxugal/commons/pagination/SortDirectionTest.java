@@ -1,4 +1,4 @@
-package gal.conxugal.domain.contrato;
+package gal.conxugal.commons.pagination;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -37,11 +37,23 @@ HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
   - **Building one and parsing one admit the same set**: the constructor refuses a year outside
     `1000`–`9999`, so `of(0)` is not a selection either. A type claiming a year cannot be asked for
     anything else would be untrue if its two entry points disagreed about what a year is.
-- **`SortKey`** — an enum of `PUBLICATION_DATE` and `AMOUNT`, and **`SortDirection`** — `ASC` and
-  `DESC`. Each has a `parse(String)` answering `Optional`, accepting exactly the spellings the
-  contract publishes: `publicationDate` / `amount`, and `asc` / `desc`. Anything else — another
-  property, another case, `descending` — answers empty. R19's two sorts are a **closed set**, and
-  a parse that quietly widened it is the defect the feature's security invariant is about.
+- **`SortKey`** in `gal.conxugal.domain.contrato` — an enum of `PUBLICATION_DATE` and `AMOUNT`, and
+  **`SortDirection`** in **`gal.conxugal.commons.pagination`** — `ASC` and `DESC`. Each has a
+  `parse(String)` answering `Optional`, accepting exactly the spellings the contract publishes:
+  `publicationDate` / `amount`, and `asc` / `desc`. Anything else — another property, another case,
+  `descending` — answers empty. R19's two sorts are a **closed set**, and a parse that quietly
+  widened it is the defect the feature's security invariant is about.
+  - **The two sit in different modules because they are different kinds of thing.** `SortKey`'s
+    values name contratos menores properties and belong to this family. A direction does not: R17's
+    control is a rule three specs share
+    ([ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md)), and
+    `asc`/`desc` parsed once per list is the divergence R17 exists to prevent. `commons` is the only
+    module all three of `domain`, `application` and `infrastructure` may depend on, and each already
+    declares it.
+  - **This stretches [ADR-0013](../../architecture/0013-shared-commons-module.md)**, which says
+    `commons` carries no transport content, and the published spellings are transport. The stretch
+    is recorded in the package's own javadoc rather than hidden, and **ADR-0013 should be amended to
+    permit shared wire vocabulary** — raised as follow-up rather than settled here.
 - **`VisibleContratoMenor`** — the projection a browse read answers with, carrying exactly what
   R16 puts on a row: `sourceId`, `publicationDate`, `obxecto`, `amount` (`Money`), `duration`,
   `awardeeName` and `awardeeFiscalId` (`FiscalIdentifier`). `publicationDate`, `amount`,

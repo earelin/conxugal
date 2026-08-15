@@ -146,7 +146,7 @@ flowchart TB
         direction LR
         listUc["ListContratosMenores"]
         resumoUc["DescribeContratosMenoresSection"]
-        selection["YearSelection · SortKey · SortDirection"]
+        selection["YearSelection · SortKey"]
         contratoRepo["VisibleContratoMenorRepository (port)"]
         stateRepo["ContratosMenoresImportStateRepository (port)"]
         organoRepo["OrganoRepository (port)"]
@@ -155,8 +155,14 @@ flowchart TB
         direction LR
         jdbcReads["paged + counted reads · year facets"]
     end
+    subgraph commons["commons"]
+        direction LR
+        sortDirection["SortDirection<br/>shared by every paginated list"]
+    end
     application --> domain
     infrastructure --> domain
+    application --> commons
+    domain --> commons
 ```
 
 ### Reaching an Órgano is FEAT-0012's, and it meets this feature at one point
@@ -747,7 +753,8 @@ accepted — so the whole feature is ready to be cut into task files.
 > demonstrable against imported data until it lands.**
 
 1. **Selection value types + read ports** *(backend)*: `YearSelection` (a year, with no
-   representable absence and no second case), `SortKey` and `SortDirection` parsed from plain strings, and the
+   representable absence and no second case), `SortKey` and `commons`' shared `SortDirection`
+   parsed from plain strings, and the
    `VisibleContratoMenorRepository` port methods for the four orderings, taking a `Pageable` and returning
    a `Page`. Pure domain — **the bound `Sort` is not seen here**, since it is an HTTP-bound type and
    its refusal is a 400; task 7 owns that mapping and calls in with these types. Unit-tested,
