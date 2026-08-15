@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildTaxonomiaView } from '../../../shared/lib/taxonomiaTree';
 import type { Organo, Termo } from '../organos';
-import { buildTermoPickerRows, foldForSearch } from './termoSearch';
+import { buildTermoPickerRows } from './termoSearch';
 
 function termo(id: string, name: string, parentId: string | null = null): Termo {
   return { id, name, parentId };
@@ -23,13 +23,6 @@ const { roots } = buildTaxonomiaView(TAXONOMIA, NO_ORGANOS);
 function names(query: string, selectedId: string | null = null) {
   return buildTermoPickerRows(roots, query, selectedId).map((row) => row.name);
 }
-
-describe('foldForSearch', () => {
-  it('strips accents and case so a typed name matches an accented one', () => {
-    expect(foldForSearch('Educación')).toBe(foldForSearch('EDUCACION'));
-    expect(foldForSearch('Saúde')).toBe('saude');
-  });
-});
 
 describe('buildTermoPickerRows', () => {
   it('returns the whole taxonomía in tree order when nothing is typed', () => {

@@ -1,41 +1,20 @@
 import { Box, Group, Input, ScrollArea, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconCheck, IconSearch } from '@tabler/icons-react';
-import { type KeyboardEvent, useId, useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 
 import { strings } from '../../../shared/lib/strings';
 import type { TermoNode } from '../../../shared/lib/taxonomiaTree';
+import { entersListFromSearch, movesFocusWithin } from '../../../shared/ui/rovingFocus';
 import { SELECTED_ROW_BG, SELECTED_ROW_COLOR } from '../../../shared/ui/selection';
 import { buildTermoPickerRows } from './termoSearch';
 
 const copy = strings.admin.organos.assign;
-
-const OPTION_SELECTOR = '[role="option"]';
 
 // One indent step per level, and the height of the panel the rows scroll in.
 // Both come from the mockup.
 const INDENT_STEP = 20;
 const BASE_INDENT = 12;
 const PANEL_HEIGHT = 288;
-
-/** Where a key moves focus within the list, or null when it is not ours. */
-function nextIndex(key: string, current: number, last: number): number | null {
-  switch (key) {
-    case 'ArrowDown':
-      return Math.min(current + 1, last);
-    case 'ArrowUp':
-      return Math.max(current - 1, 0);
-    case 'Home':
-      return 0;
-    case 'End':
-      return last;
-    default:
-      return null;
-  }
-}
-
-function optionsOf(list: HTMLElement | null): HTMLElement[] {
-  return list === null ? [] : Array.from(list.querySelectorAll<HTMLElement>(OPTION_SELECTOR));
-}
 
 export interface TermoTreePickerProps {
   roots: TermoNode[];
@@ -75,31 +54,6 @@ export function TermoTreePicker({ roots, label, value, onChange, required }: Ter
   const chosenRow = value === null ? undefined : rows.find((row) => row.id === value);
   const tabbableId = chosenRow?.id ?? rows[0]?.id;
 
-  function moveFocus(event: KeyboardEvent<HTMLDivElement>) {
-    const options = optionsOf(listRef.current);
-    if (options.length === 0) {
-      return;
-    }
-    const current = options.indexOf(document.activeElement as HTMLElement);
-    const target = nextIndex(event.key, current, options.length - 1);
-    if (target === null) {
-      return;
-    }
-    event.preventDefault();
-    options[target].focus();
-  }
-
-  function enterListFromSearch(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key !== 'ArrowDown') {
-      return;
-    }
-    const [first] = optionsOf(listRef.current);
-    if (first) {
-      event.preventDefault();
-      first.focus();
-    }
-  }
-
   return (
     <Input.Wrapper
       label={label}
@@ -119,7 +73,7 @@ export function TermoTreePicker({ roots, label, value, onChange, required }: Ter
         leftSection={<IconSearch size={16} aria-hidden />}
         value={query}
         onChange={(event) => setQuery(event.currentTarget.value)}
-        onKeyDown={enterListFromSearch}
+        onKeyDown={entersListFromSearch(listRef)}
       />
       <Box mt="xs" bd="1px solid gray.3" bdrs="md">
         <ScrollArea.Autosize mah={PANEL_HEIGHT} type="auto">
@@ -132,7 +86,7 @@ export function TermoTreePicker({ roots, label, value, onChange, required }: Ter
             // the field's required-ness would be sighted-only.
             aria-required={required}
             tabIndex={-1}
-            onKeyDown={moveFocus}
+            onKeyDown={movesFocusWithin(listRef)}
             p={4}
           >
             {rows.map((row) => {

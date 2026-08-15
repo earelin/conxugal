@@ -18,10 +18,14 @@ continue-on-failure = true
 [phases.stateful]
 enabled = false
 
+# The budget of the pull-request gate. The nightly fuzz run raises it from the command line.
 [generation]
 max-examples = 50
-# Same inputs on every run, so a red CI build reproduces locally.
-deterministic = true
+
+# Determinism is deliberately not set here. It is what the pull-request gate wants and what the
+# nightly run must not have, and no command-line option turns it back off once a file has turned
+# it on — so the choice belongs to the invocation. scripts/contract-test.sh passes
+# --generation-deterministic when CONTRACT_TEST_SEED is unset, and --seed when it is set.
 
 # Bound to the SESSION cookie the contract declares as its security scheme rather than
 # sent as a raw Cookie header: the checks that probe authentication work by dropping the
