@@ -11,7 +11,9 @@ depends_on: []
 The domain vocabulary a contratos menores read is asked in — a year, a sort key, a direction —
 the shape a paged read answers with, and the port method that serves it.
 Pure `domain` ([ADR-0002](../../architecture/0002-hexagonal-architecture.md)): no SQL, no
-HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
+HTTP, and **no `Sort` built here** — the port receives one on its `Pageable`, and
+[TASK-0005](TASK-0005-list-contratos-menores-use-case.md) is what constructs it. Nothing here is
+wired to a caller; the use case is
 [TASK-0005](TASK-0005-list-contratos-menores-use-case.md) and the endpoint is
 [TASK-0007](TASK-0007-paged-contracts-endpoint.md).
 
@@ -98,10 +100,10 @@ HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
     same adapter implements three interfaces, one of them a single-purpose read port. Reading a
     browse page and writing an import batch are two questions of one table, and only the second
     of them may ever write.
-- **What is deliberately not here**: no `Sort`, no `@QueryValue`, no problem type, no default
-  page size. Those are HTTP vocabulary and belong to
-  [TASK-0007](TASK-0007-paged-contracts-endpoint.md); the mapping from a validated `sort` onto
-  one of these four is [TASK-0005](TASK-0005-list-contratos-menores-use-case.md)'s.
+- **What is deliberately not here**: no constructed `Sort`, no `@QueryValue`, no problem type, no
+  default page size. Those are HTTP vocabulary and belong to
+  [TASK-0007](TASK-0007-paged-contracts-endpoint.md); building the four `Sort` values from a
+  validated key and direction is [TASK-0005](TASK-0005-list-contratos-menores-use-case.md)'s.
   `Pageable`/`Page` on a domain port is the leak
   [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md) accepted,
   and `server/domain/build.gradle.kts` already declares `api(libs.micronaut.data.model)`.
@@ -125,7 +127,11 @@ HTTP, and **no `Sort`**. Nothing here is wired to a caller; the use case is
 - `VisibleContratoMenorRepository` declares one read, `page(OrganoId, YearSelection, Pageable)`,
   returning `Page<VisibleContratoMenor>` and taking no property name or direction of its own — the
   ordering reaches it only as the `Sort` its caller built from `SortKey` and
-  `Sort.Order.Direction`. (SPEC-0005 #28)
-- The `domain` module compiles with no reference to `io.micronaut.http`, `Sort`, or any HTTP type
-  in these classes.
+  `Sort.Order.Direction`. **The compiler is the check**: nothing can compile against a method that
+  does not exist or a signature that differs, so this criterion carries no test of its own. The
+  invariants that a test *can* fail on — what the `Sort` is built from, and that it ends with the
+  tiebreaker — are [TASK-0005](TASK-0005-list-contratos-menores-use-case.md)'s, because that is
+  where a `Sort` is built. (SPEC-0005 #28)
+- The `domain` module compiles with no reference to `io.micronaut.http` or any other HTTP type in
+  these classes.
 - Unit-tested with JUnit and AssertJ; no database and no Micronaut context.
