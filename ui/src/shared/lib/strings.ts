@@ -28,6 +28,7 @@ export const strings = {
   organoPicker: {
     label: 'Órgano',
     placeholder: 'Escolle un órgano',
+    searchLabel: 'Buscar un órgano',
     searchPlaceholder: 'Buscar un órgano…',
     inactive: 'Inactivo',
     noMatches: (query: string) => `Ningún órgano coincide con «${query}».`,

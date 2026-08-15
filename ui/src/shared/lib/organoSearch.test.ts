@@ -32,4 +32,8 @@ describe('matches', () => {
   it('answers false for a query the name does not hold', () => {
     expect(matches('Servizo Galego de Saúde', 'sanidde')).toBe(false);
   });
+
+  it('lets a blank query through, leaving it to the caller to refuse one', () => {
+    expect(matches('Ávila', '')).toBe(true);
+  });
 });

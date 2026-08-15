@@ -12,9 +12,8 @@ export function foldForSearch(text: string): string {
  * Whether `query` appears anywhere in `name`, ignoring case and accents. Both
  * sides are folded, so the match holds whichever of the two carries the accent.
  *
- * It is `includes`-style, so an interior fragment matches and a blank query
- * matches everything. Offering nothing until something is typed is a rule about
- * what a surface shows, not about what matches, so the caller trims first.
+ * A blank query matches everything, as `includes('')` does. A surface that
+ * offers nothing until something is typed trims and checks that itself.
  */
 export function matches(name: string, query: string): boolean {
   return foldForSearch(name).includes(foldForSearch(query));

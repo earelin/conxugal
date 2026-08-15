@@ -4,7 +4,7 @@ import { horizontalOverflow } from '../support/locators';
 import { clearRequestJournal, requestCountFor, resetMappings } from '../support/wiremock';
 
 const PLACEHOLDER = 'Escolle un órgano';
-const SEARCH = 'Buscar un órgano…';
+const SEARCH = 'Buscar un órgano';
 const SERGAS = 'Servizo Galego de Saúde (SERGAS)';
 const UNCLASSIFIED = 'Instituto Galego da Vivenda e Solo';
 const INACTIVE = 'Hospital Álvaro Cunqueiro';
@@ -37,7 +37,7 @@ function searchBox(page: Page) {
 
 /** The filter's matches, which share the tree's accessible name. */
 function offered(page: Page) {
-  return page.getByRole('list', { name: 'Órgano' });
+  return page.getByRole('listbox', { name: 'Órgano' });
 }
 
 test.describe('Órgano picker', () => {
@@ -139,7 +139,7 @@ test.describe('Órgano picker search', () => {
     await trigger(page).click();
     await searchBox(page).fill('alvaro');
 
-    await expect(offered(page).getByRole('button', { name: `${INACTIVE} Inactivo` })).toBeVisible();
+    await expect(offered(page).getByRole('option', { name: `${INACTIVE} Inactivo` })).toBeVisible();
   });
 
   test('withholds by name whatever the tree withholds', async ({ page }) => {
@@ -148,6 +148,14 @@ test.describe('Órgano picker search', () => {
 
     await expect(page.getByText('Ningún órgano coincide con «turismo».')).toBeVisible();
     await expect(offered(page)).toBeHidden();
+
+    // The other direction of the same criterion: the tree does not offer it
+    // either, unclassified rows at its root included. Asserting only the search
+    // half would pass while the two disagreed, which is the drift they exist to
+    // rule out.
+    await searchBox(page).fill('');
+    await expect(tree(page).getByText(SERGAS)).toBeVisible();
+    await expect(tree(page).getByText(WITHHELD)).toBeHidden();
 
     // The administration area lists it throughout, so the picker is withholding
     // it rather than the catalogue lacking it.
