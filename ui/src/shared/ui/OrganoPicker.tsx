@@ -68,9 +68,10 @@ function organoIdOf(value: string): string | null {
 // level whether or not the row has children.
 const MARKER_SIZE = 14;
 
-// Relative to the window rather than a pixel count, so the tree still fits
-// under the trigger on a short viewport.
-const MAX_TREE_HEIGHT = '60vh';
+// Relative to the window rather than a pixel count, so the dropdown still fits
+// under the trigger on a short viewport. Bounds the tree and the matches
+// alike: either can outgrow the window on the real catalogue.
+const MAX_BODY_HEIGHT = '60vh';
 
 function organoNodes(organos: Organo[]): TreeNodeData[] {
   return organos.map((organo) => ({ value: `${ORGANO}${organo.id}`, label: organo.name }));
@@ -196,7 +197,7 @@ function OrganoTree({ data, openId, onOpen, labelledBy }: OrganoTreeProps) {
   return (
     // Every branch opens at once, so a large visible set draws a tree taller
     // than the window it drops into.
-    <ScrollArea.Autosize mah={MAX_TREE_HEIGHT} type="auto">
+    <ScrollArea.Autosize mah={MAX_BODY_HEIGHT} type="auto">
       <Tree
         data={data}
         tree={tree}
@@ -255,7 +256,7 @@ function OrganoMatches({
   return (
     <>
       <Box style={{ display: searching && organos.length > 0 ? undefined : 'none' }}>
-        <ScrollArea.Autosize mah={MAX_TREE_HEIGHT} type="auto">
+        <ScrollArea.Autosize mah={MAX_BODY_HEIGHT} type="auto">
           <Box
             ref={listRef}
             id={id}
