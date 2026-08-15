@@ -16,12 +16,27 @@
 #
 #   cd server && ./gradlew :application:dockerBuild && docker compose --profile app up -d --wait
 #
+# Two ways to run it, and the difference is generation, not conformance:
+#
+#   scripts/contract-test.sh
+#       The pull-request gate. Deterministic — the same inputs every run, so a red build
+#       reproduces locally and a green one never goes red on its own.
+#
+#   CONTRACT_TEST_SEED=$RANDOM CONTRACT_TEST_MAX_EXAMPLES=1000 scripts/contract-test.sh
+#       The nightly fuzz run (.github/workflows/contract-fuzz.yml). A fresh seed and a much
+#       larger budget, which is what makes property-based generation accumulate coverage
+#       across runs instead of probing one fixed set of inputs forever. It can go red on
+#       inputs no earlier run reached; that is the job. Reproduce a failure by passing back
+#       the seed it prints.
+#
 # Usage: scripts/contract-test.sh
 #
 # Environment:
 #   CONTRACT_TEST_BASE_URL         default http://localhost:8080
 #   CONTRACT_TEST_ADMIN_EMAIL      default root@local
 #   CONTRACT_TEST_ADMIN_PASSWORD   default secret
+#   CONTRACT_TEST_SEED             unset ⇒ deterministic; an integer ⇒ that seed
+#   CONTRACT_TEST_MAX_EXAMPLES     unset ⇒ the budget in schemathesis.toml
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -61,6 +76,28 @@ EXEMPT_OPERATIONS="GET /api/admin/metrics"
 BASE_URL="${CONTRACT_TEST_BASE_URL:-http://localhost:8080}"
 ADMIN_EMAIL="${CONTRACT_TEST_ADMIN_EMAIL:-root@local}"
 ADMIN_PASSWORD="${CONTRACT_TEST_ADMIN_PASSWORD:-secret}"
+SEED="${CONTRACT_TEST_SEED:-}"
+MAX_EXAMPLES="${CONTRACT_TEST_MAX_EXAMPLES:-}"
+
+# Deterministic unless a seed is named. The flag has no negation, so schemathesis.toml cannot
+# hold the default and let a caller lift it — which is why the choice is made here.
+GENERATION=()
+if [[ -n "$SEED" ]]; then
+  if [[ ! "$SEED" =~ ^[0-9]+$ ]]; then
+    printf 'CONTRACT_TEST_SEED must be a non-negative integer, got: %s\n' "$SEED" >&2
+    exit 2
+  fi
+  GENERATION+=(--seed "$SEED")
+else
+  GENERATION+=(--generation-deterministic)
+fi
+if [[ -n "$MAX_EXAMPLES" ]]; then
+  if [[ ! "$MAX_EXAMPLES" =~ ^[1-9][0-9]*$ ]]; then
+    printf 'CONTRACT_TEST_MAX_EXAMPLES must be a positive integer, got: %s\n' "$MAX_EXAMPLES" >&2
+    exit 2
+  fi
+  GENERATION+=(--max-examples "$MAX_EXAMPLES")
+fi
 
 bold=$(tput bold 2>/dev/null || true)
 red=$(tput setaf 1 2>/dev/null || true)
@@ -120,7 +157,11 @@ log_in() {
 
 # --- Contract conformance ----------------------------------------------------
 run_schemathesis() {
-  section "API contract conformance (schemathesis)"
+  if [[ -n "$SEED" ]]; then
+    section "API contract conformance (schemathesis, seed ${SEED})"
+  else
+    section "API contract conformance (schemathesis, deterministic)"
+  fi
 
   if ! have docker; then
     printf '%sSKIP%s docker not found — install from https://docs.docker.com/engine/install/\n' "$yellow" "$reset"
@@ -150,6 +191,7 @@ run_schemathesis() {
     --config-file /spec/schemathesis.toml \
     run /spec/openapi.yaml --url "$BASE_URL" --warnings "$SCHEMATHESIS_WARNINGS" \
     --report junit --report-junit-path /report/junit.xml \
+    "${GENERATION[@]}" \
     2>&1 | tee "$output" || status=1
 
   if [[ $status -ne 0 ]]; then
@@ -247,4 +289,15 @@ if [[ ${#FAILED[@]} -eq 0 ]]; then
   exit 0
 fi
 printf '%sFailed checks:%s %s\n' "$red" "$reset" "${FAILED[*]}"
+
+# A seeded run is the only one whose inputs are not implied by the command itself, and it is
+# the one whose failures are hardest to believe — nobody changed anything, the nightly went
+# red. The seed is what turns it back into a repeatable case, so it is printed where the
+# failure is rather than left in the middle of the schemathesis output above.
+if [[ -n "$SEED" ]]; then
+  printf '\nReproduce this run against a freshly started instance with:\n  %s%s%s\n' \
+    "$bold" \
+    "CONTRACT_TEST_SEED=${SEED}${MAX_EXAMPLES:+ CONTRACT_TEST_MAX_EXAMPLES=${MAX_EXAMPLES}} scripts/contract-test.sh" \
+    "$reset"
+fi
 exit 1

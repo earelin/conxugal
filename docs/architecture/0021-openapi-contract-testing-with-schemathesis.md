@@ -46,6 +46,22 @@ repository root.
   and boots. It runs last because it generates data: run earlier, the rows it leaves behind
   would be there for that suite to read, and only the job's `docker compose down -v` teardown
   discards them.
+- **The same script runs twice, on different generation settings**, because a pull-request
+  gate and a fuzzer want opposite things from generation. The pull-request run is
+  **deterministic** on a budget of 50 test cases per operation: it must be quick, and it must
+  never go red on its own, since a gate that fails for reasons unrelated to the change is a
+  gate people learn to re-run rather than read. That stability is bought by probing the same
+  inputs every time — so it stops finding anything new after its first green run, which is the
+  opposite of what property-based generation is for. `contract-fuzz.yml` is the other half: a
+  **fresh seed and a much larger budget, nightly**, where a slow run costs nothing and a
+  surprising failure is the point rather than an interruption. Coverage accumulates across
+  nights instead of being re-spent on one fixed set of inputs.
+- **A nightly failure is replayed by its seed, not re-run.** The seed is drawn by the workflow,
+  written to the job summary before anything can fail, and printed by
+  `scripts/contract-test.sh` beside the failure as the command that reproduces it. Without
+  that, a randomized run is a report nobody can act on. Determinism therefore cannot live in
+  `schemathesis.toml`: no command-line option turns it back off once a file has turned it on,
+  so the choice is made per invocation, by whether `CONTRACT_TEST_SEED` is set.
 - **A violation is a defect in the implementation**, per ADR-0010. The contract is amended
   only when it states something the domain does not mean.
 - **A warning fails the build too.** Schemathesis exits zero on a run that only warns, and its
@@ -108,7 +124,11 @@ contributor setup beyond the Docker daemon the acceptance suite already needs.
   name reaching PostgreSQL as a 500. None of it was visible to any existing test.
 - It counterweights ADR-0018's "stubs can lie": the stubs remain hand-written, but the real
   API is now measured against the same document they are derived from.
-- Failures reproduce locally with the same command CI runs, and generation is deterministic.
+- Failures reproduce locally with the same command CI runs — the pull-request run because its
+  generation is deterministic, the nightly one because it prints back the seed that produced it.
+- The nightly run finds what a fixed-input gate cannot, and finds it away from anyone's pull
+  request: the bug surfaces on the night it is generated rather than under a change that had
+  nothing to do with it.
 
 ### Cons
 - **The run mutates the target's data** — it creates accounts and taxonomy terms, and deletes
@@ -116,6 +136,17 @@ contributor setup beyond the Docker daemon the acceptance suite already needs.
   will leave rows behind and disable seeded accounts. Nothing in the script prevents that. The
   seed restores the rows it *owns* on the next start, but nothing collects the ones the run
   invents.
+- **The nightly run is allowed to be flaky, and nothing here decides what to do about it.** It
+  is a different failure than a red pull request: it may be a real defect, an input the fixtures
+  cannot serve, or a check that a larger budget makes probabilistic — the uniqueness constraints
+  behind *validation mismatch* are the obvious candidate. Triage is a person reading the seed
+  and replaying it. Nothing files an issue or pages anyone; a scheduled workflow that fails
+  notifies only whoever last touched its cron, and a nightly nobody reads is a nightly that does
+  not exist. If it earns the attention, notification is its own decision to record.
+- **The fixtures do not deepen with the budget.** The disposable-terms pool is thirty rows,
+  restored at start-up, so a larger budget exhausts it early and the `DELETE` operations spend
+  the rest of the night on their 404 branch. The extra test cases buy depth on the operations
+  whose inputs are generated, not on the ones pointed at seeded rows.
 - The image tag is bumped by hand: `.github/dependabot.yml` covers npm, Gradle and GitHub
   Actions, and Dependabot does not read shell scripts.
 - `--network host` makes the script Linux-first.
