@@ -1,10 +1,8 @@
+// The keyboard contract of a list that offers options rather than links: one
+// tab stop, the arrows moving within it, and a search box above it that hands
+// focus down. Shared so every such list answers the same keys.
 import type { KeyboardEvent, RefObject } from 'react';
 
-/**
- * The keyboard contract of a list that offers options rather than links: one
- * tab stop, the arrows moving within it, and a search box above it that hands
- * focus down. Shared so every such list answers the same keys.
- */
 const OPTION_SELECTOR = '[role="option"]';
 
 /** Where a key moves focus within a list, or null when it is not ours. */

@@ -100,9 +100,9 @@ function searchBox() {
 
 /** Types into the filter, waiting for the dropdown to have drawn it first. */
 async function search(user: UserEvent, query: string) {
-  await screen.findByRole('textbox', { name: copy.searchLabel });
-  await user.clear(searchBox());
-  await user.type(searchBox(), query);
+  const box = await screen.findByRole('textbox', { name: copy.searchLabel });
+  await user.clear(box);
+  await user.type(box, query);
 }
 
 /** The matches the filter offers, which share the tree's accessible name. */
