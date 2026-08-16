@@ -3,15 +3,18 @@ import { expect, test } from '@playwright/test';
 import { horizontalOverflow } from '../support/locators';
 import { resetMappings } from '../support/wiremock';
 
-// The Órgano the visible set offers that holds no contract of any family. The
-// ones that do hold a family redirect to a child route no section is mounted
-// into yet, so the tab bar is proven by the component suite until it is.
-const EMPTY_ID = '6d4f9b81-0c52-4a17-e396-5b1d8f4c2a60';
-const EMPTY_NAME = 'Instituto Galego da Vivenda e Solo';
+// An Órgano the administration area lists and the picker withholds, because it
+// holds no visible contract of any family — so this page is reached by a
+// retained link and by nothing the UI offers, which is the only way that state
+// exists. Every Órgano the picker *does* offer holds a family, and redirects to
+// a child route no section is mounted into yet, so the tab bar is the component
+// suite's to prove until one is.
+const EMPTY_ID = '0b6d1f52-3a47-4c19-8e25-7f1c4d9a2b60';
+const EMPTY_NAME = 'Axencia de Turismo de Galicia';
 const UNKNOWN_ID = '0f0e0d0c-0b0a-4009-8008-070605040302';
 
 const NO_CONTRACTS = 'Non hai contratos para este órgano.';
-const NO_CONTRACTS_HELP = 'O sistema non garda ningún contrato deste órgano, en ningunha familia.';
+const NO_CONTRACTS_HELP = 'Non hai ningún contrato deste órgano que se poida amosar aquí.';
 const NOT_FOUND_TITLE = 'Non atopamos este órgano.';
 const NOT_FOUND_HELP =
   'A ligazón pode estar mal, ou o órgano pode xa non existir no catálogo. Escolle un ' +
@@ -49,6 +52,10 @@ test.describe('Órgano page', () => {
     await expect(page.getByText(NO_CONTRACTS)).toHaveCount(0);
   });
 
+  // Only the state without a bar and without an outlet is reachable here, which
+  // is the narrow half of this criterion: the width that will matter is a page
+  // with tabs, and that check belongs with the task that mounts the first
+  // section into them.
   test('reads at 360 px without pushing the page sideways', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 720 });
     await page.goto(`/organo/${EMPTY_ID}`);

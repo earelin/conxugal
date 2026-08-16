@@ -58,8 +58,8 @@ against a stubbed API per
   per-family summary port that each family's feature implements.
 - **UI:** the `/organo/:id` **layout route** — the Órgano's name, the tab bar built from that read,
   the redirect from the bare path to the first family's tab, the page's own no-contracts state, and
-  the `<Outlet/>` each family's section is mounted in, **carrying that family's summary as outlet
-  context** so the section does not read it again.
+  the `<Outlet/>` each family's section is mounted in, **carrying that family's entry as outlet
+  context** — the section takes its summary out of it, and does not read it again.
 
 **Out of scope (owned elsewhere):**
 - **Every contract, and every control over contracts.** The contratos menores section — its year
@@ -91,7 +91,9 @@ this shape is worth having. ADR-0015 forbids one feature slice importing another
 component could never render a section it does not own — and a shell that owned every section would
 make the licitacións feature edit the contratos menores slice. The router is in `app/`, which **may**
 import from every feature, so it wires shell and section together while neither imports the other.
-**A new family adds a child route and a tab; it changes no file this feature ships.**
+**A new family adds a registry entry, a label and a child route — and edits no other feature's
+slice.** That is what *additive* has to mean once a router is involved: this feature's own registry
+is where a family is declared, and declaring one there costs the contratos menores slice nothing.
 
 **Deep links are per family**, which is what R15's *reachable independently* asks for. A reader
 sharing a link shares the family they were looking at, and FEAT-0011's year, sort and page ride in
@@ -128,22 +130,31 @@ page needs the Órgano's **name** at the same moment. Both come from the member 
   separate flag that could disagree with the summary beside it — it *is* the summary's existence,
   the same construction FEAT-0011 uses for whether a section exists. `families: {}` is an Órgano
   holding nothing, and it draws no tab bar.
-- **The key names the family; the `route` inside it addresses the family.** The key is an
-  identifier and stays stable; the path segment the section is mounted at travels beside it as
-  **data the server sends**, so the client maps a response onto a route with no table of its own
-  that could disagree with the router. Deriving one from the other — by spelling the key as the
-  segment, or by converting between cases — would put exactly such a table back, in the form of a
-  convention two sides have to keep agreeing on.
+- **The key names the family; the `route` beside it is the server's own statement of where that
+  family is mounted.** The key is an identifier and stays stable, in camelCase like every other
+  property; the path segment travels beside it as **data the server sends**, so a client needs no
+  case conversion — and no table of its own — to turn a response into a link.
+  **This UI is not that client.** React Router is given its route tree up front, so
+  `app/router.tsx` names the segment literally whatever the response says; a table cannot be
+  removed here, only moved. So the family registry names it too, beside the tab's label, and the
+  page addresses a family from there — which also means a tab always points at a route this build
+  has declared, where one built from `route` could point at a segment the router never learned.
+  The segment is therefore written twice — in the registry and in the router's child route, which
+  cannot read the registry because a static import of the slice's barrel would drag the whole slice
+  into the eager chunk — and nothing but the property's `enum` holds those two and the server to
+  the same value. The alternative was writing it twice *and* trusting the response, which is not
+  fewer places. `route` stays in the contract for the clients that are not this one.
 - **Each family's summary is owned by that family's feature**, not by this one. The
   `contratosMenores` entry nests it under `summary` — its years, its `partial` and `updating` are
   [FEAT-0011](../FEAT-0011-contratos-menores-browsing/README.md)'s schema and come from
   FEAT-0011's port; this feature composes the ports and publishes the envelope, and the nesting is
   what keeps `route` out of a schema it does not own. **A new family adds a property and implements
   a port; it changes no member that already exists.**
-- **The page reads only the keys and each entry's `route`.** Which tabs to draw, which to redirect
-  to, and whether to draw a bar at all are answered by `Object.keys(families)`; where each tab
-  points is answered by its `route`. Every `summary` is opaque to this feature and is handed to the
-  section that owns it.
+- **The page reads only the keys.** Which tabs to draw, which to redirect to, and whether to draw a
+  bar at all are answered by `Object.keys(families)` matched against the family registry — and a
+  key the registry does not know is ignored, so a server that learns a family before this build
+  does draws no tab the router cannot follow. Every `summary` is opaque to this feature and is
+  handed to the section that owns it.
 
 > **This replaces two endpoints an earlier draft split**, and the consolidation is the user-visible
 > point. That draft had `GET /api/organo/{id}/contratos/familias` here for the tabs, FEAT-0011's
@@ -187,10 +198,13 @@ member read and the redirect. It imports **no other feature**, and no other feat
   known families. A shared module that knew what a `contratos-menores` summary contains would be
   `shared/` depending on a feature, which ADR-0015 forbids in exactly that direction. Each family's
   slice narrows its own entry; nothing else may.
-- **The summary reaches the section through `<Outlet context={…}/>`**, read with
-  `useOutletContext()`. That is what lets the section have the years without importing this slice
-  and without a second request: the router passes data, so neither feature imports the other. It is
-  the same boundary trick the child routes already use, applied to data instead of composition.
+- **The family's entry reaches the section through `<Outlet context={…}/>`**, read with
+  `useOutletContext()`; the section narrows `family.summary` and nothing else does. That is what
+  lets it have the years without importing this slice and without a second request: the router
+  passes data, so neither feature imports the other. It is the same boundary trick the child routes
+  already use, applied to data instead of composition. The entry is typed and the summary inside it
+  is `unknown`, so reaching for a summary field on the entry is a compiler error rather than a
+  silent `undefined`.
 - The **family registry** — slug, tab label, child-route path — lives here, because it is what the
   tab bar renders and what the router's child routes are declared from. It is a list, and a family is
   an entry.

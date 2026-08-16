@@ -6,6 +6,7 @@ import { RouterProvider } from 'react-router/dom';
 import { describe, expect, it } from 'vitest';
 
 import { theme } from '../../app/theme';
+import { strings } from '../../shared/lib/strings';
 import { FAMILIES, type Family } from './families';
 import { FamilyTabs } from './FamilyTabs';
 
@@ -21,7 +22,7 @@ function renderTabs(held: Family[], active: Family) {
       {
         path: '/organo/:id/:family',
         element: (
-          <FamilyTabs organoId={ORGANO_ID} held={held} active={active}>
+          <FamilyTabs basePath={`/organo/${ORGANO_ID}`} held={held} active={active}>
             <p>{'A sección da familia activa'}</p>
           </FamilyTabs>
         ),
@@ -37,15 +38,20 @@ function renderTabs(held: Family[], active: Family) {
   return { ...utils, router };
 }
 
+/** Found by name, which is how a screen reader's rotor reaches it. */
+function bar() {
+  return screen.getByRole('tablist', { name: strings.organo.tabsLabel });
+}
+
 function tabs() {
-  return within(screen.getByRole('tablist')).getAllByRole('tab');
+  return within(bar()).getAllByRole('tab');
 }
 
 describe('FamilyTabs', () => {
   it('draws the full bar for a single family, which is not a defect', () => {
     renderTabs([contratosMenores], contratosMenores);
 
-    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    expect(bar()).toBeInTheDocument();
     expect(tabs()).toHaveLength(1);
     expect(tabs()[0]).toHaveAccessibleName(contratosMenores.label);
   });
@@ -88,6 +94,9 @@ describe('FamilyTabs', () => {
       `/organo/${ORGANO_ID}/${contratosMenores.path}`,
       `/organo/${ORGANO_ID}/${licitacions.path}`,
     ]);
+    // `type` is what a Mantine tab carries as a button; on an anchor it would
+    // claim the linked document's media type.
+    expect(tabs().every((tab) => !tab.hasAttribute('type'))).toBe(true);
   });
 
   it('moves focus along the bar without navigating, so arrowing past a tab is not a visit', async () => {
@@ -101,6 +110,17 @@ describe('FamilyTabs', () => {
     expect(router.state.location.pathname).toBe(`/organo/${ORGANO_ID}/${contratosMenores.path}`);
 
     await user.keyboard('{Enter}');
+
+    expect(router.state.location.pathname).toBe(`/organo/${ORGANO_ID}/${licitacions.path}`);
+  });
+
+  it('chooses on Space too, which a role=tab is expected to answer', async () => {
+    const user = userEvent.setup();
+    const { router } = renderTabs([contratosMenores, licitacions], contratosMenores);
+
+    await user.tab();
+    await user.keyboard('{ArrowRight}');
+    await user.keyboard(' ');
 
     expect(router.state.location.pathname).toBe(`/organo/${ORGANO_ID}/${licitacions.path}`);
   });

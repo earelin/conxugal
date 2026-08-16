@@ -10,7 +10,7 @@ depends_on: [TASK-0001]
 
 The `/organo/:id` layout route comes into existence here — the Órgano's name, the tab bar built
 from the member read's `families` keys, the redirect from the bare path, and the `<Outlet/>` each
-family's section will mount in, **carrying that family's summary as context**.
+family's section will mount in, **carrying that family's entry as context**.
 
 **It mounts no section, and the outlet stays empty**: the child route that fills it is
 [TASK-0003](TASK-0003-mount-contratos-menores-section.md). Until then the page is a frame, which is
@@ -27,11 +27,14 @@ Drawn in [`design/organo-page.svg`](design/organo-page.svg),
   way the endpoints are. It lives in `shared/` because **two slices consume the response**: this
   page reads the name and the family keys, and each family's section reads its own entry out of the
   same object — ADR-0015's second consumer, present on arrival rather than anticipated.
-  - **`families` is typed as a record of opaque values** — `Record<string, unknown>` — never as a
-    union of the known families. A shared module that knew what a `contratos-menores` summary
-    contains would be `shared/` depending on a feature, which
+  - **The summary inside each family entry is typed as opaque** — `unknown` — never as a union of
+    the known families. A shared module that knew what a `contratos-menores` summary contains would
+    be `shared/` depending on a feature, which
     [ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md)
-    forbids in exactly that direction. Each family's slice narrows its own entry; nothing else may.
+    forbids in exactly that direction. Each family's slice narrows its own summary; nothing else
+    may. The **envelope** around it — the `route` and the `summary` slot every family entry carries
+    — is this feature's own schema and is typed, so a section reaching for a summary field on the
+    entry is a compiler error rather than a silent `undefined`.
   - A `404` from the read is distinguishable from any other failure, because the page renders them
     as two different things.
 - **`ui/src/features/organo/`** — a new slice exposing only an `index.ts` barrel, holding the page,
@@ -48,8 +51,9 @@ Drawn in [`design/organo-page.svg`](design/organo-page.svg),
     order. A key in `families` that the registry does not know is **ignored**, so a server that
     learns a family before this build does draws no tab it cannot route to. A single tab still
     draws the full bar.
-  - `<Outlet context={…}/>` carrying the **active family's summary** together with the Órgano, so
-    the section has its years without a second request and without importing this slice. The
+  - `<Outlet context={…}/>` carrying the **active family's entry** together with the Órgano, so
+    the section takes its years out of `family.summary` without a second request and without
+    importing this slice. The
     active family is the URL's family segment matched against the registry — not a `handle` on the
     child route, which would put the knowledge in `app/`.
 - **The bare-path redirect**: `/organo/:id` redirects to the **first registry family present in
@@ -73,19 +77,23 @@ Drawn in [`design/organo-page.svg`](design/organo-page.svg),
   already uses. **No child route is declared here.**
 - **Copy** in `ui/src/shared/lib/strings.ts` under this slice's namespace, in Galician
   ([SPEC-0001](../../specs/SPEC-0001-web-ui.md) AC7), with exactly the keys the
-  [design's copy table](design/README.md) lists — `families.contratosMenores`, `noContracts`,
-  `noContractsHelp`, `errorTitle`, `errorHelp`, `notFoundTitle`, `notFoundHelp`. `strings.retry`
-  and `strings.loading` are reused, not duplicated. The tab label lives here because the registry
-  does: slug, label and path travel together.
+  [design's copy table](design/README.md) lists — `families.contratosMenores`, `tabsLabel`,
+  `noContracts`, `noContractsHelp`, `errorTitle`, `errorHelp`, `notFoundTitle` and `notFoundHelp`.
+  `strings.retry` and `strings.loading` are reused, not duplicated. The tab label lives here
+  because the registry does: slug, label and path travel together.
 - **The stubbed API**
   ([ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md)):
-  `ui/wiremock/mappings/organo.json` serving `/api/organo/{id}` for the ids
-  `ui/wiremock/mappings/organos.json` already offers the picker — at least one Órgano with a
-  `contratos-menores` summary and one with `families: {}` — so dev, preview and the acceptance
-  suite can reach both shapes of the page.
+  `ui/wiremock/mappings/organo.json` serving `/api/organo/{id}` for every id
+  `ui/wiremock/mappings/organos.json` names, so dev, preview and the acceptance suite can reach
+  every shape of the page. Each Órgano of the **visible set** carries a `contratos-menores`
+  summary — it must, since that set is defined as the Órganos holding at least one visible
+  contract — so the `families: {}` shape belongs to an Órgano the picker **withholds**, reached by
+  a retained link and by nothing the UI offers. An unknown id answers `404`.
 - **Tests**: `organo.test.ts` for the read with `nock`, including the `404` path; component tests
   driving accessible roles and the Galician copy for the tab bar as a function of `families`, the
   redirect target, the ignored unknown key, and each of the four states.
+  - The bar's own tests give it a **second registry entry** the shipped registry does not have,
+    because *first family* and *only family* are otherwise the same assertion.
 
 ## Acceptance criteria
 
@@ -104,11 +112,11 @@ Drawn in [`design/organo-page.svg`](design/organo-page.svg),
   empty page.
 - The page reads **no contract list** and renders **no contract**: the only request the slice makes
   is `GET /api/organo/{id}`.
-- The active family's summary reaches the outlet as context, and the page itself reads **no field
+- The active family's entry reaches the outlet as context, and the page itself reads **no field
   inside any summary** — which tabs to draw and which to redirect to are answered from the keys
   alone.
 - `ui/src/features/organo/` imports nothing from another feature and nothing but `app/router.tsx`
-  imports it; `shared/entities/organo.ts` types `families` opaquely and narrows no family.
+  imports it; `shared/entities/organo.ts` types every summary opaquely and narrows no family.
   `npm run lint` proves both through `eslint-plugin-boundaries`.
 - All copy is Galician and lives in `strings.ts` under this slice's namespace; the page is usable
   at a 360 px viewport. (SPEC-0001 AC6, AC7)

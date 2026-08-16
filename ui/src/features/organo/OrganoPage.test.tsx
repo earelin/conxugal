@@ -42,7 +42,7 @@ function mockOrgano(status: number, body?: object) {
  */
 function FamilySectionSpy() {
   const { organo, family } = useOutletContext<OrganoOutletContext>();
-  const { summary } = family as { summary: { years: number[] } };
+  const summary = family.summary as { years: number[] };
   return <p>{`${organo.name} abre en ${summary.years[0]}`}</p>;
 }
 
@@ -180,8 +180,13 @@ describe('OrganoPage', () => {
 
       renderOrganoPage();
 
-      expect(await screen.findByRole('heading', { name: ORGANO_NAME })).toBeInTheDocument();
+      const title = await screen.findByRole('heading', { name: ORGANO_NAME });
       expect(screen.getAllByRole('heading')).toHaveLength(1);
+      // The tab bar is what follows the name — a subtitle would sit between
+      // them, and being a `Text` rather than a heading would slip past a count.
+      expect(title.nextElementSibling).toContainElement(
+        screen.getByRole('tablist', { name: copy.tabsLabel }),
+      );
     });
   });
 
@@ -217,6 +222,16 @@ describe('OrganoPage', () => {
         'aria-selected',
         'true',
       );
+    });
+
+    it('carries the query string through the redirect, since it is the section that owns it', async () => {
+      mockOrgano(200, member(HOLDS_CONTRATOS_MENORES));
+
+      const { router } = renderOrganoPage(`/organo/${ORGANO_ID}?ano=2024`);
+
+      await screen.findByRole('tablist');
+      expect(router.state.location.pathname).toBe(`/organo/${ORGANO_ID}/${contratosMenores.path}`);
+      expect(router.state.location.search).toBe('?ano=2024');
     });
 
     it('replaces the bare path rather than stacking it, so Back leaves the page', async () => {

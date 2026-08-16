@@ -7,27 +7,45 @@ import { apiFetch } from '../lib/httpClient';
  * the catalogue row in `taxonomiaTree`: no `active`, no `termoId`, because the
  * page renders neither.
  */
+/**
+ * What every family entry carries, whichever family it is: the envelope this
+ * read publishes, and nothing of what is inside it.
+ */
+export interface OrganoFamily {
+  /** The path segment this family's section is mounted at, as the server states it. */
+  route: string;
+  /**
+   * Opaque here on purpose: a shared module that knew what a family's summary
+   * contains would be the shared core depending on a feature, which is the one
+   * direction the layering forbids. Only that family's slice may narrow it.
+   */
+  summary: unknown;
+}
+
+/**
+ * One Órgano as its own page reads it, which is a different serialisation from
+ * the catalogue row in `taxonomiaTree`: no `active`, no `termoId`, because the
+ * page renders neither.
+ */
 export interface OrganoMember {
   id: string;
   name: string;
-  /**
-   * One entry per contract family the Órgano holds visible data for. Values are
-   * opaque here on purpose: a shared module that knew what a family's summary
-   * contains would be the shared core depending on a feature, which is the one
-   * direction the layering forbids. Each family's slice narrows its own entry.
-   */
-  families: Record<string, unknown>;
+  /** One entry per contract family the Órgano holds visible data for. */
+  families: Record<string, OrganoFamily>;
 }
 
 /**
  * What the `/organo/:id` layout route hands the family section mounted in its
  * outlet. It lives here rather than in either slice because both ends need it
  * and neither may import the other.
+ *
+ * The section takes its own summary out of `family.summary` and narrows it
+ * there — typed rather than left `unknown` whole, so reaching for a field of the
+ * summary on the entry itself is a compiler error and not a silent `undefined`.
  */
 export interface OrganoOutletContext {
   organo: OrganoMember;
-  /** The active family's entry, narrowed by the section that understands it. */
-  family: unknown;
+  family: OrganoFamily;
 }
 
 async function fetchOrgano(id: string): Promise<OrganoMember> {

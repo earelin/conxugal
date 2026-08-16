@@ -102,8 +102,9 @@ in the navbar, closed and naming the open Órgano, since that is how a reader ar
 | Key | Galician | Where |
 | --- | --- | --- |
 | `families.contratosMenores` | Contratos menores | the family registry's tab label |
+| `tabsLabel` | Familias de contratos | the tab bar's accessible name, read but not drawn |
 | `noContracts` | Non hai contratos para este órgano. | `families: {}` |
-| `noContractsHelp` | O sistema non garda ningún contrato deste órgano, en ningunha familia. | beneath it |
+| `noContractsHelp` | Non hai ningún contrato deste órgano que se poida amosar aquí. | beneath it |
 | `errorTitle` | Non se puido cargar este órgano. | the member read failed |
 | `errorHelp` | Téntao de novo; se persiste, volve máis tarde. | beneath it |
 | `notFoundTitle` | Non atopamos este órgano. | 404 from the member read |
@@ -112,6 +113,14 @@ in the navbar, closed and naming the open Órgano, since that is how a reader ar
 `strings.retry` (*Tentar de novo*) and `strings.loading` already exist and are reused. The
 tab label lives in this slice's namespace because the family registry does — slug, label
 and child-route path travel together.
+
+`noContractsHelp` speaks for what the page can show rather than for what the system
+stores. The two are the same thing for an Órgano answering `families: {}`, and not for
+one whose families this build does not yet know — a claim that nothing is held *in any
+family* would be one the response it was given contradicts.
+
+`tabsLabel` is never drawn: a `tablist` with no visible label needs an accessible name,
+and every other composite control in the product carries one.
 
 ## Regenerating previews
 

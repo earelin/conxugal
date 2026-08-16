@@ -1,5 +1,5 @@
 import { Stack, Text, Title } from '@mantine/core';
-import { Navigate, Outlet, useMatch, useParams } from 'react-router';
+import { Navigate, Outlet, useLocation, useMatch, useParams } from 'react-router';
 
 import { type OrganoOutletContext, useOrgano } from '../../shared/entities/organo';
 import { isHttpStatus } from '../../shared/lib/httpError';
@@ -27,6 +27,9 @@ const copy = strings.organo;
  */
 export function OrganoPage() {
   const { id = '' } = useParams();
+  // Escaped on the way back out, because `useParams` hands it over decoded.
+  const basePath = `/organo/${encodeURIComponent(id)}`;
+  const { hash, search } = useLocation();
   // Read from the location rather than from a `handle` on the child route,
   // which would put the knowledge of what a family is into `app/`.
   // The splat lets a section's own deeper paths keep the family they sit under,
@@ -74,10 +77,11 @@ export function OrganoPage() {
 
   // The bare path, a family this build does not know, and one it knows but this
   // Órgano does not hold all land on the first family that has a tab: a URL
-  // cannot conjure one, because the bar is built from the read.
+  // cannot conjure one, because the bar is built from the read. The query string
+  // travels with it — a family's own state rides there.
   const active = held.find((family) => family.path === segment) ?? null;
   if (active === null) {
-    return <Navigate to={`/organo/${id}/${held[0].path}`} replace />;
+    return <Navigate to={{ pathname: `${basePath}/${held[0].path}`, search, hash }} replace />;
   }
 
   const context: OrganoOutletContext = { organo, family: organo.families[active.key] };
@@ -85,7 +89,7 @@ export function OrganoPage() {
   return (
     <Stack gap="lg">
       <Title order={2}>{organo.name}</Title>
-      <FamilyTabs organoId={id} held={held} active={active}>
+      <FamilyTabs basePath={basePath} held={held} active={active}>
         <Outlet context={context} />
       </FamilyTabs>
     </Stack>

@@ -41,6 +41,10 @@ and so is not in `depends_on:`, which names only tasks here.
   the side panel, landing on the page, and seeing that family's contracts — driven against the
   WireMock stub, whose `/api/organo/{id}` mapping [TASK-0002](TASK-0002-organo-page-and-family-tabs.md)
   added and whose contract list mapping is FEAT-0011's.
+  - **It carries the 360 px check with it.** TASK-0002 could only assert the width of the page in
+    its *no contracts* state, which draws neither the tab bar nor the outlet — every Órgano holding
+    a family redirected past the frame to a route that did not exist. This task is the first that
+    can measure the page as it actually ships. (SPEC-0001 AC6)
 
 ## Acceptance criteria
 

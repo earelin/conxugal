@@ -45,13 +45,15 @@ export const strings = {
     errorHelp: 'Téntao de novo; se persiste, volve máis tarde.',
   },
   organo: {
-    // Beside the family registry that renders it: slug, label and child-route
-    // path travel together.
     families: {
       contratosMenores: 'Contratos menores',
     },
+    tabsLabel: 'Familias de contratos',
     noContracts: 'Non hai contratos para este órgano.',
-    noContractsHelp: 'O sistema non garda ningún contrato deste órgano, en ningunha familia.',
+    // Speaks for what the page can show rather than for what the system stores:
+    // a family this build does not know is one it cannot draw, not one the
+    // server said nothing about.
+    noContractsHelp: 'Non hai ningún contrato deste órgano que se poida amosar aquí.',
     errorTitle: 'Non se puido cargar este órgano.',
     errorHelp: 'Téntao de novo; se persiste, volve máis tarde.',
     notFoundTitle: 'Non atopamos este órgano.',
