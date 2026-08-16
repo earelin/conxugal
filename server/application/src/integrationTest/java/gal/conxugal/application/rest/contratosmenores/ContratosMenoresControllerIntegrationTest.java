@@ -310,6 +310,20 @@ class ContratosMenoresControllerIntegrationTest extends AuthenticationTestSuppor
         .hasDetail("sort must order by publicationDate or amount");
   }
 
+  // Wrong in both halves, and the direction is the one named: how the parameter is spelled is
+  // settled before which properties this operation offers, the first rule being one every list in
+  // the API shares and the second being this one's alone. Either fault is a true thing to say
+  // about the request; which is said is pinned here so it stays a decision.
+  @Test
+  void sort_wrong_in_both_halves_is_answered_about_its_direction(RequestSpecification spec) {
+    Response response =
+        getAs(spec, TestUserFactory.normalUser(), "?year=2025&sort=obxecto,descending");
+
+    assertProblem(response)
+        .hasStatus(HttpStatus.BAD_REQUEST)
+        .hasDetail("sort direction must be asc or desc");
+  }
+
   // The one refusal whose detail is not a constant. A parameter name is a stranger's text, of
   // whatever length and characters a URI admits, and the problem document declares its detail a
   // single bounded line — so what comes back names one parameter, flattened and short, rather
