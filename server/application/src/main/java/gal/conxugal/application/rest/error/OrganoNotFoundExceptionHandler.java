@@ -1,4 +1,4 @@
-package gal.conxugal.application.http.error;
+package gal.conxugal.application.rest.error;
 
 import gal.conxugal.domain.organo.OrganoNotFoundException;
 import io.micronaut.http.HttpRequest;

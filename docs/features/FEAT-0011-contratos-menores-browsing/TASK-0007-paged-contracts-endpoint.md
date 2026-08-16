@@ -62,7 +62,7 @@ mapping from Micronaut Data's `Page` are recorded there and must not be restated
 - **An unknown Órgano reuses `urn:conxugal:problem-type:organo-not-found`** through the existing
   `OrganoNotFoundExceptionHandler`. **Nothing to do here: the move landed with
   [FEAT-0013](../FEAT-0013-organo-contracts-page/TASK-0001-organo-member-read.md)'s member read**,
-  which reached this condition first — the handler now sits in the shared `http/error` package and
+  which reached this condition first — the handler now sits in the shared `rest/error` package and
   applies to this path as it stands. A **second** problem type for the same condition is not an
   option.
 - **`sourceUrl` is composed on the server**, from a `@ConfigurationProperties` record of this

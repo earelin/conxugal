@@ -73,7 +73,7 @@ and so is not in `depends_on:`, which names only tasks here.
   repository directly.
 - **An unknown Órgano reuses `urn:conxugal:problem-type:organo-not-found`** through the existing
   `OrganoNotFoundExceptionHandler`, which moves out of `rest/admin/organos` to the shared
-  `http/error` package — the same move FEAT-0011's
+  `rest/error` package — the same move FEAT-0011's
   [TASK-0007](../FEAT-0011-contratos-menores-browsing/TASK-0007-paged-contracts-endpoint.md)
   records, done by whichever lands first. A **second** problem type for the same condition is not
   an option.
@@ -98,7 +98,7 @@ and so is not in `depends_on:`, which names only tasks here.
 > does *not* keep `OrganoNotFoundExceptionHandler` from applying outside `rest/admin/organos`:
 > Micronaut resolves an `ExceptionHandler` by the exception type it is declared over, not by the
 > package it sits in, and the 404 integration test passed with the handler still filed under
-> `admin`. It moved to `http/error` anyway, on the different question of where it *belongs* — two
+> `admin`. It moved to `rest/error` anyway, on the different question of where it *belongs* — two
 > slices now throw the exception, and a handler co-located with one of them is owned by a caller
 > that is not the only one. FEAT-0011's [TASK-0007](../FEAT-0011-contratos-menores-browsing/TASK-0007-paged-contracts-endpoint.md)
 > records the same move; this task is the one that landed first, so that one inherits it done.
