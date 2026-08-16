@@ -11,6 +11,7 @@ dependencies {
 
     runtimeOnly(project(":infrastructure"))
 
+    implementation(libs.micronaut.data.model)
     implementation(libs.micronaut.http.server.netty)
     implementation(libs.micronaut.management)
     implementation(libs.micronaut.serde.jackson)

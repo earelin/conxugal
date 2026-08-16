@@ -1155,6 +1155,123 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /api/organo/{id}/contratos-menores:
+    parameters:
+      - $ref: "#/components/parameters/OrganoId"
+    get:
+      tags: [organos]
+      operationId: listOrganoContratosMenores
+      summary: One page of an Órgano's contratos menores of one publication year
+      description: >-
+        One Órgano's contratos menores of **one publication year**, in **one of four
+        orderings**, **one page at a time**, with the count of the whole selection beside it.
+        Available to any authenticated user, `USER` or `ADMIN`. A contrato menor has no detail
+        view, so a row carries every attribute the system holds for it.
+
+
+        **The year is required and there is no all-years list.** Omitting it is a `400`, not a
+        read of everything: one Órgano-year is what bounds the size of this query, and a
+        client's default year is the first entry of the `contratos-menores` summary the
+        Órgano member read carries.
+
+
+        **A contract missing its publication date, its amount or its awardee is withheld** —
+        stored, but not a visible contract. It therefore appears in no page and in **no
+        count**, which is why those three properties are never null on a row here and why an
+        Órgano holding only such contracts is indistinguishable from one holding none.
+
+
+        **Every ordering is total.** Neither sort key is unique, so each appends the contract's
+        source identifier in the same direction; a page therefore repeats no entry and skips
+        none.
+
+
+        **The four query parameters below are the only ones it takes**, and any other is a
+        `400` rather than something ignored. A misspelt `sort` is otherwise the quietest wrong
+        answer this operation could give: the parameter would be dropped, the default ordering
+        applied, and the response — which states no ordering, the URL being what carries it —
+        would look exactly like the one that was asked for.
+      parameters:
+        - name: year
+          in: query
+          required: true
+          description: >-
+            The publication year to read. Mandatory and with no alternative form: there is no
+            *all years* value, no *undated* value, and no server-side default. Anything that is
+            not a four-digit year is a `400`.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1000
+            maximum: 9999
+          example: 2025
+        - name: sort
+          in: query
+          required: false
+          description: >-
+            The ordering, as `property,direction`. The four combinations below are the whole
+            set and it cannot be widened by a caller: **anything else is a `400`**, including
+            another property, a longer spelling of a direction, and an empty value. It is
+            refused rather than degraded to the default, so an answer never carries a
+            different ordering from the one its request named.
+          schema:
+            type: string
+            default: "publicationDate,desc"
+            enum:
+              - "publicationDate,desc"
+              - "publicationDate,asc"
+              - "amount,desc"
+              - "amount,asc"
+          example: "amount,desc"
+        - $ref: "#/components/parameters/PageNumber"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: >-
+            One page of the selection. `totalItems` counts the **whole year**, not the page, so
+            sorting by amount descending puts the largest contract of the year on the first
+            page; and it is the same on every page, paging being a window onto a selection
+            rather than a change to it. A `page` beyond the last answers here too, with an
+            empty `items` and the selection's true totals, rather than an error or a silently
+            clamped page.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContratosMenoresPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: >-
+            No Órgano exists with that id. Carries the problem type
+            `urn:conxugal:problem-type:organo-not-found`, the same one every other read of an
+            Órgano by id uses. An Órgano that exists but holds no visible contrato menor is
+            **not** this: it has no section at all, which the Órgano member read reports by
+            carrying no `contratos-menores` entry.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /api/me:
     get:
       tags: [account]
@@ -1231,6 +1348,37 @@ components:
       schema:
         type: string
         format: uuid
+    PageNumber:
+      name: page
+      in: query
+      required: false
+      description: >-
+        Which page of the selection to read, **1-based** — the same number a shared URL
+        carries and a paging control displays, so nothing between the wire and the screen
+        converts between bases. A page below 1 is a `400`; a page beyond the last is not, and
+        answers an empty one carrying the selection's true totals.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 2147483647
+        default: 1
+      example: 3
+    PageSize:
+      name: size
+      in: query
+      required: false
+      description: >-
+        How many entries the page holds. Outside 1–100 it is **refused rather than clamped**:
+        a smaller answer than the one asked for would disagree with the request that produced
+        it.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        default: 50
+      example: 50
 
   headers:
     ImportRunLocation:
@@ -2101,6 +2249,199 @@ components:
             is expected to change. It says nothing about which Órganos an administrator has
             marked — that the two coincide today is an implementation fact, not a promise this
             field makes.
+
+    PagedCollection:
+      type: object
+      description: >-
+        The paging envelope **every** paginated read in this API answers with. It is declared
+        once and composed into each paged response so the lists a reader meets in one session
+        cannot page differently from one another. An operation adds only its `items`.
+
+
+        Both totals are served because a reader is owed both: `totalPages` is what a paging
+        control renders, and `totalItems` is an answer in its own right — how many entries the
+        current selection holds. Neither is derived by a client, and the two cannot disagree,
+        being read off one page.
+      required: [page, size, totalItems, totalPages]
+      example:
+        page: 3
+        size: 50
+        totalItems: 1832
+        totalPages: 37
+      properties:
+        page:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 2147483647
+          example: 3
+          description: >-
+            The page this response is, 1-based, and always the page the request asked for —
+            nothing is clamped, so a page beyond the last is echoed back with an empty `items`.
+        size:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
+          example: 50
+          description: The page size the request asked for, not the number of entries returned.
+        totalItems:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9223372036854775807
+          example: 1832
+          description: >-
+            How many entries the whole selection holds — not this page. It is the same on every
+            page of one selection.
+        totalPages:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 2147483647
+          example: 37
+          description: >-
+            How many pages the selection spans at this `size`. Zero when the selection is
+            empty.
+
+    ContratosMenoresPage:
+      description: One page of an Órgano's contratos menores, in the shared paging envelope.
+      example:
+        items:
+          - sourceId: 1234567
+            publicationDate: "2025-03-14"
+            obxecto: "Subministración de material funxible de laboratorio"
+            amount: 14520.75
+            duration: "1 mes"
+            awardee:
+              name: "Subministracións Galegas, S.L."
+              fiscalId: "B12345678"
+            sourceUrl: "https://www.contratosdegalicia.gal/licitacion?N=1234567"
+        page: 3
+        size: 50
+        totalItems: 1832
+        totalPages: 37
+      allOf:
+        - $ref: "#/components/schemas/PagedCollection"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              maxItems: 100
+              description: >-
+                The contracts of this page, in the requested ordering. Empty for a page beyond
+                the last; never empty otherwise, since a year is offered only when it holds
+                contracts.
+              items:
+                $ref: "#/components/schemas/ContratoMenor"
+
+    ContratoMenor:
+      type: object
+      description: >-
+        One contrato menor as a browse read shows it. This family has no detail view, so the
+        row carries everything the system holds — and nothing more: it names **no awarding
+        Órgano**, every row of a list belonging to the Órgano already open, and **no operador
+        identity**, nothing consuming one until the operadores read exists.
+
+
+        The publication date, the amount and the awardee are **never null**, a contract
+        missing any of them being withheld rather than shown incomplete. Only the object and
+        the duration can be absent, the source genuinely publishing neither for some awards;
+        both are present as `null` rather than omitted.
+      required: [sourceId, publicationDate, obxecto, amount, duration, awardee, sourceUrl]
+      example:
+        sourceId: 1234567
+        publicationDate: "2025-03-14"
+        obxecto: "Subministración de material funxible de laboratorio"
+        amount: 14520.75
+        duration: "1 mes"
+        awardee:
+          name: "Subministracións Galegas, S.L."
+          fiscalId: "B12345678"
+        sourceUrl: "https://www.contratosdegalicia.gal/licitacion?N=1234567"
+      properties:
+        sourceId:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9223372036854775807
+          example: 1234567
+          description: >-
+            The contract's identifier as the official source publishes it. It is the
+            contract's identity here too — nothing assigns a second one — and it is what the
+            source link is composed from.
+        publicationDate:
+          type: string
+          format: date
+          maxLength: 10
+          example: "2025-03-14"
+          description: The date the award was published, interpreted from the source's own text.
+        obxecto:
+          type: [string, "null"]
+          pattern: "\\S"
+          example: "Subministración de material funxible de laboratorio"
+          description: >-
+            What was contracted, exactly as published — nothing truncates, case-folds or
+            reformats it, and the source publishes no length cap. Never blank: a blank one is
+            null instead. Galician here because it is Galician in the domain and in the store.
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1000000000000
+          example: 14520.75
+          description: >-
+            The awarded amount as published, in euros and **including VAT**. The thresholds
+            that legally define a contrato menor are VAT-exclusive, so anything rendering this
+            figure has to say so.
+        duration:
+          type: [string, "null"]
+          maxLength: 64
+          pattern: "\\S"
+          example: "1 mes"
+          description: >-
+            The stated duration as published, capped at 64 characters when it was read, and
+            never blank — a blank one is null instead. The source frequently publishes a
+            per-Órgano default here rather than a per-contract term, so it is not a reliable
+            contract term.
+        awardee:
+          $ref: "#/components/schemas/Awardee"
+        sourceUrl:
+          type: string
+          format: uri
+          example: "https://www.contratosdegalicia.gal/licitacion?N=1234567"
+          description: >-
+            An absolute link to this contract's publication at the official source, so any row
+            can be checked against the original. It is composed on the server, from the
+            source's public address and this row's `sourceId`, and never from the address the
+            importer is pointed at — the two coincide only in production.
+
+    Awardee:
+      type: object
+      description: >-
+        Who was awarded the contract, under the operador's single selected name and its one
+        canonical fiscal identifier. Per-contract spelling variance is not recorded anywhere,
+        so this is the same pair wherever the same operador appears. It carries no identity of
+        its own yet: the crossing into an operador is added with the read that gives it
+        somewhere to go.
+      required: [name, fiscalId]
+      example:
+        name: "Subministracións Galegas, S.L."
+        fiscalId: "B12345678"
+      properties:
+        name:
+          type: string
+          pattern: "\\S"
+          example: "Subministracións Galegas, S.L."
+          description: The operador's name, displayed exactly as published — case and spacing included.
+        fiscalId:
+          type: string
+          pattern: "^\\S(.*\\S)?$"
+          example: "B12345678"
+          description: >-
+            The operador's canonical fiscal identifier: the published one with surrounding
+            whitespace removed and letters upper-cased, and nothing else changed.
 
     RuntimeMetrics:
       type: object

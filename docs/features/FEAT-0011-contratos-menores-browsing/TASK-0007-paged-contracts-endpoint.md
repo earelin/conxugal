@@ -2,7 +2,7 @@
 feat: FEAT-0011
 domain: backend
 adrs: [0002, 0005, 0006, 0010, 0012, 0016, 0020, 0021, 0022]
-status: todo
+status: done
 depends_on: [TASK-0005]
 ---
 
@@ -83,6 +83,45 @@ mapping from Micronaut Data's `Page` are recorded there and must not be restated
 - Integration tests in `server/application/src/integrationTest`, plus the Schemathesis run
   ([ADR-0021](../../architecture/0021-openapi-contract-testing-with-schemathesis.md)) through
   `scripts/contract-test.sh`.
+
+## What building it found
+
+> **The `OrganoNotFoundExceptionHandler` contingency did not fire, and it is now answered rather
+> than assumed.** Micronaut resolves an `ExceptionHandler` by the exception type it is declared
+> against, not by the package the controller sits in, and a package-private `@Singleton` registers
+> like any other — so the handler under `rest/admin/organos` already covers a read outside it. The
+> scope's *move it to a shared error package* branch is therefore unused and no second problem type
+> exists. The package name is now a little misleading, which is a rename for whoever adds the third
+> caller rather than a change worth making on this one.
+>
+> **Two absences the serializer would have dropped, and only one of them was foreseen.** The row's
+> null `obxecto` and `duration` needed `@JsonInclude(ALWAYS)`, as every response carrying a
+> meaningful null does. So did the envelope's **empty `items`** — the default inclusion is
+> `NON_EMPTY`, so a page beyond the last went out as `{"page":100,…}` with the key the contract
+> marks required missing altogether, on exactly the response a client has to read to clamp. Both
+> are asserted on the serialised keys rather than on the record's fields, which is what keeps the
+> annotation load-bearing.
+>
+> **An unknown query parameter was accepted, and Schemathesis is what noticed.** This is the first
+> operation in the contract with query parameters at all, so the coverage phase's *unexpected
+> property* case had never applied before; it sent one and got a `200`. Ignoring it is the quietest
+> wrong answer this operation could give — `?srot=amount,asc` would have been answered in the
+> default ordering, and the envelope states no ordering back — so an unrecognised parameter is now
+> a **400**, which is the same rule as refusing an ordering that was never offered, one level up.
+>
+> **A refusal has to be thrown as a problem, not as a status.** `HttpStatusException` reaches
+> Micronaut's own handler and is rendered `{"type":"about:blank","title":"Bad Request","status":400}`
+> — the message dropped. On an operation with five distinct refusal rules that leaves a caller to
+> guess which one it broke, so the refusals build a `Problem` with a `detail` naming the parameter,
+> which the shared `BadRequest` response already admits without a contract change.
+>
+> **`ApiUrlPrefixArchTest`'s sibling rule had to be narrowed, and it is narrowed to three classes.**
+> `ModuleBoundariesArchTest.APPLICATION_DOES_NOT_DEPEND_ON_PERSISTENCE` predates
+> [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md) and forbade
+> `application` naming anything under `io.micronaut.data..` — which is precisely the widening that
+> record states and accepts. It now excepts `Page`, `Pageable` and `Sort` and nothing else, so the
+> rule still keeps out every annotation, every repository type and the whole runtime, and the
+> exception is the size the ADR made it rather than a hole the next change can widen quietly.
 
 ## Acceptance criteria
 
