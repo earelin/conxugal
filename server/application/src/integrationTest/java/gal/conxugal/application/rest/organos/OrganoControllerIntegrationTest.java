@@ -180,26 +180,19 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
         .hasType("urn:conxugal:problem-type:organo-not-found");
   }
 
+  // The status and the body together: 401 alone would still pass if the refusal carried the
+  // Órgano beside it, and a name is what an unauthenticated caller must not learn from a path
+  // that names one. Refused by the filter chain, so neither collaborator is stubbed here.
   @Test
-  void unauthenticated_caller_is_unauthorized(RequestSpecification spec) {
-    given(spec)
-    .when()
-        .get(memberOf(SERGAS))
-    .then()
-        .statusCode(HttpStatus.UNAUTHORIZED.getCode());
-  }
-
-  // Nothing may be read before the session is: an unauthenticated caller is refused by the filter
-  // chain, so neither collaborator is reached and there is no body to leak.
-  @Test
-  void unauthenticated_caller_reads_no_organo(RequestSpecification spec) {
+  void unauthenticated_caller_is_unauthorized_and_reads_no_organo(RequestSpecification spec) {
     Response response =
         given(spec)
         .when()
             .get(memberOf(SERGAS));
 
-    assertThat(response.jsonPath().getString("name")).isNull();
-    assertThat(response.jsonPath().getString("families")).isNull();
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED.getCode());
+    assertThat(response.jsonPath().getMap("$"))
+        .doesNotContainKeys("id", "name", "families");
   }
 
   private void stubOrgano() {

@@ -7,11 +7,13 @@ info:
     REST API for the Conxugal application. All endpoints live under the reserved `/api/` prefix
     (ADR-0006). Authentication is a server-side session established by the server-rendered
     `/login` form (ADR-0005, outside this JSON API) and carried by a session cookie. Most
-    operations are restricted to administrators; the exceptions are `GET /api/me` and the two
-    Órganos reads (`GET /api/organos` and `GET /api/organos/taxonomia`), available to any
-    authenticated user. `GET /api/organos` serves the **visible set** — the Órganos holding at
-    least one visible contract — to every caller alike; the **whole** catalogue is an
-    administration read, `GET /api/admin/organos`.
+    operations are restricted to administrators; the exceptions are `GET /api/me` and the three
+    Órganos reads (`GET /api/organos`, `GET /api/organos/taxonomia` and the member read `GET
+    /api/organo/{id}`), available to any authenticated user. `GET /api/organos` serves the
+    **visible set** — the Órganos holding at least one visible contract — to every caller alike;
+    the **whole** catalogue is an administration read, `GET /api/admin/organos`. The member read
+    narrows for nobody: visibility is a property of the contracts, not of the reader, so an Órgano
+    the visible set leaves out is still answered, carrying no family.
 
     This document is the design-first, authoritative contract for the API (ADR-0010): endpoints
     are specified here before they are implemented, and controllers conform to it. It currently
@@ -20,8 +22,9 @@ info:
     catalogue import trigger), FEAT-0007 (the Órganos catalogue and taxonomía reads, and the
     administration of the taxonomía and of each Órgano's placement in it), FEAT-0009 (the
     contratos menores import mark and the administrator's catalogue read that carries it, the
-    two import triggers, and the read that reports what a run amounted to), and FEAT-0012 (the
-    narrowing of the shared catalogue read to the visible set).
+    two import triggers, and the read that reports what a run amounted to), FEAT-0012 (the
+    narrowing of the shared catalogue read to the visible set), and FEAT-0013 (the Órgano member
+    read, carrying one summary per contract family it holds visible data for).
 
 servers:
   - url: /

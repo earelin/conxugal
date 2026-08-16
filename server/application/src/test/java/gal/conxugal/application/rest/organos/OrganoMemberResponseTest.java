@@ -36,18 +36,10 @@ class OrganoMemberResponseTest {
     });
   }
 
-  @Test
-  void organo_holding_no_family_still_carries_the_families_object() {
-    OrganoMemberResponse response = OrganoMemberResponse.of(sergas(), new FamiliesResponse(null));
-
-    assertThat(response.families()).isNotNull();
-    assertThat(response.families().contratosMenores()).isNull();
-  }
-
-  // The page renders "this Órgano holds no contracts" from an empty families map, so an absent
-  // key and an empty one are different facts. The serializer's default NON_EMPTY inclusion is
-  // what would drop it, which is why @JsonInclude(ALWAYS) on the record is load-bearing and why
-  // this asserts on the serialised key rather than on the record's component.
+  // The page renders "this Órgano holds no contracts" from an empty families map, so an absent key
+  // and an empty one are different facts. Asserted on the serialised key rather than the record's
+  // component because the record cannot be wrong here — what could is the inclusion rule the
+  // serializer applies to the property, and only the payload shows that.
   @Test
   void serialises_an_empty_families_map_rather_than_dropping_it() throws IOException {
     ObjectMapper objectMapper = ObjectMapper.getDefault();
@@ -58,10 +50,10 @@ class OrganoMemberResponseTest {
     assertThat(objectMapper.readValue(json, asMap())).containsEntry("families", Map.of());
   }
 
-  // The opposite requirement to the one above, on the same payload: families itself must always
-  // be there, and a family it does not hold must not be. A contratos-menores key sent as null
-  // would be a second spelling of "no data" beside the absent key the contract declares, and a
-  // client reading Object.keys(families) would count a family this Órgano does not have.
+  // The other half of the same payload: families itself must be there, and a family it does not
+  // hold must not be. A contratos-menores key sent as null would be a second spelling of "no data"
+  // beside the absent key the contract declares, and a client reading Object.keys(families) would
+  // count a family this Órgano does not have.
   @Test
   void omits_family_with_no_data_instead_of_sending_it_as_null() throws IOException {
     ObjectMapper objectMapper = ObjectMapper.getDefault();

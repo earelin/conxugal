@@ -72,8 +72,8 @@ and so is not in `depends_on:`, which names only tasks here.
   `OrganoNotFoundException`, in the shape `ListOrganos` already sets. The controller reaches no
   repository directly.
 - **An unknown Órgano reuses `urn:conxugal:problem-type:organo-not-found`** through the existing
-  `OrganoNotFoundExceptionHandler`. If its package-private visibility keeps it from applying
-  outside `rest/admin/organos`, it moves to a shared error package — the same move FEAT-0011's
+  `OrganoNotFoundExceptionHandler`, which moves out of `rest/admin/organos` to the shared
+  `http/error` package — the same move FEAT-0011's
   [TASK-0007](../FEAT-0011-contratos-menores-browsing/TASK-0007-paged-contracts-endpoint.md)
   records, done by whichever lands first. A **second** problem type for the same condition is not
   an option.
@@ -94,22 +94,27 @@ and so is not in `depends_on:`, which names only tasks here.
 
 ## What building it found
 
-> **The handler needed no move, and that is now tested rather than assumed.** The contingency
-> above — package-private visibility keeping `OrganoNotFoundExceptionHandler` from applying outside
-> `rest/admin/organos` — did not fire. Micronaut resolves an `ExceptionHandler` by the exception
-> type it is declared over, not by the package it sits in, so a controller in `rest/organos` is
-> answered by it unchanged. Every one of the module's twelve handlers is package-private and none
-> is co-located with all the controllers it serves, so there was never a shared error package
-> waiting to be needed. FEAT-0011's [TASK-0007](../FEAT-0011-contratos-menores-browsing/TASK-0007-paged-contracts-endpoint.md)
-> records the same contingency and can now drop it.
+> **The handler moved, but not for the reason the contingency named.** Package-private visibility
+> does *not* keep `OrganoNotFoundExceptionHandler` from applying outside `rest/admin/organos`:
+> Micronaut resolves an `ExceptionHandler` by the exception type it is declared over, not by the
+> package it sits in, and the 404 integration test passed with the handler still filed under
+> `admin`. It moved to `http/error` anyway, on the different question of where it *belongs* — two
+> slices now throw the exception, and a handler co-located with one of them is owned by a caller
+> that is not the only one. FEAT-0011's [TASK-0007](../FEAT-0011-contratos-menores-browsing/TASK-0007-paged-contracts-endpoint.md)
+> records the same move; this task is the one that landed first, so that one inherits it done.
 >
-> **`families` is a record with one component, not a `Map`.** Both reach the wire as `{}` when
-> empty, but only the record carries `additionalProperties: false`'s meaning into Java and spells
-> the slug exactly once, in a `@JsonProperty`. What it costs is that the two inclusions are
-> *opposite* and both load-bearing: `ALWAYS` on `OrganoMemberResponse` so an empty families map is
-> not dropped, `NON_NULL` on `FamiliesResponse` so an absent family is not sent as an explicit
-> null. Either one alone produces a payload the page misreads, so each has its own test asserting
-> the serialised keys rather than the record's components.
+> **`families` is a record with one component, not a `Map`**, which carries
+> `additionalProperties: false`'s meaning into Java and spells the slug exactly once, in a
+> `@JsonProperty`. Choosing the record is also what made **both `@JsonInclude` overrides
+> unnecessary**, and they are gone. The first draft carried `ALWAYS` on `OrganoMemberResponse` and
+> `NON_NULL` on `FamiliesResponse`, each documented as load-bearing; neither was. Micronaut Serde's
+> default `NON_EMPTY` asks a property's own serializer whether it is empty, and the one for a
+> bean-typed property answers that only for a null — so `NON_EMPTY` degenerates to `NON_NULL`
+> there. `families` is never null, and the absent family already is one. Deleting both annotations
+> changes no byte of the payload, which is how it was checked. A `Map` would have been the case
+> where `ALWAYS` was genuinely required, since a map serializer *does* report an empty map as
+> empty; the `OrganoResponse` precedent the drafts cited is real but different, its `termoId` being
+> an actual null. **What guards the shape is the round trip over HTTP**, not an annotation.
 >
 > **The member read costs two `findById` calls**, one in `ViewOrgano` and one inside
 > `DescribeContratosMenoresSection`. It is the price of the port deciding its own presence rule —
