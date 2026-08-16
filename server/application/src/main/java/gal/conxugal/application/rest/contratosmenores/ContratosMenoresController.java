@@ -173,15 +173,24 @@ class ContratosMenoresController {
    * The contract's 1-based page as the store's 0-based one, carrying no ordering: the sort is the
    * use case's to build, and a pageable arriving with one would be a second source for a clause
    * that must have exactly one.
+   *
+   * <p>The {@code - 1} is the change of base and nothing else. It is written as a literal rather
+   * than as {@link #MIN_PAGE}, which happens to be the same number for a different reason — the
+   * smallest page a caller may ask for — so that raising the floor could never silently move the
+   * origin with it.
    */
   private static Pageable pageableOf(int page, int size) {
+    refusePagingOutsideItsRange(page, size);
+    return Pageable.from(page - 1, size);
+  }
+
+  private static void refusePagingOutsideItsRange(int page, int size) {
     if (page < MIN_PAGE) {
       throw refused("page is 1-based, so it must be %d or greater".formatted(MIN_PAGE));
     }
     if (size < MIN_SIZE || size > MAX_SIZE) {
       throw refused("size must be between %d and %d".formatted(MIN_SIZE, MAX_SIZE));
     }
-    return Pageable.from(page - MIN_PAGE, size);
   }
 
   /**
