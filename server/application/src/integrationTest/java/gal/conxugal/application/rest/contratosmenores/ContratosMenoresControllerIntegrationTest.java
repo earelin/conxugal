@@ -233,13 +233,8 @@ class ContratosMenoresControllerIntegrationTest extends AuthenticationTestSuppor
   void unknown_organo_is_organo_not_found(RequestSpecification spec) {
     when(listContratosMenores.list(any(), any(), any(), any(), any()))
         .thenThrow(new OrganoNotFoundException(SANIDADE));
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.normalUser());
 
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-        .when()
-            .get(contractsOf(SANIDADE) + "?year=2025");
+    Response response = getAs(spec, TestUserFactory.normalUser(), "?year=2025");
 
     assertProblem(response)
         .hasStatus(HttpStatus.NOT_FOUND)
@@ -263,13 +258,7 @@ class ContratosMenoresControllerIntegrationTest extends AuthenticationTestSuppor
   @ParameterizedTest(name = "{0}")
   @MethodSource("refusedSelections")
   void selection_is_refused(String reason, String query, RequestSpecification spec) {
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.normalUser());
-
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-        .when()
-            .get(contractsOf(SANIDADE) + query);
+    Response response = getAs(spec, TestUserFactory.normalUser(), query);
 
     assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
     verifyNoInteractions(listContratosMenores);
@@ -305,13 +294,8 @@ class ContratosMenoresControllerIntegrationTest extends AuthenticationTestSuppor
   // are thrown as problems rather than as statuses.
   @Test
   void refusal_says_which_rule_the_selection_broke(RequestSpecification spec) {
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.normalUser());
-
     Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-        .when()
-            .get(contractsOf(SANIDADE) + "?year=2025&sort=obxecto,asc");
+        getAs(spec, TestUserFactory.normalUser(), "?year=2025&sort=obxecto,asc");
 
     assertProblem(response)
         .hasStatus(HttpStatus.BAD_REQUEST)
@@ -325,14 +309,9 @@ class ContratosMenoresControllerIntegrationTest extends AuthenticationTestSuppor
   @Test
   void refusal_repeats_back_one_short_parameter_name_however_much_was_sent(
       RequestSpecification spec) {
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.normalUser());
     String sprawling = "?year=2025&%0Aorder=1&" + "z".repeat(200) + "=1";
 
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-        .when()
-            .get(contractsOf(SANIDADE) + sprawling);
+    Response response = getAs(spec, TestUserFactory.normalUser(), sprawling);
 
     assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
     assertThat(response.jsonPath().getString("detail"))
@@ -370,15 +349,19 @@ class ContratosMenoresControllerIntegrationTest extends AuthenticationTestSuppor
         new FiscalIdentifier("B12345678"));
   }
 
-  private Response readAs(RequestSpecification spec, User user, String query) {
+  /** The read as an authenticated caller, whatever it answers. */
+  private Response getAs(RequestSpecification spec, User user, String query) {
     String sessionCookie = seedUserAndLoginAs(spec, user);
 
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-        .when()
-            .get(contractsOf(SANIDADE) + query);
+    return given(spec)
+        .header(HttpHeaders.COOKIE, sessionCookie)
+    .when()
+        .get(contractsOf(SANIDADE) + query);
+  }
 
+  /** The same read, for the cases that are only interesting once it succeeded. */
+  private Response readAs(RequestSpecification spec, User user, String query) {
+    Response response = getAs(spec, user, query);
     response.then().statusCode(HttpStatus.OK.getCode());
     return response;
   }
