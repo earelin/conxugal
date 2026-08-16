@@ -37,6 +37,21 @@ class OrganoMemberResponseTest {
     });
   }
 
+  // The two scalars the page actually renders, asserted as a client parses them. The record test
+  // above sees the components and the key-set test below sees only the names, so without this
+  // nothing checks what the payload carries under them — that the identity arrives as the bare
+  // UUID string the contract declares rather than wrapped, and that the name survives verbatim,
+  // accents included.
+  @Test
+  void serialises_the_identity_as_bare_uuid_beside_the_name() throws IOException {
+    OrganoMemberResponse response =
+        OrganoMemberResponse.of(sergas(), familiesWithContratosMenores());
+
+    assertThat(serialised(response))
+        .containsEntry("id", ORGANO_ID.value().toString())
+        .containsEntry("name", "Servizo Galego de Saúde");
+  }
+
   // The page renders "this Órgano holds no contracts" from an empty families map, so an absent key
   // and an empty one are different facts.
   @Test
@@ -72,6 +87,25 @@ class OrganoMemberResponseTest {
         .extracting("contratosMenores", MAP)
         .containsEntry("route", "contratos-menores")
         .containsOnlyKeys("route", "summary");
+  }
+
+  // The envelope must carry the summary through, not merely make room for it: the test above sees
+  // that a `summary` key exists, and this one that what is under it is what the section answered —
+  // its years in the order they arrived, newest first, and the two flags unswapped. The page never
+  // reads these; the section mounted below it does, out of this same response.
+  @Test
+  void serialises_the_familys_summary_with_its_years_newest_first_and_both_flags()
+      throws IOException {
+    OrganoMemberResponse response =
+        OrganoMemberResponse.of(sergas(), familiesWithContratosMenores());
+
+    assertThat(serialised(response))
+        .extracting("families", MAP)
+        .extracting("contratosMenores", MAP)
+        .extracting("summary", MAP)
+        .containsEntry("years", List.of(2025, 2024, 2023))
+        .containsEntry("partial", false)
+        .containsEntry("updating", true);
   }
 
   // The catalogue row's fields are absent by construction here rather than by omission: the page
