@@ -23,6 +23,7 @@ import io.micronaut.security.rules.SecurityRule;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * One Órgano's contratos menores, a year at a time. Open to any authenticated caller — the read is
@@ -60,6 +61,9 @@ class ContratosMenoresController {
   private static final String ASCENDING = "asc";
   private static final String DESCENDING = "desc";
   private static final Set<String> ACCEPTED_PARAMETERS = Set.of("year", "sort", "page", "size");
+  private static final Pattern WHOLE_NUMBER = Pattern.compile("-?\\d{1,10}");
+  private static final int DEFAULT_PAGE = 1;
+  private static final int DEFAULT_SIZE = 50;
   private static final int MIN_PAGE = 1;
   private static final int MIN_SIZE = 1;
   private static final int MAX_SIZE = 100;
@@ -80,12 +84,14 @@ class ContratosMenoresController {
       @PathVariable UUID id,
       @QueryValue @Nullable String year,
       @QueryValue(defaultValue = DEFAULT_SORT) String sort,
-      @QueryValue(defaultValue = "1") int page,
-      @QueryValue(defaultValue = "50") int size) {
+      @QueryValue @Nullable String page,
+      @QueryValue @Nullable String size) {
     refuseUnknownParameters(request, ACCEPTED_PARAMETERS);
     YearSelection selection = yearOf(year);
     Ordering ordering = orderingOf(sort);
-    Pageable pageable = pageableOf(page, size);
+    Pageable pageable =
+        pageableOf(
+            wholeNumberOf("page", page, DEFAULT_PAGE), wholeNumberOf("size", size, DEFAULT_SIZE));
 
     Page<VisibleContratoMenor> answered =
         listContratosMenores.list(
@@ -126,6 +132,35 @@ class ContratosMenoresController {
       case DESCENDING -> Optional.of(Sort.Order.Direction.DESC);
       default -> Optional.empty();
     };
+  }
+
+  /**
+   * A paging parameter as the number it claims to be, its default when it was not sent at all, or
+   * a refusal.
+   *
+   * <p><b>Both arrive as text on purpose</b>, and the framework's own conversion is what that
+   * avoids. Bound as an {@code int} with a {@code defaultValue}, a value the converter cannot read
+   * is not refused — the binder falls back to the default — so {@code ?size=} was answered with
+   * fifty rows and a body saying {@code "size": 50}, which is the wrong answer to a question
+   * nobody asked. Absent and empty are different requests and only the first has a default.
+   *
+   * <p>The pattern does the refusing rather than {@link Integer#parseInt}, for the reason a year
+   * is parsed the same way: {@code parseInt} accepts a leading {@code +} and digits from every
+   * script Unicode defines, none of which the contract offers. Ten digits is the widest a
+   * {@code format: int32} parameter can be, and anything beyond what an {@code int} holds is
+   * refused rather than wrapped.
+   */
+  private static int wholeNumberOf(String name, @Nullable String published, int whenAbsent) {
+    if (published == null) {
+      return whenAbsent;
+    }
+    if (WHOLE_NUMBER.matcher(published).matches()) {
+      long value = Long.parseLong(published);
+      if (value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE) {
+        return (int) value;
+      }
+    }
+    throw refused("%s must be a whole number".formatted(name));
   }
 
   /**

@@ -118,6 +118,20 @@ mapping from Micronaut Data's `Page` are recorded there and must not be restated
 > mirrors what was published, and a claim only the document makes is worse than no claim. Bounding
 > it for real is a `CHECK` and a domain guard, which belongs to whoever owns the store.
 >
+> **An empty `page` or `size` was answered with the default, and the fuzzer is what found it.**
+> Bound as an `int` carrying a `@QueryValue(defaultValue = …)`, a value Micronaut's conversion
+> cannot read is not refused: the binder falls back to the default. So `?size=` came back `200`
+> with fifty rows and a body stating `"size": 50` — a wrong answer to a question nobody asked, and
+> the same quiet-default failure the `sort` refusal exists to prevent. `year` and `sort` never had
+> it, being bound as text and parsed here. Both paging parameters now arrive as text too, and are
+> refused unless they are a whole number an `int32` holds — **absent and empty are different
+> requests, and only the first has a default**.
+>
+> It survived a green local contract run and was caught by the pull-request gate, which is the
+> case ADR-0021 describes: the run is deterministic per environment, not identical across them,
+> because the acceptance suite ahead of it leaves different rows behind. The three refusals are
+> now integration-tested by name, so no future run has to rediscover them.
+>
 > **A refusal has to be thrown as a problem, not as a status.** `HttpStatusException` reaches
 > Micronaut's own handler and is rendered `{"type":"about:blank","title":"Bad Request","status":400}`
 > — the message dropped. On an operation with five distinct refusal rules that leaves a caller to

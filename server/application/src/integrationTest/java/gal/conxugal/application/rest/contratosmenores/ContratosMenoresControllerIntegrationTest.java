@@ -282,6 +282,14 @@ class ContratosMenoresControllerIntegrationTest extends AuthenticationTestSuppor
         arguments("page is below the first one", "?year=2025&page=0"),
         arguments("page is negative", "?year=2025&page=-1"),
         arguments("page is not a number", "?year=2025&page=first"),
+        // Sent but empty is a different request from not sent, and only the second has a default.
+        // Bound as an int with a defaultValue, both were answered with the default — which is how
+        // ?size= came back as a page of fifty rows saying "size": 50.
+        arguments("page is empty", "?year=2025&page="),
+        arguments("size is empty", "?year=2025&size="),
+        arguments("page is wider than the int32 the contract declares",
+            "?year=2025&page=2147483648"),
+        arguments("size carries a sign the contract does not offer", "?year=2025&size=+50"),
         arguments("size is below one", "?year=2025&size=0"),
         arguments("size is above the hundred allowed", "?year=2025&size=101"),
         arguments("a parameter this operation does not have", "?year=2025&order=amount"),
