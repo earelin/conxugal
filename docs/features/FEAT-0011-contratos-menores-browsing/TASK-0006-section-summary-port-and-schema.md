@@ -2,7 +2,7 @@
 feat: FEAT-0011
 domain: backend
 adrs: [0002, 0010]
-status: todo
+status: done
 depends_on: [TASK-0004]
 ---
 
@@ -46,6 +46,24 @@ map rather than an endpoint to the contract — and it is why an earlier draft's
   type. Nothing about the import beyond the two flags, and nothing added to `GET /api/organos`.
 - Unit-tested: the mapping from a domain section onto the response, including that `years` keeps
   the newest-first order it arrived in and that both flags survive independently.
+
+## What building it found
+
+> **The unused-component contingency did not fire, and it is now answered rather than assumed.**
+> `ContratosMenoresSummary` is the first schema in the contract that nothing `$ref`s — all 21
+> already there are referenced at least once — so the question the scope raised was a real one.
+> Vacuum reports it as `oas3-unused-component`, and reports it as a **warning**:
+> `scripts/openapi-lint.sh` passes no `--fail-severity`, so vacuum's default of `error` applies and
+> the gate exits 0 with one warning beside the seven `description-duplication` informs the contract
+> already carried. The schema therefore stays declared here, and
+> [FEAT-0013](../FEAT-0013-organo-contracts-page/README.md)'s member read will `$ref` it and take
+> the warning away.
+>
+> **The response record needs no `@JsonInclude` override**, unlike every response beside it that
+> carries a meaningful null. The two flags are primitives and the years are never empty, so the
+> serializer's default `NON_EMPTY` inclusion drops nothing the contract declares required — which
+> the mapping test asserts on the serialised keys rather than trusts, since all three are
+> `required` and a later change to the global inclusion is exactly what would take one out.
 
 ## Acceptance criteria
 

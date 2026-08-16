@@ -2053,6 +2053,55 @@ components:
           items:
             $ref: "#/components/schemas/ImportRunOrgano"
 
+    ContratosMenoresSummary:
+      type: object
+      description: >-
+        What an Órgano's contratos menores section says about itself, answered before any contract
+        is fetched. **Its presence is what says the section exists**: it is carried as the
+        `contratos-menores` entry of an Órgano's families map, and an Órgano with no visible
+        contrato menor carries no entry at all — which is also how one holding only contracts the
+        system withholds is indistinguishable from one holding none. There is deliberately no *has
+        contracts* flag, because a section exists exactly when there is a year to open it on and a
+        flag beside the years could disagree with them.
+      required: [years, partial, updating]
+      example:
+        years: [2025, 2024, 2023]
+        partial: false
+        updating: true
+      properties:
+        years:
+          type: array
+          minItems: 1
+          maxItems: 100
+          example: [2025, 2024, 2023]
+          description: >-
+            The publication years this Órgano has visible contratos menores in, newest first —
+            the order a chooser offers them in, and the first of them is the year the section
+            opens on. Only years: there is no *all years* member and no *undated* one, and the
+            list is never empty, a section with no year being no section at all.
+          items:
+            type: integer
+            format: int32
+            minimum: 1000
+            maximum: 9999
+        partial:
+          type: boolean
+          example: false
+          description: >-
+            Whether what is shown is incomplete, because this Órgano's initial import has not
+            reached its earliest publication yet. Independent of `updating`, and never collapsed
+            into a combined status: an Órgano unmarked halfway through its initial import is
+            partial *and* no longer being refreshed, which one status field would have to lie
+            about.
+        updating:
+          type: boolean
+          example: true
+          description: >-
+            Whether this Órgano's contratos menores are still being refreshed, so what is shown
+            is expected to change. It says nothing about which Órganos an administrator has
+            marked — that the two coincide today is an implementation fact, not a promise this
+            field makes.
+
     RuntimeMetrics:
       type: object
       description: >-
