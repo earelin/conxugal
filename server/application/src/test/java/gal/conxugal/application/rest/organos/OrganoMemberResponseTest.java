@@ -42,12 +42,9 @@ class OrganoMemberResponseTest {
   // serializer applies to the property, and only the payload shows that.
   @Test
   void serialises_an_empty_families_map_rather_than_dropping_it() throws IOException {
-    ObjectMapper objectMapper = ObjectMapper.getDefault();
     OrganoMemberResponse response = OrganoMemberResponse.of(sergas(), new FamiliesResponse(null));
 
-    String json = objectMapper.writeValueAsString(response);
-
-    assertThat(objectMapper.readValue(json, asMap())).containsEntry("families", Map.of());
+    assertThat(serialised(response)).containsEntry("families", Map.of());
   }
 
   // The other half of the same payload: families itself must be there, and a family it does not
@@ -56,12 +53,9 @@ class OrganoMemberResponseTest {
   // count a family this Órgano does not have.
   @Test
   void omits_family_with_no_data_instead_of_sending_it_as_null() throws IOException {
-    ObjectMapper objectMapper = ObjectMapper.getDefault();
     OrganoMemberResponse response = OrganoMemberResponse.of(sergas(), new FamiliesResponse(null));
 
-    String json = objectMapper.writeValueAsString(response);
-
-    assertThat(objectMapper.readValue(json, asMap()))
+    assertThat(serialised(response))
         .extracting("families", MAP)
         .doesNotContainKey("contratos-menores");
   }
@@ -70,13 +64,10 @@ class OrganoMemberResponseTest {
   // keying on it is that no lookup table sits between this response and the router.
   @Test
   void serialises_held_family_under_its_route_segment() throws IOException {
-    ObjectMapper objectMapper = ObjectMapper.getDefault();
     OrganoMemberResponse response =
         OrganoMemberResponse.of(sergas(), familiesWithContratosMenores());
 
-    String json = objectMapper.writeValueAsString(response);
-
-    assertThat(objectMapper.readValue(json, asMap()))
+    assertThat(serialised(response))
         .extracting("families", MAP)
         .containsKey("contratos-menores");
   }
@@ -85,17 +76,14 @@ class OrganoMemberResponseTest {
   // renders neither, and folding them in would make this a second way to read the catalogue.
   @Test
   void withholds_the_catalogue_rows_state_and_placement() throws IOException {
-    ObjectMapper objectMapper = ObjectMapper.getDefault();
     OrganoDeContratacion classified =
         new OrganoDeContratacion(ORGANO_ID, "test-sergas", "Servizo Galego de Saúde", true, true,
             new TermoId(UUID.randomUUID()));
 
-    String json =
-        objectMapper.writeValueAsString(
-            OrganoMemberResponse.of(classified, familiesWithContratosMenores()));
+    OrganoMemberResponse response =
+        OrganoMemberResponse.of(classified, familiesWithContratosMenores());
 
-    assertThat(objectMapper.readValue(json, asMap()))
-        .containsOnlyKeys("id", "name", "families");
+    assertThat(serialised(response)).containsOnlyKeys("id", "name", "families");
   }
 
   @Test
@@ -121,7 +109,15 @@ class OrganoMemberResponseTest {
                 false, true)));
   }
 
-  private static Argument<Map<String, Object>> asMap() {
-    return Argument.mapOf(String.class, Object.class);
+  /**
+   * The payload as a client parses it. These assertions are about the keys the serializer emits,
+   * which the record's own components cannot show — a component is set either way, and what
+   * decides whether it reaches the wire is the inclusion rule applied to it.
+   */
+  private static Map<String, Object> serialised(OrganoMemberResponse response) throws IOException {
+    ObjectMapper objectMapper = ObjectMapper.getDefault();
+    String json = objectMapper.writeValueAsString(response);
+
+    return objectMapper.readValue(json, Argument.mapOf(String.class, Object.class));
   }
 }
