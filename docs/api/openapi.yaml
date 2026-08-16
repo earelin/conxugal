@@ -2388,13 +2388,17 @@ components:
         amount:
           type: number
           format: double
-          minimum: 0
-          maximum: 1000000000000
           example: 14520.75
           description: >-
             The awarded amount as published, in euros and **including VAT**. The thresholds
             that legally define a contrato menor are VAT-exclusive, so anything rendering this
             figure has to say so.
+
+
+            Deliberately unbounded, like `obxecto`'s length: the figure is a faithful mirror of
+            what the source published, nothing between the store and here rescales or range-checks
+            it, and a bound stated only here would be one the server could break on a published
+            correction while claiming otherwise.
         duration:
           type: [string, "null"]
           maxLength: 64

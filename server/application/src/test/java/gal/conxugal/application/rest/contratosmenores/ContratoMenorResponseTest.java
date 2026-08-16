@@ -100,6 +100,25 @@ class ContratoMenorResponseTest {
         .containsEntry("duration", null);
   }
 
+  // Asserted on the raw JSON, because every other reader of these two coerces: a REST-assured
+  // getDouble and a Map<String, Object> both accept "14520.75" as happily as 14520.75, and the
+  // contract declares one a number and the other an integer. An amount reaching a client as a
+  // string is the kind of drift that leaves every status code correct and nothing failing —
+  // and the contract test cannot catch it either, the seeded Órgano it runs against holding no
+  // contracts for the row schema to be checked against.
+  @Test
+  void serialises_the_amount_and_the_source_identifier_as_json_numbers() throws IOException {
+    ObjectMapper objectMapper = ObjectMapper.getDefault();
+    ContratoMenorResponse response = ContratoMenorResponse.of(row("materiais", "1 mes"),
+        PUBLICATION);
+
+    String json = objectMapper.writeValueAsString(response);
+
+    assertThat(json)
+        .contains("\"sourceId\":1234567")
+        .contains("\"amount\":14520.75");
+  }
+
   // Every row of this list belongs to the Órgano already open, and nothing consumes an operador
   // identity until the operadores read exists. Both absences are asserted on the serialised keys,
   // because a test naming the fields it wants cannot see one it did not ask for.

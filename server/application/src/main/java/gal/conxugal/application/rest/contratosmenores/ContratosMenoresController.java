@@ -19,10 +19,11 @@ import io.micronaut.http.annotation.QueryValue;
 import io.micronaut.problem.HttpStatusType;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
-import java.util.List;
+import java.util.Comparator;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.zalando.problem.Problem;
 import org.zalando.problem.ThrowableProblem;
 
@@ -62,6 +63,8 @@ class ContratosMenoresController {
   private static final String ASCENDING = "asc";
   private static final String DESCENDING = "desc";
   private static final Set<String> ACCEPTED_PARAMETERS = Set.of("year", "sort", "page", "size");
+  private static final Pattern CONTROL_OR_SPACE = Pattern.compile("[\\p{Cntrl}\\s]+");
+  private static final int MAX_ECHOED_NAME = 40;
   private static final int MIN_PAGE = 1;
   private static final int MIN_SIZE = 1;
   private static final int MAX_SIZE = 100;
@@ -102,18 +105,34 @@ class ContratosMenoresController {
    * quietest failure this endpoint could have: the parameter is dropped, the default ordering is
    * applied, and the response — which states no ordering, the URL being what carries it — looks
    * exactly like the one that was asked for.
+   *
+   * <p><b>It names one, and names it briefly.</b> This is the only refusal here whose detail is
+   * not a constant, and a parameter name is caller-controlled text of whatever length and
+   * characters a URI admits — percent-decoded by the time it is read here. One short name is
+   * enough for a caller to find its mistake, and it bounds how much of a stranger's input this
+   * server repeats back and writes to whatever reads the problem.
    */
   private static void refuseUnknownParameters(HttpRequest<?> request) {
-    List<String> unknown =
-        request.getParameters()
-            .names()
-            .stream()
-            .filter(name -> !ACCEPTED_PARAMETERS.contains(name))
-            .sorted()
-            .toList();
-    if (!unknown.isEmpty()) {
-      throw refused("no such query parameter: %s".formatted(String.join(", ", unknown)));
-    }
+    request.getParameters()
+        .names()
+        .stream()
+        .filter(name -> !ACCEPTED_PARAMETERS.contains(name))
+        .min(Comparator.naturalOrder())
+        .ifPresent(name -> {
+          throw refused("no such query parameter: %s".formatted(repeatable(name)));
+        });
+  }
+
+  /**
+   * One line, and a short one. A percent-encoded newline is a name a caller can send, and the
+   * problem document's detail is declared as a single line — so a refusal that echoed one verbatim
+   * would answer with a body its own contract rejects.
+   */
+  private static String repeatable(String name) {
+    String flattened = CONTROL_OR_SPACE.matcher(name).replaceAll(" ");
+    return flattened.length() <= MAX_ECHOED_NAME
+        ? flattened
+        : flattened.substring(0, MAX_ECHOED_NAME) + "…";
   }
 
   private static YearSelection yearOf(@Nullable String year) {

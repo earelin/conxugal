@@ -109,19 +109,37 @@ mapping from Micronaut Data's `Page` are recorded there and must not be restated
 > default ordering, and the envelope states no ordering back — so an unrecognised parameter is now
 > a **400**, which is the same rule as refusing an ordering that was never offered, one level up.
 >
+> **`amount` is declared unbounded, and that is a decision rather than an omission.** A first draft
+> gave it `minimum: 0` and a ceiling, which nothing in the system enforces: `Money` only null-checks,
+> the column is a bare `NUMERIC`, and the import stores what the source published. A published
+> correction or a mis-scaled figure would then have made the server answer `200` with a body its own
+> contract rejects — and no test could have caught it, the contract run's seeded Órgano holding no
+> contracts. The bounds are gone, on the same footing as `obxecto` carrying no length cap: the row
+> mirrors what was published, and a claim only the document makes is worse than no claim. Bounding
+> it for real is a `CHECK` and a domain guard, which belongs to whoever owns the store.
+>
 > **A refusal has to be thrown as a problem, not as a status.** `HttpStatusException` reaches
 > Micronaut's own handler and is rendered `{"type":"about:blank","title":"Bad Request","status":400}`
 > — the message dropped. On an operation with five distinct refusal rules that leaves a caller to
 > guess which one it broke, so the refusals build a `Problem` with a `detail` naming the parameter,
 > which the shared `BadRequest` response already admits without a contract change.
 >
-> **`ApiUrlPrefixArchTest`'s sibling rule had to be narrowed, and it is narrowed to three classes.**
-> `ModuleBoundariesArchTest.APPLICATION_DOES_NOT_DEPEND_ON_PERSISTENCE` predates
-> [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md) and forbade
-> `application` naming anything under `io.micronaut.data..` — which is precisely the widening that
-> record states and accepts. It now excepts `Page`, `Pageable` and `Sort` and nothing else, so the
-> rule still keeps out every annotation, every repository type and the whole runtime, and the
-> exception is the size the ADR made it rather than a hole the next change can widen quietly.
+> **`ApiUrlPrefixArchTest`'s sibling rule had to be narrowed, and *how* it is narrowed turned out to
+> matter more than that it is.** `ModuleBoundariesArchTest.APPLICATION_DOES_NOT_DEPEND_ON_PERSISTENCE`
+> predates [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md) and
+> forbade `application` naming anything under `io.micronaut.data..` — which is precisely the
+> widening that record states and accepts.
+>
+> The first narrowing excepted `Page`, `Pageable` and `Sort` through ArchUnit's `belongToAnyOf`,
+> which matches **nested types too** — that is what makes `Sort.Order.Direction` resolve, and it is
+> also what would have let `Sort.Order` in. `Sort.of(Sort.Order.asc(text))` in a driving adapter
+> would then have compiled and passed the rule, which is exactly the ordering-built-from-raw-input
+> this feature's security invariant exists to foreclose; the only remaining guard would have been
+> one adapter's private allow-list. The rule now excepts **by identity** — `Page`, `Pageable` and
+> `Sort.Order.Direction`, those three classes and no nested type of any of them — so the sort itself
+> is unbuildable in `application` and a later *dynamic* ordering has to move that line before it can
+> compile. A negative check confirms the exception is load-bearing rather than vacuous: swapping
+> `Sort.Order.Direction` for `Sort` fails the rule.
 
 ## Acceptance criteria
 

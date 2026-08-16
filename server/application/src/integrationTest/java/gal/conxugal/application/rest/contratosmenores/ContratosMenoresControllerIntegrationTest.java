@@ -302,6 +302,28 @@ class ContratosMenoresControllerIntegrationTest extends AuthenticationTestSuppor
         .hasDetail("sort must order by publicationDate or amount");
   }
 
+  // The one refusal whose detail is not a constant. A parameter name is a stranger's text, of
+  // whatever length and characters a URI admits, and the problem document declares its detail a
+  // single bounded line — so what comes back names one parameter, flattened and short, rather
+  // than however much was sent.
+  @Test
+  void refusal_repeats_back_one_short_parameter_name_however_much_was_sent(
+      RequestSpecification spec) {
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.normalUser());
+    String sprawling = "?year=2025&%0Aorder=1&" + "z".repeat(200) + "=1";
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+        .when()
+            .get(contractsOf(SANIDADE) + sprawling);
+
+    assertProblem(response).hasStatus(HttpStatus.BAD_REQUEST);
+    assertThat(response.jsonPath().getString("detail"))
+        .doesNotContain("\n")
+        .hasSizeLessThan(80);
+  }
+
   /**
    * Answers with one row stating the selection the read was asked for, so that what the ordering
    * became is asserted on the response rather than on the mock.
