@@ -37,9 +37,7 @@ class OrganoMemberResponseTest {
   }
 
   // The page renders "this Órgano holds no contracts" from an empty families map, so an absent key
-  // and an empty one are different facts. Asserted on the serialised key rather than the record's
-  // component because the record cannot be wrong here — what could is the inclusion rule the
-  // serializer applies to the property, and only the payload shows that.
+  // and an empty one are different facts.
   @Test
   void serialises_an_empty_families_map_rather_than_dropping_it() throws IOException {
     OrganoMemberResponse response = OrganoMemberResponse.of(sergas(), new FamiliesResponse(null));
