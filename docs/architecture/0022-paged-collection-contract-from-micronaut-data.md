@@ -124,11 +124,26 @@ would have dragged a persistence library's *HTTP* layer behind a driving adapter
 The distinction is the point: the application layer knows the persistence library's **model**,
 because it converts to and from it, and knows nothing of its runtime.
 
-**The controller is the only place the two vocabularies meet.** Inbound it validates the contract's
-parameters and builds a 0-based, unsorted `Pageable`; outbound it maps a `Page<T>` onto the
-envelope, adding one to the page number and taking `getTotalPages()` for the span. Nothing above
-the controller sees a `Pageable`, and nothing below it sees the envelope, so the conversion has
+**The application layer is the only place the two vocabularies meet.** Inbound it validates the
+contract's parameters and builds a 0-based, unsorted `Pageable`; outbound it maps a `Page<T>` onto
+the envelope, adding one to the page number and taking `getTotalPages()` for the span. Nothing
+above that layer sees a `Pageable`, and nothing below it sees the envelope, so the conversion has
 exactly one home and an off-by-one has exactly one place to be.
+
+> **Amended.** As first accepted, this said *the controller* rather than *the application layer*,
+> and put both conversions inside the controller class. FEAT-0011's endpoint showed the cost of
+> reading that literally. The `page` and `size` parameters are identical across the three specs by
+> construction, so leaving each controller to declare and validate them means the second operation
+> re-derives the defaults, the bounds, the change of base and — the part that bites — the refusals.
+> The first implementation bound them as `int` with a `defaultValue`, which silently answers an
+> empty `?size=` with the default instead of refusing it, and no reading of this record would have
+> stopped the next operation making the same mistake independently.
+>
+> So `page` and `size` are read once, by a shared `PagingParameters`, exactly as the envelope is
+> written once by `PagedResponse` — inbound and outbound halves of one contract, in one place. What
+> stays with the operation is what the operation actually owns: its own parameters, and its own
+> closed set of orderings. The guarantee is unchanged and is now enforceable rather than
+> remembered: the conversion has one home, and it is a home a test can stand in.
 
 **`Sort` is never constructed from raw input.** Each operation declares a **closed set** of
 orderings as a pair of enums, refuses any `sort` value outside it, and builds whatever `Sort` it
@@ -191,9 +206,11 @@ describe a slightly different one.
   would have put a persistence library's **HTTP** module behind a driving adapter does not arise.
   What it does take — `micronaut-data-model` — it declares, rather than inheriting it from the
   domain's `api(...)` by accident.
-- **The conversion has one home.** Both directions live in the controller, so no other layer has to
-  know which base it is holding, and the seam is somewhere a test can stand rather than spread
-  across a call chain.
+- **The conversion has one home**, and one implementation. Both directions live in the application
+  layer — the parameters read by one shared type, the envelope written by another — so no other
+  layer has to know which base it is holding, no second operation re-derives the defaults, the
+  bounds or the refusals, and the seam is somewhere a test can stand rather than spread across a
+  call chain.
 - **Bad input is refused, not corrected.** `page=0` and `size=5000` are 400s that say so, rather
   than being silently answered with something else — which is what the framework binder would do.
 - **The security invariant is stated once**, where every feature that pages must read it, and the

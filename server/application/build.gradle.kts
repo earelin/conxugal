@@ -26,6 +26,8 @@ dependencies {
     runtimeOnly(libs.logback.classic)
     runtimeOnly(libs.snakeyaml)
 
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
     testImplementation(libs.micronaut.http.client)
     testImplementation(libs.micronaut.test.junit5)
     testImplementation(libs.mockito.junit.jupiter)

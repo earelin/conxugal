@@ -42,7 +42,7 @@ mapping from Micronaut Data's `Page` are recorded there and must not be restated
   (`name` and `fiscalId`) and `sourceUrl`. `publicationDate`, `amount` and `awardee` are
   **required** — R28 withholds a contract without them, so the wire shape has no optionality for a
   client to branch on — and there is **no operador id** and **no awarding Órgano** on the row.
-- **Both conversions live in the controller, and nowhere else.** Inbound: the validated
+- **Both conversions live in the driving adapter, and nowhere else.** Inbound: the validated
   parameters become a `YearSelection`, a `SortKey`, a `Sort.Order.Direction` and a **0-based, unsorted**
   `Pageable` — unsorted because the ordering travels as the two enums and
   [TASK-0005](TASK-0005-list-contratos-menores-use-case.md) is the one place a `Sort` is built from
@@ -131,6 +131,17 @@ mapping from Micronaut Data's `Page` are recorded there and must not be restated
 > case ADR-0021 describes: the run is deterministic per environment, not identical across them,
 > because the acceptance suite ahead of it leaves different rows behind. The three refusals are
 > now integration-tested by name, so no future run has to rediscover them.
+>
+> **And it is what moved the paging parameters out of the controller**, which this task's scope had
+> put there. The defaults, the bounds, the change of base and these refusals are identical across
+> the three specifications that page, so leaving each operation to declare them means the second
+> one re-derives all four — and would have re-derived this defect independently, since nothing in
+> the record warned against it. They now live in a shared `PagingParameters` beside the envelope's
+> `PagedResponse`, the two halves of one contract in one place, and what stays here is what this
+> operation actually owns: its year and its closed set of orderings.
+> [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md) is amended
+> to say *the application layer* where it said *the controller*, rather than being left to
+> contradict the code.
 >
 > **A refusal has to be thrown as a problem, not as a status.** `HttpStatusException` reaches
 > Micronaut's own handler and is rendered `{"type":"about:blank","title":"Bad Request","status":400}`
