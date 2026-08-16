@@ -56,9 +56,15 @@ public class ListContratosMenores {
    * total on every page of it, since it counts the year rather than what this page holds.
    *
    * <p>The catalogue is asked first, and its answer is discarded: what is wanted from it is that
-   * the Órgano exists, and reading the row is how this system asks. It costs the browse read
-   * nothing a reader would notice and it is the only thing standing between a mistyped identifier
-   * and an empty page presented as an answer.
+   * the Órgano exists, and reading the row is how this system asks. One lookup by primary key is
+   * what it costs, and it is the only thing standing between a mistyped identifier and an empty
+   * page presented as an answer.
+   *
+   * <p><b>The ordering replaces whatever the pageable carried rather than joining it.</b>
+   * {@link Pageable#withSort} is that replacement; {@code order(...)} beside it would append, and
+   * appending would let an ordering that arrived from somewhere else survive into a clause this
+   * method is supposed to be the whole source of. Nothing else about the pageable is touched — not
+   * the page, not the size, not whether a total was asked for.
    */
   public Page<VisibleContratoMenor> list(
       OrganoId organoId,
@@ -69,16 +75,6 @@ public class ListContratosMenores {
     if (organos.findById(organoId).isEmpty()) {
       throw new OrganoNotFoundException(organoId);
     }
-    return visibleContratos.page(organoId, year, ordered(pageable, key, direction));
-  }
-
-  /**
-   * The page asked for, ordered. It <b>replaces</b> whatever sort the incoming pageable carried
-   * rather than appending to it, which is what {@code Pageable.order(...)} would do: appending
-   * would let an ordering that arrived from somewhere else survive into the emitted clause, and
-   * the guarantee here is that the whole of it came from the two enums.
-   */
-  private static Pageable ordered(Pageable pageable, SortKey key, Sort.Order.Direction direction) {
-    return Pageable.from(pageable.getNumber(), pageable.getSize(), key.ordering(direction));
+    return visibleContratos.page(organoId, year, pageable.withSort(key.ordering(direction)));
   }
 }

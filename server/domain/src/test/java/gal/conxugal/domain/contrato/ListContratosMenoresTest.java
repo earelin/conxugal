@@ -37,7 +37,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * Rendering them would restate the production expression on both sides of the assertion, and a
  * key that came to name a property no table has a column for would move the expectation along
  * with the emitted clause and stay green. Written out, they are a fixed point — the same one the
- * schema test pins the plan of.
+ * schema test pins the plan of. That holds of the four ordering assertions specifically; the
+ * stubs below that key on a whole pageable do render the ordering from {@code SortKey}, since
+ * what they are pinning is which page comes back rather than what the clause says, and the four
+ * above already hold the clause itself still.
  *
  * <p><b>The store is stubbed against an exact {@code Pageable} wherever the answer is what is
  * asserted.</b> Under strict stubbing that is itself the argument assertion: a use case handing a
@@ -130,6 +133,12 @@ class ListContratosMenoresTest {
    * The four are asserted together rather than one test apart, because what has to hold is that
    * they are <b>distinguishable</b>: each answers the page its own ordering selected. Four
    * assertions in four tests would all still pass if one ordering quietly served another's page.
+   *
+   * <p>This is as far as a stubbed store can carry <em>the largest contract of the whole year is
+   * on the first page sorted by amount descending</em>: that the pair asks for page one in that
+   * ordering and answers what the store gave back. Whether the store's answer really is the
+   * largest of the year rather than of some subset is a property of the statement, and it is
+   * proven where the statement runs — {@code JdbcVisibleContratoMenorRepositoryIntegrationTest}.
    */
   @Test
   void answers_each_of_the_four_orderings_with_the_page_that_ordering_selected() {
@@ -148,19 +157,6 @@ class ListContratosMenoresTest {
         .containsExactly(EARLIEST, LATEST, SMALLEST, LARGEST);
   }
 
-  /**
-   * The largest of the <em>whole</em> year rather than of some subset: the store is asked for page
-   * one of the year in that ordering, and it is the only thing this use case asks for.
-   */
-  @Test
-  void puts_the_largest_contract_of_the_whole_year_on_the_first_page_sorted_by_amount_descending() {
-    organoExists();
-    firstRowIs(SortKey.AMOUNT, Sort.Order.Direction.DESC, LARGEST);
-
-    assertThat(firstRowOf(SortKey.AMOUNT, Sort.Order.Direction.DESC))
-        .isEqualTo(LARGEST);
-  }
-
   // ------------------------------------------------------------- the page, the size and the count
 
   @Test
@@ -174,8 +170,10 @@ class ListContratosMenoresTest {
   }
 
   /**
-   * The count is of the selection, so it is the same on every page of it. Three pages are walked
-   * rather than one, because a total that came from the page would only be wrong on the last one.
+   * The count is of the selection, so it is the same on every page of it, and the use case neither
+   * recomputes it nor rewrites it. Three pages are walked rather than one because each is stubbed
+   * against its own exact pageable: under strict stubbing that is what pins the ordering as
+   * identical across the three, which is the other half of a page number meaning anything.
    */
   @Test
   void answers_the_count_of_the_whole_selection_on_every_page_of_it() {

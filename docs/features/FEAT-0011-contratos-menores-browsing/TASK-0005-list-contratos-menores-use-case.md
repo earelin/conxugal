@@ -70,10 +70,11 @@ so it is the place that guarantees none does.
 >   the pageable the store is handed, with the clauses written out rather than rendered from
 >   `SortKey`, so an expectation cannot move along with the expression it is checking.
 > - **The incoming ordering is replaced, not appended to.** `Pageable.order(...)` adds to whatever
->   sort the pageable already carried, so the use case rebuilds the pageable —
->   `Pageable.from(number, size, key.ordering(direction))` — and a test hands it a pageable
->   carrying a property no `SortKey` could have produced to pin that it does not survive. The page
->   number and the size pass through untouched, as the scope requires.
+>   sort the pageable already carried, which would let an ordering from somewhere else survive into
+>   a clause this use case is meant to be the whole source of. `Pageable.withSort(...)` is the
+>   replacement, and it leaves the rest of the pageable — the page, the size, whether a total was
+>   asked for — exactly as it arrived, as the scope requires. A test hands it a pageable carrying a
+>   property no `SortKey` could have produced, to pin that it does not survive.
 
 ## Acceptance criteria
 
