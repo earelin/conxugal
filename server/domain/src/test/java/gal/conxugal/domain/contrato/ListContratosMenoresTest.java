@@ -120,11 +120,10 @@ class ListContratosMenoresTest {
             Sort.Order.Direction.DESC,
             Pageable.from(0, SIZE, Sort.of(Sort.Order.asc("obxecto; DROP TABLE contrato_menor"))));
 
-    assertThat(handed.getSort().getOrderBy())
-        .extracting(Sort.Order::getProperty, Sort.Order::getDirection)
-        .containsExactly(
-            tuple("amount", Sort.Order.Direction.DESC),
-            tuple("source_id", Sort.Order.Direction.DESC));
+    assertOrders(
+        handed,
+        tuple("amount", Sort.Order.Direction.DESC),
+        tuple("source_id", Sort.Order.Direction.DESC));
   }
 
   // --------------------------------------------------- and that the four are four different reads
@@ -204,10 +203,18 @@ class ListContratosMenoresTest {
 
   // --------------------------------------------------------------------------------------- fixture
 
+  /** The ordering a pair produces on a pageable that asked for none. */
   private void assertOrdering(
       SortKey key, Sort.Order.Direction direction, Tuple... expectedOrders) {
-    Pageable handed = orderingHandedFor(key, direction, Pageable.from(0, SIZE));
+    assertOrders(orderingHandedFor(key, direction, Pageable.from(0, SIZE)), expectedOrders);
+  }
 
+  /**
+   * Each expected order is a column and a direction, spelled out by the caller. Nothing here
+   * derives the tiebreaker's direction from the key's: that they match is what is under test, and
+   * a helper that built one from the other could no longer fail when they stopped matching.
+   */
+  private static void assertOrders(Pageable handed, Tuple... expectedOrders) {
     assertThat(handed.getSort().getOrderBy())
         .extracting(Sort.Order::getProperty, Sort.Order::getDirection)
         .containsExactly(expectedOrders);
