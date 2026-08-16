@@ -93,8 +93,7 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
   @Test
   void an_organo_holding_no_visible_contract_answers_an_empty_families_object(
       RequestSpecification spec) {
-    stubOrgano();
-    when(contratosMenoresSection.describe(SERGAS)).thenReturn(Optional.empty());
+    stubOrganoHoldingNothing();
 
     Response response = readAs(spec, TestUserFactory.normalUser(), SERGAS);
 
@@ -106,8 +105,7 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
   // Órgano does not hold, and draw a tab with nothing behind it.
   @Test
   void family_with_no_data_is_absent_rather_than_null(RequestSpecification spec) {
-    stubOrgano();
-    when(contratosMenoresSection.describe(SERGAS)).thenReturn(Optional.empty());
+    stubOrganoHoldingNothing();
 
     Response response = readAs(spec, TestUserFactory.normalUser(), SERGAS);
 
@@ -119,8 +117,7 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
   // A 403 or a 404 in this case would make an Órgano's identity a secret, which it is not.
   @Test
   void organo_outside_the_visible_set_is_answered_rather_than_refused(RequestSpecification spec) {
-    stubOrgano();
-    when(contratosMenoresSection.describe(SERGAS)).thenReturn(Optional.empty());
+    stubOrganoHoldingNothing();
 
     Response response = getAs(spec, TestUserFactory.normalUser(), SERGAS);
 
@@ -189,6 +186,17 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
     when(viewOrgano.view(SERGAS)).thenReturn(
         new OrganoDeContratacion(
             SERGAS, "test-sergas", "Servizo Galego de Saúde", true, true, null));
+  }
+
+  /**
+   * An Órgano that exists and holds no visible contrato menor — the arrangement behind every
+   * empty-families case, whether the Órgano never had one, had its last removed, or falls outside
+   * the reader's visible set. The port answers all three the same way, which is why one
+   * arrangement serves them.
+   */
+  private void stubOrganoHoldingNothing() {
+    stubOrgano();
+    when(contratosMenoresSection.describe(SERGAS)).thenReturn(Optional.empty());
   }
 
   /** The read as an authenticated caller makes it, with no expectation of how it is answered. */
