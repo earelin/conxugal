@@ -60,9 +60,11 @@ mapping from Micronaut Data's `Page` are recorded there and must not be restated
   The default year is the client's, taken from the summary
   [TASK-0006](TASK-0006-section-summary-port-and-schema.md) publishes.
 - **An unknown Órgano reuses `urn:conxugal:problem-type:organo-not-found`** through the existing
-  `OrganoNotFoundExceptionHandler`. If its package-private visibility keeps it from applying
-  outside `rest/admin/organos`, it moves to a shared error package — a **second** problem type for
-  the same condition is not an option.
+  `OrganoNotFoundExceptionHandler`. **Nothing to do here: the move landed with
+  [FEAT-0013](../FEAT-0013-organo-contracts-page/TASK-0001-organo-member-read.md)'s member read**,
+  which reached this condition first — the handler now sits in the shared `rest/error` package and
+  applies to this path as it stands. A **second** problem type for the same condition is not an
+  option.
 - **`sourceUrl` is composed on the server**, from a `@ConfigurationProperties` record of this
   feature's own — `conxugal.contratos-menores.publication` with a base URL defaulting to
   `https://www.contratosdegalicia.gal` — appended with `licitacion?N={sourceId}`, the address

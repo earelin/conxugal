@@ -126,3 +126,10 @@ parameters = { "path.id" = "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa" }
 [[operations]]
 include-name = "PUT /api/admin/organo/{id}/importable"
 parameters = { "path.id" = "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa" }
+
+# The member read, pointed at a seeded Órgano so it reaches its 200 branch. No contrato_menor is
+# seeded, so what the run validates is the empty families map — which is the branch that has to
+# serialise as {} rather than be dropped. A populated one is covered by the integration tests.
+[[operations]]
+include-name = "GET /api/organo/{id}"
+parameters = { "path.id" = "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa" }
