@@ -119,7 +119,7 @@ class ContratosMenoresController {
         .filter(name -> !ACCEPTED_PARAMETERS.contains(name))
         .min(Comparator.naturalOrder())
         .ifPresent(name -> {
-          throw refused("no such query parameter: %s".formatted(repeatable(name)));
+          throw refused("no such query parameter: %s".formatted(oneShortLine(name)));
         });
   }
 
@@ -128,7 +128,7 @@ class ContratosMenoresController {
    * problem document's detail is declared as a single line — so a refusal that echoed one verbatim
    * would answer with a body its own contract rejects.
    */
-  private static String repeatable(String name) {
+  private static String oneShortLine(String name) {
     String flattened = CONTROL_OR_SPACE.matcher(name).replaceAll(" ");
     return flattened.length() <= MAX_ECHOED_NAME
         ? flattened
