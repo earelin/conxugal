@@ -99,6 +99,22 @@ class ContratosMenoresControllerIntegrationTest extends AuthenticationTestSuppor
     assertThat(response.jsonPath().getList("items")).hasSize(1);
   }
 
+  // The two defaults, which nothing else here states: a reader who asks only for a year gets the
+  // first page of fifty. They are the client's starting point, so moving one silently would move
+  // every first request in the application.
+  @Test
+  void omitting_the_paging_reads_the_first_page_of_fifty(RequestSpecification spec) {
+    answerWithTheSelectionAskedFor();
+
+    Response response = readAs(spec, TestUserFactory.normalUser(), "?year=2025");
+
+    assertThat(response.jsonPath().getInt("page")).isEqualTo(1);
+    assertThat(response.jsonPath().getInt("size")).isEqualTo(50);
+    assertThat(pageables).hasSize(1);
+    assertThat(pageables.getFirst().getNumber()).isZero();
+    assertThat(pageables.getFirst().getSize()).isEqualTo(50);
+  }
+
   // R2 grants this read to both roles, and the path does no role-dependent narrowing of its own.
   @Test
   void admin_and_user_alike_read_the_same_page(RequestSpecification spec) {
