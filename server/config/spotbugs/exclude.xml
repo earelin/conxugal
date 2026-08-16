@@ -58,12 +58,12 @@
     <Field name="importRuns"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
-  <!-- And for the read that describes a contratos menores section, which stores the catalogue port
-       both of its flags are derived from. Only that field: the browse port beside it declares
-       reads alone, so the heuristic does not read it as mutable and a genuine leak of it would
-       still report. -->
+  <!-- And for the two browse reads, each of which stores the catalogue port — one to derive its
+       flags from, the other to refuse an Órgano that does not exist. Only that field: the browse
+       port beside it declares reads alone, so the heuristic does not read it as mutable and a
+       genuine leak of it would still report. -->
   <Match>
-    <Class name="gal.conxugal.domain.contrato.DescribeContratosMenoresSection"/>
+    <Class name="~gal\.conxugal\.domain\.contrato\.(DescribeContratosMenoresSection|ListContratosMenores)"/>
     <Field name="organos"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>

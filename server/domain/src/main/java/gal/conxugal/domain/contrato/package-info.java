@@ -14,7 +14,9 @@
  * {@link io.micronaut.data.model.Sort} and a second enum would only be mapped onto that one.
  * Beside them sit the {@link gal.conxugal.domain.contrato.VisibleContratoMenor} row a browse read
  * answers with and the {@link gal.conxugal.domain.contrato.VisibleContratoMenorRepository} port
- * that serves it.
+ * that serves it. {@link gal.conxugal.domain.contrato.ListContratosMenores} is the read that asks
+ * it for a page: the one place a key and a direction become the ordering the store is handed, and
+ * the one place an Órgano that does not exist is refused rather than answered with an empty page.
  *
  * <p>What a reader meets before any of that is the
  * {@link gal.conxugal.domain.contrato.ContratosMenoresSection} an Órgano presents — the years it
