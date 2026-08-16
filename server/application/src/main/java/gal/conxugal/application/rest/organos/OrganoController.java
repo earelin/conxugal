@@ -1,6 +1,5 @@
 package gal.conxugal.application.rest.organos;
 
-import gal.conxugal.application.rest.contratosmenores.ContratosMenoresSummaryResponse;
 import gal.conxugal.domain.contrato.DescribeContratosMenoresSection;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.organo.ViewOrgano;
@@ -51,7 +50,7 @@ class OrganoController {
   private FamiliesResponse familiesOf(OrganoId organoId) {
     return new FamiliesResponse(
         contratosMenoresSection.describe(organoId)
-            .map(ContratosMenoresSummaryResponse::of)
+            .map(ContratosMenoresFamilyResponse::of)
             .orElse(null));
   }
 }

@@ -79,10 +79,15 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
 
     assertThat(response.jsonPath().getString("id")).isEqualTo(SERGAS.toString());
     assertThat(response.jsonPath().getString("name")).isEqualTo("Servizo Galego de Saúde");
-    assertThat(response.jsonPath().getList("families.'contratos-menores'.years", Integer.class))
+    assertThat(response.jsonPath().getString("families.contratosMenores.route"))
+        .isEqualTo("contratos-menores");
+    assertThat(
+        response.jsonPath().getList("families.contratosMenores.summary.years", Integer.class))
         .containsExactly(2025, 2024, 2023);
-    assertThat(response.jsonPath().getBoolean("families.'contratos-menores'.partial")).isFalse();
-    assertThat(response.jsonPath().getBoolean("families.'contratos-menores'.updating")).isTrue();
+    assertThat(response.jsonPath().getBoolean("families.contratosMenores.summary.partial"))
+        .isFalse();
+    assertThat(response.jsonPath().getBoolean("families.contratosMenores.summary.updating"))
+        .isTrue();
   }
 
   // The page renders "this Órgano holds no contracts" from the emptiness itself, so an absent key
@@ -99,7 +104,7 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
   }
 
   // The opposite half of the same requirement, and the one a null-tolerant serializer would get
-  // wrong quietly: a contratos-menores key sent as null would have the client count a family this
+  // wrong quietly: a contratosMenores key sent as null would have the client count a family this
   // Órgano does not hold, and draw a tab with nothing behind it.
   @Test
   void family_with_no_data_is_absent_rather_than_null(RequestSpecification spec) {
@@ -107,7 +112,7 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
 
     Response response = readAs(spec, TestUserFactory.normalUser(), SERGAS);
 
-    assertThat(response.jsonPath().getMap("families")).doesNotContainKey("contratos-menores");
+    assertThat(response.jsonPath().getMap("families")).doesNotContainKey("contratosMenores");
   }
 
   // Visibility is a property of the contracts, not of the reader, so an Órgano a USER would never

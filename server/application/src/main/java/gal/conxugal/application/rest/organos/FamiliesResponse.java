@@ -1,13 +1,12 @@
 package gal.conxugal.application.rest.organos;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import gal.conxugal.application.rest.contratosmenores.ContratosMenoresSummaryResponse;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 
 /**
- * The contract families an Órgano holds visible data for, keyed by the slug the client's
- * child-route segment uses — so nothing here can disagree with the router.
+ * The contract families an Órgano holds visible data for, keyed by family. The key identifies a
+ * family and nothing more — where its section is mounted travels inside the entry, as a
+ * {@code route} the client reads rather than a spelling it has to infer from the key.
  *
  * <p><b>A family is present when it has visible data and absent when it has none</b>, and that is
  * the whole mechanism. There is no <em>has contracts</em> flag: a boolean beside a summary could
@@ -23,7 +22,5 @@ import io.micronaut.serde.annotation.Serdeable;
  * changes, and this record never learns what any summary contains.
  */
 @Serdeable
-public record FamiliesResponse(
-    @JsonProperty("contratos-menores") @Nullable
-        ContratosMenoresSummaryResponse contratosMenores) {
+public record FamiliesResponse(@Nullable ContratosMenoresFamilyResponse contratosMenores) {
 }

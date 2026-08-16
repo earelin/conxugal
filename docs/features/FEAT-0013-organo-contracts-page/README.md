@@ -116,7 +116,10 @@ page needs the Órgano's **name** at the same moment. Both come from the member 
   "id": "…",
   "name": "Servizo Galego de Saúde",
   "families": {
-    "contratos-menores": { "years": [2025, 2024, 2023], "partial": false, "updating": true }
+    "contratosMenores": {
+      "route": "contratos-menores",
+      "summary": { "years": [2025, 2024, 2023], "partial": false, "updating": true }
+    }
   }
 }
 ```
@@ -125,16 +128,22 @@ page needs the Órgano's **name** at the same moment. Both come from the member 
   separate flag that could disagree with the summary beside it — it *is* the summary's existence,
   the same construction FEAT-0011 uses for whether a section exists. `families: {}` is an Órgano
   holding nothing, and it draws no tab bar.
-- **The keys are the family slugs**, spelled exactly as the child-route segments, so the client maps
-  a response onto a route with no lookup table that could disagree with the router.
+- **The key names the family; the `route` inside it addresses the family.** The key is an
+  identifier and stays stable; the path segment the section is mounted at travels beside it as
+  **data the server sends**, so the client maps a response onto a route with no table of its own
+  that could disagree with the router. Deriving one from the other — by spelling the key as the
+  segment, or by converting between cases — would put exactly such a table back, in the form of a
+  convention two sides have to keep agreeing on.
 - **Each family's summary is owned by that family's feature**, not by this one. The
-  `contratos-menores` entry — its years, its `partial` and `updating` — is
-  [FEAT-0011](../FEAT-0011-contratos-menores-browsing/README.md)'s schema and comes from
-  FEAT-0011's port; this feature composes the ports and publishes the envelope. **A new family adds
-  a property and implements a port; it changes no member that already exists.**
-- **The page reads only the keys.** Which tabs to draw, which to redirect to, and whether to draw a
-  bar at all are answered by `Object.keys(families)`. Every value is opaque to this feature and is
-  handed to the section that owns it.
+  `contratosMenores` entry nests it under `summary` — its years, its `partial` and `updating` are
+  [FEAT-0011](../FEAT-0011-contratos-menores-browsing/README.md)'s schema and come from
+  FEAT-0011's port; this feature composes the ports and publishes the envelope, and the nesting is
+  what keeps `route` out of a schema it does not own. **A new family adds a property and implements
+  a port; it changes no member that already exists.**
+- **The page reads only the keys and each entry's `route`.** Which tabs to draw, which to redirect
+  to, and whether to draw a bar at all are answered by `Object.keys(families)`; where each tab
+  points is answered by its `route`. Every `summary` is opaque to this feature and is handed to the
+  section that owns it.
 
 > **This replaces two endpoints an earlier draft split**, and the consolidation is the user-visible
 > point. That draft had `GET /api/organo/{id}/contratos/familias` here for the tabs, FEAT-0011's

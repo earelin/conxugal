@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.InstanceOfAssertFactories.MAP;
 
-import gal.conxugal.application.rest.contratosmenores.ContratosMenoresSummaryResponse;
 import gal.conxugal.domain.contrato.ContratosMenoresSection;
 import gal.conxugal.domain.contrato.YearSelection;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
@@ -31,8 +30,10 @@ class OrganoMemberResponseTest {
     SoftAssertions.assertSoftly(softly -> {
       softly.assertThat(response.id()).isEqualTo(ORGANO_ID.value());
       softly.assertThat(response.name()).isEqualTo("Servizo Galego de Saúde");
-      softly.assertThat(response.families().contratosMenores().years())
+      softly.assertThat(response.families().contratosMenores().summary().years())
           .containsExactly(2025, 2024, 2023);
+      softly.assertThat(response.families().contratosMenores().route())
+          .isEqualTo("contratos-menores");
     });
   }
 
@@ -46,7 +47,7 @@ class OrganoMemberResponseTest {
   }
 
   // The other half of the same payload: families itself must be there, and a family it does not
-  // hold must not be. A contratos-menores key sent as null would be a second spelling of "no data"
+  // hold must not be. A contratosMenores key sent as null would be a second spelling of "no data"
   // beside the absent key the contract declares, and a client reading Object.keys(families) would
   // count a family this Órgano does not have.
   @Test
@@ -55,19 +56,22 @@ class OrganoMemberResponseTest {
 
     assertThat(serialised(response))
         .extracting("families", MAP)
-        .doesNotContainKey("contratos-menores");
+        .doesNotContainKey("contratosMenores");
   }
 
-  // Under the family's own slug, spelled as the client's child-route segment — the whole point of
-  // keying on it is that no lookup table sits between this response and the router.
+  // The key names the family; the route addresses it. Asserting both together is what says they
+  // are allowed to differ — a client reads the segment out of the entry rather than inferring it
+  // from the key, so no table it holds can disagree with the response about where a family lives.
   @Test
-  void serialises_held_family_under_its_route_segment() throws IOException {
+  void keys_held_family_by_identifier_and_carries_its_route_beside_it() throws IOException {
     OrganoMemberResponse response =
         OrganoMemberResponse.of(sergas(), familiesWithContratosMenores());
 
     assertThat(serialised(response))
         .extracting("families", MAP)
-        .containsKey("contratos-menores");
+        .extracting("contratosMenores", MAP)
+        .containsEntry("route", "contratos-menores")
+        .containsOnlyKeys("route", "summary");
   }
 
   // The catalogue row's fields are absent by construction here rather than by omission: the page
@@ -101,7 +105,7 @@ class OrganoMemberResponseTest {
 
   private static FamiliesResponse familiesWithContratosMenores() {
     return new FamiliesResponse(
-        ContratosMenoresSummaryResponse.of(
+        ContratosMenoresFamilyResponse.of(
             new ContratosMenoresSection(
                 List.of(YearSelection.of(2025), YearSelection.of(2024), YearSelection.of(2023)),
                 false, true)));

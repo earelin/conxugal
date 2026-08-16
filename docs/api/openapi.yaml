@@ -1177,9 +1177,10 @@ paths:
         existence. `families: {}` is an Órgano holding nothing, and it draws no tab bar.
 
 
-        **The keys are family slugs**, spelled exactly as the client's child-route segments, so a
-        response maps onto a route with no lookup table in between. Each family's summary is owned
-        by that family: this operation composes them and restates none of them.
+        **Each family carries the `route` its section is mounted at**, so a response maps onto a
+        route with no lookup table in between: the key identifies the family and stays stable, and
+        the path segment travels beside it as data. Each family's summary is owned by that family:
+        this operation composes them and restates none of them.
 
 
         **It carries no contract.** No list, no row, no paging envelope and no year parameter — it
@@ -1732,10 +1733,12 @@ components:
         id: "8d1b0f6e-2c5a-4c1e-9a3f-6b7c8d9e0f11"
         name: "Servizo Galego de Saúde"
         families:
-          contratos-menores:
-            years: [2025, 2024, 2023]
-            partial: false
-            updating: true
+          contratosMenores:
+            route: contratos-menores
+            summary:
+              years: [2025, 2024, 2023]
+              partial: false
+              updating: true
       properties:
         id:
           type: string
@@ -1754,11 +1757,16 @@ components:
       type: object
       additionalProperties: false
       description: >-
-        The contract families this Órgano holds visible data for, keyed by family slug — spelled
-        exactly as the client's child-route segment, so no lookup table exists that could disagree
-        with the router. **A family is present when it has visible data and absent when it has
-        none**, and that absence is the whole mechanism: there is no *has contracts* flag, because
-        a flag beside a summary could disagree with it.
+        The contract families this Órgano holds visible data for, keyed by family. **A family is
+        present when it has visible data and absent when it has none**, and that absence is the
+        whole mechanism: there is no *has contracts* flag, because a flag beside a summary could
+        disagree with it.
+
+
+        **The key identifies the family; the `route` inside it addresses the family.** The two are
+        kept apart deliberately: a key is an identifier and stays stable, while the path segment a
+        client mounts the family's section at is **data the server sends**, so no client holds a
+        table mapping one to the other that could disagree with its router.
 
 
         **Always present, and `{}` when the Órgano holds nothing** — an Órgano holding no contracts
@@ -1770,12 +1778,43 @@ components:
         A family the system gains later **adds a property here**; it changes nothing already
         declared.
       example:
-        contratos-menores:
+        contratosMenores:
+          route: contratos-menores
+          summary:
+            years: [2025, 2024, 2023]
+            partial: false
+            updating: true
+      properties:
+        contratosMenores:
+          $ref: "#/components/schemas/ContratosMenoresFamily"
+
+    ContratosMenoresFamily:
+      type: object
+      additionalProperties: false
+      description: >-
+        An Órgano's contratos menores, as the page that frames them needs them: where to mount the
+        section, and what the section says about itself. The page reads the first and treats the
+        second as opaque — what a summary *means* is the family's business, and this envelope
+        carries it without interpreting it.
+      required: [route, summary]
+      example:
+        route: contratos-menores
+        summary:
           years: [2025, 2024, 2023]
           partial: false
           updating: true
       properties:
-        contratos-menores:
+        route:
+          type: string
+          enum: [contratos-menores]
+          maxLength: 40
+          pattern: "^[a-z][a-z0-9-]*$"
+          example: contratos-menores
+          description: >-
+            The path segment this family's section is mounted at, below the Órgano's own page —
+            here `/organo/{id}/contratos-menores`. Sent rather than derived from the key so that a
+            client builds its links and its tab bar from the response alone.
+        summary:
           $ref: "#/components/schemas/ContratosMenoresSummary"
 
     AdminOrgano:
@@ -2187,8 +2226,8 @@ components:
       type: object
       description: >-
         What an Órgano's contratos menores section says about itself, answered before any contract
-        is fetched. **Its presence is what says the section exists**: it is carried as the
-        `contratos-menores` entry of an Órgano's families map, and an Órgano with no visible
+        is fetched. **Its presence is what says the section exists**: it is carried by the
+        `contratosMenores` entry of an Órgano's families map, and an Órgano with no visible
         contrato menor carries no entry at all — which is also how one holding only contracts the
         system withholds is indistinguishable from one holding none. There is deliberately no *has
         contracts* flag, because a section exists exactly when there is a year to open it on and a
