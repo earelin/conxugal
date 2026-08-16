@@ -60,9 +60,11 @@ mapping from Micronaut Data's `Page` are recorded there and must not be restated
   The default year is the client's, taken from the summary
   [TASK-0006](TASK-0006-section-summary-port-and-schema.md) publishes.
 - **An unknown Órgano reuses `urn:conxugal:problem-type:organo-not-found`** through the existing
-  `OrganoNotFoundExceptionHandler`. If its package-private visibility keeps it from applying
-  outside `rest/admin/organos`, it moves to a shared error package — a **second** problem type for
-  the same condition is not an option.
+  `OrganoNotFoundExceptionHandler`. **Nothing to do here: the move landed with
+  [FEAT-0013](../FEAT-0013-organo-contracts-page/TASK-0001-organo-member-read.md)'s member read**,
+  which reached this condition first — the handler now sits in the shared `rest/error` package and
+  applies to this path as it stands. A **second** problem type for the same condition is not an
+  option.
 - **`sourceUrl` is composed on the server**, from a `@ConfigurationProperties` record of this
   feature's own — `conxugal.contratos-menores.publication` with a base URL defaulting to
   `https://www.contratosdegalicia.gal` — appended with `licitacion?N={sourceId}`, the address
@@ -86,13 +88,19 @@ mapping from Micronaut Data's `Page` are recorded there and must not be restated
 
 ## What building it found
 
-> **The `OrganoNotFoundExceptionHandler` contingency did not fire, and it is now answered rather
-> than assumed.** Micronaut resolves an `ExceptionHandler` by the exception type it is declared
-> against, not by the package the controller sits in, and a package-private `@Singleton` registers
-> like any other — so the handler under `rest/admin/organos` already covers a read outside it. The
-> scope's *move it to a shared error package* branch is therefore unused and no second problem type
-> exists. The package name is now a little misleading, which is a rename for whoever adds the third
-> caller rather than a change worth making on this one.
+> **The `OrganoNotFoundExceptionHandler` contingency did not fire, and the move happened anyway —
+> for a different reason.** The scope guarded against the handler's package-private visibility
+> keeping it from applying outside `rest/admin/organos`. It does not: Micronaut resolves an
+> `ExceptionHandler` by the exception type it is declared against, not by the package the
+> controller sits in, and a package-private `@Singleton` registers like any other. This endpoint
+> was answered correctly with the handler still under `rest/admin/organos`, and an integration test
+> asserts the problem type to prove it.
+>
+> What moved it was **[FEAT-0013](../FEAT-0013-organo-contracts-page/TASK-0001-organo-member-read.md)'s
+> member read**, which reached the same condition first and put the handler in a shared
+> `rest/error` package where its name is no longer misleading. Both features answer
+> `urn:conxugal:problem-type:organo-not-found` from that one handler; no second problem type
+> exists, which was the part of the scope that actually mattered.
 >
 > **Two absences the serializer would have dropped, and only one of them was foreseen.** The row's
 > null `obxecto` and `duration` needed `@JsonInclude(ALWAYS)`, as every response carrying a

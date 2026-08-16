@@ -7,11 +7,13 @@ info:
     REST API for the Conxugal application. All endpoints live under the reserved `/api/` prefix
     (ADR-0006). Authentication is a server-side session established by the server-rendered
     `/login` form (ADR-0005, outside this JSON API) and carried by a session cookie. Most
-    operations are restricted to administrators; the exceptions are `GET /api/me` and the two
-    Órganos reads (`GET /api/organos` and `GET /api/organos/taxonomia`), available to any
-    authenticated user. `GET /api/organos` serves the **visible set** — the Órganos holding at
-    least one visible contract — to every caller alike; the **whole** catalogue is an
-    administration read, `GET /api/admin/organos`.
+    operations are restricted to administrators; the exceptions are `GET /api/me` and the three
+    Órganos reads (`GET /api/organos`, `GET /api/organos/taxonomia` and the member read `GET
+    /api/organo/{id}`), available to any authenticated user. `GET /api/organos` serves the
+    **visible set** — the Órganos holding at least one visible contract — to every caller alike;
+    the **whole** catalogue is an administration read, `GET /api/admin/organos`. The member read
+    narrows for nobody: visibility is a property of the contracts, not of the reader, so an Órgano
+    the visible set leaves out is still answered, carrying no family.
 
     This document is the design-first, authoritative contract for the API (ADR-0010): endpoints
     are specified here before they are implemented, and controllers conform to it. It currently
@@ -20,8 +22,9 @@ info:
     catalogue import trigger), FEAT-0007 (the Órganos catalogue and taxonomía reads, and the
     administration of the taxonomía and of each Órgano's placement in it), FEAT-0009 (the
     contratos menores import mark and the administrator's catalogue read that carries it, the
-    two import triggers, and the read that reports what a run amounted to), and FEAT-0012 (the
-    narrowing of the shared catalogue read to the visible set).
+    two import triggers, and the read that reports what a run amounted to), FEAT-0012 (the
+    narrowing of the shared catalogue read to the visible set), and FEAT-0013 (the Órgano member
+    read, carrying one summary per contract family it holds visible data for).
 
 servers:
   - url: /
@@ -1155,6 +1158,76 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /api/organo/{id}:
+    parameters:
+      - $ref: "#/components/parameters/OrganoId"
+    get:
+      tags: [organos]
+      operationId: getOrgano
+      summary: Read one Órgano and the contract families it holds data for
+      description: >-
+        One Órgano's own attributes, and **one summary per contract family it holds visible data
+        for**. This is the single read an Órgano's page is built from: its name, the tabs it draws,
+        and the opening section's year chooser all come from this response. Available to any
+        authenticated user, `USER` or `ADMIN`.
+
+
+        **A family present in `families` has visible data; one absent has none.** Presence is not
+        a separate flag that could disagree with the summary beside it — it *is* the summary's
+        existence. `families: {}` is an Órgano holding nothing, and it draws no tab bar.
+
+
+        **Each family carries the `route` its section is mounted at**, so a response maps onto a
+        route with no lookup table in between: the key identifies the family and stays stable, and
+        the path segment travels beside it as data. Each family's summary is owned by that family:
+        this operation composes them and restates none of them.
+
+
+        **It carries no contract.** No list, no row, no paging envelope and no year parameter — it
+        takes no query parameter at all. An Órgano a caller cannot reach through `GET /api/organos`
+        is **not** an error here: visibility is a property of the contracts, not of the reader, so
+        such an Órgano answers `200` with an empty `families`. Only an unknown id is a `404`.
+      responses:
+        "200":
+          description: >-
+            The Órgano, and one summary per contract family it holds visible data for. `families`
+            is always present and is `{}` when it holds none.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganoMember"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: >-
+            No Órgano exists with that id. Carries the problem type
+            `urn:conxugal:problem-type:organo-not-found`, the same type every other operation
+            naming an Órgano uses.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /api/organo/{id}/contratos-menores:
     parameters:
       - $ref: "#/components/parameters/OrganoId"
@@ -1348,6 +1421,7 @@ components:
       schema:
         type: string
         format: uuid
+
     PageNumber:
       name: page
       in: query
@@ -1796,6 +1870,102 @@ components:
             /api/organos/taxonomia`. Null means unclassified — there is no separate unclassified
             collection, so callers filter for it.
 
+    OrganoMember:
+      type: object
+      description: >-
+        One Órgano as its own page reads it: its identity, its name, and the contract families it
+        holds visible data for. A **second serialisation** of the same aggregate rather than an
+        extension of `Organo` — the catalogue row carries `active` and `termoId` because a caller
+        filters and files by them, and this one carries neither because the page renders neither.
+      required: [id, name, families]
+      example:
+        id: "8d1b0f6e-2c5a-4c1e-9a3f-6b7c8d9e0f11"
+        name: "Servizo Galego de Saúde"
+        families:
+          contratosMenores:
+            route: contratos-menores
+            summary:
+              years: [2025, 2024, 2023]
+              partial: false
+              updating: true
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "8d1b0f6e-2c5a-4c1e-9a3f-6b7c8d9e0f11"
+          description: The Órgano's system-assigned identity, stable across imports.
+        name:
+          type: string
+          maxLength: 255
+          pattern: "^\\S(.*\\S)?$"
+          example: "Servizo Galego de Saúde"
+        families:
+          $ref: "#/components/schemas/OrganoFamilies"
+
+    OrganoFamilies:
+      type: object
+      additionalProperties: false
+      description: >-
+        The contract families this Órgano holds visible data for, keyed by family. **A family is
+        present when it has visible data and absent when it has none**, and that absence is the
+        whole mechanism: there is no *has contracts* flag, because a flag beside a summary could
+        disagree with it.
+
+
+        **The key identifies the family; the `route` inside it addresses the family.** The two are
+        kept apart deliberately: a key is an identifier and stays stable, while the path segment a
+        client mounts the family's section at is **data the server sends**, so no client holds a
+        table mapping one to the other that could disagree with its router.
+
+
+        **Always present, and `{}` when the Órgano holds nothing** — an Órgano holding no contracts
+        at all is a fact the page renders, and an absent key would be a different fact from an
+        empty object. No property is required, and an absent family is omitted rather than sent as
+        null.
+
+
+        A family the system gains later **adds a property here**; it changes nothing already
+        declared.
+      example:
+        contratosMenores:
+          route: contratos-menores
+          summary:
+            years: [2025, 2024, 2023]
+            partial: false
+            updating: true
+      properties:
+        contratosMenores:
+          $ref: "#/components/schemas/ContratosMenoresFamily"
+
+    ContratosMenoresFamily:
+      type: object
+      additionalProperties: false
+      description: >-
+        An Órgano's contratos menores, as the page that frames them needs them: where to mount the
+        section, and what the section says about itself. The page reads the first and treats the
+        second as opaque — what a summary *means* is the family's business, and this envelope
+        carries it without interpreting it.
+      required: [route, summary]
+      example:
+        route: contratos-menores
+        summary:
+          years: [2025, 2024, 2023]
+          partial: false
+          updating: true
+      properties:
+        route:
+          type: string
+          enum: [contratos-menores]
+          maxLength: 40
+          pattern: "^[a-z][a-z0-9-]*$"
+          example: contratos-menores
+          description: >-
+            The path segment this family's section is mounted at, below the Órgano's own page —
+            here `/organo/{id}/contratos-menores`. Sent rather than derived from the key so that a
+            client builds its links and its tab bar from the response alone.
+        summary:
+          $ref: "#/components/schemas/ContratosMenoresSummary"
+
     AdminOrgano:
       type: object
       description: >-
@@ -2205,8 +2375,8 @@ components:
       type: object
       description: >-
         What an Órgano's contratos menores section says about itself, answered before any contract
-        is fetched. **Its presence is what says the section exists**: it is carried as the
-        `contratos-menores` entry of an Órgano's families map, and an Órgano with no visible
+        is fetched. **Its presence is what says the section exists**: it is carried by the
+        `contratosMenores` entry of an Órgano's families map, and an Órgano with no visible
         contrato menor carries no entry at all — which is also how one holding only contracts the
         system withholds is indistinguishable from one holding none. There is deliberately no *has
         contracts* flag, because a section exists exactly when there is a year to open it on and a
