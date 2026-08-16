@@ -242,9 +242,19 @@ class ListContratosMenoresTest {
 
   private void firstRowIs(
       SortKey key, Sort.Order.Direction direction, VisibleContratoMenor first) {
-    Pageable expected = Pageable.from(0, SIZE, key.ordering(direction));
+    pageIs(0, key, direction, first);
+  }
+
+  /**
+   * The store's answer for exactly one page of one ordering. It is stubbed against the whole
+   * pageable rather than loose matchers, so under strict stubbing the page number and the ordering
+   * the use case asked for are asserted by the stub matching at all.
+   */
+  private void pageIs(
+      int number, SortKey key, Sort.Order.Direction direction, VisibleContratoMenor row) {
+    Pageable expected = Pageable.from(number, SIZE, key.ordering(direction));
     when(visibleContratos.page(ORGANO_ID, YEAR, expected))
-        .thenReturn(Page.of(List.of(first), expected, WHOLE_YEAR));
+        .thenReturn(Page.of(List.of(row), expected, WHOLE_YEAR));
   }
 
   private VisibleContratoMenor firstRowOf(SortKey key, Sort.Order.Direction direction) {
@@ -255,10 +265,7 @@ class ListContratosMenoresTest {
 
   private void yearIsThreePagesLong() {
     for (int number = 0; number < 3; number++) {
-      Pageable expected =
-          Pageable.from(number, SIZE, SortKey.AMOUNT.ordering(Sort.Order.Direction.DESC));
-      when(visibleContratos.page(ORGANO_ID, YEAR, expected))
-          .thenReturn(Page.of(List.of(LARGEST), expected, WHOLE_YEAR));
+      pageIs(number, SortKey.AMOUNT, Sort.Order.Direction.DESC, LARGEST);
     }
   }
 
