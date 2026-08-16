@@ -70,12 +70,10 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
   @Test
   void user_reads_an_organo_with_the_years_and_flags_of_the_family_it_holds(
       RequestSpecification spec) {
-    stubOrgano();
-    when(contratosMenoresSection.describe(SERGAS)).thenReturn(
-        Optional.of(
-            new ContratosMenoresSection(
-                List.of(YearSelection.of(2025), YearSelection.of(2024), YearSelection.of(2023)),
-                false, true)));
+    stubOrganoHolding(
+        new ContratosMenoresSection(
+            List.of(YearSelection.of(2025), YearSelection.of(2024), YearSelection.of(2023)),
+            false, true));
 
     Response response = readAs(spec, TestUserFactory.normalUser(), SERGAS);
 
@@ -128,9 +126,8 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
 
   @Test
   void admin_and_user_read_the_same_member(RequestSpecification spec) {
-    stubOrgano();
-    when(contratosMenoresSection.describe(SERGAS)).thenReturn(
-        Optional.of(new ContratosMenoresSection(List.of(YearSelection.of(2025)), true, false)));
+    stubOrganoHolding(
+        new ContratosMenoresSection(List.of(YearSelection.of(2025)), true, false));
 
     Response asUser = readAs(spec, TestUserFactory.normalUser(), SERGAS);
     Response asAdmin = readAs(spec, TestUserFactory.adminUser(), SERGAS);
@@ -144,9 +141,8 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
   @Test
   void the_member_carries_no_contract_and_none_of_the_catalogue_rows_fields(
       RequestSpecification spec) {
-    stubOrgano();
-    when(contratosMenoresSection.describe(SERGAS)).thenReturn(
-        Optional.of(new ContratosMenoresSection(List.of(YearSelection.of(2025)), false, false)));
+    stubOrganoHolding(
+        new ContratosMenoresSection(List.of(YearSelection.of(2025)), false, false));
 
     Response response = readAs(spec, TestUserFactory.normalUser(), SERGAS);
 
@@ -186,6 +182,12 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
     when(viewOrgano.view(SERGAS)).thenReturn(
         new OrganoDeContratacion(
             SERGAS, "test-sergas", "Servizo Galego de Saúde", true, true, null));
+  }
+
+  /** An Órgano that exists, whose contratos menores section says this about itself. */
+  private void stubOrganoHolding(ContratosMenoresSection section) {
+    stubOrgano();
+    when(contratosMenoresSection.describe(SERGAS)).thenReturn(Optional.of(section));
   }
 
   /**
