@@ -121,13 +121,8 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
   void organo_outside_the_visible_set_is_answered_rather_than_refused(RequestSpecification spec) {
     stubOrgano();
     when(contratosMenoresSection.describe(SERGAS)).thenReturn(Optional.empty());
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.normalUser());
 
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-        .when()
-            .get(memberOf(SERGAS));
+    Response response = getAs(spec, TestUserFactory.normalUser(), SERGAS);
 
     assertThat(response.getStatusCode())
         .as("neither 403 nor 404: an Órgano nothing is visible for is answered, not refused")
@@ -167,13 +162,8 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
   void unknown_organo_is_organo_not_found(RequestSpecification spec) {
     OrganoId unknown = new OrganoId(UUID.randomUUID());
     when(viewOrgano.view(unknown)).thenThrow(new OrganoNotFoundException(unknown));
-    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.normalUser());
 
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-        .when()
-            .get(memberOf(unknown));
+    Response response = getAs(spec, TestUserFactory.normalUser(), unknown);
 
     assertProblem(response)
         .hasStatus(HttpStatus.NOT_FOUND)
@@ -201,14 +191,19 @@ class OrganoControllerIntegrationTest extends AuthenticationTestSupport {
             SERGAS, "test-sergas", "Servizo Galego de Saúde", true, true, null));
   }
 
-  private Response readAs(RequestSpecification spec, User user, OrganoId organoId) {
+  /** The read as an authenticated caller makes it, with no expectation of how it is answered. */
+  private Response getAs(RequestSpecification spec, User user, OrganoId organoId) {
     String sessionCookie = seedUserAndLoginAs(spec, user);
 
-    Response response =
-        given(spec)
-            .header(HttpHeaders.COOKIE, sessionCookie)
-        .when()
-            .get(memberOf(organoId));
+    return given(spec)
+        .header(HttpHeaders.COOKIE, sessionCookie)
+    .when()
+        .get(memberOf(organoId));
+  }
+
+  /** The same read, for the tests whose subject is the body and not the status. */
+  private Response readAs(RequestSpecification spec, User user, OrganoId organoId) {
+    Response response = getAs(spec, user, organoId);
 
     response.then().statusCode(HttpStatus.OK.getCode());
     return response;
