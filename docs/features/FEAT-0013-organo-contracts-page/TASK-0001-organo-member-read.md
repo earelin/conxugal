@@ -2,7 +2,7 @@
 feat: FEAT-0013
 domain: backend
 adrs: [0002, 0005, 0006, 0010, 0012, 0016, 0020, 0021]
-status: todo
+status: done
 depends_on: []
 ---
 
@@ -91,6 +91,39 @@ and so is not in `depends_on:`, which names only tasks here.
   `server/application/src/integrationTest`, and the Schemathesis run
   ([ADR-0021](../../architecture/0021-openapi-contract-testing-with-schemathesis.md)) through
   `scripts/contract-test.sh`.
+
+## What building it found
+
+> **The handler needed no move, and that is now tested rather than assumed.** The contingency
+> above — package-private visibility keeping `OrganoNotFoundExceptionHandler` from applying outside
+> `rest/admin/organos` — did not fire. Micronaut resolves an `ExceptionHandler` by the exception
+> type it is declared over, not by the package it sits in, so a controller in `rest/organos` is
+> answered by it unchanged. Every one of the module's twelve handlers is package-private and none
+> is co-located with all the controllers it serves, so there was never a shared error package
+> waiting to be needed. FEAT-0011's [TASK-0007](../FEAT-0011-contratos-menores-browsing/TASK-0007-paged-contracts-endpoint.md)
+> records the same contingency and can now drop it.
+>
+> **`families` is a record with one component, not a `Map`.** Both reach the wire as `{}` when
+> empty, but only the record carries `additionalProperties: false`'s meaning into Java and spells
+> the slug exactly once, in a `@JsonProperty`. What it costs is that the two inclusions are
+> *opposite* and both load-bearing: `ALWAYS` on `OrganoMemberResponse` so an empty families map is
+> not dropped, `NON_NULL` on `FamiliesResponse` so an absent family is not sent as an explicit
+> null. Either one alone produces a payload the page misreads, so each has its own test asserting
+> the serialised keys rather than the record's components.
+>
+> **The member read costs two `findById` calls**, one in `ViewOrgano` and one inside
+> `DescribeContratosMenoresSection`. It is the price of the port deciding its own presence rule —
+> it answers an unknown Órgano exactly as it answers one holding nothing, and so cannot be what
+> produces the 404. Left as it is: one extra indexed primary-key read, against a page that used to
+> take three round trips.
+>
+> **One vacuum warning is now permanent, and it is the right one to accept.**
+> `camel-case-properties` reports `contratos-menores` as kebab-case. The spelling is the
+> requirement — it is the client's child-route segment, and a camelCase key would put a
+> translation step between the response and the router. The rule is left on rather than disabled,
+> so a genuinely mis-cased property elsewhere still reports. In exchange the
+> `oas3-unused-component` warning TASK-0006 left behind is gone, this being the `$ref` it
+> predicted.
 
 ## Acceptance criteria
 

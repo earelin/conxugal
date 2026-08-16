@@ -1155,6 +1155,75 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /api/organo/{id}:
+    parameters:
+      - $ref: "#/components/parameters/OrganoId"
+    get:
+      tags: [organos]
+      operationId: getOrgano
+      summary: Read one Órgano and the contract families it holds data for
+      description: >-
+        One Órgano's own attributes, and **one summary per contract family it holds visible data
+        for**. This is the single read an Órgano's page is built from: its name, the tabs it draws,
+        and the opening section's year chooser all come from this response. Available to any
+        authenticated user, `USER` or `ADMIN`.
+
+
+        **A family present in `families` has visible data; one absent has none.** Presence is not
+        a separate flag that could disagree with the summary beside it — it *is* the summary's
+        existence. `families: {}` is an Órgano holding nothing, and it draws no tab bar.
+
+
+        **The keys are family slugs**, spelled exactly as the client's child-route segments, so a
+        response maps onto a route with no lookup table in between. Each family's summary is owned
+        by that family: this operation composes them and restates none of them.
+
+
+        **It carries no contract.** No list, no row, no paging envelope and no year parameter — it
+        takes no query parameter at all. An Órgano a caller cannot reach through `GET /api/organos`
+        is **not** an error here: visibility is a property of the contracts, not of the reader, so
+        such an Órgano answers `200` with an empty `families`. Only an unknown id is a `404`.
+      responses:
+        "200":
+          description: >-
+            The Órgano, and one summary per contract family it holds visible data for. `families`
+            is always present and is `{}` when it holds none.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganoMember"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: >-
+            No Órgano exists with that id. Carries the problem type
+            `urn:conxugal:problem-type:organo-not-found`, the same type every other operation
+            naming an Órgano uses.
+          headers:
+            RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /api/me:
     get:
       tags: [account]
@@ -1647,6 +1716,64 @@ components:
             The single term this Órgano is filed under, matching a `Termo.id` from `GET
             /api/organos/taxonomia`. Null means unclassified — there is no separate unclassified
             collection, so callers filter for it.
+
+    OrganoMember:
+      type: object
+      description: >-
+        One Órgano as its own page reads it: its identity, its name, and the contract families it
+        holds visible data for. A **second serialisation** of the same aggregate rather than an
+        extension of `Organo` — the catalogue row carries `active` and `termoId` because a caller
+        filters and files by them, and this one carries neither because the page renders neither.
+      required: [id, name, families]
+      example:
+        id: "8d1b0f6e-2c5a-4c1e-9a3f-6b7c8d9e0f11"
+        name: "Servizo Galego de Saúde"
+        families:
+          contratos-menores:
+            years: [2025, 2024, 2023]
+            partial: false
+            updating: true
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "8d1b0f6e-2c5a-4c1e-9a3f-6b7c8d9e0f11"
+          description: The Órgano's system-assigned identity, stable across imports.
+        name:
+          type: string
+          maxLength: 255
+          pattern: "^\\S(.*\\S)?$"
+          example: "Servizo Galego de Saúde"
+        families:
+          $ref: "#/components/schemas/OrganoFamilies"
+
+    OrganoFamilies:
+      type: object
+      additionalProperties: false
+      description: >-
+        The contract families this Órgano holds visible data for, keyed by family slug — spelled
+        exactly as the client's child-route segment, so no lookup table exists that could disagree
+        with the router. **A family is present when it has visible data and absent when it has
+        none**, and that absence is the whole mechanism: there is no *has contracts* flag, because
+        a flag beside a summary could disagree with it.
+
+
+        **Always present, and `{}` when the Órgano holds nothing** — an Órgano holding no contracts
+        at all is a fact the page renders, and an absent key would be a different fact from an
+        empty object. No property is required, and an absent family is omitted rather than sent as
+        null.
+
+
+        A family the system gains later **adds a property here**; it changes nothing already
+        declared.
+      example:
+        contratos-menores:
+          years: [2025, 2024, 2023]
+          partial: false
+          updating: true
+      properties:
+        contratos-menores:
+          $ref: "#/components/schemas/ContratosMenoresSummary"
 
     AdminOrgano:
       type: object
