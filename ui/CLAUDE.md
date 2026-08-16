@@ -59,7 +59,12 @@ failures before committing changes to this module.
   renders the persistent Mantine `AppShell`; page routes nest as its children
   via `<Outlet/>`. `routes` (the `RouteObject[]`) is exported separately from
   `router` so tests can mount the same tree with `createMemoryRouter` instead of
-  a real browser router — see `src/App.test.tsx`.
+  a real browser router — see `src/App.test.tsx`. `/organo/:id` is itself a
+  layout route: the page draws the Órgano's name and a tab per contract family
+  its member read carries, and hands the active family's entry to the section
+  mounted in its `<Outlet/>` as context (`OrganoOutletContext` in
+  `src/shared/entities/organo.ts`). Composing shell and section in the router is
+  what lets neither feature slice import the other.
 - **Code splitting** (`src/app/router.tsx`): only the shell and the three
   standalone pages ship in the eager chunk. Feature sections are split with the
   local `section()` helper, which pairs a `React.lazy` component with its own

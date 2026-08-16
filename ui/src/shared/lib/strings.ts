@@ -44,6 +44,21 @@ export const strings = {
     errorTitle: 'Non se puido cargar a lista de órganos.',
     errorHelp: 'Téntao de novo; se persiste, volve máis tarde.',
   },
+  organo: {
+    // Beside the family registry that renders it: slug, label and child-route
+    // path travel together.
+    families: {
+      contratosMenores: 'Contratos menores',
+    },
+    noContracts: 'Non hai contratos para este órgano.',
+    noContractsHelp: 'O sistema non garda ningún contrato deste órgano, en ningunha familia.',
+    errorTitle: 'Non se puido cargar este órgano.',
+    errorHelp: 'Téntao de novo; se persiste, volve máis tarde.',
+    notFoundTitle: 'Non atopamos este órgano.',
+    notFoundHelp:
+      'A ligazón pode estar mal, ou o órgano pode xa non existir no catálogo. Escolle un ' +
+      'órgano no selector do panel lateral para seguir.',
+  },
   home: {
     title: 'Benvido/a a conxugal',
     description:

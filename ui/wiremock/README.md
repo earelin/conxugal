@@ -32,12 +32,20 @@ a stub:
 | `session.json` | `POST /logout`, `GET /login` — both are proxied, so both need an answer |
 | `metrics.json` | `GET /api/admin/metrics` — a few canned SSE samples |
 | `organos.json` | `GET /api/organos` (the **visible set**, a subset), `GET /api/admin/organos` (the whole catalogue), `GET /api/organos/taxonomia`, the catalogue import and the placement writes |
+| `organo.json` | `GET /api/organo/{id}` — one stub per Órgano of the visible set, plus a catch-all 404 |
 
 `organos.json` serves **two different catalogues on purpose**: the side-panel picker's
 `/api/organos` holds 4 of the 8 Órganos `/api/admin/organos` lists, so the administration
 area visibly shows what the picker withholds. Two of the taxonomía's terms — *Concellos*
 and *Deputacións provinciais* — hold no Órgano of that subset and are therefore pruned
 from the picker's tree while still appearing in the management one.
+
+`organo.json` names the **same ids and names** as `organos.json`'s visible set, so the
+page the picker opens agrees with the row it was chosen from. Three of the four hold
+`contratosMenores`; *Instituto Galego da Vivenda e Solo* holds `families: {}`, which is
+the only way to reach the page's *no contracts* state. Its catch-all sits at a lower
+priority so an unknown id answers the contract's `organo-not-found` problem rather than
+one of the four.
 
 `metrics.json`'s samples are repeated as `metricsSamples` in
 [`../acceptance/support/fixtures.ts`](../acceptance/support/fixtures.ts), which the metrics

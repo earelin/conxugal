@@ -75,9 +75,10 @@ test.describe('Órgano picker', () => {
     await trigger(page).click();
     await tree(page).getByText(SERGAS).click();
 
-    await expect(page).toHaveURL(new RegExp(`/organo/${SERGAS_ID}$`));
-    // The contracts page does not exist yet, so the shell renders its
-    // not-found body — the picker's job ends at the URL.
+    // The Órgano's page redirects on to the first family it holds, so the
+    // segment beyond the id is the page's business — the picker's job ends at
+    // the Órgano.
+    await expect(page).toHaveURL(new RegExp(`/organo/${SERGAS_ID}(/|$)`));
     await expect(page.getByRole('button', { name: `Órgano ${SERGAS}` })).toBeVisible();
   });
 
@@ -110,7 +111,7 @@ test.describe('Órgano picker', () => {
     );
 
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(new RegExp(`/organo/${INACTIVE_ID}$`));
+    await expect(page).toHaveURL(new RegExp(`/organo/${INACTIVE_ID}(/|$)`));
   });
 
   test('offers no control that changes anything', async ({ page }) => {
@@ -132,7 +133,7 @@ test.describe('Órgano picker search', () => {
     await expect(tree(page)).toBeHidden();
 
     await offered(page).getByText(SERGAS).click();
-    await expect(page).toHaveURL(new RegExp(`/organo/${SERGAS_ID}$`));
+    await expect(page).toHaveURL(new RegExp(`/organo/${SERGAS_ID}(/|$)`));
   });
 
   test('states that an offered Órgano is inactive', async ({ page }) => {

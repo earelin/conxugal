@@ -56,7 +56,8 @@ export function renderApp(initialPath = '/') {
       </QueryClientProvider>
     </MantineProvider>,
   );
-  // Handed back so a test can ask what the shell has actually asked the server
-  // for, which is not something the rendered output can answer.
-  return { ...utils, queryClient };
+  // The query client is handed back so a test can ask what the shell has
+  // actually asked the server for, and the router so it can ask where a
+  // redirect landed — neither is something the rendered output can answer.
+  return { ...utils, queryClient, router };
 }

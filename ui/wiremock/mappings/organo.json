@@ -1,0 +1,105 @@
+{
+  "mappings": [
+    {
+      "name": "Read the Órgano the picker opens on, holding contratos menores",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/organo/7e5a0c92-1d63-4b28-f407-6c2e9a5d3b71"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "7e5a0c92-1d63-4b28-f407-6c2e9a5d3b71",
+          "name": "Servizo Galego de Saúde (SERGAS)",
+          "families": {
+            "contratosMenores": {
+              "route": "contratos-menores",
+              "summary": { "years": [2025, 2024, 2023], "partial": false, "updating": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Read an Órgano whose contratos menores import is complete and idle",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/organo/1d8e2a94-5b63-4f27-9c14-6a3f8e5d0c71"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "1d8e2a94-5b63-4f27-9c14-6a3f8e5d0c71",
+          "name": "Axencia Galega de Innovación",
+          "families": {
+            "contratosMenores": {
+              "route": "contratos-menores",
+              "summary": { "years": [2026, 2025], "partial": false, "updating": false }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Read an inactive Órgano that still holds contratos menores",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/organo/5c3e8a70-9b41-4f06-d285-4a0c7e3b1f59"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "5c3e8a70-9b41-4f06-d285-4a0c7e3b1f59",
+          "name": "Hospital Álvaro Cunqueiro",
+          "families": {
+            "contratosMenores": {
+              "route": "contratos-menores",
+              "summary": { "years": [2025], "partial": true, "updating": false }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Read an Órgano that holds no contracts of any family",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPath": "/api/organo/6d4f9b81-0c52-4a17-e396-5b1d8f4c2a60"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "6d4f9b81-0c52-4a17-e396-5b1d8f4c2a60",
+          "name": "Instituto Galego da Vivenda e Solo",
+          "families": {}
+        }
+      }
+    },
+    {
+      "name": "Read an Órgano the catalogue does not know",
+      "priority": 10,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+"
+      },
+      "response": {
+        "status": 404,
+        "headers": { "Content-Type": "application/problem+json" },
+        "jsonBody": {
+          "type": "urn:conxugal:problem-type:organo-not-found",
+          "title": "Órgano not found",
+          "status": 404,
+          "detail": "No Órgano exists with the requested id."
+        }
+      }
+    }
+  ]
+}
