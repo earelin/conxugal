@@ -1,4 +1,5 @@
 import { Stack, Text, Title } from '@mantine/core';
+import type { ReactNode } from 'react';
 import { Navigate, Outlet, useLocation, useMatch, useParams } from 'react-router';
 
 import { type OrganoOutletContext, useOrgano } from '../../shared/entities/organo';
@@ -10,6 +11,20 @@ import { familiesHeld } from './families';
 import { FamilyTabs } from './FamilyTabs';
 
 const copy = strings.organo;
+
+/**
+ * The name, and whatever the page has to put under it. Written once because both
+ * an Órgano holding families and one holding none are the same page with the
+ * same title — they differ only in what follows it.
+ */
+function OrganoFrame({ name, children }: { name: string; children: ReactNode }) {
+  return (
+    <Stack gap="lg">
+      <Title order={2}>{name}</Title>
+      {children}
+    </Stack>
+  );
+}
 
 /**
  * The frame every contract family's section mounts in: the Órgano's name, a tab
@@ -65,13 +80,12 @@ export function OrganoPage() {
   // An answer, not a failure: no bar to draw and nothing to try again.
   if (held.length === 0) {
     return (
-      <Stack gap="lg">
-        <Title order={2}>{organo.name}</Title>
+      <OrganoFrame name={organo.name}>
         <Stack gap={4}>
           <Text>{copy.noContracts}</Text>
           <Text c="dimmed">{copy.noContractsHelp}</Text>
         </Stack>
-      </Stack>
+      </OrganoFrame>
     );
   }
 
@@ -87,11 +101,10 @@ export function OrganoPage() {
   const context: OrganoOutletContext = { organo, family: organo.families[active.key] };
 
   return (
-    <Stack gap="lg">
-      <Title order={2}>{organo.name}</Title>
+    <OrganoFrame name={organo.name}>
       <FamilyTabs basePath={basePath} held={held} active={active}>
         <Outlet context={context} />
       </FamilyTabs>
-    </Stack>
+    </OrganoFrame>
   );
 }
