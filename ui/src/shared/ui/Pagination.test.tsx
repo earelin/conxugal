@@ -3,11 +3,15 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { formatCount } from '../lib/number';
 import { counted } from '../lib/plural';
 import { strings } from '../lib/strings';
 import { Pagination } from './Pagination';
 
 const copy = strings.pagination;
+
+/** The page total as the control composes it, so the test reads it the same way. */
+const pagesOf = (totalPages: number) => copy.ofPages(formatCount(totalPages));
 
 interface Envelope {
   page?: number;
@@ -48,7 +52,7 @@ function button(name: string) {
  */
 function jumpBox(totalPages = 37) {
   return screen.getByRole('textbox', {
-    name: `${copy.pageLabel} ${copy.ofPages(totalPages)}`,
+    name: `${copy.pageLabel} ${pagesOf(totalPages)}`,
   });
 }
 
@@ -62,7 +66,7 @@ describe('Pagination', () => {
     expect(button(copy.last)).toBeInTheDocument();
     expect(jumpBox()).toHaveValue('3');
     expect(screen.getByText(counted(1832, copy.records))).toBeInTheDocument();
-    expect(screen.getByText(copy.ofPages(37))).toBeInTheDocument();
+    expect(screen.getByText(pagesOf(37))).toBeInTheDocument();
   });
 
   it('is a navigation landmark of its own, so a reader can be taken straight to it', () => {
@@ -100,23 +104,26 @@ describe('Pagination', () => {
     // The point of the case: how many entries there are is an answer in its own
     // right, not a by-product of there being somewhere to page to.
     expect(screen.getByText(counted(18, copy.records))).toBeInTheDocument();
-    expect(screen.getByText(copy.ofPages(1))).toBeInTheDocument();
+    expect(screen.getByText(pagesOf(1))).toBeInTheDocument();
   });
 
-  it('says one rexistro in the singular and the rest in the plural', () => {
-    renderPagination({ totalItems: 1, totalPages: 1 });
-    expect(screen.getByText(`1 ${copy.records.singular}`)).toBeInTheDocument();
+  it.each([
+    [1, copy.records.singular],
+    [2, copy.records.plural],
+  ])('says %i in the form that count calls for', (totalItems, form) => {
+    renderPagination({ totalItems, totalPages: 1 });
 
-    renderPagination({ totalItems: 2, totalPages: 1 });
-    expect(screen.getByText(`2 ${copy.records.plural}`)).toBeInTheDocument();
+    expect(screen.getByText(`${totalItems} ${form}`)).toBeInTheDocument();
   });
 
   it('draws an empty selection without a page to offer, rather than failing', () => {
     renderPagination({ page: 1, totalItems: 0, totalPages: 0 });
 
     expect(screen.getByText(counted(0, copy.records))).toBeInTheDocument();
-    expect(screen.getByText(copy.ofPages(0))).toBeInTheDocument();
+    expect(screen.getByText(pagesOf(0))).toBeInTheDocument();
     expect(button(copy.first)).toBeDisabled();
+    expect(button(copy.previous)).toBeDisabled();
+    expect(button(copy.next)).toBeDisabled();
     expect(button(copy.last)).toBeDisabled();
     expect(jumpBox(0)).toBeDisabled();
   });
@@ -152,6 +159,12 @@ describe('Pagination', () => {
     ['38', 'a page past the last'],
     ['abc', 'something that is not a number'],
     ['', 'nothing at all'],
+    ['5.5', 'a page between two pages'],
+    // `Number` would read each of these as a page in range — 16, 10, 5 — and
+    // page somewhere the reader never asked for.
+    ['0x10', 'a hexadecimal literal'],
+    ['1e1', 'an exponent'],
+    ['0b101', 'a binary literal'],
   ])('refuses «%s» — %s — rather than emitting it', async (asked) => {
     const { onPageChange, user } = renderPagination({ page: 3, totalPages: 37 });
 

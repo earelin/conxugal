@@ -7,7 +7,7 @@
   <!-- ===== A: first page ===== -->
   <text x="80" y="126" font-size="12" font-weight="600" fill="#495057">Primeira páxina</text>
   <rect x="80" y="136" width="1120" height="70" rx="8" fill="#ffffff" stroke="#dee2e6"/>
-  <text x="104" y="171" dominant-baseline="central" font-size="12.5" fill="#868e96">1.832 rexistros</text>
+  <text x="104" y="171" dominant-baseline="central" font-size="12.5" fill="#868e96">1 832 rexistros</text>
   <rect x="596" y="154" width="96" height="34" rx="8" fill="#f8f9fa" stroke="#e9ecef"/>
   <text x="652" y="171" text-anchor="middle" dominant-baseline="central" font-size="12.5" font-weight="500" fill="#adb5bd">Primeira</text>
   <g stroke="#ced4da" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -32,7 +32,7 @@
   <!-- ===== B: a middle page ===== -->
   <text x="80" y="234" font-size="12" font-weight="600" fill="#495057">Páxina intermedia</text>
   <rect x="80" y="244" width="1120" height="70" rx="8" fill="#ffffff" stroke="#dee2e6"/>
-  <text x="104" y="279" dominant-baseline="central" font-size="12.5" fill="#868e96">1.832 rexistros</text>
+  <text x="104" y="279" dominant-baseline="central" font-size="12.5" fill="#868e96">1 832 rexistros</text>
   <rect x="596" y="262" width="96" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
   <text x="652" y="279" text-anchor="middle" dominant-baseline="central" font-size="12.5" font-weight="500" fill="#495057">Primeira</text>
   <g stroke="#495057" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -57,7 +57,7 @@
   <!-- ===== C: last page ===== -->
   <text x="80" y="342" font-size="12" font-weight="600" fill="#495057">Última páxina</text>
   <rect x="80" y="352" width="1120" height="70" rx="8" fill="#ffffff" stroke="#dee2e6"/>
-  <text x="104" y="387" dominant-baseline="central" font-size="12.5" fill="#868e96">1.832 rexistros</text>
+  <text x="104" y="387" dominant-baseline="central" font-size="12.5" fill="#868e96">1 832 rexistros</text>
   <rect x="596" y="370" width="96" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
   <text x="652" y="387" text-anchor="middle" dominant-baseline="central" font-size="12.5" font-weight="500" fill="#495057">Primeira</text>
   <g stroke="#495057" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">

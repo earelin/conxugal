@@ -1,19 +1,31 @@
 import { Box, Button, Divider, Group, Input, Text } from '@mantine/core';
 import {
   IconChevronLeft,
+  IconChevronLeftPipe,
   IconChevronRight,
-  IconChevronsLeft,
-  IconChevronsRight,
+  IconChevronRightPipe,
 } from '@tabler/icons-react';
 import { type ChangeEvent, type KeyboardEvent, useId, useState } from 'react';
 
+import { formatCount } from '../lib/number';
 import { counted } from '../lib/plural';
 import { strings } from '../lib/strings';
 
 const copy = strings.pagination;
 
+/**
+ * Decimal digits only. `Number` would otherwise read a page number in another
+ * base or in exponent form — `0x10` as 16, `1e1` as 10 — and page somewhere the
+ * reader did not ask for, which is the one thing the jump must not do.
+ */
+const DIGITS = /^\d+$/;
+
 interface PaginationProps {
-  /** The page being shown, 1-based, exactly as the wire states it. */
+  /**
+   * The page being shown, 1-based, exactly as the wire states it. Callers are
+   * expected to have clamped it to `1…totalPages`: a page past the end leaves
+   * *last* disabled, since it is already at or beyond the end it would go to.
+   */
   page: number;
   /**
    * The page size the wire states. Read by nobody here: both totals below are
@@ -62,12 +74,11 @@ export function Pagination({ page, totalItems, totalPages, onPageChange }: Pagin
   const single = totalPages <= 1;
 
   function commit() {
-    // A blank box, a non-number and a page outside the selection are all
-    // refused rather than corrected: silently paging somewhere adjacent to what
-    // was asked for is worse than not moving at all. An empty box needs no case
-    // of its own — `Number('')` is 0, which the range below already turns away.
-    const asked = Number(typed);
-    if (Number.isInteger(asked) && asked >= 1 && asked <= totalPages) {
+    // A blank box, anything that is not a run of digits, and a page outside the
+    // selection are all refused rather than corrected: silently paging
+    // somewhere adjacent to what was asked for is worse than not moving at all.
+    const asked = DIGITS.test(typed?.trim() ?? '') ? Number(typed) : NaN;
+    if (asked >= 1 && asked <= totalPages) {
       onPageChange(asked);
     }
     // Either way the box goes back to speaking for the page prop, which is how
@@ -77,7 +88,7 @@ export function Pagination({ page, totalItems, totalPages, onPageChange }: Pagin
 
   return (
     <Box component="nav" aria-label={copy.navLabel}>
-      <Divider />
+      <Divider color="gray.1" />
       <Group justify="space-between" gap="sm" wrap="wrap" pt="sm">
         <Text size="sm" c="dimmed">
           {counted(totalItems, copy.records)}
@@ -87,7 +98,7 @@ export function Pagination({ page, totalItems, totalPages, onPageChange }: Pagin
             variant="default"
             size="sm"
             disabled={atStart}
-            leftSection={<IconChevronsLeft size={16} />}
+            leftSection={<IconChevronLeftPipe size={16} />}
             onClick={() => onPageChange(1)}
           >
             {copy.first}
@@ -102,7 +113,7 @@ export function Pagination({ page, totalItems, totalPages, onPageChange }: Pagin
             {copy.previous}
           </Button>
           <Group gap="xs" wrap="nowrap">
-            {/* The visible word labels the box, so the two cannot drift apart. */}
+            {/* Gives the word a click target on the box; the name comes from `aria-labelledby` below. */}
             <Text component="label" id={labelId} htmlFor={jumpId} size="sm" c="dimmed">
               {copy.pageLabel}
             </Text>
@@ -137,7 +148,7 @@ export function Pagination({ page, totalItems, totalPages, onPageChange }: Pagin
               onBlur={() => setTyped(null)}
             />
             <Text id={totalId} size="sm" c="dimmed">
-              {copy.ofPages(totalPages)}
+              {copy.ofPages(formatCount(totalPages))}
             </Text>
           </Group>
           <Button
@@ -153,7 +164,7 @@ export function Pagination({ page, totalItems, totalPages, onPageChange }: Pagin
             variant="default"
             size="sm"
             disabled={atEnd}
-            rightSection={<IconChevronsRight size={16} />}
+            rightSection={<IconChevronRightPipe size={16} />}
             onClick={() => onPageChange(totalPages)}
           >
             {copy.last}
