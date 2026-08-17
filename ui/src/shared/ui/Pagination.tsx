@@ -10,15 +10,9 @@ import { type ChangeEvent, type KeyboardEvent, useId, useState } from 'react';
 import { formatCount } from '../lib/number';
 import { counted } from '../lib/plural';
 import { strings } from '../lib/strings';
+import { askedPage } from './askedPage';
 
 const copy = strings.pagination;
-
-/**
- * Decimal digits only. `Number` would otherwise read a page number in another
- * base or in exponent form — `0x10` as 16, `1e1` as 10 — and page somewhere the
- * reader did not ask for, which is the one thing the jump must not do.
- */
-const DIGITS = /^\d+$/;
 
 interface PaginationProps {
   /**
@@ -74,15 +68,12 @@ export function Pagination({ page, totalItems, totalPages, onPageChange }: Pagin
   const single = totalPages <= 1;
 
   function commit() {
-    // A blank box, anything that is not a run of digits, and a page outside the
-    // selection are all refused rather than corrected: silently paging
-    // somewhere adjacent to what was asked for is worse than not moving at all.
-    const asked = DIGITS.test(typed?.trim() ?? '') ? Number(typed) : NaN;
-    if (asked >= 1 && asked <= totalPages) {
+    const asked = askedPage(typed, totalPages);
+    if (asked !== null) {
       onPageChange(asked);
     }
-    // Either way the box goes back to speaking for the page prop, which is how
-    // a refusal shows itself: the number typed does not stay.
+    // Committed or refused, the box goes back to speaking for the page prop —
+    // which is how a refusal shows itself: the number typed does not stay.
     setTyped(null);
   }
 
