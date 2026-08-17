@@ -3,11 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/httpClient';
 
 /**
- * One Órgano as its own page reads it, which is a different serialisation from
- * the catalogue row in `taxonomiaTree`: no `active`, no `termoId`, because the
- * page renders neither.
- */
-/**
  * What every family entry carries, whichever family it is: the envelope this
  * read publishes, and nothing of what is inside it.
  */
