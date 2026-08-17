@@ -208,16 +208,34 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
   // rather than something readable as one. Each asserts the use case was never reached: a
   // request understood as something other than what it said would still have reached it.
 
-  // --- What the edge refuses before a use case ever sees it -------------------
-  // An email that is one, a role the enum names, and an enabled state that is a JSON boolean
-  // rather than something readable as one. Each asserts the use case was never reached: a
-  // request understood as something other than what it said would still have reached it.
-
   @ParameterizedTest(name = "{0}")
   @MethodSource("refusedNewAccounts")
   void create_is_refused(String reason, String body, RequestSpecification spec) {
     assertProblem(postCreate(spec, body)).hasStatus(HttpStatus.BAD_REQUEST);
     verifyNoInteractions(createUser);
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("acceptedAddresses")
+  void create_accepts_an_awkward_address(String email, RequestSpecification spec) {
+    User admin = TestUserFactory.adminUser();
+    seedUser(admin);
+    User created = new User(
+        new UserId(UUID.randomUUID()), email, "hashed-password", Role.USER, true,
+        Instant.parse("2026-07-18T09:30:00Z"));
+    when(createUser.create(email, Role.USER))
+        .thenReturn(new CreatedAccount(created, new GeneratedPassword("Tg7#kLp2Qw9$mZxR")));
+    String sessionCookie = loginAs(spec, admin);
+
+    Response response =
+        given(spec)
+            .header(HttpHeaders.COOKIE, sessionCookie)
+            .body("{\"email\":\"%s\",\"role\":\"USER\"}".formatted(email))
+        .when()
+            .post("/api/admin/users");
+
+    response.then().statusCode(HttpStatus.CREATED.getCode());
+    assertThat(response.jsonPath().getString("email")).isEqualTo(email);
   }
 
   @ParameterizedTest(name = "{0}")
@@ -236,7 +254,41 @@ class UsersControllerIntegrationTest extends AuthenticationTestSupport {
         arguments("role is absent", "{\"email\":\"new.admin@conxugal.gal\"}"),
         arguments("role is outside the enum",
             "{\"email\":\"new.admin@conxugal.gal\",\"role\":\"WIZARD\"}"),
-        arguments("body is not an object", "[]"));
+        arguments("body is not an object", "[]"),
+        arguments("email is the address the contract test slipped through",
+            "{\"email\":\"û@N\",\"role\":\"USER\"}"),
+        arguments("email local part is not ASCII",
+            "{\"email\":\"û@example.gal\",\"role\":\"USER\"}"),
+        arguments("email domain carries no dot", "{\"email\":\"root@local\",\"role\":\"USER\"}"),
+        arguments("email top-level domain is one letter",
+            "{\"email\":\"a@b.c\",\"role\":\"USER\"}"),
+        arguments("email local part opens with a dot",
+            "{\"email\":\".a@example.gal\",\"role\":\"USER\"}"),
+        arguments("email local part carries two dots",
+            "{\"email\":\"a..b@example.gal\",\"role\":\"USER\"}"),
+        arguments("email domain label closes with a hyphen",
+            "{\"email\":\"a@ex-.gal\",\"role\":\"USER\"}"),
+        arguments("email is longer than an address can be",
+            "{\"email\":\"%s@example.gal\",\"role\":\"USER\"}".formatted("a".repeat(250))),
+        arguments("email local part is longer than 64",
+            "{\"email\":\"%s@example.gal\",\"role\":\"USER\"}".formatted("a".repeat(65))),
+        arguments("email domain label is longer than 63",
+            "{\"email\":\"a@%s.gal\",\"role\":\"USER\"}".formatted("b".repeat(64))),
+        arguments("email closes with a line break",
+            "{\"email\":\"a@example.gal\\n\",\"role\":\"USER\"}"));
+  }
+
+  // The plain address is admin_creates_user's; these are the awkward ones the contract's
+  // pattern still admits, and that a generator working from it will send. The last two sit
+  // exactly on the RFC length limits, which is where an off-by-one in the rule would show.
+  // Without them an over-tightened rule would surface as a contract-test failure instead.
+  private static Stream<Arguments> acceptedAddresses() {
+    return Stream.of(
+        arguments("first.last@example.gal"),
+        arguments("a+tag@sub.example.co.uk"),
+        arguments("weird!#$%&'*+-/=?^_`{|}~@example.gal"),
+        arguments("%s@example.gal".formatted("a".repeat(64))),
+        arguments("a@%s.gal".formatted("b".repeat(63))));
   }
 
   private static Stream<Arguments> refusedEnabledStates() {

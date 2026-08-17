@@ -173,6 +173,11 @@ flowchart LR
    black-box Playwright coverage of the admin screens, driving the built SPA with the API
    replaced by WireMock ([ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md));
    the same stub also gives `npm run dev` a local API. *(SPEC-0003 #1, #2, #5, #6, #10, #12)*
+9. **The shape an email must have to create an account**
+   ([TASK-0009](TASK-0009-create-user-email-shape.md)) — state the address rule the create
+   endpoint enforces as a `pattern` and a length bound in the contract, and mirror that exact
+   regex on the request record, so `format: email` alone can no longer let the document and the
+   validator mean different things. *(SPEC-0003 #6)*
 
 ## Edge cases
 - **Disabled account is indistinct at login** — a disabled account produces the same
