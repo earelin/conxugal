@@ -1,80 +1,23 @@
-import { MantineProvider } from '@mantine/core';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import nock from 'nock';
-import { createMemoryRouter, useOutletContext } from 'react-router';
-import { RouterProvider } from 'react-router/dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { theme } from '../../app/theme';
-import type { OrganoOutletContext } from '../../shared/entities/organo';
-import { createQueryClient } from '../../shared/lib/queryClient';
 import { strings } from '../../shared/lib/strings';
 import { mockCurrentUser, mockOrganosPicker, renderApp } from '../../test/renderApp';
-import { FAMILIES } from './families';
-import { OrganoPage } from './OrganoPage';
-
-const BASE_URL = 'http://localhost:3000';
-const ORGANO_ID = 'o-1';
-const ORGANO_NAME = 'Servizo Galego de Saúde';
-const copy = strings.organo;
-const contratosMenores = FAMILIES[0];
-
-const familyEntry = {
-  route: contratosMenores.path,
-  summary: { years: [2025, 2024, 2023], partial: false, updating: true },
-};
-const HOLDS_CONTRATOS_MENORES = { [contratosMenores.key]: familyEntry };
-
-function member(families: Record<string, unknown>) {
-  return { id: ORGANO_ID, name: ORGANO_NAME, families };
-}
-
-function mockOrgano(status: number, body?: object) {
-  return nock(BASE_URL).get(`/api/organo/${ORGANO_ID}`).reply(status, body);
-}
-
-/**
- * Stands in for the contract family's section, which arrives as a child route of
- * its own. It reads the summary the page hands it exactly as that section will:
- * out of the outlet context, with no request of its own.
- */
-function FamilySectionSpy() {
-  const { organo, family } = useOutletContext<OrganoOutletContext>();
-  const summary = family.summary as { years: number[] };
-  return <p>{`${organo.name} abre en ${summary.years[0]}`}</p>;
-}
-
-function renderOrganoPage(initialPath = `/organo/${ORGANO_ID}`) {
-  const router = createMemoryRouter(
-    [
-      {
-        path: '/organo/:id',
-        Component: OrganoPage,
-        // A splat, so a section with routes of its own stands in for one too.
-        children: [{ path: ':family/*', Component: FamilySectionSpy }],
-      },
-    ],
-    { initialEntries: [initialPath] },
-  );
-  const utils = render(
-    <MantineProvider theme={theme} env="test">
-      <QueryClientProvider client={createQueryClient()}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </MantineProvider>,
-  );
-  return { ...utils, router };
-}
-
-function organoHeading() {
-  return screen.queryByRole('heading', { name: ORGANO_NAME });
-}
-
-function retryButton() {
-  return screen.queryByRole('button', { name: strings.retry });
-}
+import {
+  contratosMenores,
+  copy,
+  familyEntry,
+  HOLDS_CONTRATOS_MENORES,
+  member,
+  mockOrgano,
+  ORGANO_ID,
+  ORGANO_NAME,
+  organoHeading,
+  renderOrganoPage,
+  retryButton,
+} from './organoHarness';
 
 describe('OrganoPage', () => {
   beforeEach(() => {

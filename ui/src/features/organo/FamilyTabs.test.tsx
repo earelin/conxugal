@@ -1,51 +1,8 @@
-import { MantineProvider } from '@mantine/core';
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createMemoryRouter } from 'react-router';
-import { RouterProvider } from 'react-router/dom';
 import { describe, expect, it } from 'vitest';
 
-import { theme } from '../../app/theme';
-import { strings } from '../../shared/lib/strings';
-import { FAMILIES, type Family } from './families';
-import { FamilyTabs } from './FamilyTabs';
-
-const ORGANO_ID = 'o-1';
-const contratosMenores = FAMILIES[0];
-// Stands in for the next family to be built, which is what the bar exists from
-// the first day to make room for.
-const licitacions: Family = { key: 'licitacions', path: 'licitacions', label: 'Licitacións' };
-
-function renderTabs(held: Family[], active: Family) {
-  const router = createMemoryRouter(
-    [
-      {
-        path: '/organo/:id/:family',
-        element: (
-          <FamilyTabs basePath={`/organo/${ORGANO_ID}`} held={held} active={active}>
-            <p>{'A sección da familia activa'}</p>
-          </FamilyTabs>
-        ),
-      },
-    ],
-    { initialEntries: [`/organo/${ORGANO_ID}/${active.path}`] },
-  );
-  const utils = render(
-    <MantineProvider theme={theme} env="test">
-      <RouterProvider router={router} />
-    </MantineProvider>,
-  );
-  return { ...utils, router };
-}
-
-/** Found by name, which is how a screen reader's rotor reaches it. */
-function bar() {
-  return screen.getByRole('tablist', { name: strings.organo.tabsLabel });
-}
-
-function tabs() {
-  return within(bar()).getAllByRole('tab');
-}
+import { bar, contratosMenores, licitacions, ORGANO_ID, renderTabs, tabs } from './organoHarness';
 
 describe('FamilyTabs', () => {
   it('draws the full bar for a single family, which is not a defect', () => {
