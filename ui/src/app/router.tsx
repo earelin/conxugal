@@ -14,6 +14,7 @@ import { RouteErrorPage } from './pages/RouteErrorPage';
 // split: the two administration pages share a barrel, so they share a chunk.
 // The module registry dedupes, so warming and rendering pull the same fetch.
 const administration = () => import('../features/administration');
+const organo = () => import('../features/organo');
 const organos = () => import('../features/organos');
 
 function warmAdminSections() {
@@ -66,6 +67,15 @@ export const routes: RouteObject[] = [
           { path: 'usuarios', Component: section(administration, (m) => m.UsersPage) },
           { path: 'organos', Component: section(organos, (m) => m.OrganosPage) },
         ],
+      },
+      {
+        // The layout route each contract family's section mounts into. Composing
+        // shell and section here is what lets neither slice import the other.
+        // It declares no child yet, so the redirect the page issues on the bare
+        // path lands on the catch-all below until the first section arrives.
+        path: 'organo/:id',
+        Component: section(organo, (m) => m.OrganoPage),
+        errorElement: <RouteErrorPage />,
       },
       { path: '*', Component: NotFoundPage },
     ],

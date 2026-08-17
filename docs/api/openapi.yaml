@@ -1177,10 +1177,10 @@ paths:
         existence. `families: {}` is an Órgano holding nothing, and it draws no tab bar.
 
 
-        **Each family carries the `route` its section is mounted at**, so a response maps onto a
-        route with no lookup table in between: the key identifies the family and stays stable, and
-        the path segment travels beside it as data. Each family's summary is owned by that family:
-        this operation composes them and restates none of them.
+        **Each family carries the `route` its section is mounted at**: the key identifies the
+        family and stays stable in camelCase, and the path segment travels beside it as data, so a
+        client needs no case conversion to turn a response into a link. Each family's summary is
+        owned by that family: this operation composes them and restates none of them.
 
 
         **It carries no contract.** No list, no row, no paging envelope and no year parameter — it
@@ -1912,10 +1912,13 @@ components:
         disagree with it.
 
 
-        **The key identifies the family; the `route` inside it addresses the family.** The two are
-        kept apart deliberately: a key is an identifier and stays stable, while the path segment a
-        client mounts the family's section at is **data the server sends**, so no client holds a
-        table mapping one to the other that could disagree with its router.
+        **The key identifies the family; the `route` beside it addresses the family.** The two are
+        kept apart deliberately: a key is an identifier and stays stable in camelCase, while the
+        path segment a client mounts the family's section at is **data the server sends**, so a
+        client needs no case conversion — and no table of its own — to build a link. A client whose
+        router is handed its route tree up front names the segment literally whatever the response
+        says, and may address the family from there instead; `route`'s `enum` is what holds both
+        answers to the same value.
 
 
         **Always present, and `{}` when the Órgano holds nothing** — an Órgano holding no contracts
@@ -1961,8 +1964,11 @@ components:
           example: contratos-menores
           description: >-
             The path segment this family's section is mounted at, below the Órgano's own page —
-            here `/organo/{id}/contratos-menores`. Sent rather than derived from the key so that a
-            client builds its links and its tab bar from the response alone.
+            here `/organo/{id}/contratos-menores`. Sent rather than derived from the key, which is
+            camelCase like every other property, so that a client needs no case conversion to turn
+            a response into a link. A client whose router is handed its route tree up front names
+            the segment literally anyway — the web UI does, in its family registry — and addresses
+            the family from there; this `enum` is what holds both answers to the same value.
         summary:
           $ref: "#/components/schemas/ContratosMenoresSummary"
 

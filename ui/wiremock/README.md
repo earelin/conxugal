@@ -32,12 +32,23 @@ a stub:
 | `session.json` | `POST /logout`, `GET /login` — both are proxied, so both need an answer |
 | `metrics.json` | `GET /api/admin/metrics` — a few canned SSE samples |
 | `organos.json` | `GET /api/organos` (the **visible set**, a subset), `GET /api/admin/organos` (the whole catalogue), `GET /api/organos/taxonomia`, the catalogue import and the placement writes |
+| `organo.json` | `GET /api/organo/{id}` — one stub per Órgano of the visible set, one for a withheld Órgano holding nothing, plus a catch-all 404 |
 
 `organos.json` serves **two different catalogues on purpose**: the side-panel picker's
 `/api/organos` holds 4 of the 8 Órganos `/api/admin/organos` lists, so the administration
 area visibly shows what the picker withholds. Two of the taxonomía's terms — *Concellos*
 and *Deputacións provinciais* — hold no Órgano of that subset and are therefore pruned
 from the picker's tree while still appearing in the management one.
+
+`organo.json` names the **same ids and names** as `organos.json`, so the page the picker
+opens agrees with the row it was chosen from. **Every Órgano of the visible set holds
+`contratosMenores`** — it has to, since `/api/organos` is defined as the Órganos holding
+at least one visible contract, so a visible Órgano answering `families: {}` would be the
+stub contradicting its own contract. The *no contracts* page therefore belongs to an
+Órgano the picker **withholds**: *Axencia de Turismo de Galicia*, listed by
+`/api/admin/organos` alone. That is also the only way a reader reaches that state — by a
+retained link, never by anything the UI offers. The catch-all sits at a lower priority so
+an unknown id answers the contract's `organo-not-found` problem rather than one of the five.
 
 `metrics.json`'s samples are repeated as `metricsSamples` in
 [`../acceptance/support/fixtures.ts`](../acceptance/support/fixtures.ts), which the metrics
