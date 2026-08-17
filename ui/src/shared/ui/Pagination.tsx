@@ -50,24 +50,20 @@ interface PaginationProps {
  * single page still draws all of it: how many entries the selection holds is an
  * answer worth giving whether or not there is anywhere to page to.
  */
-/**
- * One of the four controls that name a page. The icon sits on the side the page
- * lies in — the two backward controls lead with it, the two forward ones trail
- * it — so the row reads outwards from the box in the middle.
- */
-function StepButton({
-  label,
-  icon,
-  side,
-  disabled,
-  onClick,
-}: {
+interface StepButtonProps {
   label: string;
   icon: ReactNode;
   side: 'back' | 'forward';
   disabled: boolean;
   onClick: () => void;
-}) {
+}
+
+/**
+ * One of the four controls that name a page. The icon sits on the side the page
+ * lies in — the two backward controls lead with it, the two forward ones trail
+ * it — so the row reads outwards from the box in the middle.
+ */
+function StepButton({ label, icon, side, disabled, onClick }: StepButtonProps) {
   return (
     <Button
       variant="default"
