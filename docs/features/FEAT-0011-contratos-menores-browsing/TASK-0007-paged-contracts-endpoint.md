@@ -2,7 +2,7 @@
 feat: FEAT-0011
 domain: backend
 adrs: [0002, 0005, 0006, 0010, 0012, 0016, 0020, 0021, 0022]
-status: todo
+status: done
 depends_on: [TASK-0005]
 ---
 
@@ -42,7 +42,7 @@ mapping from Micronaut Data's `Page` are recorded there and must not be restated
   (`name` and `fiscalId`) and `sourceUrl`. `publicationDate`, `amount` and `awardee` are
   **required** — R28 withholds a contract without them, so the wire shape has no optionality for a
   client to branch on — and there is **no operador id** and **no awarding Órgano** on the row.
-- **Both conversions live in the controller, and nowhere else.** Inbound: the validated
+- **Both conversions live in the driving adapter, and nowhere else.** Inbound: the validated
   parameters become a `YearSelection`, a `SortKey`, a `Sort.Order.Direction` and a **0-based, unsorted**
   `Pageable` — unsorted because the ordering travels as the two enums and
   [TASK-0005](TASK-0005-list-contratos-menores-use-case.md) is the one place a `Sort` is built from
@@ -85,6 +85,94 @@ mapping from Micronaut Data's `Page` are recorded there and must not be restated
 - Integration tests in `server/application/src/integrationTest`, plus the Schemathesis run
   ([ADR-0021](../../architecture/0021-openapi-contract-testing-with-schemathesis.md)) through
   `scripts/contract-test.sh`.
+
+## What building it found
+
+> **The `OrganoNotFoundExceptionHandler` contingency did not fire, and the move happened anyway —
+> for a different reason.** The scope guarded against the handler's package-private visibility
+> keeping it from applying outside `rest/admin/organos`. It does not: Micronaut resolves an
+> `ExceptionHandler` by the exception type it is declared against, not by the package the
+> controller sits in, and a package-private `@Singleton` registers like any other. This endpoint
+> was answered correctly with the handler still under `rest/admin/organos`, and an integration test
+> asserts the problem type to prove it.
+>
+> What moved it was **[FEAT-0013](../FEAT-0013-organo-contracts-page/TASK-0001-organo-member-read.md)'s
+> member read**, which reached the same condition first and put the handler in a shared
+> `rest/error` package where its name is no longer misleading. Both features answer
+> `urn:conxugal:problem-type:organo-not-found` from that one handler; no second problem type
+> exists, which was the part of the scope that actually mattered.
+>
+> **Two absences the serializer would have dropped, and only one of them was foreseen.** The row's
+> null `obxecto` and `duration` needed `@JsonInclude(ALWAYS)`, as every response carrying a
+> meaningful null does. So did the envelope's **empty `items`** — the default inclusion is
+> `NON_EMPTY`, so a page beyond the last went out as `{"page":100,…}` with the key the contract
+> marks required missing altogether, on exactly the response a client has to read to clamp. Both
+> are asserted on the serialised keys rather than on the record's fields, which is what keeps the
+> annotation load-bearing.
+>
+> **An unknown query parameter was accepted, and Schemathesis is what noticed.** This is the first
+> operation in the contract with query parameters at all, so the coverage phase's *unexpected
+> property* case had never applied before; it sent one and got a `200`. Ignoring it is the quietest
+> wrong answer this operation could give — `?srot=amount,asc` would have been answered in the
+> default ordering, and the envelope states no ordering back — so an unrecognised parameter is now
+> a **400**, which is the same rule as refusing an ordering that was never offered, one level up.
+>
+> **`amount` is declared unbounded, and that is a decision rather than an omission.** A first draft
+> gave it `minimum: 0` and a ceiling, which nothing in the system enforces: `Money` only null-checks,
+> the column is a bare `NUMERIC`, and the import stores what the source published. A published
+> correction or a mis-scaled figure would then have made the server answer `200` with a body its own
+> contract rejects — and no test could have caught it, the contract run's seeded Órgano holding no
+> contracts. The bounds are gone, on the same footing as `obxecto` carrying no length cap: the row
+> mirrors what was published, and a claim only the document makes is worse than no claim. Bounding
+> it for real is a `CHECK` and a domain guard, which belongs to whoever owns the store.
+>
+> **An empty `page` or `size` was answered with the default, and the fuzzer is what found it.**
+> Bound as an `int` carrying a `@QueryValue(defaultValue = …)`, a value Micronaut's conversion
+> cannot read is not refused: the binder falls back to the default. So `?size=` came back `200`
+> with fifty rows and a body stating `"size": 50` — a wrong answer to a question nobody asked, and
+> the same quiet-default failure the `sort` refusal exists to prevent. `year` and `sort` never had
+> it, being bound as text and parsed here. Both paging parameters now arrive as text too, and are
+> refused unless they are a whole number an `int32` holds — **absent and empty are different
+> requests, and only the first has a default**.
+>
+> It survived a green local contract run and was caught by the pull-request gate, which is the
+> case ADR-0021 describes: the run is deterministic per environment, not identical across them,
+> because the acceptance suite ahead of it leaves different rows behind. The three refusals are
+> now integration-tested by name, so no future run has to rediscover them.
+>
+> **And it is what moved the paging parameters out of the controller**, which this task's scope had
+> put there. The defaults, the bounds, the change of base and these refusals are identical across
+> the three specifications that page, so leaving each operation to declare them means the second
+> one re-derives all four — and would have re-derived this defect independently, since nothing in
+> the record warned against it. They now live in a shared `PagingParameters` beside the envelope's
+> `PagedResponse`, the two halves of one contract in one place, and what stays here is what this
+> operation actually owns: its year and its closed set of orderings.
+> [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md) is amended
+> to say *the application layer* where it said *the controller*, rather than being left to
+> contradict the code.
+>
+> **A refusal has to be thrown as a problem, not as a status.** `HttpStatusException` reaches
+> Micronaut's own handler and is rendered `{"type":"about:blank","title":"Bad Request","status":400}`
+> — the message dropped. On an operation with five distinct refusal rules that leaves a caller to
+> guess which one it broke, so the refusals build a `Problem` with a `detail` naming the parameter,
+> which the shared `BadRequest` response already admits without a contract change.
+>
+> **`ApiUrlPrefixArchTest`'s sibling rule had to be narrowed, and *how* it is narrowed turned out to
+> matter more than that it is.** `ModuleBoundariesArchTest.APPLICATION_DOES_NOT_DEPEND_ON_PERSISTENCE`
+> predates [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md) and
+> forbade `application` naming anything under `io.micronaut.data..` — which is precisely the
+> widening that record states and accepts.
+>
+> The first narrowing excepted `Page`, `Pageable` and `Sort` through ArchUnit's `belongToAnyOf`,
+> which matches **nested types too** — that is what makes `Sort.Order.Direction` resolve, and it is
+> also what would have let `Sort.Order` in. `Sort.of(Sort.Order.asc(text))` in a driving adapter
+> would then have compiled and passed the rule, which is exactly the ordering-built-from-raw-input
+> this feature's security invariant exists to foreclose; the only remaining guard would have been
+> one adapter's private allow-list. The rule now excepts **by identity** — `Page`, `Pageable` and
+> `Sort.Order.Direction`, those three classes and no nested type of any of them — so the sort itself
+> is unbuildable in `application` and a later *dynamic* ordering has to move that line before it can
+> compile. A negative check confirms the exception is load-bearing rather than vacuous: swapping
+> `Sort.Order.Direction` for `Sort` fails the rule.
 
 ## Acceptance criteria
 

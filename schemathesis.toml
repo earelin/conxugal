@@ -133,3 +133,12 @@ parameters = { "path.id" = "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa" }
 [[operations]]
 include-name = "GET /api/organo/{id}"
 parameters = { "path.id" = "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa" }
+
+# The same Órgano for the browse read, so it too is answered rather than 404'd on every generated
+# UUID. It holds no contratos menores — the stubbed source reports none for any Órgano — so what
+# this exercises is the envelope of an empty page and the refusals around it, which is the whole
+# of what the contract describes here. What a page containing rows looks like is asserted by the
+# application and infrastructure suites, against data they seed themselves.
+[[operations]]
+include-name = "GET /api/organo/{id}/contratos-menores"
+parameters = { "path.id" = "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa" }

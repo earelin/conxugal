@@ -11,6 +11,7 @@ dependencies {
 
     runtimeOnly(project(":infrastructure"))
 
+    implementation(libs.micronaut.data.model)
     implementation(libs.micronaut.http.server.netty)
     implementation(libs.micronaut.management)
     implementation(libs.micronaut.serde.jackson)
@@ -25,6 +26,8 @@ dependencies {
     runtimeOnly(libs.logback.classic)
     runtimeOnly(libs.snakeyaml)
 
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
     testImplementation(libs.micronaut.http.client)
     testImplementation(libs.micronaut.test.junit5)
     testImplementation(libs.mockito.junit.jupiter)
