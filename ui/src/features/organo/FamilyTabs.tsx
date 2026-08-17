@@ -16,6 +16,19 @@ interface FamilyTabsProps {
   children: ReactNode;
 }
 
+/** What Mantine hands a tab's `renderRoot`. */
+type TabRootProps = ComponentPropsWithoutRef<'a'> & {
+  /**
+   * `button`, which is what Mantine's tab would have been. On an anchor it would
+   * claim the linked document's media type, so it is dropped.
+   */
+  type?: string;
+};
+
+interface FamilyTabLinkProps extends TabRootProps {
+  to: string;
+}
+
 /**
  * The bar that says what the page holds, and the panel the active family's
  * section fills.
@@ -55,19 +68,13 @@ export function FamilyTabs({ basePath, held, active, children }: FamilyTabsProps
   );
 }
 
-type TabRootProps = ComponentPropsWithoutRef<'a'> & {
-  /** `button`, which is what Mantine's tab would have been. On an anchor it
-   * would claim the linked document's media type, so it is dropped. */
-  type?: string;
-};
-
 /**
  * A tab as a link, answering Space as well as Enter. A `role="tab"` is expected
  * to activate on either, and an anchor answers only Enter — Space scrolls the
  * page instead, leaving the tab looking unresponsive to the one key a reader
  * arriving from the arrows is most likely to press.
  */
-function FamilyTabLink({ type: _type, onKeyDown, to, ...props }: TabRootProps & { to: string }) {
+function FamilyTabLink({ type: _type, onKeyDown, to, ...props }: FamilyTabLinkProps) {
   return (
     <Link
       {...props}
