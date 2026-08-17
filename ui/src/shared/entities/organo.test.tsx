@@ -22,16 +22,12 @@ const member = {
   },
 };
 
-function createWrapper() {
+/** A client per render, so no case inherits another's cached read. */
+function renderUseOrgano(id = ORGANO_ID) {
   const queryClient = createQueryClient();
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  return { Wrapper, queryClient };
-}
-
-function renderUseOrgano(id = ORGANO_ID) {
-  const { Wrapper } = createWrapper();
   return renderHook(() => useOrgano(id), { wrapper: Wrapper });
 }
 
