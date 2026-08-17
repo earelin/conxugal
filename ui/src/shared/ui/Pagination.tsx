@@ -5,6 +5,7 @@ import {
   IconChevronRight,
   IconChevronRightPipe,
 } from '@tabler/icons-react';
+import type { ReactNode } from 'react';
 
 import { counted } from '../lib/plural';
 import { strings } from '../lib/strings';
@@ -49,6 +50,38 @@ interface PaginationProps {
  * single page still draws all of it: how many entries the selection holds is an
  * answer worth giving whether or not there is anywhere to page to.
  */
+/**
+ * One of the four controls that name a page. The icon sits on the side the page
+ * lies in — the two backward controls lead with it, the two forward ones trail
+ * it — so the row reads outwards from the box in the middle.
+ */
+function StepButton({
+  label,
+  icon,
+  side,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  icon: ReactNode;
+  side: 'back' | 'forward';
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      variant="default"
+      size="sm"
+      disabled={disabled}
+      leftSection={side === 'back' ? icon : undefined}
+      rightSection={side === 'forward' ? icon : undefined}
+      onClick={onClick}
+    >
+      {label}
+    </Button>
+  );
+}
+
 export function Pagination({ page, totalItems, totalPages, onPageChange }: PaginationProps) {
   const atStart = page <= 1;
   const atEnd = page >= totalPages;
@@ -62,48 +95,40 @@ export function Pagination({ page, totalItems, totalPages, onPageChange }: Pagin
           {counted(totalItems, copy.records)}
         </Text>
         <Group gap="xs" wrap="wrap">
-          <Button
-            variant="default"
-            size="sm"
+          <StepButton
+            label={copy.first}
+            icon={<IconChevronLeftPipe size={16} />}
+            side="back"
             disabled={atStart}
-            leftSection={<IconChevronLeftPipe size={16} />}
             onClick={() => onPageChange(1)}
-          >
-            {copy.first}
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
+          />
+          <StepButton
+            label={copy.previous}
+            icon={<IconChevronLeft size={16} />}
+            side="back"
             disabled={atStart}
-            leftSection={<IconChevronLeft size={16} />}
             onClick={() => onPageChange(page - 1)}
-          >
-            {copy.previous}
-          </Button>
+          />
           <PageJump
             page={page}
             totalPages={totalPages}
             disabled={single}
             onPageChange={onPageChange}
           />
-          <Button
-            variant="default"
-            size="sm"
+          <StepButton
+            label={copy.next}
+            icon={<IconChevronRight size={16} />}
+            side="forward"
             disabled={atEnd}
-            rightSection={<IconChevronRight size={16} />}
             onClick={() => onPageChange(page + 1)}
-          >
-            {copy.next}
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
+          />
+          <StepButton
+            label={copy.last}
+            icon={<IconChevronRightPipe size={16} />}
+            side="forward"
             disabled={atEnd}
-            rightSection={<IconChevronRightPipe size={16} />}
             onClick={() => onPageChange(totalPages)}
-          >
-            {copy.last}
-          </Button>
+          />
         </Group>
       </Group>
     </Box>
