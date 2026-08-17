@@ -69,6 +69,19 @@ describe('Pagination', () => {
     expect(screen.getByText(pagesOf(37))).toBeInTheDocument();
   });
 
+  it('lays the controls out in the order the design fixes, count first', () => {
+    renderPagination();
+
+    const nav = screen.getByRole('navigation', { name: copy.navLabel });
+    const order = [...nav.querySelectorAll('button, input, label')].map(
+      (el) => el.textContent || (el as HTMLInputElement).value,
+    );
+
+    expect(order).toEqual([copy.first, copy.previous, copy.pageLabel, '3', copy.next, copy.last]);
+    // The count leads the row, ahead of every control.
+    expect(nav.textContent?.startsWith(counted(1832, copy.records))).toBe(true);
+  });
+
   it('is a navigation landmark of its own, so a reader can be taken straight to it', () => {
     renderPagination();
 
