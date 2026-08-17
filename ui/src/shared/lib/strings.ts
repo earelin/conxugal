@@ -1,3 +1,5 @@
+import { formatCount } from './number';
+
 /**
  * User-facing interface text, in Galician.
  *
@@ -24,6 +26,22 @@ export const strings = {
     trigger: 'Abrir o menú da conta',
     logout: 'Pechar sesión',
     logoutError: 'Non foi posible pechar a sesión. Téntao de novo.',
+  },
+  // Its own top-level namespace rather than any feature's: the paging control
+  // lives in `shared/ui` because SPEC-0006's and SPEC-0007's lists take it
+  // unchanged, and copy filed under the first feature to need it would have to
+  // move the moment the second one did.
+  pagination: {
+    navLabel: 'Paxinación',
+    first: 'Primeira',
+    previous: 'Anterior',
+    next: 'Seguinte',
+    last: 'Última',
+    pageLabel: 'Páxina',
+    ofPages: (totalPages: number) => `de ${formatCount(totalPages)}`,
+    // Both forms of a counted noun travel as one entry, chosen by
+    // `singularOrPlural`, so no call site can take one form and forget the other.
+    records: { singular: 'rexistro', plural: 'rexistros' },
   },
   organoPicker: {
     label: 'Órgano',
