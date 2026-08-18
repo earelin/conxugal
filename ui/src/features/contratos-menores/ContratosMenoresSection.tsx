@@ -12,15 +12,15 @@ const copy = strings.contratosMenores;
 const YEAR_PARAM = 'year';
 
 /**
- * The query string with this year named in it, and everything else it was
- * already carrying left where it was. Both ways the year can change — a reader
- * choosing one, and a stale one being corrected — write it through here, so
- * neither can drift from the other in what it preserves.
+ * The current parameters with this year named in them, and everything else they
+ * were already carrying left where it was. Both ways the year can change — a
+ * reader choosing one, and a stale one being corrected — write it through here,
+ * so neither can drift from the other in what it preserves.
  */
-function withYear(searchParams: URLSearchParams, year: string): string {
+function withYear(searchParams: URLSearchParams, year: string): URLSearchParams {
   const next = new URLSearchParams(searchParams);
   next.set(YEAR_PARAM, year);
-  return next.toString();
+  return next;
 }
 
 interface SectionStatementProps {
@@ -76,7 +76,7 @@ export function ContratosMenoresSection() {
   // here. Arriving with no year at all is left alone, which is a different case
   // — there the URL says nothing rather than something untrue.
   if (asked !== null && asked !== shown) {
-    const search = `?${withYear(searchParams, shown)}`;
+    const search = `?${withYear(searchParams, shown).toString()}`;
     return <Navigate to={{ pathname, search, hash }} replace />;
   }
 
