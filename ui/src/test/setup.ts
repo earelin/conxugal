@@ -1,6 +1,14 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
+
+// Testing Library's 1 s default budgets a wait against a state update. A test
+// that mounts a route from `router.tsx` waits on a dynamic `import()` as well,
+// and the admin section's chunk — @mantine/charts and its recharts peer — takes
+// over a second to evaluate whenever the worker pool is busy, which is most of a
+// full-suite run. That is test-infrastructure latency, not something the app
+// promises, so the budget covers it rather than the suite failing by luck.
+configure({ asyncUtilTimeout: 5_000 });
 
 // Vitest globals are disabled, so register Testing Library's DOM cleanup
 // explicitly to unmount between tests.

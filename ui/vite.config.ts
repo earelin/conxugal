@@ -35,9 +35,15 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
+    // Has to stay clear of the 5 s `asyncUtilTimeout` in the setup file, since a
+    // test may spend that budget more than once; at the 5 s default the test
+    // itself would time out first and report a deadline instead of the query
+    // that never matched.
+    testTimeout: 20_000,
     env: {
       // Small enough that tests filling/evicting the metrics history buffer
-      // stay fast, without needing a raised per-test timeout.
+      // stay fast — at the real 250 they would spend seconds pushing samples
+      // that buy no extra coverage.
       VITE_METRICS_HISTORY_LIMIT: '10',
     },
   },
