@@ -157,20 +157,27 @@ test.describe('Órgano page with a family', () => {
       await expect(page.getByRole('tab', { name: CONTRATOS_MENORES })).toBeVisible();
       await expect(page.getByRole('combobox', { name: YEAR_LABEL })).toBeVisible();
       expect(await horizontalOverflow(page)).toBe(0);
+    });
 
-      // Nothing is clipped inside the card either, which a page-level scroll
-      // check cannot see: the chooser sits in one. What counts as clipped is
-      // text the reader cannot get to — an element that hides its overflow and
-      // holds something to read. A region the reader can scroll has lost
-      // nothing, which is why Mantine's own scrollable tab list does not count.
-      const clipped = await page.evaluate(() =>
-        Array.from(document.querySelectorAll('body *'))
-          .filter((el) => el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1)
-          .filter((el) => ['hidden', 'clip'].includes(getComputedStyle(el).overflowX))
-          .filter((el) => (el.textContent ?? '').trim() !== '')
-          .map((el) => el.className.toString()),
-      );
-      expect(clipped).toEqual([]);
+    // The Órgano whose section has something to wrap. SERGAS renders neither
+    // statement, so its card holds one 180 px-wide chooser on a 328 px column
+    // and cannot be squeezed by construction — measuring the width there proves
+    // the frame and nothing the section puts in it.
+    test('wraps the section\u2019s own statements rather than squeezing them', async ({ page }) => {
+      await page.goto(`/organo/${PARTIAL_ID}`);
+
+      const partial = page.getByRole('status').filter({ hasText: PARTIAL_TITLE });
+      const notUpdated = page.getByRole('status').filter({ hasText: NOT_UPDATED_TITLE });
+      await expect(partial).toBeVisible();
+      await expect(notUpdated).toBeVisible();
+
+      // Every one of them whole and on screen: `toBeInViewport` fails on a
+      // statement pushed outside the 360 px column, which a document-level
+      // scroll check cannot see once an ancestor hides the overflow.
+      await expect(partial).toBeInViewport({ ratio: 1 });
+      await expect(notUpdated).toBeInViewport({ ratio: 1 });
+      await expect(page.getByRole('combobox', { name: YEAR_LABEL })).toBeInViewport({ ratio: 1 });
+      expect(await horizontalOverflow(page)).toBe(0);
     });
   });
 });

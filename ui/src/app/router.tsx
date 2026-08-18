@@ -23,6 +23,19 @@ function warmAdminSections() {
   void organos();
 }
 
+/**
+ * The Órgano page withholds its `<Outlet/>` until the member read answers, so
+ * the section's chunk would otherwise queue behind that request instead of
+ * downloading beside the page's own — four sequential hops before a reader sees
+ * a year. Warming it here makes the two parallel. The cost is one section chunk
+ * fetched for an Órgano that turns out to hold nothing, which is the same trade
+ * `warmAdminSections` makes above.
+ */
+function loadOrganoPage() {
+  void contratosMenores();
+  return organo();
+}
+
 function section<M>(load: () => Promise<M>, pick: (module: M) => ComponentType): ComponentType {
   const Lazy = lazy(() => load().then((module) => ({ default: pick(module) })));
   return function Section() {
@@ -77,11 +90,18 @@ export const routes: RouteObject[] = [
         // gains later adds a registry entry beside the page's and a sibling
         // below, and edits neither slice.
         path: 'organo/:id',
-        Component: section(organo, (m) => m.OrganoPage),
+        Component: section(loadOrganoPage, (m) => m.OrganoPage),
         errorElement: <RouteErrorPage />,
         children: [
           {
             path: 'contratos-menores',
+            // Its own handler, unlike the admin subtree's single one: that
+            // boundary sits on a guard drawing nothing, so replacing it costs
+            // nothing visible. This one sits under a page that draws the name
+            // and the tab bar, and a section whose chunk 404s after a redeploy
+            // should not take the frame — and the reader's way to another
+            // family — down with it.
+            errorElement: <RouteErrorPage />,
             Component: section(contratosMenores, (m) => m.ContratosMenoresSection),
           },
         ],

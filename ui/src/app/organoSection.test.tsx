@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -121,14 +121,16 @@ describe('the contratos menores section, mounted by the application router', () 
 
     await yearChooser();
 
-    // Filtered by the id rather than by the key's head: a section that fetched a
-    // summary of its own would key it on the Órgano whatever it called the read,
-    // and a filter on `'organo'` would let every such name through.
+    // Serialised rather than filtered on the key's own elements: a section
+    // fetching a summary of its own would name the Órgano whatever it called the
+    // read, and react-query's idiomatic shape puts it in an options object —
+    // `['contratosMenores', { organoId }]` — where neither a check on the key's
+    // head nor `Array.includes` would find it.
     const scopedToThisOrgano = queryClient
       .getQueryCache()
       .getAll()
       .map((query) => query.queryKey)
-      .filter((key) => key.includes(ORGANO_ID));
+      .filter((key) => JSON.stringify(key).includes(ORGANO_ID));
     expect(scopedToThisOrgano).toEqual([['organo', ORGANO_ID]]);
     // Nothing else was asked for either: `nock` refuses an unmatched request,
     // and every interceptor this test set up is spent.
@@ -148,17 +150,6 @@ describe('the contratos menores section, mounted by the application router', () 
     expect(headings).toEqual([strings.appName, ORGANO_NAME]);
   });
 
-  it('no longer sends the redirect to the shell not-found page', async () => {
-    mockOrgano();
-
-    renderApp(`/organo/${ORGANO_ID}`);
-
-    await yearChooser();
-    await waitFor(() => {
-      expect(screen.queryByText(strings.notFound.title)).not.toBeInTheDocument();
-    });
-  });
-
   it('answers a family it declares no route for with the shell not-found page', async () => {
     // No read is stubbed because none is made: the page never mounts. The
     // redirect that sends an unknown family to the first one an Órgano holds is
@@ -169,7 +160,51 @@ describe('the contratos menores section, mounted by the application router', () 
     renderApp(`/organo/${ORGANO_ID}/licitacions`);
 
     expect(await screen.findByText(strings.notFound.title)).toBeInTheDocument();
+    // Both negatives are safe here only because the positive above establishes
+    // the match: neither chunk is imported on this route, so on their own they
+    // would pass by outrunning an import that never starts.
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: ORGANO_NAME })).not.toBeInTheDocument();
+  });
+
+  it('routes no path deeper inside the family, because the section declares none', async () => {
+    renderApp(`${SECTION_PATH}/algo-mais`);
+
+    // The page's own suite asserts that it keeps the family's tab active for a
+    // path deeper than the family segment, against a harness whose child route
+    // is a splat. This build's child route is not, so no such path reaches the
+    // page at all — and that difference is only visible here.
+    //
+    // The day the section gains a route of its own, this is the test that goes
+    // red, and the child route above is what has to grow a splat or children.
+    expect(await screen.findByText(strings.notFound.title)).toBeInTheDocument();
+  });
+
+  it('frames an Órgano that holds nothing, even at a family segment', async () => {
+    nock(BASE_URL)
+      .get(`/api/organo/${ORGANO_ID}`)
+      .reply(200, { id: ORGANO_ID, name: ORGANO_NAME, families: {} });
+
+    // Newly reachable: before a child route existed this URL fell to the
+    // catch-all. A retained link to a family the Órgano has since stopped
+    // holding is answered by the page saying so, not by a 404 and not by an
+    // empty section.
+    renderApp(SECTION_PATH);
+
+    expect(await screen.findByText(organo.noContracts)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: ORGANO_NAME })).toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  });
+
+  it('reports an unknown Órgano at a family segment as not found, not as a bad route', async () => {
+    nock(BASE_URL)
+      .get(`/api/organo/${ORGANO_ID}`)
+      .reply(404, { type: 'urn:conxugal:problem-type:organo-not-found' });
+
+    renderApp(SECTION_PATH);
+
+    expect(await screen.findByText(organo.notFoundTitle)).toBeInTheDocument();
+    // The page's answer about the Órgano, not the shell's about the URL.
+    expect(screen.queryByText(strings.notFound.title)).not.toBeInTheDocument();
   });
 });

@@ -56,7 +56,15 @@ export function renderOrganoPage(initialPath = `/organo/${ORGANO_ID}`) {
       {
         path: '/organo/:id',
         Component: OrganoPage,
-        // A splat, so a section with routes of its own stands in for one too.
+        // Deliberately wider than the tree the app declares, which routes one
+        // literal family segment and nothing beneath it. The cases below are
+        // therefore statements about what the page does *given* a router that
+        // reaches it — its redirect for a family it does not hold, and its
+        // handling of a path deeper than the family segment — not about which
+        // URLs the app answers. What this build actually answers for those two
+        // is asserted against the real route tree in `app/organoSection.test.tsx`,
+        // and that is the file that goes red when a family gains routes of its
+        // own and `app/router.tsx` has not kept up.
         children: [{ path: ':family/*', Component: FamilySectionSpy }],
       },
     ],
