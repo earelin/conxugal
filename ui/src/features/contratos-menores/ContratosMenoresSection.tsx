@@ -65,14 +65,18 @@ export function ContratosMenoresSection() {
   const [searchParams, setSearchParams] = useSearchParams();
   const asked = searchParams.get(YEAR_PARAM);
   const year = chosenYear(asked, summary.years);
+  // One spelling, used by the comparison below, by the URL it writes and by
+  // the field: computing it three times is what would let a correction that
+  // never settles slip in.
+  const shown = String(year);
 
   // A year the Órgano has no contracts in — or one spelled some other way — is
   // corrected in place rather than merely displayed over. Replacing rather than
   // pushing is what keeps this off the reader's history: they made no choice
   // here. Arriving with no year at all is left alone, which is a different case
   // — there the URL says nothing rather than something untrue.
-  if (asked !== null && asked !== String(year)) {
-    const search = `?${withYear(searchParams, String(year))}`;
+  if (asked !== null && asked !== shown) {
+    const search = `?${withYear(searchParams, shown)}`;
     return <Navigate to={{ pathname, search, hash }} replace />;
   }
 
@@ -109,7 +113,7 @@ export function ContratosMenoresSection() {
           // `size` here is accepted and then ignored.
           labelProps={{ fz: 'xs', fw: 700, c: 'dimmed', tt: 'uppercase' }}
           data={options}
-          value={String(year)}
+          value={shown}
           // Years and nothing else: no placeholder and no deselect, so there is
           // no state in which the chooser offers something the domain does not
           // have. That is also what leaves the `null` below unreachable — it is
