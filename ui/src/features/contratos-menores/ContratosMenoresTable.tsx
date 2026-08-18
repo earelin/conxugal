@@ -1,6 +1,6 @@
-import { Anchor, Group, Stack, Table, Text } from '@mantine/core';
+import { ActionIcon, Group, Stack, Table, Text } from '@mantine/core';
 import { IconExternalLink, IconInfoCircle } from '@tabler/icons-react';
-import type { CSSProperties, ReactNode } from 'react';
+import { type CSSProperties, type ReactNode, useId } from 'react';
 
 import { strings } from '../../shared/lib/strings';
 import { formatAmount, formatPublicationDate } from './contractFormat';
@@ -11,15 +11,23 @@ const copy = strings.contratosMenores;
 // The admin tables' column-header treatment, which this one adopts unchanged.
 const COLUMN_HEADER = { tt: 'uppercase', fz: 'xs', c: 'dimmed' } as const;
 
-// Everything except the object takes only the width its content needs, so the
-// object column absorbs the wrapping instead of them. It is the only value with
-// no length the source respects, and the one a reader actually reads.
+// A column whose content has a shape the source respects — a date, a figure, an
+// icon — and which therefore gains nothing from wrapping.
 const NARROW_COLUMN: CSSProperties = { whiteSpace: 'nowrap', width: '1%' };
+
+// The duration is capped at 64 characters and the source spends them: a stated
+// term can be a sentence rather than «12 meses». Narrow, but never `nowrap` —
+// one such row on an unbreakable line would widen the table by some 400 px and
+// squeeze the object down to a word per line, which is the opposite of what the
+// widths are for. The awardee's name has no cap at all and so takes no width
+// here either.
+const NARROW_WRAPPING_COLUMN: CSSProperties = { width: '1%' };
 
 // The identifiers under the date and the awardee are copied rather than read,
 // which is what the monospace is for; dimmed because neither is the value the
-// column is named after.
-const IDENTIFIER = { size: 'xs', c: 'dimmed', ff: 'monospace' } as const;
+// column is named after. Neither breaks across lines: half an identifier on one
+// line and half on the next is worse than a wider column.
+const IDENTIFIER = { size: 'xs', c: 'dimmed', ff: 'monospace', style: { whiteSpace: 'nowrap' } };
 
 /**
  * The two values a row can lack. Nothing else has one of these: a contract
@@ -28,8 +36,10 @@ const IDENTIFIER = { size: 'xs', c: 'dimmed', ff: 'monospace' } as const;
  */
 function OrNotPublished({ children }: { children: string | null }): ReactNode {
   if (children === null) {
+    // The same size as the value it stands in for. A marker that set its own
+    // would change the height of every row carrying one.
     return (
-      <Text fs="italic" c="dimmed">
+      <Text size="sm" fs="italic" c="dimmed">
         {copy.notPublished}
       </Text>
     );
@@ -55,7 +65,7 @@ function ContractRow({ contract }: { contract: ContratoMenor }): ReactNode {
       {/* Text, deliberately: the operador route belongs to another spec's read
           feature, and a link to a route that 404s is worse than none. That
           feature adds the crossing here. */}
-      <Table.Td style={NARROW_COLUMN}>
+      <Table.Td>
         <Stack gap={0}>
           <Text size="sm">{contract.awardee.name}</Text>
           <Text {...IDENTIFIER}>{contract.awardee.fiscalId}</Text>
@@ -64,11 +74,17 @@ function ContractRow({ contract }: { contract: ContratoMenor }): ReactNode {
       <Table.Td ta="right" fw={600} style={NARROW_COLUMN}>
         {formatAmount(contract.amount)}
       </Table.Td>
-      <Table.Td style={NARROW_COLUMN}>
+      <Table.Td style={NARROW_WRAPPING_COLUMN}>
         <OrNotPublished>{contract.duration}</OrNotPublished>
       </Table.Td>
       <Table.Td ta="right" style={NARROW_COLUMN}>
-        <Anchor
+        {/* An `ActionIcon` rather than a bare anchor around the glyph: the icon
+            alone is an 18 px target, which is below what a finger can be asked
+            to hit — and it sits right beside the gesture that scrolls this
+            table sideways. */}
+        <ActionIcon
+          component="a"
+          variant="subtle"
           href={contract.sourceUrl}
           target="_blank"
           rel="noreferrer"
@@ -76,10 +92,9 @@ function ContractRow({ contract }: { contract: ContratoMenor }): ReactNode {
           // the only thing that tells one of these links from the next is the
           // contract it says it opens.
           aria-label={copy.sourceLinkLabel(sourceId)}
-          display="inline-flex"
         >
           <IconExternalLink size={18} aria-hidden />
-        </Anchor>
+        </ActionIcon>
       </Table.Td>
     </Table.Tr>
   );
@@ -95,56 +110,73 @@ function ContractRow({ contract }: { contract: ContratoMenor }): ReactNode {
  * presentation rather than a correction of what the source published.
  */
 export function ContratosMenoresTable({ contracts }: { contracts: ContratoMenor[] }) {
+  const caveatId = useId();
   return (
-    // Six columns need more than a 360 px card can give, so the table scrolls
-    // inside its own region rather than dragging the whole page sideways.
-    <Table.ScrollContainer minWidth={720} type="native">
-      <Table aria-label={copy.tableLabel} verticalSpacing="sm">
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th {...COLUMN_HEADER}>{copy.columnDate}</Table.Th>
-            <Table.Th {...COLUMN_HEADER}>{copy.columnObxecto}</Table.Th>
-            <Table.Th {...COLUMN_HEADER}>{copy.columnAwardee}</Table.Th>
-            {/* Two lines, and the second is not decoration: an amount whose VAT
-                is unstated invites comparison against thresholds that exclude
-                it. */}
-            <Table.Th {...COLUMN_HEADER} ta="right" style={NARROW_COLUMN}>
-              <Stack gap={0}>
-                <span>{copy.columnAmount}</span>
-                <span>{copy.columnAmountVat}</span>
-              </Stack>
-            </Table.Th>
-            <Table.Th {...COLUMN_HEADER} style={NARROW_COLUMN}>
-              <Group gap={4} wrap="nowrap">
-                {copy.columnDuration}
-                {/* The mark is on the column, and the caption below spells out
-                    what it means: one statement covers every row and reads
-                    once. Hidden from the accessibility tree because that caption
-                    is already part of the table a screen reader announces. */}
-                <IconInfoCircle size={14} aria-hidden />
-              </Group>
-            </Table.Th>
-            <Table.Th {...COLUMN_HEADER} ta="right" style={NARROW_COLUMN}>
-              {copy.columnSource}
-            </Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {contracts.map((contract) => (
-            <ContractRow key={contract.sourceId} contract={contract} />
-          ))}
-        </Table.Tbody>
-        {/* A real `<caption>`, so the caveat belongs to the table rather than
-            merely sitting under it. */}
-        <Table.Caption>
-          <Group gap={6} justify="flex-start" wrap="nowrap">
-            <IconInfoCircle size={14} aria-hidden />
-            <Text size="xs" c="dimmed" ta="left">
-              {copy.durationCaveat}
-            </Text>
-          </Group>
-        </Table.Caption>
-      </Table>
-    </Table.ScrollContainer>
+    <Stack gap="xs">
+      {/* Six columns need more than a 360 px card can give, so the table scrolls
+          inside its own region rather than dragging the whole page sideways. The
+          region takes focus and a name of its own: without them a keyboard
+          reader tabs into the source links in the last column, arrives scrolled
+          fully right, and has nothing focusable further left to bring it back. */}
+      <Table.ScrollContainer
+        minWidth={720}
+        type="native"
+        tabIndex={0}
+        role="region"
+        aria-label={copy.tableLabel}
+      >
+        <Table aria-label={copy.tableLabel} verticalSpacing="sm">
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th {...COLUMN_HEADER}>{copy.columnDate}</Table.Th>
+              <Table.Th {...COLUMN_HEADER}>{copy.columnObxecto}</Table.Th>
+              <Table.Th {...COLUMN_HEADER}>{copy.columnAwardee}</Table.Th>
+              {/* Two lines, and the second is not decoration: an amount whose
+                  VAT is unstated invites comparison against thresholds that
+                  exclude it. */}
+              <Table.Th {...COLUMN_HEADER} ta="right" style={NARROW_COLUMN}>
+                <Stack gap={0}>
+                  <span>{copy.columnAmount}</span>
+                  <span>{copy.columnAmountVat}</span>
+                </Stack>
+              </Table.Th>
+              {/* The caveat is described from the header rather than repeated on
+                  every row: one statement covers all of them and reads once. The
+                  `ⓘ` carries it to a reader who sees it, and `aria-describedby`
+                  to one who does not — the sentence is named from the column it
+                  is about rather than left to be met after the last row. */}
+              <Table.Th
+                {...COLUMN_HEADER}
+                style={NARROW_WRAPPING_COLUMN}
+                aria-describedby={caveatId}
+              >
+                <Group gap={4} wrap="nowrap">
+                  {copy.columnDuration}
+                  <IconInfoCircle size={14} aria-hidden />
+                </Group>
+              </Table.Th>
+              <Table.Th {...COLUMN_HEADER} ta="right" style={NARROW_COLUMN}>
+                {copy.columnSource}
+              </Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {contracts.map((contract) => (
+              <ContractRow key={contract.sourceId} contract={contract} />
+            ))}
+          </Table.Tbody>
+        </Table>
+      </Table.ScrollContainer>
+      {/* Outside the scrolling region, deliberately. As a `<caption>` it sat
+          inside the 720 px the table is held to, so at a 360 px viewport its
+          lines ran off the side and each had to be read by scrolling right and
+          back again. A table may scroll sideways; a sentence may not. */}
+      <Group gap={6} wrap="nowrap" align="flex-start">
+        <IconInfoCircle size={14} aria-hidden />
+        <Text id={caveatId} size="xs" c="dimmed">
+          {copy.durationCaveat}
+        </Text>
+      </Group>
+    </Stack>
   );
 }

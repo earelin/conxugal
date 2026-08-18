@@ -65,6 +65,40 @@ because a contrato menor has **no detail view** to click into. Drawn field by fi
 - Component-tested with Vitest and Testing Library, HTTP mocked at the network boundary with
   `nock` per the project's convention.
 
+## What building it found
+
+> **The duration caveat could not stay a `<caption>`.** Put inside the table, it sits inside the
+> `min-width` the six columns are held to, so at a 360 px viewport its lines ran off the side and
+> each had to be read by scrolling right and back again. A table may scroll sideways; a sentence
+> may not. It now sits below the scrolling region, and the column names it through
+> `aria-describedby` — which is also what fixed the half a `<caption>` never delivered: the
+> table's `aria-label` wins over a caption for the accessible name, so the sentence was announced
+> only after the last row, fifty of them away from the column it is about.
+>
+> **Two of the six columns could not take `white-space: nowrap`.** The awardee's name has no
+> length cap on the wire and the stated duration is capped at 64 characters the source does
+> spend — `Desde a formalización do contrato ata o 31 de decembro de 2025` is a real shape. Held
+> on one line, either widens the table by some 400 px and squeezes `obxecto` down to a word per
+> line, which is the opposite of what the widths are for.
+>
+> **The 360 px criterion is asserted by no test here, and could not be.** The section has no route
+> until [FEAT-0013 TASK-0003](../FEAT-0013-organo-contracts-page/TASK-0003-mount-contratos-menores-section.md)
+> mounts it, so the `horizontalOverflow` check the acceptance suite uses for this has nothing to
+> drive — `acceptance/specs/organo-page.spec.ts` already defers it, saying the width that matters
+> is a page with a section in its tabs. **It is owed by whichever task mounts this one**, and the
+> two findings above are exactly what it would have caught. What is proved here instead is the
+> arrangement that criterion rests on: the caveat outside the scroll, and the two columns free to
+> wrap.
+>
+> **The scrolling region needed focus of its own.** The only focusable things in the table are the
+> source links in the last column, so a keyboard reader tabbing in arrived scrolled fully right
+> with nothing further left to bring it back. `axe`'s `scrollable-region-focusable` passes either
+> way, focusable descendants existing, so no tooling would have said so.
+>
+> **A WireMock stub landed with the read rather than with the journeys.** The existing
+> `/api/organo/{id}` catch-all cannot match a sub-resource, so without one this section renders its
+> error state in `dev` and `preview` the moment the route child arrives.
+
 ## Acceptance criteria
 
 - A row states the source identifier, the publication date, the `obxecto`, the amount, the

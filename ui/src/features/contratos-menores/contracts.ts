@@ -23,6 +23,12 @@ export interface Awardee {
  * and they arrive as explicit nulls rather than as missing keys.
  */
 export interface ContratoMenor {
+  /**
+   * The source's own identifier, and the contract's identity here too. Declared
+   * `int64` on the wire and read as a JS number, which rounds past 2^53 — a
+   * published identifier is seven digits, so the two only part company on a
+   * value the source has never issued.
+   */
   sourceId: number;
   /** An ISO calendar date, `YYYY-MM-DD`, with no time and no zone. */
   publicationDate: string;
@@ -44,8 +50,6 @@ export interface ContratosMenoresPage {
   totalItems: number;
   totalPages: number;
 }
-
-export const CONTRATOS_MENORES_QUERY_KEY = ['contratos-menores'] as const;
 
 async function fetchContratosMenores(
   organoId: string,
@@ -73,7 +77,7 @@ async function fetchContratosMenores(
  */
 export function useContratosMenores(organoId: string, year: number) {
   return useQuery({
-    queryKey: [...CONTRATOS_MENORES_QUERY_KEY, organoId, year],
+    queryKey: ['contratos-menores', organoId, year],
     queryFn: () => fetchContratosMenores(organoId, year),
   });
 }

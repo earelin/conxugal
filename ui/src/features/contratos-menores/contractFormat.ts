@@ -14,7 +14,14 @@ const MONTHS = ['xan', 'feb', 'mar', 'abr', 'mai', 'xuñ', 'xul', 'ago', 'set', 
  *
  * Split rather than parsed through `Date`: `new Date('2025-03-12')` is midnight
  * UTC, so anywhere west of Greenwich the calendar date a reader is shown would
- * be the day before the one the source published.
+ * be the day before the one the source published. `shared/lib/date.ts`'s
+ * `formatDate` still has both traits this avoids — the runtime's spelling and
+ * that shift — and is left alone here because changing it would change the
+ * screens that already use it; reconciling the two is its own task.
+ *
+ * The date is taken at its published word, like every other value in this slice:
+ * nothing validates the shape, so a malformed one renders as the nonsense it is
+ * rather than being guessed at.
  */
 export function formatPublicationDate(iso: string): string {
   const [year, month, day] = iso.split('-');

@@ -1,0 +1,110 @@
+{
+  "mappings": [
+    {
+      "name": "Read a page of one Órgano's contratos menores of one year",
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+/contratos-menores",
+        "queryParameters": {
+          "year": {
+            "matches": "[1-9][0-9]{3}"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "items": [
+            {
+              "sourceId": 1184621,
+              "publicationDate": "2025-03-12",
+              "obxecto": "Subministración de material funxible de laboratorio para o Hospital de Santiago",
+              "amount": 12480.0,
+              "duration": "12 meses",
+              "awardee": {
+                "name": "CLINILAB GALICIA, S.L.",
+                "fiscalId": "ESB15234567"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1184621"
+            },
+            {
+              "sourceId": 1179004,
+              "publicationDate": "2025-02-28",
+              "obxecto": "Servizo de mantemento de equipos de radiodiagnóstico",
+              "amount": 8750.5,
+              "duration": "6 meses",
+              "awardee": {
+                "name": "TECNOMÉDICA NOROESTE, S.A.",
+                "fiscalId": "ESA36112233"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1179004"
+            },
+            {
+              "sourceId": 1171338,
+              "publicationDate": "2025-02-14",
+              "obxecto": "Adquisición de mobiliario clínico para consultas externas",
+              "amount": 3215.0,
+              "duration": "Desde a formalización do contrato ata o 31 de decembro de 2025",
+              "awardee": {
+                "name": "MOBILIARIO SANITARIO DO EIXO, S.L.",
+                "fiscalId": "ESB27998811"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1171338"
+            },
+            {
+              "sourceId": 1166710,
+              "publicationDate": "2025-02-03",
+              "obxecto": "Reparación urxente da instalación de climatización do bloque cirúrxico",
+              "amount": 14900.0,
+              "duration": null,
+              "awardee": {
+                "name": "INSTALACIÓNS TÉRMICAS RÍA, S.L.U.",
+                "fiscalId": "ESB36447722"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1166710"
+            },
+            {
+              "sourceId": 1160245,
+              "publicationDate": "2025-01-21",
+              "obxecto": null,
+              "amount": 4060.0,
+              "duration": "12 meses",
+              "awardee": {
+                "name": "LINGUA ATLÁNTICA, S. COOP. GALEGA",
+                "fiscalId": "ESF15667788"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1160245"
+            }
+          ],
+          "page": 1,
+          "size": 50,
+          "totalItems": 1832,
+          "totalPages": 37
+        }
+      }
+    },
+    {
+      "name": "Refuse a read with no year, or with something that is not one",
+      "priority": 10,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+/contratos-menores"
+      },
+      "response": {
+        "status": 400,
+        "headers": {
+          "Content-Type": "application/problem+json"
+        },
+        "jsonBody": {
+          "type": "about:blank",
+          "title": "Bad Request",
+          "status": 400,
+          "detail": "year is required and must be a four-digit year: there is no all-years list"
+        }
+      }
+    }
+  ]
+}

@@ -63,9 +63,6 @@ describe('formatAmount', () => {
     // The separators are the assertion, not the digits: the suite runs across
     // browser builds whose gl-ES data disagrees, and one that resolved '.' as
     // the decimal mark would otherwise render 1,90 as "1 90".
-    const formatted = formatAmount(1234.5);
-
-    expect(formatted).toBe('1.234,50 €');
-    expect(formatted).not.toContain(' 234');
+    expect(formatAmount(1234.5)).toBe('1.234,50 €');
   });
 });

@@ -104,10 +104,41 @@ describe('the contract row', () => {
       renderList([verbose]);
       await screen.findByRole('table');
 
-      // The object's cell is the one column with no width pinned and no nowrap,
-      // which is what leaves it the room the others do not take.
+      // Asserted as the pairing it is, because the object's cell carries no
+      // style at all: on its own, "no nowrap here" would pass for an
+      // implementation that pinned no column anywhere.
       const cell = screen.getByText(verbose.obxecto as string).closest('td');
+      const dateCell = screen.getByText(String(verbose.sourceId)).closest('td');
+      expect(dateCell).toHaveStyle({ whiteSpace: 'nowrap' });
       expect(cell).not.toHaveStyle({ whiteSpace: 'nowrap' });
+      // And nothing clips what it wraps, which is the other way the column
+      // could swallow a long object while still passing the check above.
+      expect(cell).not.toHaveStyle({ overflow: 'hidden' });
+      expect(cell).not.toHaveStyle({ textOverflow: 'ellipsis' });
+    });
+
+    it('leaves the two unbounded text columns free to wrap', async () => {
+      // The awardee's name has no length cap on the wire and the duration is
+      // capped at 64 characters the source does spend. Held on one line, either
+      // would widen the table by hundreds of pixels and squeeze the object down
+      // to a word per line — the opposite of what the widths are for.
+      const wordy = contract({
+        sourceId: 77,
+        duration: 'Desde a formalización do contrato ata o 31 de decembro de 2025',
+        awardee: {
+          name: 'SUBMINISTRACIÓNS HOSPITALARIAS DO NOROESTE PENINSULAR, S.L.U.',
+          fiscalId: 'ESB15234567',
+        },
+      });
+      renderList([wordy]);
+      await screen.findByRole('table');
+
+      expect(screen.getByText(wordy.awardee.name).closest('td')).not.toHaveStyle({
+        whiteSpace: 'nowrap',
+      });
+      expect(screen.getByText(wordy.duration as string).closest('td')).not.toHaveStyle({
+        whiteSpace: 'nowrap',
+      });
     });
   });
 
@@ -156,7 +187,42 @@ describe('the contract row', () => {
       // One statement covers all of them and reads once; the same sentence on
       // fifty rows would be fifty things to read.
       expect(screen.getAllByText(copy.durationCaveat)).toHaveLength(1);
-      expect(within(contractsTable()).getByText(copy.durationCaveat)).toBeInTheDocument();
+    });
+
+    it('names the caveat from the column header it qualifies', async () => {
+      renderList();
+      await screen.findByRole('table');
+
+      // The `ⓘ` is decorative, so this is the only thing that carries the
+      // caveat to a reader who never sees it. Announced with the column rather
+      // than met after the last row, fifty of them away from what it is about.
+      const header = screen.getByRole('columnheader', { name: copy.columnDuration });
+      expect(header).toHaveAccessibleDescription(copy.durationCaveat);
+    });
+
+    it('keeps the caveat out of the table’s own sideways scroll', async () => {
+      renderList();
+      await screen.findByRole('table');
+
+      // Inside it, the sentence was held to the table's 720 px and had to be
+      // read by scrolling right and back again for each line at 360 px. A table
+      // may scroll sideways; a sentence may not.
+      expect(within(contractsTable()).queryByText(copy.durationCaveat)).not.toBeInTheDocument();
+      expect(screen.getByText(copy.durationCaveat)).toBeInTheDocument();
+    });
+  });
+
+  describe('the sideways scroll six columns need', () => {
+    it('is a region a keyboard can reach and scroll back', async () => {
+      renderList();
+      await screen.findByRole('table');
+
+      // Without this the only focusable things in the table are the source
+      // links in the last column: tabbing in arrives scrolled fully right, with
+      // nothing further left to bring it back.
+      const region = screen.getByRole('region', { name: copy.tableLabel });
+      expect(region).toHaveAttribute('tabindex', '0');
+      expect(region).toContainElement(contractsTable());
     });
   });
 
@@ -180,6 +246,16 @@ describe('the contract row', () => {
       const link = within(rowFor(laboratorio)).getByRole('link');
       expect(link).toHaveAttribute('target', '_blank');
       expect(link).toHaveAttribute('rel', expect.stringContaining('noreferrer'));
+    });
+
+    it('is a target a finger can hit rather than the glyph’s own 18 px', async () => {
+      renderList([laboratorio]);
+      await screen.findByRole('table');
+
+      // It sits beside the gesture that scrolls this table sideways, so a
+      // target the size of the icon is one a reader misses into a scroll.
+      const link = within(rowFor(laboratorio)).getByRole('link');
+      expect(link).toHaveClass('mantine-ActionIcon-root');
     });
   });
 
