@@ -6,6 +6,21 @@ conforms ([ADR-0010](../architecture/0010-design-first-openapi-contract.md)). A 
 written here is therefore the decision, not a description of one — get the naming right
 in this file and the code follows.
 
+## Stating a rule the server enforces
+
+`format` is an annotation, not a constraint. A JSON Schema reader is free to ignore
+`format: email` or `format: uri` entirely, and readers that do honour one disagree about
+what it admits — so a field carrying only a `format` has stated nothing the server can be
+held to, and the contract test will pick whichever reading the implementation does not
+share. **A rule the server enforces is written as `pattern`, `maxLength`, `minimum` or an
+`enum`**, and the implementation mirrors those characters exactly; a `format` alongside
+them is documentation, and worth keeping for the better examples it gives a generator.
+
+Write a `pattern` from literal character ranges where you can. `\s`, `\d` and `\w` are
+read differently by ECMA-262 than by the server, so a pattern using them needs its
+divergence spelled out in the field's `description` — see `CreateTermoRequest.name` for one
+that does, and `CreateUserRequest.email` for one that avoids the need.
+
 ## Resource naming
 
 Every path is mounted under `/api/`

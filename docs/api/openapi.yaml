@@ -1660,7 +1660,26 @@ components:
         email:
           type: string
           format: email
+          maxLength: 254
+          pattern: "^(?=[^@]{1,64}@)[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}$"
           example: "new.admin@conxugal.gal"
+          description: >-
+            The address the account is identified by. **The `pattern` is the rule, not the
+            `format`** — `format` asserts nothing on its own, so a reader honouring only it
+            would call valid an address this endpoint refuses. Dot-atom on the left, host-name
+            labels on the right: ASCII throughout, a domain carrying at least one dot, and a
+            top-level domain of two or more letters. Narrower than RFC 5322 and than most
+            readings of `format: email`, and the same rule the web client applies. The lengths
+            are RFC 5321's — 254 for the whole address, 64 for the local part, 63 for each
+            domain label — and they are spelled out here rather than left to `format` because
+            the two keywords have to reach the same verdict on every input; a pattern admitting
+            a longer local part would contradict the format beside it. Every character rule is
+            a literal range, so ECMA-262 and the server cannot read it differently, and the one
+            lookahead is a length bound rather than a character rule. `format: email` is kept
+            because a generator that recognises it produces better examples than one working
+            from the pattern alone. The account-bearing responses deliberately carry no such
+            pattern: accounts predating this rule, including the seeded administrators on a
+            dot-less domain, stay readable — they simply cannot be created here.
         role:
           $ref: "#/components/schemas/Role"
       description: The password is not accepted here; the server generates it.

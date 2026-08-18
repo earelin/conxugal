@@ -17,8 +17,8 @@
   "enabledPlugins": {
     "github@earelin-plugins": true,
     "backend@earelin-plugins": true,
-    "jdtls-lsp@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true,
+    "jdtls-lsp@claude-plugins-official": false,
+    "typescript-lsp@claude-plugins-official": false,
     "architecture@earelin-plugins": true,
     "devops@earelin-plugins": true,
     "frontend@earelin-plugins": true,

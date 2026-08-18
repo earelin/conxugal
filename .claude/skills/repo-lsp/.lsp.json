@@ -1,0 +1,29 @@
+{
+  "java": {
+    "command": "jdtls",
+    "args": [
+      "-data", "${CLAUDE_PROJECT_DIR}/.jdtls-workspace",
+      "--jvm-arg=-Xmx4G"
+    ],
+    "extensionToLanguage": { ".java": "java" },
+    "workspaceFolder": "${CLAUDE_PROJECT_DIR}/server",
+    "startupTimeout": 180000,
+    "settings": {
+      "java": {
+        "import": { "gradle": { "enabled": true, "wrapper": { "enabled": true } } },
+        "configuration": { "updateBuildConfiguration": "automatic" }
+      }
+    }
+  },
+  "typescript": {
+    "command": "typescript-language-server",
+    "args": ["--stdio"],
+    "extensionToLanguage": {
+      ".ts": "typescript", ".tsx": "typescriptreact",
+      ".mts": "typescript", ".cts": "typescript",
+      ".js": "javascript", ".jsx": "javascriptreact"
+    },
+    "workspaceFolder": "${CLAUDE_PROJECT_DIR}/ui",
+    "env": { "NODE_OPTIONS": "--max-old-space-size=8192" }
+  }
+}
