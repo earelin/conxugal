@@ -12,6 +12,18 @@ const copy = strings.contratosMenores;
 const YEAR_PARAM = 'year';
 
 /**
+ * The query string with this year named in it, and everything else it was
+ * already carrying left where it was. Both ways the year can change — a reader
+ * choosing one, and a stale one being corrected — write it through here, so
+ * neither can drift from the other in what it preserves.
+ */
+function withYear(searchParams: URLSearchParams, year: string): string {
+  const next = new URLSearchParams(searchParams);
+  next.set(YEAR_PARAM, year);
+  return next.toString();
+}
+
+/**
  * A standing fact about the section rather than a report of something that just
  * happened, so `role="status"` rather than the assertive `role="alert"` Mantine
  * defaults an `Alert` to — the same policy `shared/ui/StatusAlert.tsx` states.
@@ -63,9 +75,8 @@ export function ContratosMenoresSection() {
   // here. Arriving with no year at all is left alone, which is a different case
   // — there the URL says nothing rather than something untrue.
   if (asked !== null && asked !== String(year)) {
-    const corrected = new URLSearchParams(searchParams);
-    corrected.set(YEAR_PARAM, String(year));
-    return <Navigate to={{ pathname, search: `?${corrected.toString()}`, hash }} replace />;
+    const search = `?${withYear(searchParams, String(year))}`;
+    return <Navigate to={{ pathname, search, hash }} replace />;
   }
 
   // In the order they arrive, which is newest first: the ordering is the
@@ -112,9 +123,7 @@ export function ContratosMenoresSection() {
             if (selected === null) {
               return;
             }
-            const next = new URLSearchParams(searchParams);
-            next.set(YEAR_PARAM, selected);
-            setSearchParams(next);
+            setSearchParams(withYear(searchParams, selected));
           }}
         />
       </Card>
