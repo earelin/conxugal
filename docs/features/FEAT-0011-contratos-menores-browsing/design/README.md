@@ -38,7 +38,7 @@ criterion demanded them.
 - **The source identifier sits under the date**, dimmed and monospaced. No criterion places it;
   it is put there because it is an identifier a reader copies rather than reads, and because it
   is the tiebreaker that makes the ordering total.
-- **The record count is worded `1.832 rexistros`.** R17 requires the count and the page total to
+- **The record count is worded `1 832 rexistros`.** R17 requires the count and the page total to
   be **stated**; the phrasing is the mockups'.
 - **The `FONTE` column is an icon-only link**, so it needs an `aria-label` naming the contract it
   opens. A drawing cannot show that; the implementing task must not skip it.
@@ -150,6 +150,7 @@ the same control:
 | `first` / `previous` / `next` / `last` | Primeira / Anterior / Seguinte / Última |
 | `pageLabel` / `ofPages` | Páxina / de {n} |
 | `records` | `{ singular: 'rexistro', plural: 'rexistros' }` |
+| `navLabel` | Paxinación *(the control's landmark name, so it can be jumped to)* |
 
 `records` travels as a singular/plural pair, the pattern `strings.ts` already uses for counted
 nouns, so no call site can take one form and forget the other.

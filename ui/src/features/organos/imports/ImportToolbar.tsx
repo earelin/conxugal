@@ -4,8 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 
 import { isHttpStatus, isProblemType } from '../../../shared/lib/httpError';
-import { formatCount } from '../../../shared/lib/number';
-import { singularOrPlural, type Word } from '../../../shared/lib/plural';
+import { counted } from '../../../shared/lib/plural';
 import { strings } from '../../../shared/lib/strings';
 import { ErrorAlert } from '../../../shared/ui/ErrorAlert';
 import { StatusAlert } from '../../../shared/ui/StatusAlert';
@@ -22,10 +21,6 @@ const menores = strings.admin.organos.contratosMenores;
 
 /** The type the server gives a source failure, so it reads as more than a 500. */
 const SOURCE_FAILURE = 'urn:conxugal:problem-type:organo-import-failed';
-
-function counted(count: number, word: Word): string {
-  return `${formatCount(count)} ${singularOrPlural(count, word)}`;
-}
 
 function outcomeCounts({ added, refreshed, deactivated }: ImportOutcome): string {
   return [

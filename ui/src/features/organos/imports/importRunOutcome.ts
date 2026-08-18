@@ -1,7 +1,6 @@
 import { formatDateTime } from '../../../shared/lib/date';
 import { isProblemType } from '../../../shared/lib/httpError';
-import { formatCount } from '../../../shared/lib/number';
-import { singularOrPlural, type Word } from '../../../shared/lib/plural';
+import { counted } from '../../../shared/lib/plural';
 import { strings } from '../../../shared/lib/strings';
 import type { ImportRefusalKind, ImportRun } from './contratosMenores';
 
@@ -47,10 +46,6 @@ export interface RefusalReport {
    * an ineligible Órgano stays ineligible until the catalogue or the mark moves.
    */
   retryable: boolean;
-}
-
-function counted(count: number, word: Word): string {
-  return `${formatCount(count)} ${singularOrPlural(count, word)}`;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { Box, Breadcrumbs, Card, Divider, Group, Stack, Text, Title } from '@mantine/core';
 import { useState } from 'react';
 
-import { singularOrPlural, type Word } from '../../../shared/lib/plural';
+import { counted, type Word } from '../../../shared/lib/plural';
 import { strings } from '../../../shared/lib/strings';
 import type { TermoNode } from '../../../shared/lib/taxonomiaTree';
 import { TermoRefusalAlert } from '../dialogs/TermoRefusalAlert';
@@ -163,8 +163,8 @@ export function TermoContentCard({
           catalogue already on screen, not from a read of its own. */}
       {count > 0 && (
         <Text size="xs" c="dimmed" mt="sm">
-          {count} {singularOrPlural(count, pane.countWord)} · {marked}{' '}
-          {singularOrPlural(marked, strings.admin.organos.contratosMenores.markedTally)}
+          {counted(count, pane.countWord)} ·{' '}
+          {counted(marked, strings.admin.organos.contratosMenores.markedTally)}
         </Text>
       )}
     </Card>

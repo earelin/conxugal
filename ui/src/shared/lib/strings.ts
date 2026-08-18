@@ -25,6 +25,22 @@ export const strings = {
     logout: 'Pechar sesión',
     logoutError: 'Non foi posible pechar a sesión. Téntao de novo.',
   },
+  // Its own top-level namespace rather than any feature's: the paging control
+  // lives in `shared/ui` because two other specs' lists take it unchanged, and
+  // copy filed under the first feature to need it would have to move the moment
+  // the second one did.
+  pagination: {
+    navLabel: 'Paxinación',
+    first: 'Primeira',
+    previous: 'Anterior',
+    next: 'Seguinte',
+    last: 'Última',
+    pageLabel: 'Páxina',
+    // Takes the total already rendered, so every number in the control is
+    // grouped by the one formatter rather than by this module too.
+    ofPages: (totalPages: string) => `de ${totalPages}`,
+    records: { singular: 'rexistro', plural: 'rexistros' },
+  },
   organoPicker: {
     label: 'Órgano',
     placeholder: 'Escolle un órgano',
