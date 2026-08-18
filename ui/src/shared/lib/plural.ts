@@ -1,3 +1,5 @@
+import { formatCount } from './number';
+
 /** A counted noun carrying both of its forms, so neither can be used without the other. */
 export interface Word {
   readonly singular: string;
@@ -14,4 +16,9 @@ export interface Word {
  */
 export function singularOrPlural(count: number, word: Word): string {
   return count === 1 ? word.singular : word.plural;
+}
+
+/** A count and its noun, agreeing — the only way this pair should be written. */
+export function counted(count: number, word: Word): string {
+  return `${formatCount(count)} ${singularOrPlural(count, word)}`;
 }
