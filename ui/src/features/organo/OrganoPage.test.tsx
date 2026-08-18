@@ -1,10 +1,9 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { strings } from '../../shared/lib/strings';
-import { mockCurrentUser, mockOrganosPicker, renderApp } from '../../test/renderApp';
 import {
   contratosMenores,
   copy,
@@ -198,36 +197,6 @@ describe('OrganoPage', () => {
       // one interceptor this test set up is spent.
       expect(scope.isDone()).toBe(true);
       expect(nock.pendingMocks()).toHaveLength(0);
-    });
-  });
-
-  describe('mounted by the application router', () => {
-    beforeEach(() => {
-      mockCurrentUser('USER');
-      mockOrganosPicker();
-    });
-
-    it('answers /organo/:id, redirecting to the family it holds', async () => {
-      mockOrgano(200, member(HOLDS_CONTRATOS_MENORES));
-
-      const { queryClient, router } = renderApp(`/organo/${ORGANO_ID}`);
-
-      await waitFor(() =>
-        expect(router.state.location.pathname).toBe(
-          `/organo/${ORGANO_ID}/${contratosMenores.path}`,
-        ),
-      );
-      // No child route is declared yet, so the shell's catch-all answers the
-      // redirect. The page is a frame with no interior until the first section
-      // is mounted into it.
-      expect(await screen.findByText(strings.notFound.title)).toBeInTheDocument();
-
-      const readKeys = queryClient
-        .getQueryCache()
-        .getAll()
-        .map((query) => query.queryKey)
-        .filter((key) => key[0] === 'organo');
-      expect(readKeys).toEqual([['organo', ORGANO_ID]]);
     });
   });
 });

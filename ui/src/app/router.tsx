@@ -14,6 +14,7 @@ import { RouteErrorPage } from './pages/RouteErrorPage';
 // split: the two administration pages share a barrel, so they share a chunk.
 // The module registry dedupes, so warming and rendering pull the same fetch.
 const administration = () => import('../features/administration');
+const contratosMenores = () => import('../features/contratos-menores');
 const organo = () => import('../features/organo');
 const organos = () => import('../features/organos');
 
@@ -70,12 +71,20 @@ export const routes: RouteObject[] = [
       },
       {
         // The layout route each contract family's section mounts into. Composing
-        // shell and section here is what lets neither slice import the other.
-        // It declares no child yet, so the redirect the page issues on the bare
-        // path lands on the catch-all below until the first section arrives.
+        // shell and section here is what lets neither slice import the other:
+        // the page cedes an outlet, the section reads the context it carries,
+        // and this is the only module that names both. A family the system
+        // gains later adds a registry entry beside the page's and a sibling
+        // below, and edits neither slice.
         path: 'organo/:id',
         Component: section(organo, (m) => m.OrganoPage),
         errorElement: <RouteErrorPage />,
+        children: [
+          {
+            path: 'contratos-menores',
+            Component: section(contratosMenores, (m) => m.ContratosMenoresSection),
+          },
+        ],
       },
       { path: '*', Component: NotFoundPage },
     ],
