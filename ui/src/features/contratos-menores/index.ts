@@ -1,0 +1,1 @@
+export { ContratosMenoresSection } from './ContratosMenoresSection';

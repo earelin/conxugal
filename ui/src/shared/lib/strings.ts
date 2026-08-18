@@ -77,6 +77,18 @@ export const strings = {
       'A ligazón pode estar mal, ou o órgano pode xa non existir no catálogo. Escolle un ' +
       'órgano no selector do panel lateral para seguir.',
   },
+  // The contratos menores section's own namespace rather than a key under
+  // `organo`: the page above it is FEAT-0013's and will frame the licitacións
+  // section too, so copy filed there would have to move the moment it does.
+  contratosMenores: {
+    yearLabel: 'Ano',
+    partialTitle: 'Importación en curso',
+    partialBody:
+      'Aínda se están a importar os contratos deste órgano, así que o que ves aquí está ' +
+      'incompleto e medra entre visitas.',
+    notUpdatedTitle: 'Este órgano xa non se actualiza',
+    notUpdatedBody: 'Os contratos xa importados seguen aquí, pero non se engadirán novos.',
+  },
   home: {
     title: 'Benvido/a a conxugal',
     description:
