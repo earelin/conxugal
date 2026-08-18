@@ -122,6 +122,12 @@ describe('DashboardPage', () => {
 
   it('mounts the lazily-loaded metrics panel alongside the system status', async () => {
     mockSystemStatus({ status: 'UP', reachable: true });
+    // The panel's chunk pulls in @mantine/charts and recharts, whose evaluation
+    // measures in seconds under a loaded worker pool and blocks the polling this
+    // assertion waits on. Resolving it up front leaves the wait to the render
+    // alone, which is the part this test is about — the lazy boundary is still
+    // exercised, it just no longer resolves against a cold module registry.
+    await import('./metrics');
     renderDashboard();
 
     expect(await screen.findByText(strings.admin.dashboard.metrics.title)).toBeInTheDocument();
