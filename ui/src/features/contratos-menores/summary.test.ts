@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { chosenYear } from './summary';
+import { chosenYear, type PublicationYears } from './summary';
 
-const YEARS = [2025, 2024, 2023];
+const YEARS: PublicationYears = [2025, 2024, 2023];
 
 describe('chosenYear', () => {
   it('takes a year the Órgano has visible contracts in', () => {
@@ -46,7 +46,8 @@ describe('chosenYear', () => {
   });
 
   it('opens on the only year an Órgano with one has', () => {
-    expect(chosenYear(null, [2024])).toBe(2024);
-    expect(chosenYear('2025', [2024])).toBe(2024);
+    const only: PublicationYears = [2024];
+    expect(chosenYear(null, only)).toBe(2024);
+    expect(chosenYear('2025', only)).toBe(2024);
   });
 });

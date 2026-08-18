@@ -1,9 +1,8 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import {
-  chosenYearShown,
   copy,
   ORGANO_NAME,
   renderSection,
@@ -15,6 +14,11 @@ import {
 
 async function openChooser(user: UserEvent) {
   await user.click(yearChooser());
+}
+
+async function chooseYear(user: UserEvent, year: string) {
+  await openChooser(user);
+  await user.click(screen.getByRole('option', { name: year }));
 }
 
 function offeredYears() {
@@ -55,27 +59,13 @@ describe('the contratos menores section', () => {
     it('opens on the most recent year when the URL names none', () => {
       renderSection(summary());
 
-      expect(chosenYearShown()).toBe('2025');
+      expect(yearChooser()).toHaveValue('2025');
     });
 
     it('opens on the year the URL already carries', () => {
       renderSection(summary(), `${SECTION_PATH}?year=2023`);
 
-      expect(chosenYearShown()).toBe('2023');
-    });
-
-    it('opens on the default for a year the Órgano has no contracts in', () => {
-      // A link that has outlived the selection it named is not an error and not
-      // an empty list.
-      renderSection(summary(), `${SECTION_PATH}?year=2019`);
-
-      expect(chosenYearShown()).toBe('2025');
-    });
-
-    it('opens on the default for a year that is not a year at all', () => {
-      renderSection(summary(), `${SECTION_PATH}?year=onte`);
-
-      expect(chosenYearShown()).toBe('2025');
+      expect(yearChooser()).toHaveValue('2023');
     });
 
     it('leaves the URL alone until a year is chosen', () => {
@@ -87,37 +77,123 @@ describe('the contratos menores section', () => {
     });
   });
 
+  describe('a URL naming a year the Órgano has no contracts in', () => {
+    it('opens on the default rather than on an error', () => {
+      renderSection(summary(), `${SECTION_PATH}?year=2019`);
+
+      expect(yearChooser()).toHaveValue('2025');
+    });
+
+    it('opens on the default when the year is not a year at all', () => {
+      renderSection(summary(), `${SECTION_PATH}?year=onte`);
+
+      expect(yearChooser()).toHaveValue('2025');
+    });
+
+    it('corrects the URL to the year it opened on', async () => {
+      // Displaying over a stale year would leave a reader holding a link that
+      // says one thing while the section shows another — and the chooser cannot
+      // resolve it for them, since picking the year already displayed is not a
+      // change.
+      const { router } = renderSection(summary(), `${SECTION_PATH}?year=2019`);
+
+      await waitFor(() => {
+        expect(router.state.location.search).toBe('?year=2025');
+      });
+    });
+
+    it('corrects it in place, leaving nothing to go back to', async () => {
+      const { router } = renderSection(summary(), `${SECTION_PATH}?year=2019`);
+      await waitFor(() => {
+        expect(router.state.location.search).toBe('?year=2025');
+      });
+
+      await router.navigate(-1);
+
+      // A replace, not a push: the reader made no choice here, so the correction
+      // is not a step in their history to be undone.
+      expect(router.state.location.search).not.toBe('?year=2019');
+    });
+
+    it('respells a year written in a spelling the API does not take', async () => {
+      const { router } = renderSection(summary(), `${SECTION_PATH}?year=02024`);
+
+      await waitFor(() => {
+        expect(router.state.location.search).toBe('?year=2024');
+      });
+      expect(yearChooser()).toHaveValue('2024');
+    });
+
+    it('keeps the rest of the query string while correcting it', async () => {
+      const { router } = renderSection(summary(), `${SECTION_PATH}?sort=amount%2Cdesc&year=2019`);
+
+      await waitFor(() => {
+        const search = new URLSearchParams(router.state.location.search);
+        expect(search.get('year')).toBe('2025');
+        expect(search.get('sort')).toBe('amount,desc');
+      });
+    });
+  });
+
   describe('choosing a year', () => {
     it('writes it to the query string as the API spells it', async () => {
       const user = userEvent.setup();
       const { router } = renderSection(summary());
 
-      await openChooser(user);
-      await user.click(screen.getByRole('option', { name: '2024' }));
+      await chooseYear(user, '2024');
 
       expect(router.state.location.search).toBe('?year=2024');
-      expect(chosenYearShown()).toBe('2024');
+      expect(yearChooser()).toHaveValue('2024');
     });
 
-    it('keeps whatever else was riding in the query string', async () => {
+    it('is a step a reader can take back', async () => {
+      const user = userEvent.setup();
+      const { router } = renderSection(summary());
+
+      await chooseYear(user, '2024');
+      await router.navigate(-1);
+
+      // A push, unlike the correction above: this one *was* a choice, so going
+      // back returns to the year the section opened on.
+      await waitFor(() => {
+        expect(router.state.location.search).toBe('');
+        expect(yearChooser()).toHaveValue('2025');
+      });
+    });
+
+    it('keeps the ordering the URL already carries', async () => {
+      // Scoped to `sort` on purpose. The paging task adds `page` and the rule
+      // that changing the year returns to the first one, which this must not
+      // read as a promise to preserve everything.
       const user = userEvent.setup();
       const { router } = renderSection(summary(), `${SECTION_PATH}?sort=amount%2Cdesc`);
 
-      await openChooser(user);
-      await user.click(screen.getByRole('option', { name: '2023' }));
+      await chooseYear(user, '2023');
 
-      expect(new URLSearchParams(router.state.location.search).get('sort')).toBe('amount,desc');
-      expect(new URLSearchParams(router.state.location.search).get('year')).toBe('2023');
+      const search = new URLSearchParams(router.state.location.search);
+      expect(search.get('sort')).toBe('amount,desc');
+      expect(search.get('year')).toBe('2023');
     });
 
     it('replaces the year already there rather than adding a second one', async () => {
       const user = userEvent.setup();
       const { router } = renderSection(summary(), `${SECTION_PATH}?year=2023`);
 
-      await openChooser(user);
-      await user.click(screen.getByRole('option', { name: '2025' }));
+      await chooseYear(user, '2025');
 
       expect(router.state.location.search).toBe('?year=2025');
+    });
+
+    it('does nothing when the year already shown is picked again', async () => {
+      const user = userEvent.setup();
+      const { router } = renderSection(summary(), `${SECTION_PATH}?year=2024`);
+
+      await chooseYear(user, '2024');
+
+      // No deselect and no clear: re-picking cannot empty the chooser, and it
+      // does not navigate either.
+      expect(router.state.location.search).toBe('?year=2024');
+      expect(yearChooser()).toHaveValue('2024');
     });
   });
 
@@ -170,6 +246,10 @@ describe('the contratos menores section', () => {
       const partial = screen.getByText(copy.partialTitle).closest('[role="status"]');
       const notUpdated = screen.getByText(copy.notUpdatedTitle).closest('[role="status"]');
       expect(partial).not.toBe(notUpdated);
+      // Each is a region of its own with its own name and body, so the two stay
+      // distinguishable where colour says nothing.
+      expect(partial).toHaveAccessibleName(copy.partialTitle);
+      expect(notUpdated).toHaveAccessibleName(copy.notUpdatedTitle);
       expect(partial).toHaveStyle({ '--alert-color': 'var(--mantine-color-indigo-light-color)' });
       expect(notUpdated).toHaveStyle({ '--alert-color': 'var(--mantine-color-gray-light-color)' });
     });

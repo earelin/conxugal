@@ -78,8 +78,8 @@ export const strings = {
       'órgano no selector do panel lateral para seguir.',
   },
   // The contratos menores section's own namespace rather than a key under
-  // `organo`: the page above it is FEAT-0013's and will frame the licitacións
-  // section too, so copy filed there would have to move the moment it does.
+  // `organo`: the page above it frames every contract family, so copy filed
+  // there would have to move the moment the licitacións section arrives.
   contratosMenores: {
     yearLabel: 'Ano',
     partialTitle: 'Importación en curso',

@@ -1,7 +1,7 @@
 import { Alert, Card, type MantineColor, Select, Stack } from '@mantine/core';
 import { IconInfoCircle, IconPlayerPause } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
-import { useOutletContext, useSearchParams } from 'react-router';
+import { Navigate, useLocation, useOutletContext, useSearchParams } from 'react-router';
 
 import type { OrganoOutletContext } from '../../shared/entities/organo';
 import { strings } from '../../shared/lib/strings';
@@ -47,15 +47,26 @@ function SectionStatement({
  *
  * The chosen year lives in the query string rather than in state, so the control
  * and the list it scopes cannot disagree about it and a selection is a link
- * somebody can send. Arriving without one derives the default and leaves the URL
- * alone: rewriting it on mount would put a redirect in every reader's history
- * for a choice they have not made yet.
+ * somebody can send.
  */
 export function ContratosMenoresSection() {
   const { family } = useOutletContext<OrganoOutletContext>();
   const summary = sectionSummary(family);
+  const { pathname, hash } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const year = chosenYear(searchParams.get(YEAR_PARAM), summary.years);
+  const asked = searchParams.get(YEAR_PARAM);
+  const year = chosenYear(asked, summary.years);
+
+  // A year the Órgano has no contracts in — or one spelled some other way — is
+  // corrected in place rather than merely displayed over. Replacing rather than
+  // pushing is what keeps this off the reader's history: they made no choice
+  // here. Arriving with no year at all is left alone, which is a different case
+  // — there the URL says nothing rather than something untrue.
+  if (asked !== null && asked !== String(year)) {
+    const corrected = new URLSearchParams(searchParams);
+    corrected.set(YEAR_PARAM, String(year));
+    return <Navigate to={{ pathname, search: `?${corrected.toString()}`, hash }} replace />;
+  }
 
   // In the order they arrive, which is newest first: the ordering is the
   // server's answer, and re-sorting here would be this module holding a second
@@ -86,15 +97,17 @@ export function ContratosMenoresSection() {
       <Card withBorder radius="md" padding="md">
         <Select
           label={copy.yearLabel}
-          labelProps={{ size: 'xs', fw: 700, c: 'dimmed', tt: 'uppercase' }}
+          // `fz`, not `size`: an input label takes its wrapper's styles, so a
+          // `size` here is accepted and then ignored.
+          labelProps={{ fz: 'xs', fw: 700, c: 'dimmed', tt: 'uppercase' }}
           data={options}
           value={String(year)}
-          // Nothing but years: no placeholder, no clear control and no deselect,
-          // so the chooser has no state in which it offers something the domain
-          // does not have.
+          // Years and nothing else: no placeholder and no deselect, so there is
+          // no state in which the chooser offers something the domain does not
+          // have. That is also what leaves the `null` below unreachable — it is
+          // narrowing, not a branch.
           allowDeselect={false}
-          clearable={false}
-          w={180}
+          maw={180}
           onChange={(selected) => {
             if (selected === null) {
               return;

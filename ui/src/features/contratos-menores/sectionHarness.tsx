@@ -7,7 +7,7 @@ import { theme } from '../../app/theme';
 import type { OrganoOutletContext } from '../../shared/entities/organo';
 import { strings } from '../../shared/lib/strings';
 import { ContratosMenoresSection } from './ContratosMenoresSection';
-import type { ContratosMenoresSummary } from './summary';
+import type { ContratosMenoresSummary, PublicationYears } from './summary';
 
 export const copy = strings.contratosMenores;
 
@@ -16,7 +16,7 @@ export const ORGANO_ID = 'o-1';
 export const ORGANO_NAME = 'Servizo Galego de Saúde';
 export const SECTION_PATH = `/organo/${ORGANO_ID}/contratos-menores`;
 
-export const YEARS = [2025, 2024, 2023];
+export const YEARS: PublicationYears = [2025, 2024, 2023];
 
 export function summary(overrides: Partial<ContratosMenoresSummary> = {}): ContratosMenoresSummary {
   return { years: YEARS, partial: false, updating: true, ...overrides };
@@ -61,9 +61,4 @@ export function renderSection(
 
 export function yearChooser() {
   return screen.getByRole('combobox', { name: copy.yearLabel });
-}
-
-/** What the closed field shows, which is the year the section opened on. */
-export function chosenYearShown() {
-  return yearChooser().getAttribute('value');
 }
