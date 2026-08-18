@@ -1,10 +1,14 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import nock from 'nock';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   copy,
+  mockAnyContracts,
+  mockContracts,
   ORGANO_NAME,
+  page,
   renderSection,
   SECTION_PATH,
   summary,
@@ -34,6 +38,19 @@ function notUpdatedStatement() {
 }
 
 describe('the contratos menores section', () => {
+  beforeEach(() => {
+    nock.disableNetConnect();
+    // The list below the chooser reads on every render. These cases are about
+    // the chooser and the two statements, so the read is answered without them
+    // having to say for which year.
+    mockAnyContracts();
+  });
+
+  afterEach(() => {
+    nock.cleanAll();
+    nock.enableNetConnect();
+  });
+
   describe('the year chooser', () => {
     it('offers exactly the years the summary carries, newest first', async () => {
       const user = userEvent.setup();
@@ -230,8 +247,11 @@ describe('the contratos menores section', () => {
       expect(notUpdatedStatement()).not.toBeInTheDocument();
     });
 
-    it('states both at once for an Órgano unmarked halfway through its initial import', () => {
+    it('states both at once for an Órgano unmarked halfway through its initial import', async () => {
       renderSection(summary({ partial: true, updating: false }));
+      // Awaited because the list's own wait is a status too, and counting them
+      // while it is on screen would count something that is not a statement.
+      await screen.findByRole('table');
 
       // Two statements, not one combined status: neither replaces the other and
       // both are true.
@@ -254,25 +274,32 @@ describe('the contratos menores section', () => {
       expect(notUpdated).toHaveStyle({ '--alert-color': 'var(--mantine-color-gray-light-color)' });
     });
 
-    it('says neither when the Órgano is complete and still being refreshed', () => {
+    it('says neither when the Órgano is complete and still being refreshed', async () => {
       renderSection(summary());
+      await screen.findByRole('table');
 
       expect(screen.queryAllByRole('status')).toEqual([]);
     });
   });
 
-  describe('what it does not read', () => {
-    it('renders from the supplied context alone, with no query client behind it', () => {
-      // The harness mounts no `QueryClientProvider`: a section that asked for
-      // the summary, the years or the Órgano's name would throw rather than
-      // quietly repeat a request the page has already made.
+  describe('what it reads and what it does not', () => {
+    it('asks for the contracts and for nothing else', async () => {
+      // The interceptor planted here is the *only* one, and the connection is
+      // disabled: a section that also asked for the summary, the years or the
+      // Órgano's name would fail on a request nothing answers rather than
+      // quietly repeating one the page has already made.
+      nock.cleanAll();
+      mockContracts(2025, 200, page([]));
+
       renderSection(summary());
 
-      expect(yearChooser()).toBeInTheDocument();
+      expect(await screen.findByRole('table')).toBeInTheDocument();
+      expect(nock.pendingMocks()).toEqual([]);
     });
 
-    it('does not draw the Órgano’s name, which is the page’s above it', () => {
+    it('does not draw the Órgano’s name, which is the page’s above it', async () => {
       renderSection(summary());
+      await screen.findByRole('table');
 
       expect(screen.queryByText(ORGANO_NAME)).not.toBeInTheDocument();
     });

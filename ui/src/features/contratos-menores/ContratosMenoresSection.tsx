@@ -5,6 +5,7 @@ import { Navigate, useLocation, useOutletContext, useSearchParams } from 'react-
 
 import type { OrganoOutletContext } from '../../shared/entities/organo';
 import { strings } from '../../shared/lib/strings';
+import { ContratosMenoresList } from './ContratosMenoresList';
 import { chosenYear, sectionSummary } from './summary';
 
 const copy = strings.contratosMenores;
@@ -46,20 +47,21 @@ function SectionStatement({ color, icon, title, body }: SectionStatementProps) {
 }
 
 /**
- * An Órgano's contratos menores: what the section says about itself, and the
- * year the rest of it is scoped to.
+ * An Órgano's contratos menores: what the section says about itself, the year
+ * the rest of it is scoped to, and the contracts of that year.
  *
- * It reads nothing. The years and both flags arrive as outlet context from the
- * Órgano page's single member read, and are narrowed here because this is the
- * feature that owns the shape — the page carries the summary without looking
- * inside it, and neither slice imports the other.
+ * It reads no Órgano. The years and both flags arrive as outlet context from the
+ * page's single member read, and are narrowed here because this is the feature
+ * that owns the shape — the page carries the summary without looking inside it,
+ * and neither slice imports the other. The slice's own read is the list below,
+ * and it is the only one it makes.
  *
  * The chosen year lives in the query string rather than in state, so the control
  * and the list it scopes cannot disagree about it and a selection is a link
  * somebody can send.
  */
 export function ContratosMenoresSection() {
-  const { family } = useOutletContext<OrganoOutletContext>();
+  const { organo, family } = useOutletContext<OrganoOutletContext>();
   const summary = sectionSummary(family);
   const { pathname, hash } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -107,26 +109,32 @@ export function ContratosMenoresSection() {
         />
       )}
       <Card withBorder radius="md" padding="md">
-        <Select
-          label={copy.yearLabel}
-          // `fz`, not `size`: an input label takes its wrapper's styles, so a
-          // `size` here is accepted and then ignored.
-          labelProps={{ fz: 'xs', fw: 700, c: 'dimmed', tt: 'uppercase' }}
-          data={options}
-          value={shown}
-          // Years and nothing else: no placeholder and no deselect, so there is
-          // no state in which the chooser offers something the domain does not
-          // have. That is also what leaves the `null` below unreachable — it is
-          // narrowing, not a branch.
-          allowDeselect={false}
-          maw={180}
-          onChange={(selected) => {
-            if (selected === null) {
-              return;
-            }
-            setSearchParams(withYear(searchParams, selected));
-          }}
-        />
+        <Stack gap="md">
+          <Select
+            label={copy.yearLabel}
+            // `fz`, not `size`: an input label takes its wrapper's styles, so a
+            // `size` here is accepted and then ignored.
+            labelProps={{ fz: 'xs', fw: 700, c: 'dimmed', tt: 'uppercase' }}
+            data={options}
+            value={shown}
+            // Years and nothing else: no placeholder and no deselect, so there
+            // is no state in which the chooser offers something the domain does
+            // not have. That is also what leaves the `null` below unreachable —
+            // it is narrowing, not a branch.
+            allowDeselect={false}
+            maw={180}
+            onChange={(selected) => {
+              if (selected === null) {
+                return;
+              }
+              setSearchParams(withYear(searchParams, selected));
+            }}
+          />
+          {/* Below the chooser and inside the card, so what it is scoped to sits
+              above it. The two statements stay outside, which is what keeps them
+              on screen while this is loading or has failed. */}
+          <ContratosMenoresList organoId={organo.id} year={year} />
+        </Stack>
       </Card>
     </Stack>
   );
