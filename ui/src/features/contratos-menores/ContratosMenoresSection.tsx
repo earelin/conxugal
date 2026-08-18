@@ -23,6 +23,13 @@ function withYear(searchParams: URLSearchParams, year: string): string {
   return next.toString();
 }
 
+interface SectionStatementProps {
+  color: MantineColor;
+  icon: ReactNode;
+  title: string;
+  body: string;
+}
+
 /**
  * A standing fact about the section rather than a report of something that just
  * happened, so `role="status"` rather than the assertive `role="alert"` Mantine
@@ -30,17 +37,7 @@ function withYear(searchParams: URLSearchParams, year: string): string {
  * That control is not reused here: it is dismissible, and neither of these two
  * stops being true because a reader closed it.
  */
-function SectionStatement({
-  color,
-  icon,
-  title,
-  body,
-}: {
-  color: MantineColor;
-  icon: ReactNode;
-  title: string;
-  body: string;
-}) {
+function SectionStatement({ color, icon, title, body }: SectionStatementProps) {
   return (
     <Alert variant="light" color={color} role="status" title={title} icon={icon}>
       {body}
