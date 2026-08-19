@@ -11,7 +11,12 @@ const section = strings.contratosMenores;
 const ORGANO_ID = 'o-1';
 const ORGANO_NAME = 'Servizo Galego de Saúde';
 const FAMILY_PATH = 'contratos-menores';
-const SECTION_PATH = `/organo/${ORGANO_ID}/${FAMILY_PATH}`;
+/**
+ * The two addresses under test: the page the picker sends a reader to, and the
+ * family route it redirects on to. Every case enters at one or the other.
+ */
+const PAGE_PATH = `/organo/${ORGANO_ID}`;
+const SECTION_PATH = `${PAGE_PATH}/${FAMILY_PATH}`;
 
 /**
  * The fixtures are declared here rather than taken from the page slice's
@@ -82,7 +87,7 @@ describe('the contratos menores section, mounted by the application router', () 
     mockOrgano(200, member(HOLDS_CONTRATOS_MENORES));
     mockContracts(2025);
 
-    const { router } = renderApp(`/organo/${ORGANO_ID}`);
+    const { router } = renderApp(PAGE_PATH);
 
     expect(await yearChooser()).toHaveValue('2025');
     expect(screen.getByRole('heading', { name: ORGANO_NAME })).toBeInTheDocument();
@@ -124,7 +129,7 @@ describe('the contratos menores section, mounted by the application router', () 
     mockOrgano(200, member(HOLDS_CONTRATOS_MENORES));
     mockContracts(2024);
 
-    const { router } = renderApp(`/organo/${ORGANO_ID}?year=2024&sort=amount%2Cdesc&page=3`);
+    const { router } = renderApp(`${PAGE_PATH}?year=2024&sort=amount%2Cdesc&page=3`);
 
     expect(await yearChooser()).toHaveValue('2024');
     expect(router.state.location.pathname).toBe(SECTION_PATH);
@@ -140,7 +145,7 @@ describe('the contratos menores section, mounted by the application router', () 
     const scope = mockOrgano(200, member(HOLDS_CONTRATOS_MENORES));
     mockContracts(2025);
 
-    const { queryClient } = renderApp(`/organo/${ORGANO_ID}`);
+    const { queryClient } = renderApp(PAGE_PATH);
 
     await yearChooser();
 
@@ -173,7 +178,7 @@ describe('the contratos menores section, mounted by the application router', () 
     mockOrgano(200, member(HOLDS_CONTRATOS_MENORES));
     mockContracts(2025);
 
-    renderApp(`/organo/${ORGANO_ID}`);
+    renderApp(PAGE_PATH);
 
     await yearChooser();
 
@@ -189,7 +194,7 @@ describe('the contratos menores section, mounted by the application router', () 
     // a child route reaches it. A segment this build does not route to is
     // treated as what it is, an address the app does not have, which is how
     // every other unrecognised URL is answered.
-    renderApp(`/organo/${ORGANO_ID}/licitacions`);
+    renderApp(`${PAGE_PATH}/licitacions`);
 
     expect(await screen.findByText(strings.notFound.title)).toBeInTheDocument();
     // Both negatives are safe here only because the positive above establishes
