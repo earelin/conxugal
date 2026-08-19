@@ -23,6 +23,11 @@ const NARROW_COLUMN: CSSProperties = { whiteSpace: 'nowrap', width: '1%' };
 // here either.
 const NARROW_WRAPPING_COLUMN: CSSProperties = { width: '1%' };
 
+// Held at module scope rather than written inline, so the identifier beneath
+// every date and every awardee is handed the same object rather than a fresh one
+// per row per render.
+const UNBROKEN: CSSProperties = { whiteSpace: 'nowrap' };
+
 /**
  * A value with the identifier that names it beneath, which two of the six
  * columns are: the date over the contract's own identifier, the awardee over its
@@ -43,7 +48,7 @@ function WithIdentifierBeneath({
   return (
     <Stack gap={0}>
       {children}
-      <Text size="xs" c="dimmed" ff="monospace" style={{ whiteSpace: 'nowrap' }}>
+      <Text size="xs" c="dimmed" ff="monospace" style={UNBROKEN}>
         {identifier}
       </Text>
     </Stack>
