@@ -66,8 +66,12 @@ export function mockContracts(year: number, status: number, body?: object) {
  * an unmatched request would fail it, but which year reached the server is not
  * what they are asserting.
  */
-export function mockAnyContracts(items: ContratoMenor[] = [contract()]) {
-  return nock(BASE_URL).persist().get(CONTRACTS_ENDPOINT).query(true).reply(200, page(items));
+export function mockAnyContracts() {
+  return nock(BASE_URL)
+    .persist()
+    .get(CONTRACTS_ENDPOINT)
+    .query(true)
+    .reply(200, page([contract()]));
 }
 
 /**
