@@ -23,11 +23,32 @@ const NARROW_COLUMN: CSSProperties = { whiteSpace: 'nowrap', width: '1%' };
 // here either.
 const NARROW_WRAPPING_COLUMN: CSSProperties = { width: '1%' };
 
-// The identifiers under the date and the awardee are copied rather than read,
-// which is what the monospace is for; dimmed because neither is the value the
-// column is named after. Neither breaks across lines: half an identifier on one
-// line and half on the next is worse than a wider column.
-const IDENTIFIER = { size: 'xs', c: 'dimmed', ff: 'monospace', style: { whiteSpace: 'nowrap' } };
+/**
+ * A value with the identifier that names it beneath, which two of the six
+ * columns are: the date over the contract's own identifier, the awardee over its
+ * fiscal one.
+ *
+ * Both identifiers are copied rather than read, which is what the monospace is
+ * for, and dimmed because neither is the value its column is named after.
+ * Neither breaks across lines either: half an identifier on one line and half on
+ * the next is worse than a wider column.
+ */
+function WithIdentifierBeneath({
+  identifier,
+  children,
+}: {
+  identifier: string;
+  children: ReactNode;
+}) {
+  return (
+    <Stack gap={0}>
+      {children}
+      <Text size="xs" c="dimmed" ff="monospace" style={{ whiteSpace: 'nowrap' }}>
+        {identifier}
+      </Text>
+    </Stack>
+  );
+}
 
 /**
  * The two values a row can lack. Nothing else has one of these: a contract
@@ -52,12 +73,11 @@ function ContractRow({ contract }: { contract: ContratoMenor }): ReactNode {
   return (
     <Table.Tr>
       <Table.Td style={NARROW_COLUMN}>
-        <Stack gap={0}>
+        <WithIdentifierBeneath identifier={sourceId}>
           <Text size="sm" fw={500}>
             {formatPublicationDate(contract.publicationDate)}
           </Text>
-          <Text {...IDENTIFIER}>{sourceId}</Text>
-        </Stack>
+        </WithIdentifierBeneath>
       </Table.Td>
       <Table.Td>
         <OrNotPublished>{contract.obxecto}</OrNotPublished>
@@ -66,10 +86,9 @@ function ContractRow({ contract }: { contract: ContratoMenor }): ReactNode {
           feature, and a link to a route that 404s is worse than none. That
           feature adds the crossing here. */}
       <Table.Td>
-        <Stack gap={0}>
+        <WithIdentifierBeneath identifier={contract.awardee.fiscalId}>
           <Text size="sm">{contract.awardee.name}</Text>
-          <Text {...IDENTIFIER}>{contract.awardee.fiscalId}</Text>
-        </Stack>
+        </WithIdentifierBeneath>
       </Table.Td>
       <Table.Td ta="right" fw={600} style={NARROW_COLUMN}>
         {formatAmount(contract.amount)}
