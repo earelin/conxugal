@@ -1,7 +1,14 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { apiFetch } from '../../shared/lib/httpClient';
-import type { Selection } from './selection';
+import type { Selection, Sort } from './selection';
+
+/**
+ * The whole selection, which is what the cache is keyed on: no two selections
+ * share an entry, and the key is what says whether an answer already on screen
+ * belongs to the one now being asked for.
+ */
+type ContratosMenoresKey = ['contratos-menores', string, number, Sort, number];
 
 /**
  * Who was awarded the contract: the operador's selected name and its canonical
@@ -80,19 +87,30 @@ async function fetchContratosMenores(
  * part of it is a different query with its own cache entry — not a mutation of
  * the one already answered.
  *
- * The page already answered is held while the next one is fetched. Without it a
- * new key has no data, the list unmounts to a spinner, and the paging control
- * goes with it — taking the stated count and page total off screen and dropping
- * keyboard focus from the button that was just pressed. Moving between pages
- * changes neither of those numbers, so neither may disappear while it happens:
- * only the window over the selection moves. The caller says the answer on screen
- * is being replaced rather than pretending it is not.
+ * The page already answered is held while the **next page of the same year and
+ * ordering** is fetched. Without it a new key has no data, the list unmounts to
+ * a spinner, and the paging control goes with it — taking the stated count and
+ * page total off screen and dropping keyboard focus from the button just
+ * pressed. Moving between pages changes neither of those numbers, so neither may
+ * disappear while it happens: only the window over the selection moves.
+ *
+ * **Held only within one selection**, which is why this is not `keepPreviousData`:
+ * that is `(previous) => previous` and compares no keys, so it would hold an
+ * answer across a change of year or ordering too — and there the count, the page
+ * total and the page in force *do* change, so the control would state the old
+ * selection's numbers with nothing saying they were stale. A change of selection
+ * is a wait, not a window moving.
  */
 export function useContratosMenores(organoId: string, selection: Selection) {
   const { year, sort, page } = selection;
   return useQuery({
     queryKey: ['contratos-menores', organoId, year, sort, page],
     queryFn: () => fetchContratosMenores(organoId, selection),
-    placeholderData: keepPreviousData,
+    placeholderData: (previous, previousQuery) => {
+      const [, heldOrgano, heldYear, heldSort] = (previousQuery?.queryKey ??
+        []) as Partial<ContratosMenoresKey>;
+      const sameSelection = heldOrgano === organoId && heldYear === year && heldSort === sort;
+      return sameSelection ? previous : undefined;
+    },
   });
 }

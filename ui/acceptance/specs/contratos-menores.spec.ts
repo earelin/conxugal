@@ -27,6 +27,9 @@ const TOTAL_ITEMS = 7;
 const TOTAL_PAGES = 3;
 const PAGE_SIZE = 3;
 const LARGEST_OF_THE_YEAR = '1142208';
+// The second page of «importe, maior primeiro», which is what a URL copied from
+// a non-default selection has to reopen on.
+const AMOUNT_DESC_PAGE_2 = ['1179004', '1149330', '1160245'];
 
 const YEAR_LABEL = 'Ano';
 const SORT_LABEL = 'Ordenar por';
@@ -68,6 +71,13 @@ function pagingButton(page: Page, name: string) {
 /** The jump box, which is also where the page in force is shown as a number. */
 function pageBox(page: Page) {
   return pagingControl(page).getByRole('textbox');
+}
+
+/** The wrapper the rows are marked busy on while the next page is fetched. */
+function tableRegion(page: Page) {
+  return page
+    .locator('[aria-busy]')
+    .filter({ has: page.getByRole('table', { name: TABLE_LABEL }) });
 }
 
 /**
@@ -153,22 +163,30 @@ test.describe('Browsing an Órgano’s contratos menores', () => {
   test('carries the whole selection in the URL, and walks paging history back', async ({
     page,
   }) => {
-    await page.goto(sectionPath(SERGAS_ID));
+    // Started from a selection that is nobody's default, so the copied URL below
+    // carries all three: an absent parameter is deliberately left absent, so a
+    // link copied from the defaults would prove only that the defaults are the
+    // defaults.
+    await page.goto(`${sectionPath(SERGAS_ID)}?year=2025&sort=amount%2Cdesc`);
     await showingPage(page, 1);
 
     await pagingButton(page, NEXT).click();
     await showingPage(page, 2);
-    expect(new URL(page.url()).searchParams.get('page')).toBe('2');
-    const shared = page.url();
+    const shared = new URL(page.url());
+    expect(shared.searchParams.get('year')).toBe('2025');
+    expect(shared.searchParams.get('sort')).toBe('amount,desc');
+    expect(shared.searchParams.get('page')).toBe('2');
 
     await page.goBack();
     await showingPage(page, 1);
 
-    // A copied URL reopens the same page of the same selection — the response
-    // states no ordering, so the URL is what carries it.
-    await page.goto(shared);
+    // A copied URL reopens the same page of the same selection in the same
+    // ordering — the response states no ordering, so the URL is what carries it.
+    await page.goto(shared.toString());
     await showingPage(page, 2);
-    await expect(sortChooser(page)).toHaveValue(SORT_DATE_DESC);
+    await expect(yearChooser(page)).toHaveValue('2025');
+    await expect(sortChooser(page)).toHaveValue(SORT_AMOUNT_DESC);
+    expect(await shownSourceIds(page)).toEqual(AMOUNT_DESC_PAGE_2);
   });
 
   test('lands a page past the end on the last page, with the true count stated', async ({
@@ -202,10 +220,16 @@ test.describe('Browsing an Órgano’s contratos menores', () => {
     await page.goto(sectionPath(SERGAS_ID));
     await showingPage(page, 1);
 
-    // Slowed so the in-flight state is a state at all, and not a frame nobody —
-    // including this assertion — could catch.
+    // Held open until this test lets go, rather than slowed by a delay the
+    // assertions would then have to outrun: a web-first assertion retries for
+    // five seconds, so against any finite delay every check below would pass by
+    // waiting out the very state it is here to reject.
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     await page.route('**/contratos-menores?*', async (route) => {
-      await new Promise((resume) => setTimeout(resume, 700));
+      await held;
       await route.continue();
     });
     await pagingButton(page, NEXT).click();
@@ -215,8 +239,52 @@ test.describe('Browsing an Órgano’s contratos menores', () => {
     await expect(pagingControl(page).getByText(RECORDS)).toBeVisible();
     await expect(pagingControl(page).getByText(OF_PAGES)).toBeVisible();
     await expect(pagingButton(page, NEXT)).toBeFocused();
+    await expect(tableRegion(page)).toHaveAttribute('aria-busy', 'true');
 
+    release();
     await showingPage(page, 2);
+    await expect(tableRegion(page)).toHaveAttribute('aria-busy', 'false');
+  });
+
+  test('waits rather than stating the old count when the year changes', async ({ page }) => {
+    await page.goto(`${sectionPath(SERGAS_ID)}?page=3`);
+    await showingPage(page, TOTAL_PAGES);
+
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route('**/contratos-menores?*', async (route) => {
+      await held;
+      await route.continue();
+    });
+    await choose(page, yearChooser(page), '2024');
+
+    // A change of selection is a wait, not a window moving: the count, the page
+    // total and the page in force are all about to change, so holding the old
+    // ones on screen would be four surfaces disagreeing at once. 2024 holds two
+    // records on one page.
+    await expect(pagingControl(page)).toHaveCount(0);
+    await expect(page.getByRole('table', { name: TABLE_LABEL })).toHaveCount(0);
+
+    release();
+    await showingPage(page, 1);
+    await expect(pagingControl(page).getByText(RECORDS)).toHaveCount(0);
+    await expect(pagingButton(page, NEXT)).toBeDisabled();
+  });
+
+  test('moves focus off the control that leads nowhere once it is reached', async ({ page }) => {
+    await page.goto(sectionPath(SERGAS_ID));
+    await showingPage(page, 1);
+
+    await pagingButton(page, LAST).click();
+    await showingPage(page, TOTAL_PAGES);
+
+    // *Última* disables itself on arrival, and a disabled element cannot hold
+    // focus — so without somewhere to send it the browser drops a keyboard
+    // reader to the top of the document, from a button they pressed on purpose.
+    await expect(pagingButton(page, LAST)).toBeDisabled();
+    await expect(pageBox(page)).toBeFocused();
   });
 });
 

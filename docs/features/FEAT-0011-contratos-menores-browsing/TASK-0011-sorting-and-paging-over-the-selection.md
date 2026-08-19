@@ -98,6 +98,40 @@ the feature's acceptance journeys are proved.
 > clamp exists to keep a stale link out of. A page past the end of the *selection* is still
 > left alone: that one the API answers.
 >
+> **Holding the page already read had to be scoped to the selection.** react-query's
+> `keepPreviousData` is `(previous) => previous` and compares no keys, so it holds an answer
+> across a change of year or ordering too — and there the count, the page total and the page
+> in force all change, leaving the control stating the old selection's numbers with nothing
+> saying they were stale, and its jump box bounding a typed page by the wrong total. The hold
+> is now a key comparison: within one year and ordering the window moves, and a change of
+> selection is an ordinary wait.
+>
+> **Keeping focus on the pressed button removed the only thing a screen reader heard.** The
+> arrival used to be announced by the list remounting into `LoadingIndicator`'s `role="status"`;
+> holding the control still deletes that, and `aria-busy` is not announced — it only quietens a
+> region that is already live. The section now says which page a reader is on, through
+> `aria-live` rather than `role="status"` so it is not counted among the two statements the
+> section makes about itself.
+>
+> **A respelling is not a change, and only a change may drop the page.** `?year=02025&page=5`
+> is the same year written differently, and routing the correction through the re-page rule
+> returned the reader to page 1 for no reason. The corrections are written directly now, so
+> the rule applies to a year that is genuinely different and not to one spelled another way.
+>
+> **The end of a walk disables the control that got there**, and a disabled element cannot
+> hold focus — so the browser dropped a keyboard reader to the top of the document from a
+> button they pressed on purpose. `shared/ui/Pagination` moves focus to the jump box between
+> the two pairs. It is the one edit this task makes to
+> [TASK-0008](TASK-0008-shared-paging-control.md)'s control, and it varies nothing the control
+> promises: the two ends are still disabled rather than hidden. **jsdom does not blur a
+> disabled element**, so the case is an acceptance one — no component test could observe it.
+>
+> **A test that waits can pass on the state it exists to reject.** Playwright's web-first
+> assertions retry for five seconds, so the case that asserted the control was still on screen
+> during a 700 ms delay would have waited out a control that unmounted for the whole fetch. The
+> request is held open until the test lets go, which makes the in-flight window a state the
+> test owns rather than a race it has to win.
+>
 > **At 360 px the ordering's entries are longer than the line they get.** They are whole
 > Galician sentences; an input clips rather than wraps, so the chosen entry read as a
 > different one. The control now ellipsises. The acceptance suite's `toBeInViewport` check

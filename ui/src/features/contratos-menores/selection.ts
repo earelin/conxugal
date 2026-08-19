@@ -152,24 +152,42 @@ function misspelt(params: URLSearchParams, key: string, shown: string): boolean 
  * another. A parameter the URL does not carry is left absent: there the URL says
  * nothing rather than something untrue, and writing a default into it would put
  * a choice the reader never made into their history.
+ *
+ * **A respelling is not a change, and only a change drops the page.** `?year=02025`
+ * and `?year=2025` are the same year, so a reader opening a padded link deep in a
+ * selection stays where the link put them; `?year=2019` on an Órgano with no such
+ * year *is* a different selection, and there the page it named counts from
+ * nothing. This is why the corrections are written here rather than handed to
+ * `withSelection`, which cannot tell the two apart.
  */
 export function respelling(params: URLSearchParams, selection: Selection): URLSearchParams | null {
-  const change: SelectionChange = {};
-  if (misspelt(params, YEAR_PARAM, String(selection.year))) {
-    change.year = selection.year;
+  const next = new URLSearchParams(params);
+  let respelt = false;
+  let moved = false;
+
+  const askedYear = params.get(YEAR_PARAM);
+  if (askedYear !== null && askedYear !== String(selection.year)) {
+    next.set(YEAR_PARAM, String(selection.year));
+    respelt = true;
+    // `Number` on a year that is not one answers `NaN`, which equals nothing —
+    // so an unreadable year counts as a different one, which it is.
+    moved = Number(askedYear) !== selection.year;
   }
+
   if (misspelt(params, SORT_PARAM, selection.sort)) {
-    change.sort = selection.sort;
+    next.set(SORT_PARAM, selection.sort);
+    respelt = true;
+    // `chosenSort` answers an exact member of the closed set, so a difference
+    // here is always a different ordering rather than another spelling of one.
+    moved = true;
   }
-  // Only where neither of the two above is being corrected: those drop the page
-  // rather than respell it, the selection it counted from having changed
-  // underneath it.
-  if (
-    change.year === undefined &&
-    change.sort === undefined &&
-    misspelt(params, PAGE_PARAM, String(selection.page))
-  ) {
-    change.page = selection.page;
+
+  if (moved) {
+    next.delete(PAGE_PARAM);
+  } else if (misspelt(params, PAGE_PARAM, String(selection.page))) {
+    next.set(PAGE_PARAM, String(selection.page));
+    respelt = true;
   }
-  return Object.keys(change).length === 0 ? null : withSelection(params, change);
+
+  return respelt ? next : null;
 }

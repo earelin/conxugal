@@ -1,5 +1,5 @@
 import { Group, Input, Text } from '@mantine/core';
-import { type ChangeEvent, type KeyboardEvent, useId, useState } from 'react';
+import { type ChangeEvent, type KeyboardEvent, type RefObject, useId, useState } from 'react';
 
 import { formatCount } from '../lib/number';
 import { strings } from '../lib/strings';
@@ -14,6 +14,12 @@ interface PageJumpProps {
   totalPages: number;
   disabled: boolean;
   onPageChange: (page: number) => void;
+  /**
+   * Where the control moves focus when the step button a reader pressed
+   * disables itself under them. This box is the one thing between the two pairs
+   * that stays reachable at either end.
+   */
+  inputRef?: RefObject<HTMLInputElement | null>;
 }
 
 /**
@@ -24,7 +30,7 @@ interface PageJumpProps {
  * page outside `1…totalPages` is refused rather than clamped to a neighbour —
  * paging somewhere adjacent to what was asked for is worse than not moving.
  */
-export function PageJump({ page, totalPages, disabled, onPageChange }: PageJumpProps) {
+export function PageJump({ page, totalPages, disabled, onPageChange, inputRef }: PageJumpProps) {
   const jumpId = useId();
   const labelId = useId();
   const totalId = useId();
@@ -64,6 +70,7 @@ export function PageJump({ page, totalPages, disabled, onPageChange }: PageJumpP
        */}
       <Input
         id={jumpId}
+        ref={inputRef}
         size="sm"
         w={64}
         inputMode="numeric"

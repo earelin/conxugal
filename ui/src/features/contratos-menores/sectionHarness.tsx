@@ -75,8 +75,23 @@ function askedQuery({ year, sort = DEFAULT_SORT, page: asked = 1 }: AskedSelecti
  * selection with the same body, and the cases that a change of year, of ordering
  * or of page is a new request would pass without any of them reaching the server.
  */
-export function mockContracts(asked: AskedSelection, status: number, body?: object) {
-  return nock(BASE_URL).get(CONTRACTS_ENDPOINT).query(askedQuery(asked)).reply(status, body);
+export function mockContracts(
+  asked: AskedSelection,
+  status: number,
+  body?: object,
+  /**
+   * Held open for this long before answering, for a case about what is on
+   * screen *while* a read is in flight: without it the reply can land inside
+   * the same macrotask as the click, and the case would be racing nock rather
+   * than asserting a state.
+   */
+  delayMillis = 0,
+) {
+  return nock(BASE_URL)
+    .get(CONTRACTS_ENDPOINT)
+    .query(askedQuery(asked))
+    .delay(delayMillis)
+    .reply(status, body);
 }
 
 /**

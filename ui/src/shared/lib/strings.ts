@@ -125,6 +125,13 @@ export const strings = {
     // source publishing neither for some awards. Nothing else needs a marker:
     // a contract without its date, amount or awardee is withheld entirely.
     notPublished: 'Non publicado',
+    // Read aloud when the page on screen changes. The rows are swapped under a
+    // control that stays put, so nothing else would say that anything happened
+    // — a reader who cannot see the table would press «Seguinte» and hear
+    // silence. It names the page rather than merely saying it arrived, that
+    // being the one thing the swap changed.
+    pageAnnounced: (page: string, totalPages: string) =>
+      `Páxina ${page} de ${totalPages} dos contratos menores.`,
     errorTitle: 'Non se puideron cargar os contratos.',
     errorHelp: 'Téntao de novo; se persiste, volve máis tarde.',
   },

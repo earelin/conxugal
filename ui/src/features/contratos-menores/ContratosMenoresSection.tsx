@@ -17,6 +17,7 @@ import {
   respelling,
   type SelectionChange,
   type Sort,
+  SORTS,
   withSelection,
 } from './selection';
 import { sectionSummary } from './summary';
@@ -24,17 +25,21 @@ import { sectionSummary } from './summary';
 const copy = strings.contratosMenores;
 
 /**
- * The four orderings a reader can ask for, each paired with the spelling the API
- * takes it in. Written out rather than derived from `SORTS`, so a control and
- * its copy cannot part company: adding an entry to either list without the other
- * fails to type-check.
+ * What each of the four orderings is called. Keyed by the ordering rather than
+ * listed beside it, so the control and the closed set cannot part company in
+ * either direction: a fifth `Sort` fails to type-check until it is named here,
+ * and a name for an ordering that does not exist fails too.
  */
-const SORT_OPTIONS: { value: Sort; label: string }[] = [
-  { value: 'publicationDate,desc', label: copy.sort.dateDesc },
-  { value: 'publicationDate,asc', label: copy.sort.dateAsc },
-  { value: 'amount,desc', label: copy.sort.amountDesc },
-  { value: 'amount,asc', label: copy.sort.amountAsc },
-];
+const SORT_LABELS: Record<Sort, string> = {
+  'publicationDate,desc': copy.sort.dateDesc,
+  'publicationDate,asc': copy.sort.dateAsc,
+  'amount,desc': copy.sort.amountDesc,
+  'amount,asc': copy.sort.amountAsc,
+};
+
+// In the order the closed set declares them, which is the order they are
+// offered: the two dates, then the two amounts.
+const SORT_OPTIONS = SORTS.map((value) => ({ value, label: SORT_LABELS[value] }));
 
 // An input label takes its wrapper's styles, so a `size` here is accepted and
 // then ignored — `fz` is what reaches it.
@@ -139,10 +144,11 @@ export function ContratosMenoresSection() {
       )}
       <Card withBorder radius="md" padding="md">
         <Stack gap="md">
-          {/* The two controls that scope the list, above what they scope. They
-              wrap rather than shrink: the ordering's entries are whole Galician
-              sentences, and a narrow viewport that squeezed them would leave a
-              reader choosing between four truncations. */}
+          {/* The two controls that scope the list, above what they scope. The
+              ordering takes the whole line before it gives any width back, its
+              entries being whole Galician sentences — and where even the line is
+              too short, the ellipsis below says the name goes on rather than
+              leaving a bare cut to read as a different entry. */}
           <Group gap="md" align="flex-end" wrap="wrap">
             <Select
               label={copy.yearLabel}

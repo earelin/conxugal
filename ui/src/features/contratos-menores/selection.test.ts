@@ -224,6 +224,20 @@ describe('respelling', () => {
     expect(next?.has('page')).toBe(false);
   });
 
+  it('drops the page when the ordering named is not one of the four', () => {
+    const next = respelling(params('?sort=obxecto&page=3'), shown);
+    expect(next?.get('sort')).toBe('publicationDate,desc');
+    expect(next?.has('page')).toBe(false);
+  });
+
+  it('keeps the page when the year is only spelled differently', () => {
+    // 02025 and 2025 are the same year, so nothing moved and the page the link
+    // named still counts from the selection it was written for.
+    const next = respelling(params('?year=02025&page=5'), { ...shown, page: 5 });
+    expect(next?.get('year')).toBe('2025');
+    expect(next?.get('page')).toBe('5');
+  });
+
   it('keeps the rest of the query string while correcting', () => {
     const next = respelling(params('?sort=amount%2Cdesc&year=2019'), {
       ...shown,

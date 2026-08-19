@@ -40,7 +40,7 @@ function pageOf(asked: number): ContratoMenor[] {
 }
 
 /** One page of the seven, with the totals the whole selection has on every page. */
-function mockPage(asked: number, sort?: string) {
+function mockPage(asked: number, sort?: string, delayMillis = 0) {
   return mockContracts(
     { year: 2025, page: asked, sort },
     200,
@@ -50,6 +50,7 @@ function mockPage(asked: number, sort?: string) {
       totalItems: TOTAL_ITEMS,
       totalPages: TOTAL_PAGES,
     }),
+    delayMillis,
   );
 }
 
@@ -67,6 +68,15 @@ function shownSourceIds(): string[] {
 
 function statedCount() {
   return within(pagingControl()).getByText(counted(TOTAL_ITEMS, paging.records));
+}
+
+/**
+ * What the section says aloud about the page on screen. Read from the live
+ * region itself rather than by role: the two statements the section makes about
+ * itself are the statuses here, and this must not be counted among them.
+ */
+function announced() {
+  return document.querySelector('[aria-live="polite"]')?.textContent;
 }
 
 describe('sorting and paging over the selection', () => {
@@ -253,7 +263,7 @@ describe('sorting and paging over the selection', () => {
     it('leaves the count, the page total and the ordering where they were', async () => {
       const user = userEvent.setup();
       mockPage(1, 'amount,desc');
-      mockPage(2, 'amount,desc');
+      mockPage(2, 'amount,desc', 50);
       renderSection(summary(), `${SECTION_PATH}?sort=amount%2Cdesc`);
       await screen.findByRole('table');
 
@@ -283,7 +293,9 @@ describe('sorting and paging over the selection', () => {
     it('keeps the page already read on screen while the next one is fetched', async () => {
       const user = userEvent.setup();
       mockPage(1);
-      mockPage(2);
+      // Held open, so the in-flight state is a state this case owns rather than
+      // a race it has to win against nock answering inside one macrotask.
+      mockPage(2, undefined, 50);
       renderSection(summary());
       await screen.findByRole('table');
       const firstPage = shownSourceIds();
@@ -301,6 +313,25 @@ describe('sorting and paging over the selection', () => {
         expect(shownSourceIds()).toEqual(pageOf(2).map((each) => String(each.sourceId)));
       });
       expect(contractsTable().closest('[aria-busy]')).toHaveAttribute('aria-busy', 'false');
+    });
+
+    it('says which page a reader is now on, the rows having changed under them', async () => {
+      const user = userEvent.setup();
+      mockPage(1);
+      mockPage(2);
+      renderSection(summary());
+      await screen.findByRole('table');
+
+      // The whole point of holding the control still is that focus stays put and
+      // nothing is remounted — which is also what leaves a reader who cannot see
+      // the table with no sign that anything happened, unless it is said.
+      expect(announced()).toBe(copy.pageAnnounced('1', String(TOTAL_PAGES)));
+
+      await user.click(pagingButton(paging.next));
+
+      await waitFor(() => {
+        expect(announced()).toBe(copy.pageAnnounced('2', String(TOTAL_PAGES)));
+      });
     });
   });
 

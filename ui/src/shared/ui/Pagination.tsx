@@ -5,7 +5,7 @@ import {
   IconChevronRight,
   IconChevronRightPipe,
 } from '@tabler/icons-react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 
 import { counted } from '../lib/plural';
 import { strings } from '../lib/strings';
@@ -82,6 +82,33 @@ export function Pagination({ page, totalItems, totalPages, onPageChange }: Pagin
   const atStart = page <= 1;
   const atEnd = page >= totalPages;
   const single = totalPages <= 1;
+  const jumpRef = useRef<HTMLInputElement>(null);
+  /**
+   * Whether the page now in force was asked for from one of the four buttons.
+   * A page arriving any other way — a pasted URL, the browser's back button —
+   * moves nobody's focus, so it must not move it here either.
+   */
+  const steppedRef = useRef(false);
+
+  /**
+   * The ordinary end of a walk disables the very control that got there:
+   * *Última* on the last page, *Primeira* on the first. A disabled element
+   * cannot hold focus, so the browser drops it to the document and a keyboard
+   * reader is returned to the top of the page — from a button they pressed on
+   * purpose. Focus moves to the box between the two pairs, which is the one
+   * thing here still reachable at either end.
+   */
+  useEffect(() => {
+    if (steppedRef.current && document.activeElement === document.body) {
+      jumpRef.current?.focus();
+    }
+    steppedRef.current = false;
+  }, [page]);
+
+  function step(to: number) {
+    steppedRef.current = true;
+    onPageChange(to);
+  }
 
   return (
     <Box component="nav" aria-label={copy.navLabel}>
@@ -96,34 +123,35 @@ export function Pagination({ page, totalItems, totalPages, onPageChange }: Pagin
             icon={<IconChevronLeftPipe size={16} />}
             side="back"
             disabled={atStart}
-            onClick={() => onPageChange(1)}
+            onClick={() => step(1)}
           />
           <StepButton
             label={copy.previous}
             icon={<IconChevronLeft size={16} />}
             side="back"
             disabled={atStart}
-            onClick={() => onPageChange(page - 1)}
+            onClick={() => step(page - 1)}
           />
           <PageJump
             page={page}
             totalPages={totalPages}
             disabled={single}
             onPageChange={onPageChange}
+            inputRef={jumpRef}
           />
           <StepButton
             label={copy.next}
             icon={<IconChevronRight size={16} />}
             side="forward"
             disabled={atEnd}
-            onClick={() => onPageChange(page + 1)}
+            onClick={() => step(page + 1)}
           />
           <StepButton
             label={copy.last}
             icon={<IconChevronRightPipe size={16} />}
             side="forward"
             disabled={atEnd}
-            onClick={() => onPageChange(totalPages)}
+            onClick={() => step(totalPages)}
           />
         </Group>
       </Group>

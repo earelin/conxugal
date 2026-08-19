@@ -1,11 +1,13 @@
-import { Box, Stack } from '@mantine/core';
+import { Box, Stack, VisuallyHidden } from '@mantine/core';
+import { useEffect, useRef } from 'react';
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 
+import { formatCount } from '../../shared/lib/number';
 import { strings } from '../../shared/lib/strings';
 import { ErrorAlert } from '../../shared/ui/ErrorAlert';
 import { LoadingIndicator } from '../../shared/ui/LoadingIndicator';
 import { Pagination } from '../../shared/ui/Pagination';
-import { useContratosMenores } from './contracts';
+import { type ContratosMenoresPage, useContratosMenores } from './contracts';
 import { ContratosMenoresTable } from './ContratosMenoresTable';
 import { type Selection, withSelection } from './selection';
 
@@ -35,6 +37,17 @@ export function ContratosMenoresList({ organoId, selection }: ContratosMenoresLi
     selection,
   );
 
+  // The last answer that arrived, kept so a failed read does not take the
+  // control down with the rows: a reader whose next page failed still has the
+  // page that worked to go back to, which the alert's retry alone cannot offer
+  // them.
+  const answeredRef = useRef<ContratosMenoresPage | null>(null);
+  useEffect(() => {
+    if (data !== undefined && !isPlaceholderData) {
+      answeredRef.current = data;
+    }
+  }, [data, isPlaceholderData]);
+
   // The whole location a page sits at, hash included — the same shape the
   // section's own correction navigates to, so a fragment survives a write from
   // either of them.
@@ -42,24 +55,53 @@ export function ContratosMenoresList({ organoId, selection }: ContratosMenoresLi
     return { pathname, search: `?${withSelection(searchParams, { page }).toString()}`, hash };
   }
 
-  // Only before the first answer of this section's life. Every page after it
-  // keeps the one already on screen, so nothing below unmounts to a spinner.
+  function goTo(page: number) {
+    // A jump can name the page already in force, which is not a step: writing
+    // it would put an entry in the reader's history that goes nowhere, and on
+    // page 1 would add a `page=1` the URL did not carry.
+    if (page !== selection.page) {
+      void navigate(pageAt(page));
+    }
+  }
+
+  function paging(envelope: ContratosMenoresPage) {
+    return (
+      // The four numbers of the envelope, in the base they arrive in: the page
+      // in the URL, the page sent to the API and the page shown here are one
+      // number, and nothing between the wire and the screen converts.
+      <Pagination
+        page={envelope.page}
+        size={envelope.size}
+        totalItems={envelope.totalItems}
+        totalPages={envelope.totalPages}
+        onPageChange={goTo}
+      />
+    );
+  }
+
+  // Only before the first answer of this selection's life. A page of the same
+  // year and ordering keeps the one already on screen, so nothing below unmounts
+  // to a spinner; a change of year or ordering waits here, the count and the
+  // page total being about to change too.
   if (isPending) {
     return <LoadingIndicator />;
   }
 
   if (isError) {
     return (
-      <ErrorAlert
-        title={copy.errorTitle}
-        onRetry={() => void refetch()}
-        // A failed query keeps reporting an error while it refetches, so without
-        // this the alert sits unchanged after a click and reads as if the button
-        // did nothing.
-        retrying={isFetching}
-      >
-        {copy.errorHelp}
-      </ErrorAlert>
+      <Stack gap="md">
+        <ErrorAlert
+          title={copy.errorTitle}
+          onRetry={() => void refetch()}
+          // A failed query keeps reporting an error while it refetches, so
+          // without this the alert sits unchanged after a click and reads as if
+          // the button did nothing.
+          retrying={isFetching}
+        >
+          {copy.errorHelp}
+        </ErrorAlert>
+        {answeredRef.current !== null && paging(answeredRef.current)}
+      </Stack>
     );
   }
 
@@ -100,18 +142,21 @@ export function ContratosMenoresList({ organoId, selection }: ContratosMenoresLi
       <Box aria-busy={isPlaceholderData} opacity={isPlaceholderData ? 0.55 : 1}>
         <ContratosMenoresTable contracts={data.items} />
       </Box>
-      {/* The four numbers of the envelope, in the base they arrive in: the page
-          in the URL, the page sent to the API and the page shown here are one
-          number, and nothing between the wire and the screen converts. */}
-      <Pagination
-        page={data.page}
-        size={data.size}
-        totalItems={data.totalItems}
-        totalPages={data.totalPages}
-        onPageChange={(page) => {
-          void navigate(pageAt(page));
-        }}
-      />
+      {/* `aria-busy` is not announced — it only quietens a region that is
+          already live — and holding focus on the pressed button is exactly what
+          removes the arrival a remount used to announce. This says which page a
+          reader is now on, which is the whole of what changed.
+
+          `aria-live` rather than `role="status"`, which is the same thing named:
+          the two statements the section makes about itself are the statuses here,
+          and a third would be counted among them by anything asking what this
+          section says. */}
+      <VisuallyHidden aria-live="polite" aria-atomic>
+        {isPlaceholderData
+          ? strings.loading
+          : copy.pageAnnounced(formatCount(data.page), formatCount(data.totalPages))}
+      </VisuallyHidden>
+      {paging(data)}
     </Stack>
   );
 }
