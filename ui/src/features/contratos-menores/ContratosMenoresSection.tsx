@@ -1,25 +1,13 @@
 import { Alert, Card, Group, type MantineColor, Select, Stack } from '@mantine/core';
 import { IconInfoCircle, IconPlayerPause } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
-import {
-  Navigate,
-  useLocation,
-  useNavigate,
-  useOutletContext,
-  useSearchParams,
-} from 'react-router';
+import { Navigate, useOutletContext } from 'react-router';
 
 import type { OrganoOutletContext } from '../../shared/entities/organo';
 import { strings } from '../../shared/lib/strings';
 import { ContratosMenoresList } from './ContratosMenoresList';
-import {
-  readSelection,
-  respelling,
-  type SelectionChange,
-  type Sort,
-  SORTS,
-  withSelection,
-} from './selection';
+import { readSelection, respelling, type Sort, SORTS } from './selection';
+import { useSelectionUrl } from './selectionUrl';
 import { sectionSummary } from './summary';
 
 const copy = strings.contratosMenores;
@@ -87,17 +75,8 @@ function SectionStatement({ color, icon, title, body }: SectionStatementProps) {
 export function ContratosMenoresSection() {
   const { organo, family } = useOutletContext<OrganoOutletContext>();
   const summary = sectionSummary(family);
-  const { pathname, hash } = useLocation();
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const { searchParams, locationWith, choose } = useSelectionUrl();
   const selection = readSelection(searchParams, summary.years);
-
-  // The whole location this section sits at, hash included: every write of the
-  // selection goes through it, so a fragment survives a choice as well as a
-  // correction.
-  function locationWith(params: URLSearchParams) {
-    return { pathname, search: `?${params.toString()}`, hash };
-  }
 
   // A selection the URL states some other way than it is being shown — a year
   // the Órgano has no contracts in, an ordering outside the four, a page written
@@ -114,12 +93,6 @@ export function ContratosMenoresSection() {
   // server's answer, and re-sorting here would be this module holding a second
   // opinion about it.
   const years = summary.years.map((offered) => String(offered));
-
-  // A choice, so it is pushed: going back returns to the selection the reader
-  // came from.
-  function choose(change: SelectionChange) {
-    void navigate(locationWith(withSelection(searchParams, change)));
-  }
 
   return (
     <Stack gap="md">

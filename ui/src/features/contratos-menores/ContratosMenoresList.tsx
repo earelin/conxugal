@@ -1,6 +1,6 @@
 import { Box, Stack, VisuallyHidden } from '@mantine/core';
 import { useEffect, useRef } from 'react';
-import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
+import { Navigate } from 'react-router';
 
 import { formatCount } from '../../shared/lib/number';
 import { strings } from '../../shared/lib/strings';
@@ -9,7 +9,8 @@ import { LoadingIndicator } from '../../shared/ui/LoadingIndicator';
 import { Pagination } from '../../shared/ui/Pagination';
 import { type ContratosMenoresPage, useContratosMenores } from './contracts';
 import { ContratosMenoresTable } from './ContratosMenoresTable';
-import { type Selection, withSelection } from './selection';
+import type { Selection } from './selection';
+import { useSelectionUrl } from './selectionUrl';
 
 const copy = strings.contratosMenores;
 
@@ -29,9 +30,7 @@ interface ContratosMenoresListProps {
  * range — and it is corrected rather than rendered.
  */
 export function ContratosMenoresList({ organoId, selection }: ContratosMenoresListProps) {
-  const { pathname, hash } = useLocation();
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const { locationFor, choose } = useSelectionUrl();
   const { data, isPending, isPlaceholderData, isError, isFetching, refetch } = useContratosMenores(
     organoId,
     selection,
@@ -48,19 +47,12 @@ export function ContratosMenoresList({ organoId, selection }: ContratosMenoresLi
     }
   }, [data, isPlaceholderData]);
 
-  // The whole location a page sits at, hash included — the same shape the
-  // section's own correction navigates to, so a fragment survives a write from
-  // either of them.
-  function pageAt(page: number) {
-    return { pathname, search: `?${withSelection(searchParams, { page }).toString()}`, hash };
-  }
-
   function goTo(page: number) {
     // A jump can name the page already in force, which is not a step: writing
     // it would put an entry in the reader's history that goes nowhere, and on
     // page 1 would add a `page=1` the URL did not carry.
     if (page !== selection.page) {
-      void navigate(pageAt(page));
+      choose({ page });
     }
   }
 
@@ -129,7 +121,7 @@ export function ContratosMenoresList({ organoId, selection }: ContratosMenoresLi
   // the chooser offers only years that hold contracts, so an empty selection is
   // not something a reader can ask for.
   if (!isPlaceholderData && data.totalPages >= 1 && selection.page > data.totalPages) {
-    return <Navigate to={pageAt(data.totalPages)} replace />;
+    return <Navigate to={locationFor({ page: data.totalPages })} replace />;
   }
 
   return (
