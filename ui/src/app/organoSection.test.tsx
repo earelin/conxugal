@@ -17,21 +17,22 @@ const SECTION_PATH = `/organo/${ORGANO_ID}/${FAMILY_PATH}`;
  * The fixtures are declared here rather than taken from the page slice's
  * harness: the app layer may reach a feature only through its barrel, so a test
  * sitting beside the router cannot borrow one slice's internals to assert about
- * another's.
+ * another's. They mirror that harness's shape, so the two read alike where they
+ * must be changed together.
  */
-function mockOrgano() {
-  return nock(BASE_URL)
-    .get(`/api/organo/${ORGANO_ID}`)
-    .reply(200, {
-      id: ORGANO_ID,
-      name: ORGANO_NAME,
-      families: {
-        contratosMenores: {
-          route: FAMILY_PATH,
-          summary: { years: [2025, 2024, 2023], partial: false, updating: true },
-        },
-      },
-    });
+const HOLDS_CONTRATOS_MENORES = {
+  contratosMenores: {
+    route: FAMILY_PATH,
+    summary: { years: [2025, 2024, 2023], partial: false, updating: true },
+  },
+};
+
+function member(families: Record<string, unknown>) {
+  return { id: ORGANO_ID, name: ORGANO_NAME, families };
+}
+
+function mockOrgano(status: number, body?: object) {
+  return nock(BASE_URL).get(`/api/organo/${ORGANO_ID}`).reply(status, body);
 }
 
 /**
@@ -78,7 +79,7 @@ describe('the contratos menores section, mounted by the application router', () 
   });
 
   it('answers the bare path with the page and the section it redirects to', async () => {
-    mockOrgano();
+    mockOrgano(200, member(HOLDS_CONTRATOS_MENORES));
     mockContracts(2025);
 
     const { router } = renderApp(`/organo/${ORGANO_ID}`);
@@ -98,7 +99,7 @@ describe('the contratos menores section, mounted by the application router', () 
   });
 
   it('renders the same page for a link straight to the family, without redirecting', async () => {
-    mockOrgano();
+    mockOrgano(200, member(HOLDS_CONTRATOS_MENORES));
     mockContracts(2025);
 
     const { router } = renderApp(SECTION_PATH);
@@ -111,7 +112,7 @@ describe('the contratos menores section, mounted by the application router', () 
   });
 
   it('opens the chooser on the year a deep link names', async () => {
-    mockOrgano();
+    mockOrgano(200, member(HOLDS_CONTRATOS_MENORES));
     mockContracts(2023);
 
     renderApp(`${SECTION_PATH}?year=2023`);
@@ -120,7 +121,7 @@ describe('the contratos menores section, mounted by the application router', () 
   });
 
   it("carries the section's own query string through the page's redirect", async () => {
-    mockOrgano();
+    mockOrgano(200, member(HOLDS_CONTRATOS_MENORES));
     mockContracts(2024);
 
     const { router } = renderApp(`/organo/${ORGANO_ID}?year=2024&sort=amount%2Cdesc&page=3`);
@@ -136,7 +137,7 @@ describe('the contratos menores section, mounted by the application router', () 
   });
 
   it('gives the section its summary as context, asking the server for it once', async () => {
-    const scope = mockOrgano();
+    const scope = mockOrgano(200, member(HOLDS_CONTRATOS_MENORES));
     mockContracts(2025);
 
     const { queryClient } = renderApp(`/organo/${ORGANO_ID}`);
@@ -169,7 +170,7 @@ describe('the contratos menores section, mounted by the application router', () 
   });
 
   it('leaves the page to name the Órgano, the section adding no heading of its own', async () => {
-    mockOrgano();
+    mockOrgano(200, member(HOLDS_CONTRATOS_MENORES));
     mockContracts(2025);
 
     renderApp(`/organo/${ORGANO_ID}`);
@@ -212,9 +213,7 @@ describe('the contratos menores section, mounted by the application router', () 
   });
 
   it('frames an Órgano that holds nothing, even at a family segment', async () => {
-    nock(BASE_URL)
-      .get(`/api/organo/${ORGANO_ID}`)
-      .reply(200, { id: ORGANO_ID, name: ORGANO_NAME, families: {} });
+    mockOrgano(200, member({}));
 
     // Newly reachable: before a child route existed this URL fell to the
     // catch-all. A retained link to a family the Órgano has since stopped
@@ -228,9 +227,7 @@ describe('the contratos menores section, mounted by the application router', () 
   });
 
   it('reports an unknown Órgano at a family segment as not found, not as a bad route', async () => {
-    nock(BASE_URL)
-      .get(`/api/organo/${ORGANO_ID}`)
-      .reply(404, { type: 'urn:conxugal:problem-type:organo-not-found' });
+    mockOrgano(404, { type: 'urn:conxugal:problem-type:organo-not-found' });
 
     renderApp(SECTION_PATH);
 
