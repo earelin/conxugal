@@ -21,6 +21,9 @@ export const ORGANO_ID = 'o-1';
 export const ORGANO_NAME = 'Servizo Galego de Saúde';
 export const SECTION_PATH = `/organo/${ORGANO_ID}/contratos-menores`;
 
+/** The one endpoint this slice reads, as both interceptors below match it. */
+const CONTRACTS_ENDPOINT = `/api/organo/${ORGANO_ID}/contratos-menores`;
+
 export const YEARS: PublicationYears = [2025, 2024, 2023];
 
 export function summary(overrides: Partial<ContratosMenoresSummary> = {}): ContratosMenoresSummary {
@@ -52,7 +55,7 @@ export function page(items: ContratoMenor[]): ContratosMenoresPage {
  */
 export function mockContracts(year: number, status: number, body?: object) {
   return nock(BASE_URL)
-    .get(`/api/organo/${ORGANO_ID}/contratos-menores`)
+    .get(CONTRACTS_ENDPOINT)
     .query({ year: String(year) })
     .reply(status, body);
 }
@@ -64,11 +67,7 @@ export function mockContracts(year: number, status: number, body?: object) {
  * what they are asserting.
  */
 export function mockAnyContracts(items: ContratoMenor[] = [contract()]) {
-  return nock(BASE_URL)
-    .persist()
-    .get(`/api/organo/${ORGANO_ID}/contratos-menores`)
-    .query(true)
-    .reply(200, page(items));
+  return nock(BASE_URL).persist().get(CONTRACTS_ENDPOINT).query(true).reply(200, page(items));
 }
 
 /**
