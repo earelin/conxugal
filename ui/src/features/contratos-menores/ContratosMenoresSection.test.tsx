@@ -293,7 +293,7 @@ describe('the contratos menores section', () => {
       // saying it was the only one.
       nock.cleanAll();
       const requests = vi.spyOn(globalThis, 'fetch');
-      mockContracts(2025, 200, page([]));
+      mockContracts({ year: 2025 }, 200, page([]));
 
       renderSection(summary());
 
@@ -307,7 +307,13 @@ describe('the contratos menores section', () => {
         expect(typeof input).toBe('string');
         return input as string;
       });
-      expect(asked).toEqual([`/api/organo/${ORGANO_ID}/contratos-menores?year=2025`]);
+      // The whole selection, in the API's own spelling — the response states
+      // neither the ordering nor which page it is, so a request naming only what
+      // differs from the defaults would leave nothing anywhere saying what was
+      // asked for.
+      expect(asked).toEqual([
+        `/api/organo/${ORGANO_ID}/contratos-menores?year=2025&sort=publicationDate%2Cdesc&page=1`,
+      ]);
     });
 
     it('does not draw the Órgano’s name, which is the page’s above it', async () => {

@@ -141,14 +141,19 @@ test.describe('Órgano page with a family', () => {
   test("carries the section's own selection in the query string beside the family", async ({
     page,
   }) => {
-    await page.goto(`/organo/${SERGAS_ID}?year=2023&sort=amount%2Cdesc&page=2`);
+    // A page the selection actually holds. This case is about the redirect
+    // carrying the three parameters across, and now that they mean something the
+    // section reads them: 2023 holds one page in the stub, so naming a second
+    // would be clamped to the last — correctly, and by the section rather than
+    // by anything this page does.
+    await page.goto(`/organo/${SERGAS_ID}?year=2023&sort=amount%2Cdesc&page=1`);
 
     await expect(yearChooser(page)).toHaveValue('2023');
     const url = new URL(page.url());
     expect(url.pathname).toBe(sectionPath(SERGAS_ID));
     expect(url.searchParams.get('year')).toBe('2023');
     expect(url.searchParams.get('sort')).toBe('amount,desc');
-    expect(url.searchParams.get('page')).toBe('2');
+    expect(url.searchParams.get('page')).toBe('1');
   });
 
   test('lets the section speak for itself inside the page frame', async ({ page }) => {

@@ -82,6 +82,17 @@ export const strings = {
   // there would have to move the moment the licitacións section arrives.
   contratosMenores: {
     yearLabel: 'Ano',
+    sortLabel: 'Ordenar por',
+    // Four entries, which is the whole set: two keys by two directions. Each
+    // says the direction in words rather than by an arrow, because the two keys
+    // read oppositely — the newest date and the largest amount are both «first»
+    // but neither is «highest» in the sense the other is.
+    sort: {
+      dateDesc: 'Data de publicación (máis recente primeiro)',
+      dateAsc: 'Data de publicación (máis antiga primeiro)',
+      amountDesc: 'Importe (maior primeiro)',
+      amountAsc: 'Importe (menor primeiro)',
+    },
     partialTitle: 'Importación en curso',
     partialBody:
       'Aínda se están a importar os contratos deste órgano, así que o que ves aquí está ' +
@@ -114,6 +125,13 @@ export const strings = {
     // source publishing neither for some awards. Nothing else needs a marker:
     // a contract without its date, amount or awardee is withheld entirely.
     notPublished: 'Non publicado',
+    // Read aloud when the page on screen changes. The rows are swapped under a
+    // control that stays put, so nothing else would say that anything happened
+    // — a reader who cannot see the table would press «Seguinte» and hear
+    // silence. It names the page rather than merely saying it arrived, that
+    // being the one thing the swap changed.
+    pageAnnounced: (page: string, totalPages: string) =>
+      `Páxina ${page} de ${totalPages} dos contratos menores.`,
     errorTitle: 'Non se puideron cargar os contratos.',
     errorHelp: 'Téntao de novo; se persiste, volve máis tarde.',
   },

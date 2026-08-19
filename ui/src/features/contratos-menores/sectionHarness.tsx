@@ -1,6 +1,6 @@
 import { MantineProvider } from '@mantine/core';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import nock from 'nock';
 import { createMemoryRouter, Outlet } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
@@ -12,9 +12,12 @@ import { strings } from '../../shared/lib/strings';
 import { BASE_URL } from '../../test/renderApp';
 import type { ContratoMenor, ContratosMenoresPage } from './contracts';
 import { ContratosMenoresSection } from './ContratosMenoresSection';
+import { DEFAULT_SORT } from './selection';
 import type { ContratosMenoresSummary, PublicationYears } from './summary';
 
 export const copy = strings.contratosMenores;
+/** The control's copy is shared, two other specs taking it unchanged. */
+export const paging = strings.pagination;
 
 export const ORGANO_ID = 'o-1';
 /** Supplied because the context carries it, and asserted absent: the name is the page's. */
@@ -43,20 +46,51 @@ export function contract(overrides: Partial<ContratoMenor> = {}): ContratoMenor 
   };
 }
 
-export function page(items: ContratoMenor[]): ContratosMenoresPage {
-  return { items, page: 1, size: 50, totalItems: items.length, totalPages: 1 };
+/**
+ * One page of the envelope. The totals default to a single page holding
+ * everything handed over, which is what a case about the rows rather than about
+ * the paging wants; a case about the paging states them.
+ */
+export function page(
+  items: ContratoMenor[],
+  overrides: Partial<Omit<ContratosMenoresPage, 'items'>> = {},
+): ContratosMenoresPage {
+  return { items, page: 1, size: 50, totalItems: items.length, totalPages: 1, ...overrides };
+}
+
+/** The whole selection, spelled as the URL and the request both spell it. */
+export interface AskedSelection {
+  year: number;
+  sort?: string;
+  page?: number;
+}
+
+function askedQuery({ year, sort = DEFAULT_SORT, page: asked = 1 }: AskedSelection) {
+  return { year: String(year), sort, page: String(asked) };
 }
 
 /**
- * The section's one read, matched on the year it asks for as well as the path:
- * an interceptor that ignored the query would answer a request for any year
- * with the same body, and the case that a change of year is a new query would
- * pass without the year ever reaching the server.
+ * The section's one read, matched on the whole selection it asks for as well as
+ * the path: an interceptor that ignored the query would answer a request for any
+ * selection with the same body, and the cases that a change of year, of ordering
+ * or of page is a new request would pass without any of them reaching the server.
  */
-export function mockContracts(year: number, status: number, body?: object) {
+export function mockContracts(
+  asked: AskedSelection,
+  status: number,
+  body?: object,
+  /**
+   * Held open for this long before answering, for a case about what is on
+   * screen *while* a read is in flight: without it the reply can land inside
+   * the same macrotask as the click, and the case would be racing nock rather
+   * than asserting a state.
+   */
+  delayMillis = 0,
+) {
   return nock(BASE_URL)
     .get(CONTRACTS_ENDPOINT)
-    .query({ year: String(year) })
+    .query(askedQuery(asked))
+    .delay(delayMillis)
     .reply(status, body);
 }
 
@@ -116,6 +150,28 @@ export function renderSection(
 
 export function yearChooser() {
   return screen.getByRole('combobox', { name: copy.yearLabel });
+}
+
+export function sortChooser() {
+  return screen.getByRole('combobox', { name: copy.sortLabel });
+}
+
+/** The shared control, found by the landmark name every list that takes it has. */
+export function pagingControl() {
+  return screen.getByRole('navigation', { name: paging.navLabel });
+}
+
+export function pagingButton(label: string) {
+  return within(pagingControl()).getByRole('button', { name: label });
+}
+
+/**
+ * The jump box, found inside the control rather than by its accessible name:
+ * that name states the page total, which is the control's own naming rule and is
+ * `Pagination`'s tests to own rather than every list that takes it.
+ */
+export function pageJump() {
+  return within(pagingControl()).getByRole('textbox');
 }
 
 export function contractsTable() {

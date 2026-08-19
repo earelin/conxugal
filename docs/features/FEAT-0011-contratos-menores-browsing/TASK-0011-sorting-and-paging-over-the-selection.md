@@ -2,7 +2,7 @@
 feat: FEAT-0011
 domain: frontend
 adrs: [0003, 0004, 0015, 0018, 0022]
-status: todo
+status: done
 depends_on: [TASK-0007, TASK-0008, TASK-0010]
 ---
 
@@ -51,6 +51,92 @@ the feature's acceptance journeys are proved.
   - changing the year and the sort while deep in a selection.
   Specs drive accessible roles and the Galician copy of `strings.ts`, and must not assert on
   locale-formatted dates or amounts.
+
+## What building it found
+
+> **The paging control had to write the page itself, not report it upwards.** The obvious
+> shape was one component owning every write to the query string and the list emitting a
+> page for it to write. The clamp forecloses it: a page past the end is only known once the
+> response is in hand, and a callback fired from a render is not a thing React allows — so
+> the list would have needed an effect where the year correction already had a
+> `<Navigate replace>`. The list therefore writes `page` and the section writes `year` and
+> `sort`, both through `selection.ts`. *One place* turned out to mean one **module**, not
+> one component, and the re-page rule lives there rather than at either call site.
+>
+> **`chosenYear` moved out of `summary.ts`.** It reads the URL, which is this task's
+> subject; what stayed behind is the narrowing of the outlet context. Splitting it is what
+> let `respelling` treat all three parameters by one rule instead of the year having its own.
+>
+> **The correction generalised further than expected, and one case had to be excluded.**
+> `?year=2019&page=0` corrects both — but the year correction *drops* the page rather than
+> respelling it, so respelling it in the same write would immediately undo that. The
+> exclusion is stated in `respelling` rather than left for the reader of `withSelection` to
+> notice.
+>
+> **The stub could not be faithful and walkable at once.** The contract's default `size` is
+> 50 and the client sends none, so a stub with more than one page needs a hundred hand-written
+> contracts. `wiremock/README.md` records the three-entry page as a deliberate simplification
+> rather than leaving the next reader to find the contract says otherwise.
+>
+> **Paging cannot unmount the control that does the paging.** The first build let the
+> list fall to its loading state on every page, which took the stated count and the page
+> total off screen with it and dropped keyboard focus from the button just pressed — the
+> opposite of what [`design/section-states.svg`](design/section-states.svg)'s loading panel
+> says: *os controis non se moven … só se move a xanela sobre a selección*. The page already
+> read is now held while the next is fetched, dimmed and marked busy. **The two cases named
+> for that criterion could not have caught it**: both asserted the steady state on either
+> side of the transition, so they passed with the control absent in between. They now assert
+> during it.
+>
+> **The clamp reads the page that was asked for, not the one the answer echoes.** ADR-0022
+> guarantees the echo, but reading the request instead costs nothing and leaves the URL and
+> the control unable to disagree whatever comes back. It is also skipped while a held-over
+> answer is on screen, that answer knowing nothing about the new selection's page count.
+>
+> **`chosenPage` had to bound the page above as well as below.** The API's `page` is an
+> `int32`, so `?page=9999999999` is a 400 — the error state, which is precisely what the
+> clamp exists to keep a stale link out of. A page past the end of the *selection* is still
+> left alone: that one the API answers.
+>
+> **Holding the page already read had to be scoped to the selection.** react-query's
+> `keepPreviousData` is `(previous) => previous` and compares no keys, so it holds an answer
+> across a change of year or ordering too — and there the count, the page total and the page
+> in force all change, leaving the control stating the old selection's numbers with nothing
+> saying they were stale, and its jump box bounding a typed page by the wrong total. The hold
+> is now a key comparison: within one year and ordering the window moves, and a change of
+> selection is an ordinary wait.
+>
+> **Keeping focus on the pressed button removed the only thing a screen reader heard.** The
+> arrival used to be announced by the list remounting into `LoadingIndicator`'s `role="status"`;
+> holding the control still deletes that, and `aria-busy` is not announced — it only quietens a
+> region that is already live. The section now says which page a reader is on, through
+> `aria-live` rather than `role="status"` so it is not counted among the two statements the
+> section makes about itself.
+>
+> **A respelling is not a change, and only a change may drop the page.** `?year=02025&page=5`
+> is the same year written differently, and routing the correction through the re-page rule
+> returned the reader to page 1 for no reason. The corrections are written directly now, so
+> the rule applies to a year that is genuinely different and not to one spelled another way.
+>
+> **The end of a walk disables the control that got there**, and a disabled element cannot
+> hold focus — so the browser dropped a keyboard reader to the top of the document from a
+> button they pressed on purpose. `shared/ui/Pagination` moves focus to the jump box between
+> the two pairs. It is the one edit this task makes to
+> [TASK-0008](TASK-0008-shared-paging-control.md)'s control, and it varies nothing the control
+> promises: the two ends are still disabled rather than hidden. **jsdom does not blur a
+> disabled element**, so the case is an acceptance one — no component test could observe it.
+>
+> **A test that waits can pass on the state it exists to reject.** Playwright's web-first
+> assertions retry for five seconds, so the case that asserted the control was still on screen
+> during a 700 ms delay would have waited out a control that unmounted for the whole fetch. The
+> request is held open until the test lets go, which makes the in-flight window a state the
+> test owns rather than a race it has to win.
+>
+> **At 360 px the ordering's entries are longer than the line they get.** They are whole
+> Galician sentences; an input clips rather than wraps, so the chosen entry read as a
+> different one. The control now ellipsises. The acceptance suite's `toBeInViewport` check
+> also had to scroll the paging control into view first — at that height it sits below the
+> fold, and the assertion was reporting that rather than the width it is about.
 
 ## Acceptance criteria
 
