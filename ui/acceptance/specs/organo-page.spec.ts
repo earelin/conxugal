@@ -196,7 +196,7 @@ test.describe('Órgano page with a family', () => {
     // statement, so its card holds one 180 px-wide chooser on a 328 px column
     // and cannot be squeezed by construction — measuring the width there proves
     // the frame and nothing the section puts in it.
-    test('wraps the section\u2019s own statements rather than squeezing them', async ({ page }) => {
+    test('wraps the section’s own statements rather than squeezing them', async ({ page }) => {
       await page.goto(`/organo/${PARTIAL_ID}`);
 
       const partial = statement(page, PARTIAL_TITLE);
