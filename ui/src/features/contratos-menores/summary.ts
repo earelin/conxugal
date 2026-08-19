@@ -32,29 +32,3 @@ export interface ContratosMenoresSummary {
 export function sectionSummary(family: OrganoFamily): ContratosMenoresSummary {
   return family.summary as ContratosMenoresSummary;
 }
-
-/**
- * Decimal digits only, for the same reason `askedPage` insists on them: `Number`
- * would otherwise read `0x7e8` as 2024 and `2.024e3` as 2024 too, so a URL could
- * name a year in a spelling the API never takes. Deliberately not trimmed, which
- * is where it parts company with the typed page box — whitespace in a query
- * string was put there by something, not typed by somebody.
- */
-const DIGITS = /^\d+$/;
-
-/**
- * The year the section opens on: the one the URL asks for where the Órgano has
- * contracts in it, and the most recent otherwise.
- *
- * An unknown year is not an error and not an empty list — it is a URL that has
- * outlived the selection it named, which happens as soon as an import moves on.
- * Landing on the default is the answer; `years` is newest first, so its first
- * entry is that default.
- */
-export function chosenYear(asked: string | null, years: PublicationYears): number {
-  if (!DIGITS.test(asked ?? '')) {
-    return years[0];
-  }
-  const year = Number(asked);
-  return years.includes(year) ? year : years[0];
-}

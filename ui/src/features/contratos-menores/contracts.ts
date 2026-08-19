@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { apiFetch } from '../../shared/lib/httpClient';
+import type { Selection } from './selection';
 
 /**
  * Who was awarded the contract: the operador's selected name and its canonical
@@ -53,13 +54,18 @@ export interface ContratosMenoresPage {
 
 async function fetchContratosMenores(
   organoId: string,
-  year: number,
+  { year, sort, page }: Selection,
 ): Promise<ContratosMenoresPage> {
-  // `year` and nothing else. The ordering and the page are the API's own
-  // defaults here, and it refuses a parameter it does not know rather than
-  // ignoring it, so sending one it did not ask for is a 400 rather than a
-  // harmless extra.
-  const query = new URLSearchParams({ year: String(year) });
+  // The three the URL carries, and nothing else: `size` is the API's own
+  // default, since the reader never chooses one and no control offers it. The
+  // API refuses a parameter it does not know rather than ignoring it, so
+  // sending one it did not ask for is a 400 rather than a harmless extra.
+  //
+  // The ordering and the page are stated rather than left to the same defaults,
+  // because the request is then the whole selection — the response states
+  // neither, so a request that named only what differs from the default would
+  // leave nothing anywhere saying what was asked for.
+  const query = new URLSearchParams({ year: String(year), sort, page: String(page) });
   const response = await apiFetch(
     `/api/organo/${encodeURIComponent(organoId)}/contratos-menores?${query.toString()}`,
   );
@@ -68,16 +74,25 @@ async function fetchContratosMenores(
 
 /**
  * The one read this slice makes: a page of one Órgano's contratos menores of
- * one year.
+ * one year, in one ordering.
  *
- * Keyed on the whole selection rather than on the Órgano alone, so choosing
- * another year is a different query with its own cache entry — not a mutation
- * of the one already answered, which is what would let a stale page sit under a
- * new year while the refetch is in flight.
+ * Keyed on the whole selection rather than on the Órgano alone, so changing any
+ * part of it is a different query with its own cache entry — not a mutation of
+ * the one already answered.
+ *
+ * The page already answered is held while the next one is fetched. Without it a
+ * new key has no data, the list unmounts to a spinner, and the paging control
+ * goes with it — taking the stated count and page total off screen and dropping
+ * keyboard focus from the button that was just pressed. Moving between pages
+ * changes neither of those numbers, so neither may disappear while it happens:
+ * only the window over the selection moves. The caller says the answer on screen
+ * is being replaced rather than pretending it is not.
  */
-export function useContratosMenores(organoId: string, year: number) {
+export function useContratosMenores(organoId: string, selection: Selection) {
+  const { year, sort, page } = selection;
   return useQuery({
-    queryKey: ['contratos-menores', organoId, year],
-    queryFn: () => fetchContratosMenores(organoId, year),
+    queryKey: ['contratos-menores', organoId, year, sort, page],
+    queryFn: () => fetchContratosMenores(organoId, selection),
+    placeholderData: keepPreviousData,
   });
 }

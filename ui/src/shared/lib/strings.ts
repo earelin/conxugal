@@ -82,6 +82,17 @@ export const strings = {
   // there would have to move the moment the licitacións section arrives.
   contratosMenores: {
     yearLabel: 'Ano',
+    sortLabel: 'Ordenar por',
+    // Four entries, which is the whole set: two keys by two directions. Each
+    // says the direction in words rather than by an arrow, because the two keys
+    // read oppositely — the newest date and the largest amount are both «first»
+    // but neither is «highest» in the sense the other is.
+    sort: {
+      dateDesc: 'Data de publicación (máis recente primeiro)',
+      dateAsc: 'Data de publicación (máis antiga primeiro)',
+      amountDesc: 'Importe (maior primeiro)',
+      amountAsc: 'Importe (menor primeiro)',
+    },
     partialTitle: 'Importación en curso',
     partialBody:
       'Aínda se están a importar os contratos deste órgano, así que o que ves aquí está ' +

@@ -33,6 +33,8 @@ a stub:
 | `metrics.json` | `GET /api/admin/metrics` — a few canned SSE samples |
 | `organos.json` | `GET /api/organos` (the **visible set**, a subset), `GET /api/admin/organos` (the whole catalogue), `GET /api/organos/taxonomia`, the catalogue import and the placement writes |
 | `organo.json` | `GET /api/organo/{id}` — one stub per Órgano of the visible set, one for a withheld Órgano holding nothing, plus a catch-all 404 |
+| `contratos-menores.json` | the **import** side — `PUT`/`DELETE /api/admin/organo/{id}/importable`, `POST /api/admin/contratos-menores/import`, `GET /api/admin/import-run/{id}` |
+| `contratos-menores-browse.json` | `GET /api/organo/{id}/contratos-menores` — one year paged and ordered four ways, a page past the end, any other year, and the refusal of a read with no year |
 
 `organos.json` serves **two different catalogues on purpose**: the side-panel picker's
 `/api/organos` holds 4 of the 8 Órganos `/api/admin/organos` lists, so the administration
@@ -49,6 +51,15 @@ stub contradicting its own contract. The *no contracts* page therefore belongs t
 `/api/admin/organos` alone. That is also the only way a reader reaches that state — by a
 retained link, never by anything the UI offers. The catch-all sits at a lower priority so
 an unknown id answers the contract's `organo-not-found` problem rather than one of the five.
+
+`contratos-menores-browse.json` serves **one selection worth walking**: 2025 holds seven
+visible contracts over three pages, matched on `year`, `sort` and `page` together and
+ordered by `priority` so a specific page wins over the year's first one. Seven over pages
+of three is deliberate — it is not a multiple of the page size, so the last page is short
+and a walk that miscounted anywhere would repeat a contract or skip one. The year's
+**largest** contract is the one published earliest, so *importe, maior primeiro* is
+observably a different first page rather than a reshuffle of the same three. Any other year
+answers one short page, with its dates templated from the year asked for.
 
 `metrics.json`'s samples are repeated as `metricsSamples` in
 [`../acceptance/support/fixtures.ts`](../acceptance/support/fixtures.ts), which the metrics
@@ -75,6 +86,16 @@ These are stub limitations, not app bugs — worth knowing before you chase one:
   every create, and no `/enabled` stub matches it, so disabling a just-created account
   404s. A stub cannot know the email you typed, and inventing one would be worse than the
   404.
+- **The browse stub pages by three, where the contract's default `size` is 50.** The client
+  chooses no size — no control offers one — so a faithful stub would need over a hundred
+  contracts written out by hand to have more than one page. Three-entry pages exercise the
+  same thing at a size a reader of the file can hold in their head. What it cannot show is
+  a page that is genuinely large.
+- **Only the four orderings' first pages are served for 2025, plus every page of the two
+  by publication date and by amount descending.** Page 2 of *importe, menor primeiro* falls
+  through to the year's first page, so the control and the URL disagree there. No journey
+  goes that way; a stub that covered every combination would be twelve near-identical
+  mappings.
 - **The metrics stream is finite.** WireMock cannot hold a real SSE connection open, so
   `metrics.json` dribbles a few samples over 30 s and then closes; `EventSource`
   reconnects and replays them. That is enough for the acceptance suite to drive the panel

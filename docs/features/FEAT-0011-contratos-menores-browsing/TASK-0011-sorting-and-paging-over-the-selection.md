@@ -2,7 +2,7 @@
 feat: FEAT-0011
 domain: frontend
 adrs: [0003, 0004, 0015, 0018, 0022]
-status: todo
+status: done
 depends_on: [TASK-0007, TASK-0008, TASK-0010]
 ---
 
@@ -51,6 +51,58 @@ the feature's acceptance journeys are proved.
   - changing the year and the sort while deep in a selection.
   Specs drive accessible roles and the Galician copy of `strings.ts`, and must not assert on
   locale-formatted dates or amounts.
+
+## What building it found
+
+> **The paging control had to write the page itself, not report it upwards.** The obvious
+> shape was one component owning every write to the query string and the list emitting a
+> page for it to write. The clamp forecloses it: a page past the end is only known once the
+> response is in hand, and a callback fired from a render is not a thing React allows — so
+> the list would have needed an effect where the year correction already had a
+> `<Navigate replace>`. The list therefore writes `page` and the section writes `year` and
+> `sort`, both through `selection.ts`. *One place* turned out to mean one **module**, not
+> one component, and the re-page rule lives there rather than at either call site.
+>
+> **`chosenYear` moved out of `summary.ts`.** It reads the URL, which is this task's
+> subject; what stayed behind is the narrowing of the outlet context. Splitting it is what
+> let `respelling` treat all three parameters by one rule instead of the year having its own.
+>
+> **The correction generalised further than expected, and one case had to be excluded.**
+> `?year=2019&page=0` corrects both — but the year correction *drops* the page rather than
+> respelling it, so respelling it in the same write would immediately undo that. The
+> exclusion is stated in `respelling` rather than left for the reader of `withSelection` to
+> notice.
+>
+> **The stub could not be faithful and walkable at once.** The contract's default `size` is
+> 50 and the client sends none, so a stub with more than one page needs a hundred hand-written
+> contracts. `wiremock/README.md` records the three-entry page as a deliberate simplification
+> rather than leaving the next reader to find the contract says otherwise.
+>
+> **Paging cannot unmount the control that does the paging.** The first build let the
+> list fall to its loading state on every page, which took the stated count and the page
+> total off screen with it and dropped keyboard focus from the button just pressed — the
+> opposite of what [`design/section-states.svg`](design/section-states.svg)'s loading panel
+> says: *os controis non se moven … só se move a xanela sobre a selección*. The page already
+> read is now held while the next is fetched, dimmed and marked busy. **The two cases named
+> for that criterion could not have caught it**: both asserted the steady state on either
+> side of the transition, so they passed with the control absent in between. They now assert
+> during it.
+>
+> **The clamp reads the page that was asked for, not the one the answer echoes.** ADR-0022
+> guarantees the echo, but reading the request instead costs nothing and leaves the URL and
+> the control unable to disagree whatever comes back. It is also skipped while a held-over
+> answer is on screen, that answer knowing nothing about the new selection's page count.
+>
+> **`chosenPage` had to bound the page above as well as below.** The API's `page` is an
+> `int32`, so `?page=9999999999` is a 400 — the error state, which is precisely what the
+> clamp exists to keep a stale link out of. A page past the end of the *selection* is still
+> left alone: that one the API answers.
+>
+> **At 360 px the ordering's entries are longer than the line they get.** They are whole
+> Galician sentences; an input clips rather than wraps, so the chosen entry read as a
+> different one. The control now ellipsises. The acceptance suite's `toBeInViewport` check
+> also had to scroll the paging control into view first — at that height it sits below the
+> fold, and the assertion was reporting that rather than the width it is about.
 
 ## Acceptance criteria
 

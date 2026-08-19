@@ -1,13 +1,14 @@
 {
   "mappings": [
     {
-      "name": "Read a page of one Órgano's contratos menores of one year",
+      "name": "2025, publication date newest first — page 1 of 3",
+      "priority": 3,
       "request": {
         "method": "GET",
         "urlPathPattern": "/api/organo/[^/]+/contratos-menores",
         "queryParameters": {
           "year": {
-            "matches": "[1-9][0-9]{3}"
+            "equalTo": "2025"
           }
         }
       },
@@ -53,7 +54,40 @@
                 "fiscalId": "ESB27998811"
               },
               "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1171338"
-            },
+            }
+          ],
+          "page": 1,
+          "size": 3,
+          "totalItems": 7,
+          "totalPages": 3
+        }
+      }
+    },
+    {
+      "name": "2025, publication date newest first — page 2 of 3",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+/contratos-menores",
+        "queryParameters": {
+          "year": {
+            "equalTo": "2025"
+          },
+          "sort": {
+            "equalTo": "publicationDate,desc"
+          },
+          "page": {
+            "equalTo": "2"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "items": [
             {
               "sourceId": 1166710,
               "publicationDate": "2025-02-03",
@@ -77,12 +111,499 @@
                 "fiscalId": "ESF15667788"
               },
               "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1160245"
+            },
+            {
+              "sourceId": 1149330,
+              "publicationDate": "2025-01-14",
+              "obxecto": "Servizo de tradución e revisión lingüística de documentación clínica",
+              "amount": 6300.0,
+              "duration": "9 meses",
+              "awardee": {
+                "name": "VERBA VIVA TRADUCIÓNS, S.L.",
+                "fiscalId": "ESB15889900"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1149330"
+            }
+          ],
+          "page": 2,
+          "size": 3,
+          "totalItems": 7,
+          "totalPages": 3
+        }
+      }
+    },
+    {
+      "name": "2025, publication date newest first — page 3 of 3, short because 7 is not a multiple of 3",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+/contratos-menores",
+        "queryParameters": {
+          "year": {
+            "equalTo": "2025"
+          },
+          "sort": {
+            "equalTo": "publicationDate,desc"
+          },
+          "page": {
+            "equalTo": "3"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "items": [
+            {
+              "sourceId": 1142208,
+              "publicationDate": "2025-01-03",
+              "obxecto": "Subministración e instalación de dous ecógrafos portátiles",
+              "amount": 28900.0,
+              "duration": "4 meses",
+              "awardee": {
+                "name": "IMAXE MÉDICA GALEGA, S.A.",
+                "fiscalId": "ESA15003344"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1142208"
+            }
+          ],
+          "page": 3,
+          "size": 3,
+          "totalItems": 7,
+          "totalPages": 3
+        }
+      }
+    },
+    {
+      "name": "2025, amount largest first — the year's largest contract on page 1, not the page's",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+/contratos-menores",
+        "queryParameters": {
+          "year": {
+            "equalTo": "2025"
+          },
+          "sort": {
+            "equalTo": "amount,desc"
+          },
+          "page": {
+            "equalTo": "1"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "items": [
+            {
+              "sourceId": 1142208,
+              "publicationDate": "2025-01-03",
+              "obxecto": "Subministración e instalación de dous ecógrafos portátiles",
+              "amount": 28900.0,
+              "duration": "4 meses",
+              "awardee": {
+                "name": "IMAXE MÉDICA GALEGA, S.A.",
+                "fiscalId": "ESA15003344"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1142208"
+            },
+            {
+              "sourceId": 1166710,
+              "publicationDate": "2025-02-03",
+              "obxecto": "Reparación urxente da instalación de climatización do bloque cirúrxico",
+              "amount": 14900.0,
+              "duration": null,
+              "awardee": {
+                "name": "INSTALACIÓNS TÉRMICAS RÍA, S.L.U.",
+                "fiscalId": "ESB36447722"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1166710"
+            },
+            {
+              "sourceId": 1184621,
+              "publicationDate": "2025-03-12",
+              "obxecto": "Subministración de material funxible de laboratorio para o Hospital de Santiago",
+              "amount": 12480.0,
+              "duration": "12 meses",
+              "awardee": {
+                "name": "CLINILAB GALICIA, S.L.",
+                "fiscalId": "ESB15234567"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1184621"
             }
           ],
           "page": 1,
-          "size": 50,
-          "totalItems": 1832,
-          "totalPages": 37
+          "size": 3,
+          "totalItems": 7,
+          "totalPages": 3
+        }
+      }
+    },
+    {
+      "name": "2025, amount largest first — page 2 of 3",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+/contratos-menores",
+        "queryParameters": {
+          "year": {
+            "equalTo": "2025"
+          },
+          "sort": {
+            "equalTo": "amount,desc"
+          },
+          "page": {
+            "equalTo": "2"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "items": [
+            {
+              "sourceId": 1179004,
+              "publicationDate": "2025-02-28",
+              "obxecto": "Servizo de mantemento de equipos de radiodiagnóstico",
+              "amount": 8750.5,
+              "duration": "6 meses",
+              "awardee": {
+                "name": "TECNOMÉDICA NOROESTE, S.A.",
+                "fiscalId": "ESA36112233"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1179004"
+            },
+            {
+              "sourceId": 1149330,
+              "publicationDate": "2025-01-14",
+              "obxecto": "Servizo de tradución e revisión lingüística de documentación clínica",
+              "amount": 6300.0,
+              "duration": "9 meses",
+              "awardee": {
+                "name": "VERBA VIVA TRADUCIÓNS, S.L.",
+                "fiscalId": "ESB15889900"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1149330"
+            },
+            {
+              "sourceId": 1160245,
+              "publicationDate": "2025-01-21",
+              "obxecto": null,
+              "amount": 4060.0,
+              "duration": "12 meses",
+              "awardee": {
+                "name": "LINGUA ATLÁNTICA, S. COOP. GALEGA",
+                "fiscalId": "ESF15667788"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1160245"
+            }
+          ],
+          "page": 2,
+          "size": 3,
+          "totalItems": 7,
+          "totalPages": 3
+        }
+      }
+    },
+    {
+      "name": "2025, amount largest first — page 3 of 3",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+/contratos-menores",
+        "queryParameters": {
+          "year": {
+            "equalTo": "2025"
+          },
+          "sort": {
+            "equalTo": "amount,desc"
+          },
+          "page": {
+            "equalTo": "3"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "items": [
+            {
+              "sourceId": 1171338,
+              "publicationDate": "2025-02-14",
+              "obxecto": "Adquisición de mobiliario clínico para consultas externas",
+              "amount": 3215.0,
+              "duration": "Desde a formalización do contrato ata o 31 de decembro de 2025",
+              "awardee": {
+                "name": "MOBILIARIO SANITARIO DO EIXO, S.L.",
+                "fiscalId": "ESB27998811"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1171338"
+            }
+          ],
+          "page": 3,
+          "size": 3,
+          "totalItems": 7,
+          "totalPages": 3
+        }
+      }
+    },
+    {
+      "name": "2025, amount smallest first — page 1",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+/contratos-menores",
+        "queryParameters": {
+          "year": {
+            "equalTo": "2025"
+          },
+          "sort": {
+            "equalTo": "amount,asc"
+          },
+          "page": {
+            "equalTo": "1"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "items": [
+            {
+              "sourceId": 1171338,
+              "publicationDate": "2025-02-14",
+              "obxecto": "Adquisición de mobiliario clínico para consultas externas",
+              "amount": 3215.0,
+              "duration": "Desde a formalización do contrato ata o 31 de decembro de 2025",
+              "awardee": {
+                "name": "MOBILIARIO SANITARIO DO EIXO, S.L.",
+                "fiscalId": "ESB27998811"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1171338"
+            },
+            {
+              "sourceId": 1160245,
+              "publicationDate": "2025-01-21",
+              "obxecto": null,
+              "amount": 4060.0,
+              "duration": "12 meses",
+              "awardee": {
+                "name": "LINGUA ATLÁNTICA, S. COOP. GALEGA",
+                "fiscalId": "ESF15667788"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1160245"
+            },
+            {
+              "sourceId": 1149330,
+              "publicationDate": "2025-01-14",
+              "obxecto": "Servizo de tradución e revisión lingüística de documentación clínica",
+              "amount": 6300.0,
+              "duration": "9 meses",
+              "awardee": {
+                "name": "VERBA VIVA TRADUCIÓNS, S.L.",
+                "fiscalId": "ESB15889900"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1149330"
+            }
+          ],
+          "page": 1,
+          "size": 3,
+          "totalItems": 7,
+          "totalPages": 3
+        }
+      }
+    },
+    {
+      "name": "2025, publication date oldest first — page 1",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+/contratos-menores",
+        "queryParameters": {
+          "year": {
+            "equalTo": "2025"
+          },
+          "sort": {
+            "equalTo": "publicationDate,asc"
+          },
+          "page": {
+            "equalTo": "1"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "items": [
+            {
+              "sourceId": 1142208,
+              "publicationDate": "2025-01-03",
+              "obxecto": "Subministración e instalación de dous ecógrafos portátiles",
+              "amount": 28900.0,
+              "duration": "4 meses",
+              "awardee": {
+                "name": "IMAXE MÉDICA GALEGA, S.A.",
+                "fiscalId": "ESA15003344"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1142208"
+            },
+            {
+              "sourceId": 1149330,
+              "publicationDate": "2025-01-14",
+              "obxecto": "Servizo de tradución e revisión lingüística de documentación clínica",
+              "amount": 6300.0,
+              "duration": "9 meses",
+              "awardee": {
+                "name": "VERBA VIVA TRADUCIÓNS, S.L.",
+                "fiscalId": "ESB15889900"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1149330"
+            },
+            {
+              "sourceId": 1160245,
+              "publicationDate": "2025-01-21",
+              "obxecto": null,
+              "amount": 4060.0,
+              "duration": "12 meses",
+              "awardee": {
+                "name": "LINGUA ATLÁNTICA, S. COOP. GALEGA",
+                "fiscalId": "ESF15667788"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1160245"
+            }
+          ],
+          "page": 1,
+          "size": 3,
+          "totalItems": 7,
+          "totalPages": 3
+        }
+      }
+    },
+    {
+      "name": "2025, a page past the end — empty, and carrying the selection's true totals",
+      "priority": 2,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+/contratos-menores",
+        "queryParameters": {
+          "year": {
+            "equalTo": "2025"
+          },
+          "page": {
+            "matches": "[4-9]|[1-9][0-9]+"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "items": [],
+          "page": 9,
+          "size": 3,
+          "totalItems": 7,
+          "totalPages": 3
+        }
+      }
+    },
+    {
+      "name": "Any other year, a page past its only one — empty, and carrying its true totals",
+      "priority": 3,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+/contratos-menores",
+        "queryParameters": {
+          "year": {
+            "matches": "[1-9][0-9]{3}"
+          },
+          "page": {
+            "matches": "[2-9]|[1-9][0-9]+"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "items": [],
+          "page": 2,
+          "size": 3,
+          "totalItems": 2,
+          "totalPages": 1
+        }
+      }
+    },
+    {
+      "name": "Any other year the chooser offers — one short page",
+      "priority": 4,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/organo/[^/]+/contratos-menores",
+        "queryParameters": {
+          "year": {
+            "matches": "[1-9][0-9]{3}"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "items": [
+            {
+              "sourceId": 1098771,
+              "publicationDate": "{{request.query.year}}-11-08",
+              "obxecto": "Servizo de limpeza e desinfección de quirófanos",
+              "amount": 5400.0,
+              "duration": "12 meses",
+              "awardee": {
+                "name": "HIXIENE INTEGRAL DO ATLÁNTICO, S.L.",
+                "fiscalId": "ESB36775511"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1098771"
+            },
+            {
+              "sourceId": 1085330,
+              "publicationDate": "{{request.query.year}}-09-19",
+              "obxecto": "Adquisición de bombas de infusión para hospitalización a domicilio",
+              "amount": 9120.0,
+              "duration": null,
+              "awardee": {
+                "name": "EQUIPAMENTO CLÍNICO BREOGÁN, S.A.",
+                "fiscalId": "ESA15220099"
+              },
+              "sourceUrl": "https://www.contratosdegalicia.gal/licitacion?N=1085330"
+            }
+          ],
+          "page": 1,
+          "size": 3,
+          "totalItems": 2,
+          "totalPages": 1
         }
       }
     },

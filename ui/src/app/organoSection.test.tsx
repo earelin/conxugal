@@ -47,13 +47,14 @@ function mockOrgano(status: number, body?: object) {
  * than an `HttpError`, so the client retries it behind every assertion and
  * leaves the panel showing an error none of these cases is about.
  *
- * Matched on the year as well as the path, so a case only passes if the section
- * asked for the year the case is about.
+ * Matched on the whole selection as well as the path, so a case only passes if
+ * the section asked for the year the case is about — and in the ordering and on
+ * the page a reader who has chosen neither gets.
  */
 function mockContracts(year: number) {
   return nock(BASE_URL)
     .get(`/api/organo/${ORGANO_ID}/${FAMILY_PATH}`)
-    .query({ year: String(year) })
+    .query({ year: String(year), sort: 'publicationDate,desc', page: '1' })
     .reply(200, { items: [], page: 1, size: 50, totalItems: 0, totalPages: 0 });
 }
 
@@ -170,7 +171,7 @@ describe('the contratos menores section, mounted by the application router', () 
       // asked the server which year that was.
       expect(scopedToThisOrgano).toEqual([
         ['organo', ORGANO_ID],
-        ['contratos-menores', ORGANO_ID, 2025],
+        ['contratos-menores', ORGANO_ID, 2025, 'publicationDate,desc', 1],
       ]);
       // And the member read was made exactly once: `nock` refuses an unmatched
       // request, and every interceptor these cases set up is spent.

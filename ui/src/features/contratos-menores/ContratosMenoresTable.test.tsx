@@ -14,9 +14,11 @@ import {
   mockContracts,
   ORGANO_NAME,
   page,
+  pageJump,
   renderSection,
   rowFor,
   SECTION_PATH,
+  sortChooser,
   summary,
   yearChooser,
 } from './sectionHarness';
@@ -37,7 +39,7 @@ const radiodiagnostico = contract({
 const bare = contract({ sourceId: 1160245, obxecto: null, duration: null });
 
 function renderList(items = [laboratorio, radiodiagnostico], year = 2025) {
-  mockContracts(year, 200, page(items));
+  mockContracts({ year }, 200, page(items));
   return renderSection(summary());
 }
 
@@ -285,17 +287,19 @@ describe('the contract row', () => {
     it('offers no CPV filter and no free-text search over the object', async () => {
       await showList();
 
-      // Not hidden and not disabled: there is simply no control. The year
-      // chooser is the only one the section has.
+      // Not hidden and not disabled: there is simply no control. The two
+      // choosers scope the selection and the paging control's box takes a page
+      // number — every input the section has is enumerated here, so a filter or
+      // a search added later fails this rather than passing unnoticed.
       expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
-      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-      expect(screen.getAllByRole('combobox')).toEqual([yearChooser()]);
+      expect(screen.getAllByRole('combobox')).toEqual([yearChooser(), sortChooser()]);
+      expect(screen.getAllByRole('textbox')).toEqual([pageJump()]);
     });
   });
 
   describe('while the read is in flight or has failed', () => {
     it('says it is loading, with the section’s own statements still on screen', () => {
-      mockContracts(2025, 200, page([laboratorio]));
+      mockContracts({ year: 2025 }, 200, page([laboratorio]));
       renderSection(summary({ partial: true, updating: false }));
 
       expect(screen.getByText(strings.loading)).toBeInTheDocument();
@@ -305,7 +309,7 @@ describe('the contract row', () => {
     });
 
     it('reports a failure with a retry, blanking neither statement nor chooser', async () => {
-      mockContracts(2025, 500);
+      mockContracts({ year: 2025 }, 500);
       renderSection(summary({ partial: true, updating: false }));
 
       expect(await screen.findByText(copy.errorTitle)).toBeInTheDocument();
@@ -317,8 +321,8 @@ describe('the contract row', () => {
 
     it('replaces the failure with the table when the retry succeeds', async () => {
       const user = userEvent.setup();
-      mockContracts(2025, 500);
-      mockContracts(2025, 200, page([laboratorio]));
+      mockContracts({ year: 2025 }, 500);
+      mockContracts({ year: 2025 }, 200, page([laboratorio]));
       renderSection(summary());
       await screen.findByText(copy.errorTitle);
 
@@ -333,8 +337,8 @@ describe('the contract row', () => {
   describe('the selection the read is keyed on', () => {
     it('asks the server again for the year a reader chooses', async () => {
       const user = userEvent.setup();
-      mockContracts(2025, 200, page([laboratorio]));
-      mockContracts(2023, 200, page([radiodiagnostico]));
+      mockContracts({ year: 2025 }, 200, page([laboratorio]));
+      mockContracts({ year: 2023 }, 200, page([radiodiagnostico]));
       renderSection(summary());
       await screen.findByText(laboratorio.awardee.name);
 
@@ -349,7 +353,7 @@ describe('the contract row', () => {
     });
 
     it('reads the year the URL already names rather than the default', async () => {
-      mockContracts(2024, 200, page([radiodiagnostico]));
+      mockContracts({ year: 2024 }, 200, page([radiodiagnostico]));
 
       renderSection(summary(), `${SECTION_PATH}?year=2024`);
 
