@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { strings } from '../../shared/lib/strings';
 import { formatAmount, formatPublicationDate } from './contractFormat';
+import type { ContratoMenor } from './contracts';
 import {
   contract,
   contractsTable,
@@ -39,6 +40,17 @@ function renderList(items = [laboratorio, radiodiagnostico], year = 2025) {
   return renderSection(summary());
 }
 
+/**
+ * The list with its read already answered, which is where all but the loading
+ * and failure cases below start. Awaiting the table is what separates them from
+ * the wait that precedes it — asserting before it arrives would be asserting
+ * against the loading state.
+ */
+async function showList(items?: ContratoMenor[]) {
+  renderList(items);
+  await screen.findByRole('table');
+}
+
 describe('the contract row', () => {
   beforeEach(() => {
     nock.disableNetConnect();
@@ -65,8 +77,7 @@ describe('the contract row', () => {
     });
 
     it('draws one row per contract the page carries', async () => {
-      renderList();
-      await screen.findByRole('table');
+      await showList();
 
       // The header row plus the two contracts, and nothing invented between
       // them: there is no empty state and no filler row.
@@ -82,8 +93,7 @@ describe('the contract row', () => {
         duration: '12  meses',
         awardee: { name: 'lingua atlántica, S. COOP. Galega', fiscalId: 'ESF15667788' },
       });
-      renderList([verbose]);
-      await screen.findByRole('table');
+      await showList([verbose]);
 
       // Not truncated, not case-folded, not respaced. The default matcher
       // collapses runs of whitespace before comparing, which would let a row
@@ -101,8 +111,7 @@ describe('the contract row', () => {
         sourceId: 42,
         obxecto: 'Reparación urxente da instalación de climatización do bloque cirúrxico',
       });
-      renderList([verbose]);
-      await screen.findByRole('table');
+      await showList([verbose]);
 
       // Asserted as the pairing it is, because the object's cell carries no
       // style at all: on its own, "no nowrap here" would pass for an
@@ -130,8 +139,7 @@ describe('the contract row', () => {
           fiscalId: 'ESB15234567',
         },
       });
-      renderList([wordy]);
-      await screen.findByRole('table');
+      await showList([wordy]);
 
       expect(screen.getByText(wordy.awardee.name).closest('td')).not.toHaveStyle({
         whiteSpace: 'nowrap',
@@ -144,8 +152,7 @@ describe('the contract row', () => {
 
   describe('the awardee', () => {
     it('is text, with no link and no operador identifier', async () => {
-      renderList([laboratorio]);
-      await screen.findByRole('table');
+      await showList([laboratorio]);
 
       const row = within(rowFor(laboratorio));
       // The operador route does not exist yet, and a link to one that 404s is
@@ -155,8 +162,7 @@ describe('the contract row', () => {
     });
 
     it('names no awarding Órgano, every row belonging to the one already open', async () => {
-      renderList();
-      await screen.findByRole('table');
+      await showList();
 
       expect(within(contractsTable()).queryByText(ORGANO_NAME)).not.toBeInTheDocument();
       expect(
@@ -167,8 +173,7 @@ describe('the contract row', () => {
 
   describe('the amount', () => {
     it('is labelled as including VAT on the column that carries it', async () => {
-      renderList();
-      await screen.findByRole('table');
+      await showList();
 
       // The thresholds that define a contrato menor are VAT-exclusive, so an
       // unlabelled figure invites exactly the wrong comparison.
@@ -181,8 +186,7 @@ describe('the contract row', () => {
 
   describe('the duration', () => {
     it('carries the caveat once, on the column rather than on every row', async () => {
-      renderList();
-      await screen.findByRole('table');
+      await showList();
 
       // One statement covers all of them and reads once; the same sentence on
       // fifty rows would be fifty things to read.
@@ -190,8 +194,7 @@ describe('the contract row', () => {
     });
 
     it('names the caveat from the column header it qualifies', async () => {
-      renderList();
-      await screen.findByRole('table');
+      await showList();
 
       // The `ⓘ` is decorative, so this is the only thing that carries the
       // caveat to a reader who never sees it. Announced with the column rather
@@ -201,8 +204,7 @@ describe('the contract row', () => {
     });
 
     it('keeps the caveat out of the table’s own sideways scroll', async () => {
-      renderList();
-      await screen.findByRole('table');
+      await showList();
 
       // Inside it, the sentence was held to the table's 720 px and had to be
       // read by scrolling right and back again for each line at 360 px. A table
@@ -214,8 +216,7 @@ describe('the contract row', () => {
 
   describe('the sideways scroll six columns need', () => {
     it('is a region a keyboard can reach and scroll back', async () => {
-      renderList();
-      await screen.findByRole('table');
+      await showList();
 
       // Without this the only focusable things in the table are the source
       // links in the last column: tabbing in arrives scrolled fully right, with
@@ -228,8 +229,7 @@ describe('the contract row', () => {
 
   describe('the source link', () => {
     it('is reachable by a name that says which contract it opens', async () => {
-      renderList();
-      await screen.findByRole('table');
+      await showList();
 
       // «Fonte» alone names none of them, and the column repeats down the page:
       // the accessible name is the only thing telling one icon from the next.
@@ -240,8 +240,7 @@ describe('the contract row', () => {
     });
 
     it('opens the official source away from the app', async () => {
-      renderList([laboratorio]);
-      await screen.findByRole('table');
+      await showList([laboratorio]);
 
       const link = within(rowFor(laboratorio)).getByRole('link');
       expect(link).toHaveAttribute('target', '_blank');
@@ -249,8 +248,7 @@ describe('the contract row', () => {
     });
 
     it('is a target a finger can hit rather than the glyph’s own 18 px', async () => {
-      renderList([laboratorio]);
-      await screen.findByRole('table');
+      await showList([laboratorio]);
 
       // It sits beside the gesture that scrolls this table sideways, so a
       // target the size of the icon is one a reader misses into a scroll.
@@ -261,8 +259,7 @@ describe('the contract row', () => {
 
   describe('the two values a row can lack', () => {
     it('shows an absent object and duration as absent rather than as invented text', async () => {
-      renderList([bare]);
-      await screen.findByRole('table');
+      await showList([bare]);
 
       const row = within(rowFor(bare));
       expect(row.getAllByText(copy.notPublished)).toHaveLength(2);
@@ -272,8 +269,7 @@ describe('the contract row', () => {
     });
 
     it('still states the date, the amount and the awardee on that same row', async () => {
-      renderList([bare]);
-      await screen.findByRole('table');
+      await showList([bare]);
 
       // Those three are never absent — a contract missing any of them is
       // withheld — so a row that reaches a reader always carries all three.
@@ -286,8 +282,7 @@ describe('the contract row', () => {
 
   describe('two absences a reader will notice, both deliberate', () => {
     it('offers no CPV filter and no free-text search over the object', async () => {
-      renderList();
-      await screen.findByRole('table');
+      await showList();
 
       // Not hidden and not disabled: there is simply no control. The year
       // chooser is the only one the section has.
