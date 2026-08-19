@@ -38,9 +38,20 @@ const NOT_FOUND_HELP =
   'A ligazón pode estar mal, ou o órgano pode xa non existir no catálogo. Escolle un ' +
   'órgano no selector do panel lateral para seguir.';
 const RETRY = 'Tentar de novo';
+// The side-panel picker, named as `organo-picker.spec.ts` names it: the control
+// is labelled by its field and its placeholder together.
+const PICKER_PLACEHOLDER = 'Escolle un órgano';
 
 // Named the way `organo-picker.spec.ts` names its own: the roles and Galician
 // labels a reader reaches these controls by, spelled once.
+function pickerTrigger(page: Page) {
+  return page.getByRole('button', { name: `Órgano ${PICKER_PLACEHOLDER}` });
+}
+
+function organoTree(page: Page) {
+  return page.getByRole('tree', { name: 'Órgano' });
+}
+
 function familyTab(scope: Page | Locator) {
   return scope.getByRole('tab', { name: CONTRATOS_MENORES });
 }
@@ -105,8 +116,8 @@ test.describe('Órgano page with a family', () => {
     page,
   }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Órgano Escolle un órgano' }).click();
-    await page.getByRole('tree', { name: 'Órgano' }).getByText(SERGAS_NAME).click();
+    await pickerTrigger(page).click();
+    await organoTree(page).getByText(SERGAS_NAME).click();
 
     // The journey no earlier task could run end to end: the picker names an
     // Órgano, the page frames it, and that family's own section fills the outlet.
