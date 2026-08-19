@@ -20,6 +20,11 @@ const SERGAS_NAME = 'Servizo Galego de Saúde (SERGAS)';
 const PARTIAL_ID = '5c3e8a70-9b41-4f06-d285-4a0c7e3b1f59';
 const PARTIAL_NAME = 'Hospital Álvaro Cunqueiro';
 
+// The one family this build routes to, and the address it sits at. Spelled
+// once so a spec naming a family route cannot drift from the router's segment.
+const FAMILY_PATH = 'contratos-menores';
+const sectionPath = (organoId: string) => `/organo/${organoId}/${FAMILY_PATH}`;
+
 const TABS_LABEL = 'Familias de contratos';
 const CONTRATOS_MENORES = 'Contratos menores';
 const YEAR_LABEL = 'Ano';
@@ -86,7 +91,7 @@ test.describe('Órgano page with a family', () => {
 
     // The journey no earlier task could run end to end: the picker names an
     // Órgano, the page frames it, and that family's own section fills the outlet.
-    await expect(page).toHaveURL(`/organo/${SERGAS_ID}/contratos-menores`);
+    await expect(page).toHaveURL(sectionPath(SERGAS_ID));
     await expect(page.getByRole('heading', { name: SERGAS_NAME })).toBeVisible();
     const tab = page
       .getByRole('tablist', { name: TABS_LABEL })
@@ -96,13 +101,13 @@ test.describe('Órgano page with a family', () => {
   });
 
   test('opens the same page from a link straight to the family', async ({ page }) => {
-    await page.goto(`/organo/${SERGAS_ID}/contratos-menores`);
+    await page.goto(sectionPath(SERGAS_ID));
 
     await expect(page.getByRole('heading', { name: SERGAS_NAME })).toBeVisible();
     await expect(page.getByRole('tab', { name: CONTRATOS_MENORES })).toBeVisible();
     await expect(page.getByRole('combobox', { name: YEAR_LABEL })).toHaveValue('2025');
     // No redirect: the deep link is the address, not a detour through one.
-    await expect(page).toHaveURL(`/organo/${SERGAS_ID}/contratos-menores`);
+    await expect(page).toHaveURL(sectionPath(SERGAS_ID));
   });
 
   test("carries the section's own selection in the query string beside the family", async ({
@@ -112,7 +117,7 @@ test.describe('Órgano page with a family', () => {
 
     await expect(page.getByRole('combobox', { name: YEAR_LABEL })).toHaveValue('2023');
     const url = new URL(page.url());
-    expect(url.pathname).toBe(`/organo/${SERGAS_ID}/contratos-menores`);
+    expect(url.pathname).toBe(sectionPath(SERGAS_ID));
     expect(url.searchParams.get('year')).toBe('2023');
     expect(url.searchParams.get('sort')).toBe('amount,desc');
     expect(url.searchParams.get('page')).toBe('2');
