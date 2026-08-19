@@ -103,6 +103,29 @@ async function showingPage(page: Page, asked: number) {
   await expect(pageBox(page)).toHaveValue(String(asked));
 }
 
+/**
+ * Holds the section's next read open until the returned function lets go, and
+ * answers it then.
+ *
+ * A delay would not do: a web-first assertion retries for five seconds, so
+ * against any finite wait a case checking what is on screen *during* a fetch
+ * would pass by outlasting the very state it is there to reject. Held open, the
+ * in-flight window is a state the case owns.
+ */
+async function holdTheNextRead(page: Page) {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/contratos-menores?*', async (route) => {
+    await held;
+    await route.continue();
+  });
+  return () => {
+    release();
+  };
+}
+
 test.beforeEach(async () => {
   await resetMappings();
 });
@@ -220,18 +243,7 @@ test.describe('Browsing an Órgano’s contratos menores', () => {
     await page.goto(sectionPath(SERGAS_ID));
     await showingPage(page, 1);
 
-    // Held open until this test lets go, rather than slowed by a delay the
-    // assertions would then have to outrun: a web-first assertion retries for
-    // five seconds, so against any finite delay every check below would pass by
-    // waiting out the very state it is here to reject.
-    let release = () => {};
-    const held = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    await page.route('**/contratos-menores?*', async (route) => {
-      await held;
-      await route.continue();
-    });
+    const release = await holdTheNextRead(page);
     await pagingButton(page, NEXT).click();
 
     // Moving between pages changes neither number, so neither may leave the
@@ -250,14 +262,7 @@ test.describe('Browsing an Órgano’s contratos menores', () => {
     await page.goto(`${sectionPath(SERGAS_ID)}?page=3`);
     await showingPage(page, TOTAL_PAGES);
 
-    let release = () => {};
-    const held = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    await page.route('**/contratos-menores?*', async (route) => {
-      await held;
-      await route.continue();
-    });
+    const release = await holdTheNextRead(page);
     await choose(page, yearChooser(page), '2024');
 
     // A change of selection is a wait, not a window moving: the count, the page
