@@ -21,7 +21,8 @@ The catalogue is **derived, never imported**: it has no source of its own and no
 its own. It is a projection of the contracts the system already holds, and it exists only
 so long as those contracts do. It is also **family-neutral by construction**: contratos
 menores are the first family to feed it (via
-[SPEC-0005](SPEC-0005-import-browse-contratos-menores.md)), licitacións will be the second,
+[SPEC-0005](SPEC-0005-import-browse-contratos-menores.md)), licitacións
+([SPEC-0008](SPEC-0008-import-browse-licitacions.md)) are the second,
 and any later family feeds the same catalogue and the same history rather than defining its
 own. This is why operadores are specified here and not inside the spec of any one family.
 
@@ -47,14 +48,23 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
 - **In scope:** the derived catalogue, operador identity and matching, the display name
   rule, awardees whose identifier is unusable, operador lifecycle, how a user finds an
   operador, and the contract history — its split by contract family, its totals, filtering,
-  sorting and pagination.
+  sorting and pagination. Also in scope, from the families able to supply them (R16): an
+  operador's **unsuccessful bids**, and the **UTE membership** a family publishes.
 - **Out of scope — importing contracts.** Every family's import is owned by that family's
   spec; contratos menores by [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md).
 - **Out of scope — anything about an operador the contracts do not say.** No enrichment from
-  company registries, no sector or size classification, no linking of related entities, and
-  no inference of whether an identifier belongs to a person or an entity beyond what the
-  source states. Each would be new information about identifiable people from outside the
-  official publication.
+  company registries, no sector or size classification, no **inferred** linking of related
+  entities, and no inference of whether an identifier belongs to a person or an entity beyond
+  what the source states. Each would be new information about identifiable people from outside
+  the official publication.
+
+  **A relationship the source itself publishes is not such an inference**, and the exclusion is
+  worded to let one through: where a family publishes a **UTE** together with the fiscal
+  identifiers of its member firms
+  ([SPEC-0008](SPEC-0008-import-browse-licitacions.md) R17), that membership is held here (R16).
+  What stays excluded is a link the system would have to **work out** — common ownership, shared
+  addresses, successor entities, groups — none of which any source states and all of which would
+  be new information about identifiable people.
 - **Out of scope — exporting an operador's history.** Left to the future export spec
   SPEC-0005 also defers to.
 - **Out of scope — erasing an operador.** No function removes an operador's data; R7 governs
@@ -94,8 +104,24 @@ that family's spec rather than while building it:
 
 Contratos menores supply all seven
 ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md)).
-Licitacións publish more and differently, and the licitacións spec is where any mismatch has
-to be resolved.
+Licitacións supply all seven too
+([SPEC-0008](SPEC-0008-import-browse-licitacions.md) R18), with two differences worth naming
+here: its contract identity is a **publication identifier together with a lote**, since a lote
+is what its awards are made per, and its comparable date is the **publication** date rather than
+the award date, because a procedure can be published long before — or without ever — being
+decided.
+
+**Two further facts are optional, and a family that can supply them may.** They are optional
+because contratos menores cannot supply either: the source publishes neither for that family.
+
+- **Participation** — the operadores that competed for a contract and were **not** awarded it,
+  and the contract they competed for.
+- **UTE membership** — where a party is a *unión temporal de empresas*, the member firms it is
+  composed of, each by its own published fiscal identifier.
+
+R16 states what the catalogue does with them. A family supplying neither is a full member of
+this catalogue exactly as before, which is what keeps the two optional rather than a new
+barrier to entry.
 
 ### Decisions taken, and what is left open
 
@@ -187,9 +213,16 @@ One decision has since been taken:
   would be new information about identifiable people, so the system declines to, even though it
   could.
 - **R7** — An operador is **reachable exactly as long as it has at least one visible
-  contract**. When its last contract is withdrawn under its family's removal rule, the operador
-  appears in no list, no lookup and no history — it ceases to exist as far as every surface of
-  this spec is concerned.
+  contract, one visible participation, or one visible UTE membership** (R16). When the last of
+  them is withdrawn under its family's removal rule, the operador appears in no list, no lookup
+  and no history — it ceases to exist as far as every surface of this spec is concerned.
+
+  **The predicate is *contract* plus the two optional facts, and it has to be**, because a firm
+  can be in this catalogue without ever having been awarded anything: one that has only ever
+  bid and lost, and one that has only ever been a **member** of a UTE that was awarded, both
+  hold no contract of their own. A predicate naming only contracts would put them in the
+  catalogue and then make them reachable from nowhere — which is exactly the failure this
+  requirement exists to prevent at the other end of the lifecycle.
 
   It is **not erased**, and this spec does not claim otherwise. The families that feed the
   catalogue never delete a contract: a withdrawal is remembered and can be undone, which is
@@ -337,6 +370,46 @@ One decision has since been taken:
   than left to each family because a cross-family total is the whole point of the history, and
   a total silently mixing VAT bases would be a number no one should act on. A family that could
   not supply an amount on this basis could not feed the catalogue.
+
+  **Beyond the family sections, the history may hold two sections that are not families**, from
+  the facts R16 admits. They are presented alongside the family sections, each omitted when
+  empty exactly as a family section is, and each is **kept out of every figure above**:
+
+  - **What this operador bid for and did not win** — one section, listing the contracts of any
+    family that supplies participation, each naming the contract, its family and its awarding
+    Órgano. It carries **no amount** and enters **no total**, because nothing here was awarded
+    and money never changed hands.
+  - **What this operador won through a UTE** — the awards held by UTEs it was a member of,
+    each naming the UTE. Those awards are the **UTE's**, counted in the UTE's own history and
+    totals; they appear here so a member's record is not silently empty, and they are excluded
+    from this operador's counts and totals so that one euro is never counted twice across the
+    catalogue.
+
+  **The rule is one sentence: every count and every total on this page counts awards made to
+  the operador the page is about.** A section that is not awards to it is shown, labelled, and
+  left out of the arithmetic. Without that rule the two additions above would inflate exactly
+  the figure this spec exists to make trustworthy.
+- **R16** — **Participation and UTE membership are held here, from the families that supply
+  them.** Both are facts about an operador that no award states, and both are derived exactly as
+  the rest of the catalogue is — from what the families publish, with no source and no import of
+  this spec's own:
+
+  - a **participation** relates an operador to a contract it competed for and was not awarded.
+    It is subject to R7's lifecycle and to its family's removal rule, so a participation
+    withdrawn at the source stops being visible and is not erased;
+  - a **UTE membership** relates a member operador to the UTE operador it was published as part
+    of. **The UTE is an operador in its own right**, identified by its own published fiscal
+    identifier under R3 and reachable under R8 like any other; an award to a UTE is an award to
+    that operador and to no member.
+
+  A member is reachable from its UTE and a UTE from each of its members, so *what has this firm
+  been part of* is answerable from either end. **Membership is recorded as published and is not
+  maintained**: a UTE is constituted for a procedure, so what the catalogue holds is what its
+  contracts currently publish, and nothing else updates it.
+
+  **A party whose fiscal identifier is unusable (R5) produces neither**, on the rule that already
+  governs an awardee: no operador, so no participation to relate and no membership to hold. The
+  contract, and the other parties on it, are unaffected.
 - **R10** — A user can **filter** an operador's history **by year** and **sort** it by
   **date** or by **amount**, ascending or descending. Both act **within one family section**,
   on that section alone: sections are independently reachable (R9), so scoping one leaves the
@@ -377,6 +450,18 @@ One decision has since been taken:
 
 ### Non-functional expectations
 
+- **R17** — **What R16 adds to the privacy analysis**, stated separately rather than folded
+  into R12 so that it is not read as covered by an argument written before it. Aggregating an
+  operador's **unsuccessful bids** across every Órgano is new information about that operador —
+  for a natural person, new personal data — and so is recording which **UTEs** a firm has been
+  part of. Neither is published in aggregate anywhere; both are assembled here.
+
+  They are judged acceptable on R12's grounds and on one of their own: every underlying fact is
+  already published, per contract, by an official source; every read requires authentication
+  (R1); and R16 records only what a source states, never a relationship the system worked out.
+  What R12 says about erasure applies unchanged — a participation and a membership are hidden
+  by their family's removal rule rather than deleted, which is why R7's reachability predicate
+  covers all three.
 - **R12** — Where an operador is a natural person, its name and fiscal identifier are
   **personal data**, and this spec produces genuinely **new derived information** about
   identifiable people that the official source does not publish: R9 assembles into a single
@@ -636,3 +721,22 @@ One decision has since been taken:
 37. **(R15)** Re-importing contracts the system already holds leaves the retained names, their
     dates and their contract identifiers **unchanged** — the retention is idempotent, as the
     catalogue it belongs to is.
+38. **(R16)** An operador that has only ever **bid and lost**, and one that has only ever been a
+    **member of a UTE**, are both reachable — each appears in the operadores list, is found by
+    identifier lookup, and opens a history stating what it did rather than an empty page.
+39. **(R16, R7)** When the last of an operador's contracts, participations and UTE memberships is
+    withdrawn under its family's removal rule, the operador becomes unreachable; restoring any one
+    of the three makes it reachable again, and nothing about it was erased in between.
+40. **(R16)** A UTE is catalogued as an operador under its own published fiscal identifier, its
+    members are catalogued under theirs, and each is reachable from the other. A party whose
+    identifier is unusable (R5) produces no operador, no participation and no membership, leaving
+    the contract and its other parties unaffected.
+41. **(R9, R16)** An operador that lost a bid sees that contract in a **bid for and did not win**
+    section carrying no amount; an operador whose UTE was awarded a contract sees it in a **won
+    through a UTE** section naming the UTE. Neither section changes any count or total on the
+    page, and the same award counted in the UTE's own total appears in no member's.
+42. **(R9)** An operador holding only participations or only UTE memberships opens a history with
+    those sections present and every family section omitted, stating no awarded total rather than
+    a total of zero.
+43. **(R17)** Every read of an operador's participations and UTE memberships requires
+    authentication, exactly as its awards do; an unauthenticated visitor is denied.
