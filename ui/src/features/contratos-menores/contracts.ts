@@ -1,14 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
+import { isEqual } from 'es-toolkit';
 
 import { apiFetch } from '../../shared/lib/httpClient';
-import type { Selection, Sort } from './selection';
+import type { Selection } from './selection';
 
 /**
- * The whole selection, which is what the cache is keyed on: no two selections
- * share an entry, and the key is what says whether an answer already on screen
- * belongs to the one now being asked for.
+ * What the cache is keyed on, bar the page: one Órgano's contracts of one year
+ * in one ordering. Every page of that shares this prefix and nothing else does,
+ * which is what says whether an answer already on screen belongs to the
+ * selection now being asked for.
  */
-type ContratosMenoresKey = ['contratos-menores', string, number, Sort, number];
+function selectionKey(organoId: string, { year, sort }: Selection) {
+  return ['contratos-menores', organoId, year, sort];
+}
 
 /**
  * Who was awarded the contract: the operador's selected name and its canonical
@@ -102,15 +106,13 @@ async function fetchContratosMenores(
  * is a wait, not a window moving.
  */
 export function useContratosMenores(organoId: string, selection: Selection) {
-  const { year, sort, page } = selection;
+  const key = selectionKey(organoId, selection);
   return useQuery({
-    queryKey: ['contratos-menores', organoId, year, sort, page],
+    queryKey: [...key, selection.page],
     queryFn: () => fetchContratosMenores(organoId, selection),
     placeholderData: (previous, previousQuery) => {
-      const [, heldOrgano, heldYear, heldSort] = (previousQuery?.queryKey ??
-        []) as Partial<ContratosMenoresKey>;
-      const sameSelection = heldOrgano === organoId && heldYear === year && heldSort === sort;
-      return sameSelection ? previous : undefined;
+      const held = previousQuery?.queryKey.slice(0, -1);
+      return isEqual(held, key) ? previous : undefined;
     },
   });
 }
