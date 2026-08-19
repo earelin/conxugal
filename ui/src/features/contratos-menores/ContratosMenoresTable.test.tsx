@@ -3,8 +3,9 @@ import userEvent from '@testing-library/user-event';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { formatCalendarDate } from '../../shared/lib/date';
+import { formatEuros } from '../../shared/lib/number';
 import { strings } from '../../shared/lib/strings';
-import { formatAmount, formatPublicationDate } from './contractFormat';
 import type { ContratoMenor } from './contracts';
 import {
   contract,
@@ -66,12 +67,12 @@ describe('the contract row', () => {
       renderList();
 
       const row = within(await screen.findByRole('row', { name: /1234567/ }));
-      expect(row.getByText(formatPublicationDate(laboratorio.publicationDate))).toBeInTheDocument();
+      expect(row.getByText(formatCalendarDate(laboratorio.publicationDate))).toBeInTheDocument();
       expect(row.getByText(String(laboratorio.sourceId))).toBeInTheDocument();
       expect(row.getByText(laboratorio.obxecto as string)).toBeInTheDocument();
       expect(row.getByText(laboratorio.awardee.name)).toBeInTheDocument();
       expect(row.getByText(laboratorio.awardee.fiscalId)).toBeInTheDocument();
-      expect(row.getByText(formatAmount(laboratorio.amount))).toBeInTheDocument();
+      expect(row.getByText(formatEuros(laboratorio.amount))).toBeInTheDocument();
       expect(row.getByText(laboratorio.duration as string)).toBeInTheDocument();
       expect(row.getByRole('link')).toHaveAttribute('href', laboratorio.sourceUrl);
     });
@@ -274,8 +275,8 @@ describe('the contract row', () => {
       // Those three are never absent — a contract missing any of them is
       // withheld — so a row that reaches a reader always carries all three.
       const row = within(rowFor(bare));
-      expect(row.getByText(formatPublicationDate(bare.publicationDate))).toBeInTheDocument();
-      expect(row.getByText(formatAmount(bare.amount))).toBeInTheDocument();
+      expect(row.getByText(formatCalendarDate(bare.publicationDate))).toBeInTheDocument();
+      expect(row.getByText(formatEuros(bare.amount))).toBeInTheDocument();
       expect(row.getByText(bare.awardee.name)).toBeInTheDocument();
     });
   });

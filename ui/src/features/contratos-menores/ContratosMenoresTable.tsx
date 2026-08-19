@@ -2,8 +2,9 @@ import { ActionIcon, Group, Stack, Table, Text } from '@mantine/core';
 import { IconExternalLink, IconInfoCircle } from '@tabler/icons-react';
 import { type CSSProperties, type ReactNode, useId } from 'react';
 
+import { formatCalendarDate } from '../../shared/lib/date';
+import { formatEuros } from '../../shared/lib/number';
 import { strings } from '../../shared/lib/strings';
-import { formatAmount, formatPublicationDate } from './contractFormat';
 import type { ContratoMenor } from './contracts';
 
 const copy = strings.contratosMenores;
@@ -80,7 +81,7 @@ function ContractRow({ contract }: { contract: ContratoMenor }): ReactNode {
       <Table.Td style={NARROW_COLUMN}>
         <WithIdentifierBeneath identifier={sourceId}>
           <Text size="sm" fw={500}>
-            {formatPublicationDate(contract.publicationDate)}
+            {formatCalendarDate(contract.publicationDate)}
           </Text>
         </WithIdentifierBeneath>
       </Table.Td>
@@ -96,7 +97,7 @@ function ContractRow({ contract }: { contract: ContratoMenor }): ReactNode {
         </WithIdentifierBeneath>
       </Table.Td>
       <Table.Td ta="right" fw={600} style={NARROW_COLUMN}>
-        {formatAmount(contract.amount)}
+        {formatEuros(contract.amount)}
       </Table.Td>
       <Table.Td style={NARROW_WRAPPING_COLUMN}>
         <OrNotPublished>{contract.duration}</OrNotPublished>
