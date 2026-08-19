@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 
 import { horizontalOverflow } from '../support/locators';
 import { clearRequestJournal, requestCountFor, resetMappings } from '../support/wiremock';
@@ -38,6 +38,25 @@ const NOT_FOUND_HELP =
   'A ligazón pode estar mal, ou o órgano pode xa non existir no catálogo. Escolle un ' +
   'órgano no selector do panel lateral para seguir.';
 const RETRY = 'Tentar de novo';
+
+// Named the way `organo-picker.spec.ts` names its own: the roles and Galician
+// labels a reader reaches these controls by, spelled once.
+function familyTab(scope: Page | Locator) {
+  return scope.getByRole('tab', { name: CONTRATOS_MENORES });
+}
+
+function tabBar(page: Page) {
+  return page.getByRole('tablist', { name: TABS_LABEL });
+}
+
+/** The section's control, reached through the page — the composition under test. */
+function yearChooser(page: Page) {
+  return page.getByRole('combobox', { name: YEAR_LABEL });
+}
+
+function statement(page: Page, title: string) {
+  return page.getByRole('status').filter({ hasText: title });
+}
 
 test.beforeEach(async () => {
   await resetMappings();
@@ -93,19 +112,17 @@ test.describe('Órgano page with a family', () => {
     // Órgano, the page frames it, and that family's own section fills the outlet.
     await expect(page).toHaveURL(sectionPath(SERGAS_ID));
     await expect(page.getByRole('heading', { name: SERGAS_NAME })).toBeVisible();
-    const tab = page
-      .getByRole('tablist', { name: TABS_LABEL })
-      .getByRole('tab', { name: CONTRATOS_MENORES });
+    const tab = familyTab(tabBar(page));
     await expect(tab).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('combobox', { name: YEAR_LABEL })).toHaveValue('2025');
+    await expect(yearChooser(page)).toHaveValue('2025');
   });
 
   test('opens the same page from a link straight to the family', async ({ page }) => {
     await page.goto(sectionPath(SERGAS_ID));
 
     await expect(page.getByRole('heading', { name: SERGAS_NAME })).toBeVisible();
-    await expect(page.getByRole('tab', { name: CONTRATOS_MENORES })).toBeVisible();
-    await expect(page.getByRole('combobox', { name: YEAR_LABEL })).toHaveValue('2025');
+    await expect(familyTab(page)).toBeVisible();
+    await expect(yearChooser(page)).toHaveValue('2025');
     // No redirect: the deep link is the address, not a detour through one.
     await expect(page).toHaveURL(sectionPath(SERGAS_ID));
   });
@@ -115,7 +132,7 @@ test.describe('Órgano page with a family', () => {
   }) => {
     await page.goto(`/organo/${SERGAS_ID}?year=2023&sort=amount%2Cdesc&page=2`);
 
-    await expect(page.getByRole('combobox', { name: YEAR_LABEL })).toHaveValue('2023');
+    await expect(yearChooser(page)).toHaveValue('2023');
     const url = new URL(page.url());
     expect(url.pathname).toBe(sectionPath(SERGAS_ID));
     expect(url.searchParams.get('year')).toBe('2023');
@@ -131,7 +148,7 @@ test.describe('Órgano page with a family', () => {
     await expect(page.getByText(PARTIAL_TITLE)).toBeVisible();
     await expect(page.getByText(NOT_UPDATED_TITLE)).toBeVisible();
     await expect(page.getByRole('heading', { name: PARTIAL_NAME })).toBeVisible();
-    await expect(page.getByRole('combobox', { name: YEAR_LABEL })).toHaveValue('2025');
+    await expect(yearChooser(page)).toHaveValue('2025');
   });
 
   test('asks for the Órgano once, the section reading its summary from that answer', async ({
@@ -141,7 +158,7 @@ test.describe('Órgano page with a family', () => {
     await clearRequestJournal();
     await page.goto(`/organo/${SERGAS_ID}`);
 
-    await expect(page.getByRole('combobox', { name: YEAR_LABEL })).toBeVisible();
+    await expect(yearChooser(page)).toBeVisible();
     // One member read carries the name, the tab and the chooser's years. A
     // section fetching its own summary would show as a second call here.
     expect(await requestCountFor('GET', `/api/organo/${SERGAS_ID}`)).toBe(1);
@@ -159,8 +176,8 @@ test.describe('Órgano page with a family', () => {
     test('frames the bar and the section without pushing the page sideways', async ({ page }) => {
       await page.goto(`/organo/${SERGAS_ID}`);
 
-      await expect(page.getByRole('tab', { name: CONTRATOS_MENORES })).toBeVisible();
-      await expect(page.getByRole('combobox', { name: YEAR_LABEL })).toBeVisible();
+      await expect(familyTab(page)).toBeVisible();
+      await expect(yearChooser(page)).toBeVisible();
       expect(await horizontalOverflow(page)).toBe(0);
     });
 
@@ -171,8 +188,8 @@ test.describe('Órgano page with a family', () => {
     test('wraps the section\u2019s own statements rather than squeezing them', async ({ page }) => {
       await page.goto(`/organo/${PARTIAL_ID}`);
 
-      const partial = page.getByRole('status').filter({ hasText: PARTIAL_TITLE });
-      const notUpdated = page.getByRole('status').filter({ hasText: NOT_UPDATED_TITLE });
+      const partial = statement(page, PARTIAL_TITLE);
+      const notUpdated = statement(page, NOT_UPDATED_TITLE);
       await expect(partial).toBeVisible();
       await expect(notUpdated).toBeVisible();
 
@@ -181,7 +198,7 @@ test.describe('Órgano page with a family', () => {
       // scroll check cannot see once an ancestor hides the overflow.
       await expect(partial).toBeInViewport({ ratio: 1 });
       await expect(notUpdated).toBeInViewport({ ratio: 1 });
-      await expect(page.getByRole('combobox', { name: YEAR_LABEL })).toBeInViewport({ ratio: 1 });
+      await expect(yearChooser(page)).toBeInViewport({ ratio: 1 });
       expect(await horizontalOverflow(page)).toBe(0);
     });
   });
