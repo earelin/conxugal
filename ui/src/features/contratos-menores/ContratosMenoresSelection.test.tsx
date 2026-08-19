@@ -54,6 +54,18 @@ function mockPage(asked: number, sort?: string, delayMillis = 0) {
   );
 }
 
+/**
+ * The section with its first read already answered, which is where every case
+ * below but the ordering's own starts. Awaiting the table is what separates them
+ * from the wait that precedes it — asserting before it arrives would be
+ * asserting against the loading state. The same idiom the row's cases use.
+ */
+async function showPage(initialPath?: string) {
+  const view = renderSection(summary(), initialPath);
+  await screen.findByRole('table');
+  return view;
+}
+
 async function chooseFrom(user: UserEvent, chooser: HTMLElement, option: string) {
   await user.click(chooser);
   await user.click(screen.getByRole('option', { name: option }));
@@ -125,8 +137,7 @@ describe('sorting and paging over the selection', () => {
       const user = userEvent.setup();
       mockPage(1);
       mockPage(1, 'amount,desc');
-      const { router } = renderSection(summary());
-      await screen.findByRole('table');
+      const { router } = await showPage();
 
       await chooseFrom(user, sortChooser(), copy.sort.amountDesc);
 
@@ -157,8 +168,7 @@ describe('sorting and paging over the selection', () => {
       const user = userEvent.setup();
       mockPage(3);
       mockContracts({ year: 2024 }, 200, page([contract()]));
-      const { router } = renderSection(summary(), `${SECTION_PATH}?page=3`);
-      await screen.findByRole('table');
+      const { router } = await showPage(`${SECTION_PATH}?page=3`);
 
       await chooseFrom(user, yearChooser(), '2024');
 
@@ -172,8 +182,7 @@ describe('sorting and paging over the selection', () => {
       const user = userEvent.setup();
       mockPage(3);
       mockPage(1, 'amount,asc');
-      const { router } = renderSection(summary(), `${SECTION_PATH}?page=3`);
-      await screen.findByRole('table');
+      const { router } = await showPage(`${SECTION_PATH}?page=3`);
 
       await chooseFrom(user, sortChooser(), copy.sort.amountAsc);
 
@@ -186,8 +195,7 @@ describe('sorting and paging over the selection', () => {
   describe('the paging control', () => {
     it('states the whole selection’s count and page total, not the page’s', async () => {
       mockPage(1);
-      renderSection(summary());
-      await screen.findByRole('table');
+      await showPage();
 
       // Three rows on screen, seven stated: the count answers how many contracts
       // the year holds, which is a question of its own rather than an
@@ -204,8 +212,7 @@ describe('sorting and paging over the selection', () => {
       mockPage(1);
       mockPage(2);
       mockPage(3);
-      renderSection(summary());
-      await screen.findByRole('table');
+      await showPage();
 
       const walked = [...shownSourceIds()];
       await user.click(pagingButton(paging.next));
@@ -229,8 +236,7 @@ describe('sorting and paging over the selection', () => {
       const user = userEvent.setup();
       mockPage(1);
       mockPage(3);
-      const { router } = renderSection(summary());
-      await screen.findByRole('table');
+      const { router } = await showPage();
 
       await user.click(pagingButton(paging.last));
 
@@ -244,8 +250,7 @@ describe('sorting and paging over the selection', () => {
       const user = userEvent.setup();
       mockPage(1).persist();
       mockPage(2);
-      const { router } = renderSection(summary());
-      await screen.findByRole('table');
+      const { router } = await showPage();
       await user.click(pagingButton(paging.next));
       await waitFor(() => {
         expect(router.state.location.search).toBe('?page=2');
@@ -264,8 +269,7 @@ describe('sorting and paging over the selection', () => {
       const user = userEvent.setup();
       mockPage(1, 'amount,desc');
       mockPage(2, 'amount,desc', 50);
-      renderSection(summary(), `${SECTION_PATH}?sort=amount%2Cdesc`);
-      await screen.findByRole('table');
+      await showPage(`${SECTION_PATH}?sort=amount%2Cdesc`);
 
       await user.click(pagingButton(paging.next));
 
@@ -296,8 +300,7 @@ describe('sorting and paging over the selection', () => {
       // Held open, so the in-flight state is a state this case owns rather than
       // a race it has to win against nock answering inside one macrotask.
       mockPage(2, undefined, 50);
-      renderSection(summary());
-      await screen.findByRole('table');
+      await showPage();
       const firstPage = shownSourceIds();
 
       await user.click(pagingButton(paging.next));
@@ -319,8 +322,7 @@ describe('sorting and paging over the selection', () => {
       const user = userEvent.setup();
       mockPage(1);
       mockPage(2);
-      renderSection(summary());
-      await screen.findByRole('table');
+      await showPage();
 
       // The whole point of holding the control still is that focus stays put and
       // nothing is remounted — which is also what leaves a reader who cannot see
