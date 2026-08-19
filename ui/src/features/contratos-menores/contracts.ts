@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { isEqual } from 'es-toolkit';
 
 import { apiFetch } from '../../shared/lib/httpClient';
 import type { Selection } from './selection';
@@ -111,8 +110,14 @@ export function useContratosMenores(organoId: string, selection: Selection) {
     queryKey: [...key, selection.page],
     queryFn: () => fetchContratosMenores(organoId, selection),
     placeholderData: (previous, previousQuery) => {
-      const held = previousQuery?.queryKey.slice(0, -1);
-      return isEqual(held, key) ? previous : undefined;
+      // Compared part by part rather than through a deep-equality helper: the
+      // key holds four primitives, and pulling in a helper that also knows about
+      // Maps, Dates and typed arrays cost this section's chunk a third of its
+      // size for nothing.
+      const held = previousQuery?.queryKey.slice(0, -1) ?? [];
+      const sameSelection =
+        held.length === key.length && key.every((part, at) => held[at] === part);
+      return sameSelection ? previous : undefined;
     },
   });
 }
