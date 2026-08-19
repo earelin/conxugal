@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { strings } from '../shared/lib/strings';
 import { BASE_URL, mockCurrentUser, mockOrganosPicker, renderApp } from '../test/renderApp';
 
-const organo = strings.organo;
-const section = strings.contratosMenores;
+const pageCopy = strings.organo;
+const sectionCopy = strings.contratosMenores;
 
 const ORGANO_ID = 'o-1';
 const ORGANO_NAME = 'Servizo Galego de Saúde';
@@ -62,7 +62,7 @@ function mockContracts(year: number) {
  * settles in two steps: awaiting the chooser is awaiting the second one.
  */
 function yearChooser() {
-  return screen.findByRole('combobox', { name: section.yearLabel });
+  return screen.findByRole('combobox', { name: sectionCopy.yearLabel });
 }
 
 /**
@@ -97,8 +97,8 @@ describe('the contratos menores section, mounted by the application router', () 
     // the section's, and the section sits in the panel the active tab owns.
     // Both on screen at once would also be true of a section that had replaced
     // the frame, which is exactly what this route used to do.
-    const bar = screen.getByRole('tablist', { name: organo.tabsLabel });
-    const tab = within(bar).getByRole('tab', { name: organo.families.contratosMenores });
+    const bar = screen.getByRole('tablist', { name: pageCopy.tabsLabel });
+    const tab = within(bar).getByRole('tab', { name: pageCopy.families.contratosMenores });
     expect(tab).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel')).toContainElement(await yearChooser());
   });
@@ -226,7 +226,7 @@ describe('the contratos menores section, mounted by the application router', () 
     // empty section.
     renderApp(SECTION_PATH);
 
-    expect(await screen.findByText(organo.noContracts)).toBeInTheDocument();
+    expect(await screen.findByText(pageCopy.noContracts)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: ORGANO_NAME })).toBeInTheDocument();
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
   });
@@ -236,7 +236,7 @@ describe('the contratos menores section, mounted by the application router', () 
 
     renderApp(SECTION_PATH);
 
-    expect(await screen.findByText(organo.notFoundTitle)).toBeInTheDocument();
+    expect(await screen.findByText(pageCopy.notFoundTitle)).toBeInTheDocument();
     // The page's answer about the Órgano, not the shell's about the URL.
     expect(screen.queryByText(strings.notFound.title)).not.toBeInTheDocument();
   });
