@@ -35,6 +35,23 @@ function mockOrgano() {
 }
 
 /**
+ * The section's own read of the contract list, which belongs to FEAT-0011 and
+ * not to this composition. It is stubbed rather than left to fail because the
+ * section is mounted for real here: an unstubbed read is a network error rather
+ * than an `HttpError`, so the client retries it behind every assertion and
+ * leaves the panel showing an error none of these cases is about.
+ *
+ * Matched on the year as well as the path, so a case only passes if the section
+ * asked for the year the case is about.
+ */
+function mockContracts(year: number) {
+  return nock(BASE_URL)
+    .get(`/api/organo/${ORGANO_ID}/${FAMILY_PATH}`)
+    .query({ year: String(year) })
+    .reply(200, { items: [], page: 1, size: 50, totalItems: 0, totalPages: 0 });
+}
+
+/**
  * The page and the section are separate chunks, so every entry into this screen
  * settles in two steps: awaiting the chooser is awaiting the second one.
  */
@@ -62,6 +79,7 @@ describe('the contratos menores section, mounted by the application router', () 
 
   it('answers the bare path with the page and the section it redirects to', async () => {
     mockOrgano();
+    mockContracts(2025);
 
     const { router } = renderApp(`/organo/${ORGANO_ID}`);
 
@@ -81,6 +99,7 @@ describe('the contratos menores section, mounted by the application router', () 
 
   it('renders the same page for a link straight to the family, without redirecting', async () => {
     mockOrgano();
+    mockContracts(2025);
 
     const { router } = renderApp(SECTION_PATH);
 
@@ -93,6 +112,7 @@ describe('the contratos menores section, mounted by the application router', () 
 
   it('opens the chooser on the year a deep link names', async () => {
     mockOrgano();
+    mockContracts(2023);
 
     renderApp(`${SECTION_PATH}?year=2023`);
 
@@ -101,6 +121,7 @@ describe('the contratos menores section, mounted by the application router', () 
 
   it("carries the section's own query string through the page's redirect", async () => {
     mockOrgano();
+    mockContracts(2024);
 
     const { router } = renderApp(`/organo/${ORGANO_ID}?year=2024&sort=amount%2Cdesc&page=3`);
 
@@ -116,30 +137,40 @@ describe('the contratos menores section, mounted by the application router', () 
 
   it('gives the section its summary as context, asking the server for it once', async () => {
     const scope = mockOrgano();
+    mockContracts(2025);
 
     const { queryClient } = renderApp(`/organo/${ORGANO_ID}`);
 
     await yearChooser();
 
-    // Serialised rather than filtered on the key's own elements: a section
-    // fetching a summary of its own would name the Órgano whatever it called the
-    // read, and react-query's idiomatic shape puts it in an options object —
-    // `['contratosMenores', { organoId }]` — where neither a check on the key's
-    // head nor `Array.includes` would find it.
+    // Every read this screen makes, named in full rather than counted. The
+    // filter is on the serialised key rather than its head because a summary
+    // read added later would name the Órgano whatever it called itself, and
+    // react-query's idiomatic shape puts it in an options object —
+    // `['contratosMenores', { organoId }]` — that a check on the head would miss.
     const scopedToThisOrgano = queryClient
       .getQueryCache()
       .getAll()
       .map((query) => query.queryKey)
       .filter((key) => JSON.stringify(key).includes(ORGANO_ID));
-    expect(scopedToThisOrgano).toEqual([['organo', ORGANO_ID]]);
-    // Nothing else was asked for either: `nock` refuses an unmatched request,
-    // and every interceptor this test set up is spent.
+    // The member read is the page's. The contract list is the section's own and
+    // is expected — what must not appear beside them is a read of the *summary*,
+    // which arrived as outlet context. The year in the list's key is the proof
+    // that it did: 2025 is the summary's first entry, and nothing on this screen
+    // asked the server which year that was.
+    expect(scopedToThisOrgano).toEqual([
+      ['organo', ORGANO_ID],
+      ['contratos-menores', ORGANO_ID, 2025],
+    ]);
+    // And the member read was made exactly once: `nock` refuses an unmatched
+    // request, and every interceptor these cases set up is spent.
     expect(scope.isDone()).toBe(true);
     expect(nock.pendingMocks()).toHaveLength(0);
   });
 
   it('leaves the page to name the Órgano, the section adding no heading of its own', async () => {
     mockOrgano();
+    mockContracts(2025);
 
     renderApp(`/organo/${ORGANO_ID}`);
 
