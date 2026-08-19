@@ -88,6 +88,34 @@ export const strings = {
       'incompleto e medra entre visitas.',
     notUpdatedTitle: 'Este órgano xa non se actualiza',
     notUpdatedBody: 'Os contratos xa importados seguen aquí, pero non se engadirán novos.',
+
+    tableLabel: 'Contratos menores deste órgano',
+    columnDate: 'Data',
+    columnObxecto: 'Obxecto',
+    columnAwardee: 'Adxudicatario',
+    columnAmount: 'Importe',
+    // Not optional and not a footnote: the thresholds that define a contrato
+    // menor are VAT-exclusive, so an unlabelled figure invites exactly the
+    // wrong comparison — and so does any total derived from one.
+    columnAmountVat: 'IVE incluído',
+    columnDuration: 'Duración',
+    columnSource: 'Fonte',
+    // Said once for the whole column rather than repeated on every row: one
+    // statement covers all of them and reads once.
+    durationCaveat:
+      'A fonte publica a miúdo unha duración por defecto do órgano no canto da do contrato, ' +
+      'así que esta columna non se debe ler como un prazo real.',
+    // The link is an icon, so its accessible name has to say which contract it
+    // opens — the column repeats down the page and «Fonte» alone names none of
+    // them.
+    sourceLinkLabel: (sourceId: string) =>
+      `Ver a publicación na fonte oficial do contrato ${sourceId}`,
+    // The object and the duration are the only two values a row can lack, the
+    // source publishing neither for some awards. Nothing else needs a marker:
+    // a contract without its date, amount or awardee is withheld entirely.
+    notPublished: 'Non publicado',
+    errorTitle: 'Non se puideron cargar os contratos.',
+    errorHelp: 'Téntao de novo; se persiste, volve máis tarde.',
   },
   home: {
     title: 'Benvido/a a conxugal',

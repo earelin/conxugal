@@ -1,10 +1,15 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import nock from 'nock';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   copy,
+  mockAnyContracts,
+  mockContracts,
+  ORGANO_ID,
   ORGANO_NAME,
+  page,
   renderSection,
   SECTION_PATH,
   summary,
@@ -34,6 +39,20 @@ function notUpdatedStatement() {
 }
 
 describe('the contratos menores section', () => {
+  beforeEach(() => {
+    nock.disableNetConnect();
+    // The list below the chooser reads on every render. These cases are about
+    // the chooser and the two statements, so the read is answered without them
+    // having to say for which year.
+    mockAnyContracts();
+  });
+
+  afterEach(() => {
+    nock.cleanAll();
+    nock.enableNetConnect();
+    vi.restoreAllMocks();
+  });
+
   describe('the year chooser', () => {
     it('offers exactly the years the summary carries, newest first', async () => {
       const user = userEvent.setup();
@@ -230,8 +249,11 @@ describe('the contratos menores section', () => {
       expect(notUpdatedStatement()).not.toBeInTheDocument();
     });
 
-    it('states both at once for an Órgano unmarked halfway through its initial import', () => {
+    it('states both at once for an Órgano unmarked halfway through its initial import', async () => {
       renderSection(summary({ partial: true, updating: false }));
+      // Awaited because the list's own wait is a status too, and counting them
+      // while it is on screen would count something that is not a statement.
+      await screen.findByRole('table');
 
       // Two statements, not one combined status: neither replaces the other and
       // both are true.
@@ -254,25 +276,43 @@ describe('the contratos menores section', () => {
       expect(notUpdated).toHaveStyle({ '--alert-color': 'var(--mantine-color-gray-light-color)' });
     });
 
-    it('says neither when the Órgano is complete and still being refreshed', () => {
+    it('says neither when the Órgano is complete and still being refreshed', async () => {
       renderSection(summary());
+      await screen.findByRole('table');
 
       expect(screen.queryAllByRole('status')).toEqual([]);
     });
   });
 
-  describe('what it does not read', () => {
-    it('renders from the supplied context alone, with no query client behind it', () => {
-      // The harness mounts no `QueryClientProvider`: a section that asked for
-      // the summary, the years or the Órgano's name would throw rather than
-      // quietly repeat a request the page has already made.
+  describe('what it reads and what it does not', () => {
+    it('asks for the contracts and for nothing else', async () => {
+      // Every request is enumerated rather than inferred from the interceptors.
+      // An unanswered one is not something a test would otherwise notice:
+      // react-query catches it and, it being no `HttpError`, quietly retries —
+      // so `pendingMocks` alone would say the contracts read happened without
+      // saying it was the only one.
+      nock.cleanAll();
+      const requests = vi.spyOn(globalThis, 'fetch');
+      mockContracts(2025, 200, page([]));
+
       renderSection(summary());
 
-      expect(yearChooser()).toBeInTheDocument();
+      expect(await screen.findByRole('table')).toBeInTheDocument();
+      // The summary, the years and the Órgano's name arrive as context; a
+      // section that read any of them would show up as a second entry here.
+      // Every read in the app passes `apiFetch` a path, so this is the whole
+      // shape a call can take here — a `Request` or a `URL` would be a read
+      // written some other way, and is worth failing on rather than coercing.
+      const asked = requests.mock.calls.map(([input]) => {
+        expect(typeof input).toBe('string');
+        return input as string;
+      });
+      expect(asked).toEqual([`/api/organo/${ORGANO_ID}/contratos-menores?year=2025`]);
     });
 
-    it('does not draw the Órgano’s name, which is the page’s above it', () => {
+    it('does not draw the Órgano’s name, which is the page’s above it', async () => {
       renderSection(summary());
+      await screen.findByRole('table');
 
       expect(screen.queryByText(ORGANO_NAME)).not.toBeInTheDocument();
     });
