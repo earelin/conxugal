@@ -89,7 +89,8 @@ describe('the contratos menores section, mounted by the application router', () 
 
     const { router } = renderApp(PAGE_PATH);
 
-    expect(await yearChooser()).toHaveValue('2025');
+    const chooser = await yearChooser();
+    expect(chooser).toHaveValue('2025');
     expect(screen.getByRole('heading', { name: ORGANO_NAME })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(SECTION_PATH);
 
@@ -100,7 +101,7 @@ describe('the contratos menores section, mounted by the application router', () 
     const bar = screen.getByRole('tablist', { name: pageCopy.tabsLabel });
     const tab = within(bar).getByRole('tab', { name: pageCopy.families.contratosMenores });
     expect(tab).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tabpanel')).toContainElement(await yearChooser());
+    expect(screen.getByRole('tabpanel')).toContainElement(chooser);
   });
 
   it('renders the same page for a link straight to the family, without redirecting', async () => {
