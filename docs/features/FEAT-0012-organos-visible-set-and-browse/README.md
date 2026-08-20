@@ -172,7 +172,7 @@ column, no count, no flag.
 - **The question is cheap in the direction it is asked.** The catalogue is a few hundred rows and
   the question is *does at least one visible row exist for this Órgano* — a semi-join on an indexed
   foreign key, not an aggregate over millions.
-  [ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md) reached the opposite
+  [ADR-0023](../../architecture/0023-operadores-as-a-stored-projection.md) reached the opposite
   conclusion for operadores because that projection carries *derived attributes* costing a
   top-1-per-group on every read; this one carries a **boolean per Órgano over a few hundred**.
 - **Cost is measured, not assumed.** SPEC-0004 R20 puts this read on SPEC-0005 R24's reference

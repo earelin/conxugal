@@ -1,7 +1,7 @@
 ---
 feat: FEAT-0010
 domain: backend
-adrs: [0002, 0008, 0018, 0019]
+adrs: [0002, 0008, 0019, 0023]
 status: done
 depends_on: [TASK-0002]
 ---

@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0006
-adrs: [0001, 0002, 0008, 0018, 0019]
+adrs: [0001, 0002, 0008, 0019, 0023]
 status: draft
 ---
 
@@ -16,12 +16,12 @@ published name it is shown under (R4), the emptiness rule that decides when an a
 no operador at all (R5), and the link from a contract to its operador.
 
 It settles nothing about identity that
-**[ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md)** has not settled:
+**[ADR-0023](../../architecture/0023-operadores-as-a-stored-projection.md)** has not settled:
 the catalogue is **stored state maintained by the import**, keyed by the fiscal identifier in
 R3's canonical form, with each contract carrying a foreign key to its operador.
 
 > **The decision this feature builds onto is settled.**
-> [ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md) is `accepted`, so the
+> [ADR-0023](../../architecture/0023-operadores-as-a-stored-projection.md) is `accepted`, so the
 > whole of tasks 2 to 4 — which rest on the catalogue being stored rather than computed — stand on
 > a decision no longer up for debate. Nothing below hedges against it changing, and nothing needs
 > to.
@@ -131,7 +131,7 @@ flowchart LR
   score. So an operador's identity is settled by its first contract and never revised as more
   arrive: no row written today is later discovered to be two operadores, or two rows one. That is
   what makes the stored catalogue of
-  [ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md) safe to maintain
+  [ADR-0023](../../architecture/0023-operadores-as-a-stored-projection.md) safe to maintain
   incrementally, and it is why no task here has a merge, a split or a confidence threshold in it.
 - Two awards name the same operador when their published fiscal identifiers are equal **once
   trimmed and upper-cased** (R3). That **canonical form is the identifier the row holds**, and it
@@ -144,7 +144,7 @@ flowchart LR
   because over-merging two real suppliers into one is as wrong as splitting one into two. The
   canonicalising function is where that line is drawn, and it is unit-tested from both sides.
 - **One column, matched on and displayed.** There is no separate match key beside a published
-  spelling, so no reader can pick the wrong one — the con ADR-0018 carried in draft. The price is
+  spelling, so no reader can pick the wrong one — the con ADR-0023 carried in draft. The price is
   that the published **letter case is retained nowhere** and an operador published as `b12345678`
   shows as `B12345678`: a deliberate exception to R13, which states it, taken because case is the
   one difference R3 rules meaningless for identity.
@@ -181,7 +181,7 @@ flowchart LR
 - The operador row stores the winning **name** and the **rank** it came from. When the import
   stores a contract, it compares that contract's rank against the row's; if it wins, the name and
   the rank move to it together. That is one comparison per contract stored, rather than a
-  top-1-per-operador computed on every read (ADR-0018).
+  top-1-per-operador computed on every read (ADR-0023).
 - Storing the rank, not just the name, is what makes the choice **deterministic across runs**
   (#7): without it, "is this contract newer than whatever won last time?" has no answer, and two
   imports over the same data could disagree.
@@ -226,7 +226,7 @@ erDiagram
   internal spacing are two names. R13 forbids normalising a published name, and folding them here
   would invent a canonical form in the one place the system is meant to be remembering that
   several existed.
-- **What this buys, stated plainly.** ADR-0018 names one thing as the projection's real price: a
+- **What this buys, stated plainly.** ADR-0023 names one thing as the projection's real price: a
   name is correct only while the contract that won R4 still wins it, and nothing can
   recompute it from stored data when a correction or withdrawal demotes that contract. With the
   names retained, that fallback becomes a choice among rows already held instead of a re-read of
@@ -236,7 +236,7 @@ erDiagram
   published it, so SPEC-0006 #25's per-row name spelling stays amended: a history row still shows
   the operador's one name. The **fiscal identifier needs no equivalent** — R3 holds one canonical
   form reached from every contract identically, so there is no spelling that could go stale and
-  nothing to demote. **ADR-0018's open question is narrowed, not closed:** the data a backward fix
+  nothing to demote. **ADR-0023's open question is narrowed, not closed:** the data a backward fix
   needs now exists, but nothing performs the demotion, and R7's lifecycle still owns it.
 
 ### The link, and where it is written
