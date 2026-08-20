@@ -88,7 +88,7 @@ public record ContratosMenoresImportState(
    */
   public Instant incrementalFloor(Duration lookback) {
     Objects.requireNonNull(lookback, "lookback must not be null");
-    return (refreshedThrough == null ? coveredThrough : refreshedThrough).minus(lookback);
+    return Objects.requireNonNullElse(refreshedThrough, coveredThrough).minus(lookback);
   }
 
   /** The mode an Órgano in this state takes on its next import. */
