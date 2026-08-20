@@ -170,6 +170,6 @@ class AdminOrganosControllerIntegrationTest extends AuthenticationTestSupport {
 
   private static ContratosMenoresImportState stateOf(
       OrganoId organoId, ContratosMenoresImportStatus status) {
-    return new ContratosMenoresImportState(organoId, status, null, T_ZERO);
+    return new ContratosMenoresImportState(organoId, status, null, T_ZERO, null);
   }
 }

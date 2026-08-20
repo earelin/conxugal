@@ -83,7 +83,8 @@ class ContratosMenoresWalkSliceLimitsTest {
                         ORGANO_ID,
                         ContratosMenoresImportStatus.INCOMPLETE,
                         resumePoint,
-                        Instant.EPOCH)));
+                        Instant.EPOCH,
+                        null)));
   }
 
   // Every start day of a leap year and of the year after it, each walked back to the floor — so

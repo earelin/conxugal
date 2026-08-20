@@ -522,7 +522,7 @@ class ImportOrganoContratosMenoresTest {
         .thenReturn(
             Optional.of(
                 new ContratosMenoresImportState(
-                    ORGANO_ID, ContratosMenoresImportStatus.INCOMPLETE, cursorDate, T_ZERO)));
+                    ORGANO_ID, ContratosMenoresImportStatus.INCOMPLETE, cursorDate, T_ZERO, null)));
   }
 
   private void runIsLive() {

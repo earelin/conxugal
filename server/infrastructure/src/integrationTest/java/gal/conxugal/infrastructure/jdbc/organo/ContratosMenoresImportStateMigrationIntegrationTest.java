@@ -30,7 +30,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Verifies V14's schema directly rather than through the adapter, because the claims are about
+ * Verifies the table's schema directly rather than through the adapter, because the claims are
+ * about
  * what the table holds, what it refuses and — most of it — what it deliberately does <em>not</em>
  * carry. A repository call cannot show the absence of a column, and the absence of any reference
  * to a run is the property that keeps pruning run history from stranding a half-loaded Órgano.
@@ -59,9 +60,10 @@ class ContratosMenoresImportStateMigrationIntegrationTest implements TestPropert
   // The acceptance criterion the whole table shape exists for: nothing here names a run, so
   // nothing that prunes run history can reach a cursor or the covered-through instant.
   @Test
-  void the_table_holds_the_three_organo_facts_and_nothing_naming_any_run() throws Exception {
+  void the_table_holds_the_four_organo_facts_and_nothing_naming_any_run() throws Exception {
     assertThat(columnNames())
-        .containsExactlyInAnyOrder("organo_id", "state", "cursor_date", "covered_through");
+        .containsExactlyInAnyOrder(
+            "organo_id", "state", "cursor_date", "covered_through", "refreshed_through");
   }
 
   @Test
@@ -107,15 +109,17 @@ class ContratosMenoresImportStateMigrationIntegrationTest implements TestPropert
             assertThat(exception.getSQLState()).isEqualTo("23502"));
   }
 
-  // The cursor is the one nullable column: an Órgano whose import has started but not yet walked
-  // past its first window has nowhere to point it.
+  // Both marks of progress are nullable, and for the same reason: an Órgano whose import has
+  // started but not yet walked past its first window has nowhere to point a cursor, and one that
+  // has never had a clean incremental run has nothing to refresh through.
   @Test
-  void started_import_may_hold_no_cursor_yet() throws Exception {
+  void started_import_may_hold_neither_cursor_nor_refresh_mark_yet() throws Exception {
     UUID organoId = insertOrgano("consorcio-x");
 
     insertState(organoId, "INCOMPLETE");
 
-    assertThat(storedCursorDate(organoId)).isNull();
+    assertThat(storedValue(organoId, "cursor_date")).isNull();
+    assertThat(storedValue(organoId, "refreshed_through")).isNull();
   }
 
   private List<String> columnNames() throws SQLException {
@@ -138,9 +142,10 @@ class ContratosMenoresImportStateMigrationIntegrationTest implements TestPropert
         "target_table");
   }
 
-  private @Nullable String storedCursorDate(UUID organoId)
-      throws SQLException {
-    String sql = "SELECT cursor_date FROM contrato_menor_import_state WHERE organo_id = ?";
+  private @Nullable String storedValue(UUID organoId, String column) throws SQLException {
+    String sql =
+        "SELECT cursor_date, refreshed_through FROM contrato_menor_import_state"
+            + " WHERE organo_id = ?";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setObject(1, organoId);
@@ -148,7 +153,7 @@ class ContratosMenoresImportStateMigrationIntegrationTest implements TestPropert
         if (!resultSet.next()) {
           throw new IllegalStateException("No state stored for Órgano %s".formatted(organoId));
         }
-        return resultSet.getString("cursor_date");
+        return resultSet.getString(column);
       }
     }
   }

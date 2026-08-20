@@ -2,6 +2,7 @@ package gal.conxugal.domain.organo;
 
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -18,7 +19,7 @@ import org.jspecify.annotations.Nullable;
  * by its contents, which is what makes a state read before an advance differ from the one read
  * after.
  *
- * <p>It sits in its own table rather than in three more columns on {@code organo_contratacion}
+ * <p>It sits in its own table rather than in four more columns on {@code organo_contratacion}
  * because the catalogue row is update-in-place territory for reconciliation and is read by every
  * catalogue read, while this one is rewritten after every batch for days. Separating them keeps
  * that churn off the row the import mark must survive on.
@@ -37,6 +38,14 @@ import org.jspecify.annotations.Nullable;
  * here or on the repository can rewrite it, which is what keeps that off-by-one from being
  * available to make.
  *
+ * <p>{@code refreshedThrough} is <b>T₁</b> — how far this Órgano has been <em>refreshed</em>
+ * through. It is a second instant rather than a rewrite of T₀ for the reason above: the two say
+ * different things — T₀ is <em>the history below this instant is loaded</em>, T₁ is <em>nothing
+ * published before this instant is missing</em> — and a port able to move T₀ is a port on which
+ * that off-by-one can be written. It is null until the Órgano's first clean incremental run, and
+ * that null is what makes {@link #incrementalFloor} fall back to T₀, so the first refresh after an
+ * initial import covers everything published while that import was walking.
+ *
  * <p>{@code cursorDate} is a conservative hint rather than a ledger: it is written after a batch
  * commits, so a crash in between leaves it slightly behind what is stored and the resumption
  * re-reads that overlap. That is safe because storing a contract again refreshes it in place.
@@ -46,7 +55,8 @@ public record ContratosMenoresImportState(
     @Id OrganoId organoId,
     ContratosMenoresImportStatus state,
     @Nullable LocalDate cursorDate,
-    Instant coveredThrough) {
+    Instant coveredThrough,
+    @Nullable Instant refreshedThrough) {
 
   public ContratosMenoresImportState {
     Objects.requireNonNull(organoId, "organoId must not be null");
@@ -55,12 +65,25 @@ public record ContratosMenoresImportState(
   }
 
   /**
-   * The state an Órgano's import starts in: incomplete, stamped with T₀, and with no cursor yet
-   * because no window has been walked.
+   * The state an Órgano's import starts in: incomplete, stamped with T₀, with no cursor yet because
+   * no window has been walked and no T₁ because an initial import has refreshed nothing.
    */
   public static ContratosMenoresImportState startedAt(OrganoId organoId, Instant coveredThrough) {
     return new ContratosMenoresImportState(
-        organoId, ContratosMenoresImportStatus.INCOMPLETE, null, coveredThrough);
+        organoId, ContratosMenoresImportStatus.INCOMPLETE, null, coveredThrough, null);
+  }
+
+  /**
+   * The instant an incremental window must reach back to: the later mark this Órgano carries, less
+   * the lookback margin corrections are found in.
+   *
+   * <p>It answers an instant and borrows no zone. Turning one into a window boundary needs the day
+   * the source publishes in, and the walk that needs it already holds that zone; a second copy here
+   * is one that eventually disagrees with the first.
+   */
+  public Instant incrementalFloor(Duration lookback) {
+    Objects.requireNonNull(lookback, "lookback must not be null");
+    return (refreshedThrough == null ? coveredThrough : refreshedThrough).minus(lookback);
   }
 
   /** The mode an Órgano in this state takes on its next import. */

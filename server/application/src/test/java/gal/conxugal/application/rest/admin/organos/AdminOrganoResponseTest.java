@@ -127,6 +127,6 @@ class AdminOrganoResponseTest {
 
   private static ContratosMenoresImportState loaded() {
     return new ContratosMenoresImportState(
-        ORGANO_ID, ContratosMenoresImportStatus.COMPLETE, null, T_ZERO);
+        ORGANO_ID, ContratosMenoresImportStatus.COMPLETE, null, T_ZERO, null);
   }
 }

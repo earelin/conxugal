@@ -2,6 +2,7 @@ package gal.conxugal.domain.organo;
 
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.Insert;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -19,7 +20,7 @@ import org.jspecify.annotations.Nullable;
  * <p>There is no delete either: an Órgano that has been loaded stays loaded, and unmarking it
  * retains both its contracts and the record of how far they got.
  *
- * <p><strong>Both writes commit in a transaction of their own</strong>, whatever the caller is
+ * <p><strong>All three writes commit in a transaction of their own</strong>, whatever the caller is
  * inside. An import's contracts and the cursor describing them are deliberately not one act — a
  * cursor rolled back by a data failure, or contracts rolled back by a failure to move the cursor,
  * are both the coupling the resumption design exists to avoid.
@@ -36,4 +37,7 @@ public interface ContratosMenoresImportStateRepository {
 
   /** Moves the status, touching neither the cursor nor T₀. */
   void updateState(@Id OrganoId organoId, ContratosMenoresImportStatus state);
+
+  /** Moves T₁, touching neither the status, nor the cursor, nor T₀. */
+  void updateRefreshedThrough(@Id OrganoId organoId, Instant refreshedThrough);
 }

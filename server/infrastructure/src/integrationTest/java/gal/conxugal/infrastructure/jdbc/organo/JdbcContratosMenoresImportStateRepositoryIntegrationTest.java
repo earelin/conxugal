@@ -18,6 +18,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -27,6 +28,7 @@ import java.util.UUID;
 import org.assertj.core.api.SoftAssertions;
 import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -34,7 +36,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-// transactional = false, because the two writes take a transaction of their own: inside the
+// transactional = false, because the three writes take a transaction of their own: inside the
 // test's own they would not see the row it had not yet committed, which is neither what a walk
 // does nor what the propagation is for.
 @MicronautTest(startApplication = false, transactional = false)
@@ -43,6 +45,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPropertyProvider {
 
   private static final Instant T_ZERO = Instant.parse("2026-08-06T09:00:00Z");
+  private static final Instant T_ONE = Instant.parse("2026-08-19T22:00:00Z");
 
   @Container
   static PostgreSQLContainer<?> postgres = PostgresContainer.create();
@@ -98,6 +101,7 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
       softly.assertThat(state.state()).isEqualTo(ContratosMenoresImportStatus.INCOMPLETE);
       softly.assertThat(state.cursorDate()).isNull();
       softly.assertThat(state.coveredThrough()).isEqualTo(T_ZERO);
+      softly.assertThat(state.refreshedThrough()).isNull();
     });
   }
 
@@ -117,7 +121,7 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
     assertThat(states).hasNumberOfRows(1);
     assertThat(states).row(0).value("cursor_date").isEqualTo(LocalDate.of(2026, 2, 6));
     assertThat(states).row(0).value("state").isEqualTo("INCOMPLETE");
-    assertThat(storedCoveredThrough(organoId)).isEqualTo(T_ZERO);
+    assertThat(storedInstant(organoId, "covered_through")).isEqualTo(T_ZERO);
   }
 
   @Test
@@ -133,7 +137,25 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
     assertThat(states).hasNumberOfRows(1);
     assertThat(states).row(0).value("state").isEqualTo("COMPLETE");
     assertThat(states).row(0).value("cursor_date").isEqualTo(LocalDate.of(2018, 1, 1));
-    assertThat(storedCoveredThrough(organoId)).isEqualTo(T_ZERO);
+    assertThat(storedInstant(organoId, "covered_through")).isEqualTo(T_ZERO);
+  }
+
+  // The acceptance criterion T₁ exists as a separate column for: a refresh must not disturb the
+  // position a half-loaded Órgano resumes from, nor the mark its future windows fall back to.
+  @Test
+  void marking_the_refresh_moves_only_that_instant() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    importStateRepository.insert(ContratosMenoresImportState.startedAt(organoId, T_ZERO));
+    importStateRepository.updateCursorDate(organoId, LocalDate.of(2018, 1, 1));
+
+    importStateRepository.updateRefreshedThrough(organoId, T_ONE);
+
+    Table states = importStateTable();
+    assertThat(states).hasNumberOfRows(1);
+    assertThat(states).row(0).value("state").isEqualTo("INCOMPLETE");
+    assertThat(states).row(0).value("cursor_date").isEqualTo(LocalDate.of(2018, 1, 1));
+    assertThat(storedInstant(organoId, "covered_through")).isEqualTo(T_ZERO);
+    assertThat(storedInstant(organoId, "refreshed_through")).isEqualTo(T_ONE);
   }
 
   // Every write is scoped to its own Órgano: an unscoped UPDATE would advance a neighbour's
@@ -148,6 +170,7 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
 
     importStateRepository.updateCursorDate(advanced, LocalDate.of(2026, 5, 6));
     importStateRepository.updateState(advanced, ContratosMenoresImportStatus.COMPLETE);
+    importStateRepository.updateRefreshedThrough(advanced, T_ONE);
 
     ContratosMenoresImportState other =
         importStateRepository.findByOrganoId(untouched).orElseThrow();
@@ -155,6 +178,7 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
       softly.assertThat(other.state()).isEqualTo(ContratosMenoresImportStatus.INCOMPLETE);
       softly.assertThat(other.cursorDate()).isNull();
       softly.assertThat(other.coveredThrough()).isEqualTo(T_ZERO);
+      softly.assertThat(other.refreshedThrough()).isNull();
     });
   }
 
@@ -169,8 +193,11 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
 
   // Read through JDBC rather than asserted on the table, because AssertJ DB compares a
   // timestamptz against the session time zone and the claim here is about the instant.
-  private static Instant storedCoveredThrough(OrganoId organoId) throws SQLException {
-    String sql = "SELECT covered_through FROM contrato_menor_import_state WHERE organo_id = ?";
+  private static @Nullable Instant storedInstant(OrganoId organoId, String column)
+      throws SQLException {
+    String sql =
+        "SELECT covered_through, refreshed_through FROM contrato_menor_import_state"
+            + " WHERE organo_id = ?";
     try (Connection connection = rawConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setObject(1, organoId.value());
@@ -178,7 +205,8 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
         if (!resultSet.next()) {
           throw new IllegalStateException("No state stored for Órgano %s".formatted(organoId));
         }
-        return resultSet.getTimestamp("covered_through").toInstant().truncatedTo(ChronoUnit.MILLIS);
+        Timestamp stored = resultSet.getTimestamp(column);
+        return stored == null ? null : stored.toInstant().truncatedTo(ChronoUnit.MILLIS);
       }
     }
   }

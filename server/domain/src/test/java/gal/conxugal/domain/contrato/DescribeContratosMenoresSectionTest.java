@@ -191,6 +191,6 @@ class DescribeContratosMenoresSectionTest {
         null,
         status == null
             ? null
-            : new ContratosMenoresImportState(ORGANO_ID, status, null, COVERED_THROUGH));
+            : new ContratosMenoresImportState(ORGANO_ID, status, null, COVERED_THROUGH, null));
   }
 }
