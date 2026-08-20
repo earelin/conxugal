@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import gal.conxugal.domain.contrato.ContratosMenoresImportSummary.StopReason;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
 import gal.conxugal.domain.importrun.ImportRunRepository;

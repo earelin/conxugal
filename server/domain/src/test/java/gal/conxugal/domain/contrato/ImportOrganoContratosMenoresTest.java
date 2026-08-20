@@ -13,7 +13,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import gal.conxugal.domain.contrato.ContratosMenoresImportSummary.StopReason;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.money.Money;
@@ -320,15 +319,39 @@ class ImportOrganoContratosMenoresTest {
     verify(importStates, never()).updateState(any(), any());
   }
 
+  // The cursor is asserted as well as the summary, because the two bookkeeping writes are ordered:
+  // the cursor moves first and the run is advanced after it. Advancing first would leave a batch
+  // whose run failed with no resumption point either, and only this assertion can tell them apart.
   @Test
   void carries_on_when_the_batch_progress_cannot_be_recorded() {
     neverStarted();
     runIsLive();
     storeAcceptsEverything();
+    cursorWritesAreRecorded();
     sourcePublishes(1, Map.of(FIRST_WINDOW_START, entries(1)));
     doThrow(new IllegalStateException("the run record is unreachable"))
         .when(importRuns)
         .advance(any(), any(), anyInt(), anyInt());
+
+    ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
+
+    assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(1, 0));
+    assertThat(cursorWrites).containsExactly(FIRST_WINDOW_START);
+  }
+
+  // The other half of the same guarantee. The cursor write is this walk's own per-batch hook rather
+  // than the shared read's business, and it runs inside the try the advance does — so a hook that
+  // throws costs the import nothing either. Outside that try it would break an initial import on a
+  // transient state-row failure, with the batch's contracts already committed.
+  @Test
+  void carries_on_when_the_cursor_cannot_be_moved() {
+    neverStarted();
+    runIsLive();
+    storeAcceptsEverything();
+    sourcePublishes(1, Map.of(FIRST_WINDOW_START, entries(1)));
+    doThrow(new IllegalStateException("the state row is unreachable"))
+        .when(importStates)
+        .updateCursorDate(any(), any());
 
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
@@ -491,11 +514,9 @@ class ImportOrganoContratosMenoresTest {
 
   private ImportOrganoContratosMenores walkFrom(LocalDate historyFloor) {
     return new ImportOrganoContratosMenores(
-        contratoMenorSource,
-        batch,
+        new ReadContratosMenoresWindow(contratoMenorSource, batch, importRuns),
         contratos,
         importStates,
-        importRuns,
         clock,
         new ContratosMenoresImportConfiguration(historyFloor));
   }
