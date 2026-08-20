@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0005
-adrs: [0001, 0002, 0004, 0008, 0010, 0011, 0014, 0015, 0017]
+adrs: [0001, 0002, 0004, 0008, 0010, 0011, 0014, 0015, 0017, 0019]
 status: draft
 ---
 
@@ -28,9 +28,10 @@ measures from, and puts a cron in front of the trigger that already exists.
 
 **No new architectural decision is taken, and none is needed.** The run state stays where
 **[ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md)** put it, the scheduler
-follows the precedent FEAT-0006 set for the catalogue import on
-**[ADR-0011](../../architecture/0011-blocking-io-virtual-threads.md)**'s virtual threads, the source
-is reached through the client **[ADR-0014](../../architecture/0014-resilient-throttled-outbound-http-client.md)**
+follows the shape FEAT-0006 set for the catalogue import — while declining its executor, because
+this one hands its work off in milliseconds and
+**[ADR-0011](../../architecture/0011-blocking-io-virtual-threads.md)** governs request handling
+rather than scheduled ticks — the source is reached through the client **[ADR-0014](../../architecture/0014-resilient-throttled-outbound-http-client.md)**
 already paces, and the one schema change is a nullable column on a table this feature owns. A
 feature that adds a column and a cron does not earn an ADR. The remaining citations are narrow and
 named where they bite: **[ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md)**
@@ -39,7 +40,7 @@ for the column on an aggregate that maps its own table,
 description in the authored contract, and
 **[ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md)** /
 **[ADR-0015](../../architecture/0015-frontend-feature-based-shared-core-modularization.md)** for
-task 7's two-string edit inside the admin Órganos slice.
+task 7's copy edit inside the admin Órganos slice.
 
 ## Scope
 - **Domain (the refresh floor):** a second durable instant on the per-Órgano import state —
@@ -402,19 +403,20 @@ javadoc and the contract description both become historical rather than current.
 6. **The scheduler** *(backend)*: `ContratosMenoresImportScheduler` on Micronaut's default
    `scheduled` executor, the `conxugal.contratos-menores.import.schedule` cron defaulting to
    `0 0 5 * * *`, and a refused claim logged rather than raised — with the integration tests that
-   only exist once it fires: a scheduled run refused while a long import holds the guard and
-   covering the whole gap once it frees, and a half-loaded Órgano resumed with no administrator
-   involved. *Depends on task 5.* *(SPEC-0005 #31, #13 scheduled half, #5 next-scheduled-run half,
-   #33 next-scheduled-run half, #14 automatic half, #35)*
-7. **The admin copy the scheduler makes true** *(frontend)*: three strings in
+   only exist once it fires: a scheduled run refused while a long import holds the guard, and the
+   next tick claiming once it frees. *Depends on task 4* — without the incremental branch a sweep
+   would skip every loaded Órgano; task 5's ordering is a freshness optimisation the scheduler works
+   without, so the two can land in parallel. *(SPEC-0005 #31, #13 scheduled half, #5
+   next-scheduled-run half, #33 next-scheduled-run half, #14 automatic half, #35)*
+7. **The admin copy the scheduler makes true** *(frontend)*: five strings in
    `ui/src/shared/lib/strings.ts` are the opposite of what ships in task 6 — the run banner's
    `succeededNote` (*"Ata que exista o refresco periódico, estes órganos non se actualizan sós"*),
    the mark dialog's `guardNote` (*"Mentres non exista o refresco periódico, ningún proceso a
    retoma"*), and the `imported` badge tooltip's history frozen at the moment of import — with
    `failedNote` and `abandonedNote`, which both tell an administrator to trigger it again by hand,
-   corrected in the same pass. *Depends on task 6.* *(No spec criterion; SPEC-0001 AC7 puts the copy
-   in this file, and a requirement contradicted by the interface that reports it is not met in
-   practice.)*
+   corrected in the same pass. *Depends on task 6.* *(No spec criterion; `ui/CLAUDE.md`'s i18n seam
+   puts the copy in this file, and a requirement contradicted by the interface that reports it is
+   not met in practice.)*
 
 **Criteria this feature deliberately leaves incomplete:**
 
