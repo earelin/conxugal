@@ -56,10 +56,17 @@ outside every future window. So `ContratosMenoresImportStateRepository` still ha
   `conxugal.contratos-menores.import.lookback` property that supplies it lands with the walk that
   reads it, in [TASK-0003](TASK-0003-the-incremental-walk.md).
 - **Three pieces of prose go stale with the column and are corrected here**, because each counts
-  what the table or the port holds: `ContratosMenoresImportState`'s and `V14`'s *"three more columns
-  on `organo_contratacion`"*, the port's *"**Both** writes commit in a transaction of their own"*,
-  and the JDBC repository's *"the **two** writes are declared only to carry their propagation"*.
-  There will be three.
+  what the table or the port holds: `ContratosMenoresImportState`'s *"three more columns on
+  `organo_contratacion`"*, the port's *"**Both** writes commit in a transaction of their own"*, and
+  the JDBC repository's *"the **two** writes are declared only to carry their propagation"*. There
+  will be three.
+
+  **`V14`'s copy of the same count is left as written.** Flyway checksums a migration over its whole
+  file, comments included, and validates on migrate; editing an applied migration to correct a word
+  fails the boot of every database that has already run it — a named `postgres-data` volume means
+  every developer's does — and no test can catch it, because a Testcontainer always migrates from
+  empty and so records the checksum it then validates. The corrected count goes in `V17`'s own
+  header, whose checksum is not recorded anywhere yet.
 
 **Out of scope:** any write of the column (TASK-0003), any read of it over HTTP, and any *última
 actualización* caption — a per-Órgano *last refreshed* read is

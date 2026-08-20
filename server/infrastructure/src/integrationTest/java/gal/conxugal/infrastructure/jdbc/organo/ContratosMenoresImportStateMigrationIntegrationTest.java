@@ -17,6 +17,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,10 +32,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Verifies the table's schema directly rather than through the adapter, because the claims are
- * about
- * what the table holds, what it refuses and — most of it — what it deliberately does <em>not</em>
- * carry. A repository call cannot show the absence of a column, and the absence of any reference
- * to a run is the property that keeps pruning run history from stranding a half-loaded Órgano.
+ * about what the table holds, what it refuses and — most of it — what it deliberately does
+ * <em>not</em> carry. A repository call cannot show the absence of a column, and the absence of any
+ * reference to a run is the property that keeps pruning run history from stranding a half-loaded
+ * Órgano.
  */
 @MicronautTest(startApplication = false)
 @Testcontainers(disabledWithoutDocker = true)
@@ -64,6 +65,16 @@ class ContratosMenoresImportStateMigrationIntegrationTest implements TestPropert
     assertThat(columnNames())
         .containsExactlyInAnyOrder(
             "organo_id", "state", "cursor_date", "covered_through", "refreshed_through");
+  }
+
+  // Both marks are instants, and a timestamp without a zone would make each one mean whatever the
+  // reading session's zone happened to be — which a write-then-read round-trip in a single session
+  // cannot catch.
+  @Test
+  void both_marks_of_progress_are_stored_with_their_zone() throws Exception {
+    assertThat(columnTypes())
+        .containsEntry("covered_through", "timestamp with time zone")
+        .containsEntry("refreshed_through", "timestamp with time zone");
   }
 
   @Test
@@ -118,8 +129,10 @@ class ContratosMenoresImportStateMigrationIntegrationTest implements TestPropert
 
     insertState(organoId, "INCOMPLETE");
 
-    assertThat(storedValue(organoId, "cursor_date")).isNull();
-    assertThat(storedValue(organoId, "refreshed_through")).isNull();
+    StoredMarks marks = storedMarks(organoId);
+
+    assertThat(marks.cursorDate()).isNull();
+    assertThat(marks.refreshedThrough()).isNull();
   }
 
   private List<String> columnNames() throws SQLException {
@@ -127,6 +140,21 @@ class ContratosMenoresImportStateMigrationIntegrationTest implements TestPropert
         "SELECT column_name FROM information_schema.columns"
             + " WHERE table_name = 'contrato_menor_import_state'",
         "column_name");
+  }
+
+  private Map<String, String> columnTypes() throws SQLException {
+    Map<String, String> types = new HashMap<>();
+    String sql =
+        "SELECT column_name, data_type FROM information_schema.columns"
+            + " WHERE table_name = 'contrato_menor_import_state'";
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql)) {
+      while (resultSet.next()) {
+        types.put(resultSet.getString("column_name"), resultSet.getString("data_type"));
+      }
+    }
+    return types;
   }
 
   private List<String> foreignKeyTargets() throws SQLException {
@@ -142,7 +170,12 @@ class ContratosMenoresImportStateMigrationIntegrationTest implements TestPropert
         "target_table");
   }
 
-  private @Nullable String storedValue(UUID organoId, String column) throws SQLException {
+  private record StoredMarks(@Nullable String cursorDate, @Nullable String refreshedThrough) {}
+
+  // Both nullable columns come back together so the query stays a literal — a helper taking a
+  // column name reads as if it served any column, and would fail at runtime for the ones it does
+  // not project.
+  private StoredMarks storedMarks(UUID organoId) throws SQLException {
     String sql =
         "SELECT cursor_date, refreshed_through FROM contrato_menor_import_state"
             + " WHERE organo_id = ?";
@@ -153,7 +186,8 @@ class ContratosMenoresImportStateMigrationIntegrationTest implements TestPropert
         if (!resultSet.next()) {
           throw new IllegalStateException("No state stored for Órgano %s".formatted(organoId));
         }
-        return resultSet.getString(column);
+        return new StoredMarks(
+            resultSet.getString("cursor_date"), resultSet.getString("refreshed_through"));
       }
     }
   }

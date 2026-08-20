@@ -12,7 +12,7 @@ CREATE TABLE contrato_menor_import_state (
     covered_through TIMESTAMPTZ NOT NULL
 );
 
--- Its own table rather than four more columns on organo_contratacion: that row is
+-- Its own table rather than three more columns on organo_contratacion: that row is
 -- update-in-place territory for catalogue reconciliation and is read by every catalogue read,
 -- while this one is rewritten after every batch for days. Deliberately carrying no run
 -- identifier and no foreign key to one, so pruning run history cannot strand a half-loaded

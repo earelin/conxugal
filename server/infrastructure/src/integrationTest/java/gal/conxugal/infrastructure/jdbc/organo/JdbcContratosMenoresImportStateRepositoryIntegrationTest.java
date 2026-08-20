@@ -121,7 +121,7 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
     assertThat(states).hasNumberOfRows(1);
     assertThat(states).row(0).value("cursor_date").isEqualTo(LocalDate.of(2026, 2, 6));
     assertThat(states).row(0).value("state").isEqualTo("INCOMPLETE");
-    assertThat(storedInstant(organoId, "covered_through")).isEqualTo(T_ZERO);
+    assertThat(storedMarks(organoId).coveredThrough()).isEqualTo(T_ZERO);
   }
 
   @Test
@@ -137,7 +137,7 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
     assertThat(states).hasNumberOfRows(1);
     assertThat(states).row(0).value("state").isEqualTo("COMPLETE");
     assertThat(states).row(0).value("cursor_date").isEqualTo(LocalDate.of(2018, 1, 1));
-    assertThat(storedInstant(organoId, "covered_through")).isEqualTo(T_ZERO);
+    assertThat(storedMarks(organoId).coveredThrough()).isEqualTo(T_ZERO);
   }
 
   // The acceptance criterion T₁ exists as a separate column for: a refresh must not disturb the
@@ -154,8 +154,8 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
     assertThat(states).hasNumberOfRows(1);
     assertThat(states).row(0).value("state").isEqualTo("INCOMPLETE");
     assertThat(states).row(0).value("cursor_date").isEqualTo(LocalDate.of(2018, 1, 1));
-    assertThat(storedInstant(organoId, "covered_through")).isEqualTo(T_ZERO);
-    assertThat(storedInstant(organoId, "refreshed_through")).isEqualTo(T_ONE);
+    assertThat(storedMarks(organoId).coveredThrough()).isEqualTo(T_ZERO);
+    assertThat(storedMarks(organoId).refreshedThrough()).isEqualTo(T_ONE);
   }
 
   // Every write is scoped to its own Órgano: an unscoped UPDATE would advance a neighbour's
@@ -172,14 +172,15 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
     importStateRepository.updateState(advanced, ContratosMenoresImportStatus.COMPLETE);
     importStateRepository.updateRefreshedThrough(advanced, T_ONE);
 
-    ContratosMenoresImportState other =
-        importStateRepository.findByOrganoId(untouched).orElseThrow();
-    SoftAssertions.assertSoftly(softly -> {
-      softly.assertThat(other.state()).isEqualTo(ContratosMenoresImportStatus.INCOMPLETE);
-      softly.assertThat(other.cursorDate()).isNull();
-      softly.assertThat(other.coveredThrough()).isEqualTo(T_ZERO);
-      softly.assertThat(other.refreshedThrough()).isNull();
-    });
+    // Asserted out of band rather than through findByOrganoId: two methods of the adapter under
+    // test agreeing cannot show that a row it never named is untouched, which is the whole claim.
+    Table states = importStateTable();
+    assertThat(states).hasNumberOfRows(2);
+    assertThat(states).row(1).value("organo_id").isEqualTo(untouched.value());
+    assertThat(states).row(1).value("state").isEqualTo("INCOMPLETE");
+    assertThat(states).row(1).value("cursor_date").isNull();
+    assertThat(storedMarks(untouched).coveredThrough()).isEqualTo(T_ZERO);
+    assertThat(storedMarks(untouched).refreshedThrough()).isNull();
   }
 
   private static Table importStateTable() {
@@ -191,10 +192,13 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
         .build();
   }
 
+  private record StoredMarks(Instant coveredThrough, @Nullable Instant refreshedThrough) {}
+
   // Read through JDBC rather than asserted on the table, because AssertJ DB compares a
-  // timestamptz against the session time zone and the claim here is about the instant.
-  private static @Nullable Instant storedInstant(OrganoId organoId, String column)
-      throws SQLException {
+  // timestamptz against the session time zone and the claims here are about the instants. Both
+  // columns come back together so the query stays a literal — a helper taking a column name reads
+  // as if it served any column, and would fail at runtime for the ones it does not project.
+  private static StoredMarks storedMarks(OrganoId organoId) throws SQLException {
     String sql =
         "SELECT covered_through, refreshed_through FROM contrato_menor_import_state"
             + " WHERE organo_id = ?";
@@ -205,10 +209,16 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
         if (!resultSet.next()) {
           throw new IllegalStateException("No state stored for Órgano %s".formatted(organoId));
         }
-        Timestamp stored = resultSet.getTimestamp(column);
-        return stored == null ? null : stored.toInstant().truncatedTo(ChronoUnit.MILLIS);
+        return new StoredMarks(
+            instantAt(resultSet, "covered_through"), instantAt(resultSet, "refreshed_through"));
       }
     }
+  }
+
+  private static @Nullable Instant instantAt(ResultSet resultSet, String column)
+      throws SQLException {
+    Timestamp stored = resultSet.getTimestamp(column);
+    return stored == null ? null : stored.toInstant().truncatedTo(ChronoUnit.MILLIS);
   }
 
   private static OrganoId insertOrgano(String sourceKey) throws SQLException {

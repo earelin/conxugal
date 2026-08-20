@@ -107,6 +107,18 @@ class ContratosMenoresImportStateTest {
         .isEqualTo(Instant.parse("2026-07-20T22:00:00Z"));
   }
 
+  // The two marks are chosen between by presence, not by which is later — with T₁ ahead of T₀, as
+  // it always is in normal operation, "the one that is set" and "the later one" cannot be told
+  // apart. This is the case that separates them, and it is the criterion's "ignores coveredThrough
+  // entirely".
+  @Test
+  void refresh_mark_behind_the_covered_instant_still_decides_the_floor() {
+    ContratosMenoresImportState state = refreshedThrough(Instant.parse("2026-08-01T00:00:00Z"));
+
+    assertThat(state.incrementalFloor(LOOKBACK))
+        .isEqualTo(Instant.parse("2026-07-02T00:00:00Z"));
+  }
+
   // A window is only as wide as the margin it is given, so a caller with none in hand has not
   // decided how far back corrections are looked for — answering T₁ itself would silently pick zero.
   @Test

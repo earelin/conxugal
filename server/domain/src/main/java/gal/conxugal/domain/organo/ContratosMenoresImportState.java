@@ -74,8 +74,13 @@ public record ContratosMenoresImportState(
   }
 
   /**
-   * The instant an incremental window must reach back to: the later mark this Órgano carries, less
-   * the lookback margin corrections are found in.
+   * The instant an incremental window must reach back to: the refresh mark if this Órgano has one,
+   * otherwise the instant its history is covered through, less the lookback margin corrections are
+   * found in.
+   *
+   * <p>Which mark applies is decided by <em>presence</em>, not by which is later. A T₁ that has
+   * somehow fallen behind T₀ still decides the floor, because the two answer different questions
+   * and the older-looking one is not the safer one to measure a window from.
    *
    * <p>It answers an instant and borrows no zone. Turning one into a window boundary needs the day
    * the source publishes in, and the walk that needs it already holds that zone; a second copy here
