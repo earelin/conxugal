@@ -99,8 +99,9 @@ layout of
 
 **Out of scope (owned by later features):**
 - **The incremental mode and the scheduler** — R8's window floor, R21's recurring run, and with
-  them R9's *automatic* resumption — belong to the next feature, *Contratos menores incremental
-  refresh*, numbered when it is written. The consequence is stated rather than hidden: **until
+  them R9's *automatic* resumption — belong to the next feature,
+  [FEAT-0014](../FEAT-0014-contratos-menores-incremental-refresh/README.md). The consequence is
+  stated rather than hidden: **until
   it lands, a refused mark is not recovered by a scheduled run** (SPEC-0005 #33), an interrupted
   import resumes only when an administrator triggers it, and a loaded Órgano goes stale. That is
   the price of shipping the load before the refresh, and every mechanism the second feature needs
