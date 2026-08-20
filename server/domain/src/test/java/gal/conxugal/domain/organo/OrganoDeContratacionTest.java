@@ -63,7 +63,8 @@ class OrganoDeContratacionTest {
                 id,
                 ContratosMenoresImportStatus.COMPLETE,
                 null,
-                Instant.parse("2026-08-06T09:00:00Z")));
+                Instant.parse("2026-08-06T09:00:00Z"),
+                null));
 
     assertThat(organo.importStatus()).isEqualTo(ContratosMenoresImportStatus.COMPLETE);
   }

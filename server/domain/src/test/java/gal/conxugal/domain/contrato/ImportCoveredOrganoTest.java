@@ -372,6 +372,6 @@ class ImportCoveredOrganoTest {
         true,
         true,
         null,
-        new ContratosMenoresImportState(ORGANO_ID, status, null, T_ZERO));
+        new ContratosMenoresImportState(ORGANO_ID, status, null, T_ZERO, null));
   }
 }
