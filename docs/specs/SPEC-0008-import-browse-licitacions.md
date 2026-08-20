@@ -11,8 +11,9 @@ The system imports the **licitacións** (tender procedures) published by
 Contratación an administrator has selected, stores each procedure whole, and lets
 authenticated users browse them. A licitación is a contract awarded through a competitive
 procedure: unlike a contrato menor it is **published as a process rather than as a fact** —
-announced before it is awarded, changed while it is open, split into **lotes** that are
-awarded separately, and decided among **several operadores económicos who competed for it**.
+announced before it is awarded, changed while it is open, sometimes split into **lotes** that
+are awarded separately, and decided among **several operadores económicos who competed for
+it**.
 
 This is the second contract family, and it fills the side of the split
 [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R15 left open. It reuses that
@@ -21,7 +22,8 @@ the same single-import guard, the same paging control, the same mandatory public
 What it adds is everything that follows from a procedure being competitive:
 
 - **Every operador that applied is recorded, not only the one that won.** The source
-  publishes the full list of *licitadores presentados* per lote, and knowing who competed —
+  publishes the full list of *licitadores presentados* — per lote where a procedure has lotes,
+  and for the procedure itself where it does not — and knowing who competed —
   and who competed and lost — is information the contratos menores family cannot produce at
   all.
 - **A bidder or an awardee may be a UTE** (*unión temporal de empresas*): a temporary
@@ -75,9 +77,13 @@ in ways that drive several requirements below, so it is recorded rather than ass
   initial import of SERGAS is ~16 800 retrievals — hours at a courteous rate (R31) — while
   its incremental runs cost one listing walk plus one retrieval per changed procedure.
   R29's yielding and R30 exist because of that asymmetry.
-- **Published per lote.** CPV codes, NUTS codes, the award and the bidder list are all
-  published **per lote** on a procedure that has lotes, and against the procedure as a whole
-  on one that does not. A procedure states how many lotes it has.
+- **Most procedures have no lotes, and the ones that do publish everything per lote.** CPV
+  codes, NUTS codes, the award and the bidder list are published **per lote** on a procedure
+  that has them, and against the procedure as a whole on one that does not; a procedure states
+  how many it has, or states none. **Lotes are the minority case**: of a sample of licitacións
+  taken on 2026-08-20, **4 of 100** procedures across three Órganos — SERGAS, Augas de Galicia and Axencia Turismo de Galicia — had any at all. The requirements below are written so the common case —
+  one procedure, one award, one bidder list — reads as the plain one, and lotes are what that
+  case generalises to rather than the shape everything is modelled on.
 - **A UTE is published with its members.** A bidder row carries one fiscal identifier and one
   name for the UTE, plus each member's own fiscal identifier and name. A UTE identifier is
   distinguishable by its form — it begins with `U` — but membership is **published**, not
@@ -148,11 +154,12 @@ claims an acceptance criterion whose surface another spec still contradicts:
 
 Five decisions are **settled** by this spec and stated here so no feature reopens them:
 
-1. **The licitación is the browsable unit; the lote is where the money is.** A procedure is
-   one row and one page however many lotes it has, and each lote carries its own
-   classification, award and bidders beneath it (R8). The alternative — one row per lote —
-   was rejected because it makes an Órgano's count mean something other than *procedures* and
-   repeats a procedure across a list a reader is scanning.
+1. **The licitación is the browsable unit; the award is per thing awarded.** A procedure is
+   one row and one page — whether it has no lotes, which is the common case, or several, each
+   carrying its own classification, award and bidders beneath it (R8). The alternative — one row
+   per lote — was rejected because it makes an Órgano's count mean something other than
+   *procedures* and repeats a procedure across a list a reader is scanning, and it would do so
+   to accommodate a minority of procedures.
 2. **A UTE is an operador, its members are operadores, and the award belongs to the UTE
    alone** (R17). A member's history shows the award as won *through* the UTE and excludes it
    from that member's own totals. Attributing it to every member as well was rejected: the
@@ -243,15 +250,21 @@ One decision remains outside this spec:
   shown or totalled.** The base budget includes VAT and the estimated value excludes it;
   presenting either unlabelled invites exactly the wrong comparison, as SPEC-0005 R7 already
   requires of the contratos menores amount.
-- **R8** — **A licitación with lotes carries them, and the lote is where the award and the
-  competition are recorded.** Each lote holds its own number and description, its own **CPV**
-  and **NUTS** classifications, its own **award** — the awarded operador, the awarded amount,
-  the resolution and its date, and the stated execution period — its own **bidders** (R16),
-  and its own **formalisation** where it has one.
+- **R8** — **Every licitación records its award and its competition in one place per thing
+  awarded.** For the ordinary procedure — which has **no lotes**, and is most of them — that
+  place is the procedure itself: one classification, one award, one bidder list. For a procedure
+  **split into lotes**, it is each lote, because that is how the source publishes it and how the
+  award was actually made.
 
-  A procedure **without** lotes carries the same facts against the procedure as a whole, so
-  every licitación has exactly one place its award and bidders are recorded — one per lote, or
-  one for the procedure — and no requirement below has to distinguish the two cases.
+  Whichever it is, the facts held are the same: a **CPV** and **NUTS** classification, an
+  **award** — the awarded operador, the awarded amount, the resolution and its date, and the
+  stated execution period — a list of **bidders** (R16), and a **formalisation** where there is
+  one. A procedure with lotes also holds each lote's number and description.
+
+  So every licitación has **exactly one place** its award and bidders are recorded, or several
+  where it has several lotes, and no requirement below has to distinguish the two cases. Where
+  one below says *per lote*, read it as *per lote, or per procedure where there are none* — the
+  spec says it the short way rather than doubling every sentence.
 
   **The licitación remains the unit a user browses** (R20) and the unit whose identity R13
   reconciles on. Lotes are not separate contracts and are not separately listed, searched or
@@ -422,21 +435,23 @@ One decision remains outside this spec:
     menor's. The base budget and estimated value stay on the licitación and never enter a
     cross-family total (R24);
   - **the awarding Órgano** — the Órgano that convened the procedure;
-  - **a stable, totally ordered contract identity** — the **publication identifier together
-    with the lote**, ordered by publication identifier and then by lote. The lote is part of it
-    because the row it identifies is a lote's award (below), and a procedure awarding five lotes
-    to five operadores would otherwise offer one identifier for five distinct history rows —
-    which SPEC-0006 R4's tie-break and R9's rows both need to tell apart. A procedure without
-    lotes has one such identity, and it is total either way;
+  - **a stable, totally ordered contract identity** — the **publication identifier**, and, on a
+    procedure that has lotes, **the lote alongside it**, ordered by publication identifier and
+    then by lote. A procedure with no lotes is identified by its publication identifier alone,
+    which is the ordinary case; the lote joins it only where one exists, and the order is total
+    either way. The lote is part of it at all because a procedure awarding five lotes to five
+    operadores would otherwise offer one identifier for five distinct history rows — which
+    SPEC-0006 R4's tie-break and R9's rows both need to tell apart;
   - **an explicit, non-destructive, reversible removal rule** — R15;
   - **a family name** — *licitacións*.
 
-  **One row of an operador's history is a lote's award**, not a procedure. An operador that won
-  two of a procedure's five lotes has **two** rows, each carrying that lote's own awarded amount,
-  each naming the procedure it belongs to and the Órgano that convened it. This follows from R8
-  putting the award on the lote: any other unit would either attribute money to an operador that
-  another firm was awarded, or state a figure the source never published. A procedure without
-  lotes contributes exactly one row, which is the ordinary case and reads no differently.
+  **One row of an operador's history is one award.** For most licitacións that is one row per
+  procedure, since most have no lotes. Where a procedure has lotes the award is the **lote's**,
+  so an operador that won two of five holds **two** rows, each carrying that lote's own awarded
+  amount and each naming the procedure it belongs to and the Órgano that convened it. This
+  follows from R8 recording the award where the source makes it: any other unit would either
+  attribute money to an operador that another firm was awarded, or state a figure the source
+  never published.
 
   **And one fact no other family supplies: participation.** An operador's history shows the
   licitacións it **bid on and did not win**, in a section of its own, distinct from what it
@@ -475,10 +490,10 @@ One decision remains outside this spec:
   publication **at the official source**. No row repeats the awarding Órgano on a list already
   scoped to one.
 
-  **A row names its awardee only when it has exactly one**, which a single-lote procedure
-  awarded once does; where the procedure's lotes were awarded to more than one operador the
-  row states **how many** rather than picking one of them, and R21's page is where they are
-  named. A row that names an awardee is a route to that operador under SPEC-0006 R8; a row that
+  **A row names its awardee only when it has exactly one** — which a procedure with no lotes
+  does once it is awarded, as does one whose lotes all went to the same operador. Where a
+  procedure's lotes were awarded to more than one, the row states **how many** rather than
+  picking one of them, and R21's page is where they are named. A row that names an awardee is a route to that operador under SPEC-0006 R8; a row that
   states a count is a route to the procedure, which is where the routes then are. Nothing here
   is a route that dead-ends: a party R16 could not resolve is simply not counted among the
   awardees the row states.
@@ -492,8 +507,9 @@ One decision remains outside this spec:
   total.
 - **R21** — **A licitación has a page of its own**, reached from its row, showing everything
   the system holds about it: its reference, object, state, types of contract, procedure and
-  processing, its base budget and estimated value, its CPV and NUTS classifications, its
-  **lotes** with each lote's classification, award and formalisation, and its **bidders** —
+  processing, its base budget and estimated value, its classification, award and formalisation —
+  held once for the procedure, or once per **lote** where it has them, each lote also naming
+  itself — and its **bidders** —
   each named with its fiscal identifier, each a route to its operador, each UTE showing its
   member firms — with the winning bidder distinguished from the rest. Every party is named
   under the name SPEC-0006 R4 selects for that operador and that operador's canonical fiscal
@@ -527,12 +543,13 @@ One decision remains outside this spec:
   this spec. A licitación whose CPV is published **per lote** (R8) is in the selection when
   **any** of its lotes carries the chosen code, since the licitación is the unit selected
   (R8).
-- **R24** — **Which amount a row states, and what a total counts.** A licitación with **at
-  least one lote awarded** states the **sum of its awarded lotes**, VAT-inclusive — which for
-  the ordinary single-award procedure is simply its awarded amount. One with **nothing awarded
-  yet** states its **base budget**, labelled as such, so the row says something about the size
-  of what is being tendered rather than nothing. The two are never presented as the same
-  figure, and a row always states which of the two it is showing.
+- **R24** — **Which amount a row states, and what a total counts.** An **awarded** licitación
+  states its **awarded amount**, VAT-inclusive — and where the procedure has lotes, the **sum of
+  the lotes awarded so far**, which for the ordinary lotless procedure is simply the one amount
+  it was awarded. One with **nothing awarded yet** states its **base budget**, labelled as such,
+  so the row says something about the size of what is being tendered rather than nothing. The
+  two are never presented as the same figure, and a row always states which of the two it is
+  showing.
 
   **A partly awarded procedure states the awarded part and says so.** Where some lotes are
   awarded and others are not, the row shows the awarded sum, marked as covering part of the
@@ -750,10 +767,10 @@ One decision remains outside this spec:
 9. **(R7, R8)** A procedure's classification, award and formalisation are held in exactly one
    place — per lote where it has lotes, against the procedure where it does not — and nowhere
    is a second copy of them held at procedure level.
-10. **(R8)** A licitación with several lotes is stored as **one** licitación holding those
-    lotes, each with its own CPV, NUTS, award and bidders; a licitación with no lotes holds the
-    same facts against the procedure itself. Neither appears more than once in any list or
-    count.
+10. **(R8)** A licitación with **no lotes** holds one CPV, NUTS, award and bidder list against
+    the procedure itself; one with several holds them per lote, stored as **one** licitación
+    holding those lotes. Neither appears more than once in any list or count, and no requirement
+    reads differently for the two.
 11. **(R9)** One run covering several Órganos runs **initially** for an Órgano never loaded,
     **resumes** one whose initial import is incomplete, and runs **incrementally** for one
     already loaded — the mode differing per Órgano within the same run, and per family for the
@@ -799,10 +816,11 @@ One decision remains outside this spec:
 21. **(R17)** A licitación **awarded** to a UTE counts as one award to the UTE: the UTE's
     awarded total includes it, **no member's awarded total does**, and each member's history
     shows it identified as won through that UTE. *(Stated here, proved in SPEC-0006.)*
-22. **(R18)** An operador awarded **two of a procedure's five lotes** holds **two** rows in its
-    contract history, each carrying that lote's own awarded amount and each naming the
-    procedure and the awarding Órgano; an operador awarded a procedure with no lotes holds
-    exactly one. No row carries an amount another operador was awarded.
+22. **(R18)** An operador awarded a procedure with **no lotes** holds exactly **one** row in
+    its contract history, identified by that procedure's publication identifier alone; one
+    awarded **two of a procedure's five lotes** holds **two**, each carrying that lote's own
+    awarded amount and each naming the procedure and the awarding Órgano. No row carries an
+    amount another operador was awarded.
 23. **(R18)** A licitación appears in its awardee's history in a *licitacións* section carrying
     its **awarded amount** — never its base budget or estimated value — and every party named
     on any row is named under the name SPEC-0006 R4 selects for that operador, this family
@@ -843,11 +861,11 @@ One decision remains outside this spec:
     first page after sorting by amount descending holds the highest-amount licitación of the
     year, not merely of the page previously displayed, and applying or clearing a filter
     returns the reader to the first page.
-34. **(R24)** A licitación with at least one lote awarded states the **sum of its awarded
-    lotes**; one with nothing awarded states its **base budget**, labelled as a budget; a
-    partly awarded one states its awarded sum marked as covering part of the procedure. Every
-    total or sum over a selection counts **awarded amounts only**, and a sort by amount places
-    each row by the figure it states.
+34. **(R24)** An awarded licitación with no lotes states its **awarded amount**; one with
+    lotes states the **sum of those awarded so far**, marked as covering part of the procedure
+    while any lote is still undecided; one with nothing awarded states its **base budget**,
+    labelled as a budget. Every total or sum over a selection counts **awarded amounts only**,
+    and a sort by amount places each row by the figure it states.
 35. **(R25)** A licitación **not yet awarded** — open for offers, pending award, or suspended
     by appeal — is imported, stored and **shown**, stating its state and naming no awardee. A
     licitación whose publication date cannot be interpreted is stored and shown to no reader.
