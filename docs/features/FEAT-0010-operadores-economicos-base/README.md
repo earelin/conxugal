@@ -88,16 +88,31 @@ import use case
   the two crossings; R10's year filter and sorts; R11's paging control; and R14's measurements
   over all of them. Nothing here is reachable over HTTP or on screen.
 - **Driving R7's lifecycle when a change subtracts.** An operador is *reachable exactly as long
-  as it has a visible contract*, and withdrawal is [SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md)
+  as it has at least one visible contract, one visible participation or one visible UTE
+  membership*, and withdrawal is [SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md)
   R13, which no feature builds yet. Until it does, no contract is ever invisible, so there is
   nothing for the lifecycle to subtract. What this feature owes the feature that builds it is
   stated in the design below, so the rule is not discovered late.
 - **Demoting a stale name.** Maintaining R4 forward — a newer contract wins — is a
   comparison this feature makes. Maintaining it *backward*, when the winning contract is
-  withdrawn or corrected out of the operador, is the open half ADR-0018 names, and it belongs
+  withdrawn or corrected out of the operador, is the open half ADR-0023 names, and it belongs
   with the feature that makes a contract invisible in the first place.
 - **Licitacións and any later family.** The catalogue is family-neutral by construction and this
   feature keeps it so, but contratos menores are the only family that exists to feed it.
+- **Participation and UTE membership (R16), and the privacy analysis R17 attaches to them.** The
+  two optional facts SPEC-0006 admits from a family able to supply them are held nowhere here: no
+  participation relation, no membership relation, and no column on the operador recording either.
+  Contratos menores can supply neither — the source publishes neither for that family — so the
+  only family feeding this catalogue today could not exercise them, and the family that can is
+  [SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md)'s, which has no feature yet.
+
+  **What their absence does not cost is the aggregate.** R16 makes a UTE **an operador in its own
+  right**, identified by its own published fiscal identifier and matched under R3 exactly like any
+  other, and a party that only ever bid and lost is an operador on the same rule. So the type this
+  feature builds already models every party R16 catalogues; what is missing is the two **relations**
+  between them, not a second kind of operador and not a flag distinguishing one. That is why R16
+  costs this feature nothing to accommodate later, and it is the reason to state it rather than
+  leave the silence to be read as an oversight.
 - **Anything the contracts do not say** — SPEC-0006's Scope rules out enrichment, sector or size
   classification, entity linking, and any inference of whether an identifier belongs to a person
   or an entity. No column here records any of it (R6).
@@ -263,11 +278,21 @@ erDiagram
   out of resolving on every upsert rather than only on insert, and it is half of SPEC-0006 #14.
   The other half — the previous operador becoming unreachable if that was its last contract — is
   R7's lifecycle and waits for the feature that makes a contract invisible.
-- **What this feature owes that feature:** reachability is *has at least one visible contract*,
-  and with the foreign key in place that is answerable either as a query or as a maintained count
-  on the row. ADR-0018 leaves the choice open deliberately; what it fixes is that whatever
-  answers it writes to **this** row, rather than introducing a second, computed notion of an
-  operador alongside the stored one.
+- **What this feature owes that feature:** reachability is *has at least one visible contract, one
+  visible participation, or one visible UTE membership* (R7 under R16). With the foreign key in
+  place, the **contract** third is answerable either as a query or as a maintained count on the
+  row; ADR-0023 leaves that choice open deliberately, and what it fixes is that whatever answers
+  it writes to **this** row, rather than introducing a second, computed notion of an operador
+  alongside the stored one.
+
+  **The other two thirds are not this feature's to owe, and are named anyway**, because the
+  cheapest-looking answer to the first is wrong for all three: a `visible_contract_count`
+  maintained on the row answers the whole predicate only while no family publishes participation
+  or UTE membership, and it silently answers the wrong question the day one does. A firm that has
+  only ever bid and lost, and one that has only ever been a **member** of an awarded UTE, both hold
+  **no contract of their own** — they are exactly the case R7's three-part predicate exists for, and
+  exactly the case a contract count would make unreachable. Whoever builds the lifecycle inherits
+  the choice; what this note fixes is that it is a choice about three facts, not one.
 
 ### Natural persons are not modelled as such
 Roughly one in seven awardees is a natural person, and the kind of identifier published does in
@@ -314,6 +339,15 @@ every *displayed* and *reachable* half — criteria #1, #5, #6's display, #8's l
 and #10's views, #11–#13, #15–#28, #31 and #32 — belongs to the read features, while #14's
 *becomes unreachable* half and #29's erasure guarantee wait on R7's lifecycle and
 SPEC-0005 R13's withdrawal.
+
+**R16 and R17's criteria — #38 to #43 — are left whole**, and not only because the read surfaces
+are elsewhere: they need a family that publishes participation or UTE membership, and no feature
+builds one. #40 is the only one this feature contributes to, and it contributes a third of it: *a
+party whose identifier is unusable produces no operador* is R5's emptiness rule, proved by tasks 1
+and 4, while *no participation and no membership* names two relations that do not exist. The
+criterion is therefore not claimed. Listing them here is what keeps them from looking covered by
+the feature that owns the operador aggregate, which is the trap the paragraph above exists to
+avoid.
 
 ## Edge cases
 - **The same identifier under three spellings** — ` B12345678 `, `b12345678`, `B12345678` — is
