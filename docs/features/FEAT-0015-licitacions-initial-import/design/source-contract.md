@@ -3,8 +3,8 @@
 What contratosdegalicia.gal actually offers for an Órgano's **licitacións**, measured against the
 live site on **2026-08-20**. This is the answer [FEAT-0015](../README.md) needs before its adapter
 can be written, and it is recorded here rather than in a task because several of the feature's
-decisions — and **two corrections to [SPEC-0008](../../../specs/SPEC-0008-import-browse-licitacions.md)** —
-rest on it.
+decisions — and **four corrections to [SPEC-0008](../../../specs/SPEC-0008-import-browse-licitacions.md)
+or a sibling document** — rest on it.
 
 It is the sibling of
 [FEAT-0009's contratos menores contract](../../FEAT-0009-contratos-menores-initial-import/design/source-contract.md),
@@ -281,28 +281,17 @@ about **2.8 GB over 16 798 requests** — roughly **4.7 hours at one request per
 figure is what SPEC-0008 R29's yielding exists for, and it is recorded here so the feature that
 builds yielding argues from a measurement rather than an estimate.
 
-## UTE identifiers: the finding that contradicts R17
+## UTEs: identified by structure, and usually without a fiscal identifier
 
 SPEC-0008 R17 requires a UTE to be stored "as an operador, identified by its **own published
 fiscal identifier** under SPEC-0006 R3", and its *What the source publishes* section states that
 "a bidder row carries one fiscal identifier and one name for the UTE" and that such an identifier
 "begins with `U`".
 
-**A UTE does have a fiscal identifier of its own — but the source usually does not publish it.**
-Measured over **240 procedures across eight Órganos**, yielding **41 UTE bidder rows**:
-
-| What the NIF cell holds | Rows | Share |
-| --- | --- | --- |
-| `-` | 31 | 76% |
-| `TEMP-00934`-style placeholder | 8 | 20% |
-| A real `U…` identifier | 2 | 5% |
-
-The two genuine ones are `U88779475` (UTE INSIDE OVIGA RIBADEO) and `U70551049` (UTE EPTISA
-SERVICIOS DE INGENIERÍA — ACERARQ CORUÑA). So the `U` prefix is real and R17's mechanism is right
-in principle; what fails is the **premise that the identifier is there to read**.
-
-The members are unaffected: a UTE row publishes each member's own NIF and name inline, and those
-are ordinary identifiers.
+**A UTE does have a fiscal identifier of its own — but the source usually does not publish it, and
+the `U` prefix is not how a UTE can be recognised.** What identifies one is the **shape of the
+bidder cell**: a consortium nests a second `<ul>` inside the first, listing each member's own
+identifier and name.
 
 ```html
 <tr class="filaLic_1_1 filasLicitadores hidden">
@@ -320,34 +309,57 @@ are ordinary identifiers.
 </tr>
 ```
 
-### Why this is a correctness problem and not a gap
+### Measured over 613 bidder rows in 250 procedures across ten Órganos
 
-[SPEC-0006](../../../specs/SPEC-0006-operadores-economicos.md) R5 defines an identifier as
-unusable when it is "absent, or empty once surrounding whitespace is ignored", and states that
-"nothing beyond the emptiness test is validated". `FiscalIdentifier.of` implements exactly that.
+| | nested `<ul>` — a consortium | flat cell — a single firm |
+| --- | --- | --- |
+| Rows | 35 | 578 |
+| NIF cell is `-` or empty | 25 | **0** |
+| NIF cell is a `TEMP-…` placeholder | 8 | **0** |
+| NIF cell is a real `U…` identifier | 2 | 0 |
+| NIF cell is an ordinary identifier | 0 | **578** |
 
-`-` is not empty. Neither is `TEMP-00934`. So under the rules as written:
+Four conclusions, and the model rests on all four:
 
-- **every `-` UTE in the system collapses into one operador** whose fiscal identifier is `-`,
-  carrying the bids and awards of dozens of unrelated consortia and displayed under whichever
-  name was published last. On the measured share that is 76% of all UTEs;
-- **every `TEMP-` placeholder becomes a catalogued operador**, which is the "invented or
-  placeholder one" SPEC-0006 R5 exists to forbid. The six distinct `TEMP-` values in the sample
-  did not repeat across procedures, but they are sequential within one procedure (`TEMP-00934`
-  … `TEMP-00939`), so they read as per-publication allocations and **nothing observed rules out
-  reuse across procedures** — which would merge unrelated consortia outright.
+- **The structure is the test, and it is exact.** In 613 rows the nested `<ul>` never appeared on a
+  single-firm bidder, and every consortium had one.
+- **The name is not the test.** **7 of the 35** consortia are published under a name that does not
+  begin with `UTE` — `MISTURAS-INGESAN`, `CONTACNOVA-CALLCENTER 012 2019`,
+  `ARCO LABORA SERV.CONST. S.L.U. - HONDIGO S.L.`, `IAM RUMBO INSTALACIONES Y OBRAS, S.L. - APER
+  SEGURIDAD…`. A prefix test would miss a fifth of them, and the `U`-prefix test SPEC-0008
+  describes would miss 33 of 35.
+- **A UTE usually publishes no usable identifier**: 33 of 35 carry `-` or a `TEMP-…` placeholder,
+  and only 2 carry a genuine one (`U88779475` UTE INSIDE OVIGA RIBADEO, `U70551049` UTE EPTISA
+  SERVICIOS DE INGENIERÍA — ACERARQ CORUÑA). So R17's mechanism is right in principle and
+  unavailable in 94% of cases.
+- **Members always publish real identifiers.** All **80** member entries carried an ordinary NIF —
+  none was `-`, none was a placeholder. So a consortium whose own identity is unpublished is still
+  composed of firms that are perfectly catalogueable.
 
-Both outcomes are silent. Nothing fails, a catalogue is produced, and it is wrong in a way that
-only shows up as an operador with an implausible history.
+### Why this makes the model simpler rather than harder
 
-**This is a SPEC-0006 change, not a decision this feature may take.** The narrowest fix is to
-widen R5's unusable test from *empty* to *empty or a published placeholder*, with `-` and the
-`TEMP-` form named — after which R16's existing rule carries the whole load with nothing else
-altered: the UTE yields no operador, the licitación stays stored and visible, its members and
-every other bidder are unaffected, and the 5% of UTEs that publish a real `U…` identifier are
-catalogued exactly as R17 intends. [FEAT-0015](../README.md) names it as a prerequisite and does
-not work around it.
+`-` and `TEMP-…` appear **only** inside consortium rows — zero of 578 single-firm rows carried
+either. So a parser that takes the consortium branch **structurally, before resolving any
+identifier**, never hands a placeholder to
+[SPEC-0006](../../../specs/SPEC-0006-operadores-economicos.md) R3's identity rule at all.
 
+That matters because R5 defines an identifier as unusable only when it is "absent, or empty once
+surrounding whitespace is ignored", and `FiscalIdentifier.of` implements exactly that — so
+`of("-")` returns a present value and `of("TEMP-00934")` likewise. Reached through the ordinary
+bidder path, those would catalogue **one** operador holding the fiscal identifier `-`, carrying the
+bids of dozens of unrelated consortia. Reached through the structural branch, they are never
+offered to it.
+
+So the SPEC-0006 R5 widening remains worth making as a guard against a row the sample did not
+contain, but it is **not** what makes this family safe — the structural branch is, and it is this
+feature's own to build. [FEAT-0015](../README.md) records the amendment as defensive rather than
+blocking for exactly that reason.
+
+**What a UTE without a published identifier needs instead is an identity that is not a fiscal
+identifier**, and the source itself suggests the shape: SPEC-0008 R17 observes that "a UTE is
+constituted for one procedure", which is what the measurements show — the consortium is a fact
+about one bid, and its members are the durable entities. FEAT-0015 records it on the participation
+accordingly.
 ## Other observations
 
 - **Not every procedure has bidders.** 44 of the first 70 procedures sampled carried a bidder
@@ -365,10 +377,19 @@ not work around it.
 
 ## Caveats
 
-- **The `TEMP-` reuse question is open.** Six distinct values were observed and none repeated, but
-  the sample is small and the values look allocated per publication. Nothing should depend on
-  their uniqueness in either direction; treating them as unusable makes the question moot, which
-  is another reason to prefer that fix.
+- **The `TEMP-` reuse question is open, and is now moot.** The values look allocated per
+  publication (`TEMP-00934` … `TEMP-00939` all on procedure 827145) and none was observed on two
+  procedures, but the sample is small. Nothing should depend on their uniqueness in either
+  direction — and nothing does, since the structural branch never treats one as an identity.
+- **No single-firm bidder row carrying `-` or a placeholder was observed** — 578 of 578 carried an
+  ordinary identifier. The structural branch's safety rests on that, and it is a measured negative
+  over one sample rather than a rule the source states. The SPEC-0006 R5 widening is the guard for
+  the row this sample did not contain, which is why FEAT-0015 still wants it.
+- **Consortium detection was verified on 35 rows**, all from the same renderer. The nested `<ul>`
+  is markup the source emits, not a documented contract, and a template change would break it
+  silently — a parse that finds a flat cell where a consortium was published would record a bidder
+  with a placeholder identifier. The `Part.` cross-check does not catch this, since the row count
+  is unchanged; nothing here does.
 - **Sizes and lote frequency were measured over 100 procedures** weighted toward large publishers.
   They are sound for costing an initial import of a large Órgano, which is what they are used for
   here, and should not be read as a distribution over the whole catalogue.

@@ -16,10 +16,10 @@ awards. This is the first buildable slice of
 
 It delivers R3–R8 (R7 and R8 as *storage* obligations — every display obligation is the browsing
 feature's); the **initial** and **resumed** modes of R9; the on-demand half of R10; R13's
-reconciliation and R14's idempotence; the storage halves of R16 and R18, and **as much of R17's as
-the source permits** (see *What this feature needs*); R27's triggers, including the mark that
-requests both families in order; R29's guard, **but not its yielding**; R30's two-level failure
-isolation; and R33's as-published rule.
+reconciliation and R14's idempotence; the storage halves of R16, R17 and R18 — R17's **as amendment
+1 restates it**, since the source identifies only 6% of consortia; R27's triggers, including the
+mark that requests both families in order; R29's guard, **but not its yielding**; R30's two-level
+failure isolation; and R33's as-published rule.
 
 It exposes **no licitación read endpoint**. Nothing browses licitacións until the browsing feature
 builds the family split, the year scoping, the CPV and state filters, the sort and the paging
@@ -69,46 +69,65 @@ stored projection of **[ADR-0023](../../architecture/0023-operadores-as-a-stored
 
 ## What this feature needs before it can be finished
 
-Two amendments, each to a `draft` spec, each narrow, and each named here so no task claims a
-criterion the system would currently get wrong. Neither is expensive; both are stated rather than
-absorbed because they are **other specs' rules**, and a feature that quietly works around a rule
-puts a second, invisible definition of it into the system.
+Two amendments, plus one defensive change to a sibling spec. Each is narrow, each is to a `draft`
+document, and each is named here so no task claims a criterion the system would currently get
+wrong — and so that no rule belonging to another spec is quietly worked around in an adapter.
 
-### 1. SPEC-0006 R5's unusable-identifier test has to admit placeholders
+**None of them blocks a task from starting.** An earlier draft of this feature named the SPEC-0006
+change as a blocker; the structural UTE branch described below removes that dependency, and the
+reasoning is recorded in amendment 1 rather than deleted.
 
-[SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) R5 makes an identifier unusable when it
-is "absent, or empty once surrounding whitespace is ignored", and says "nothing beyond the emptiness
-test is validated". Its criterion **#9** goes further and makes the consequence normative: "a
-contract published with an irregular but non-empty identifier **is** attached to an operador rather
-than rejected or discarded."
+### 1. SPEC-0008 R17 has to admit a UTE the source does not identify
 
-Measured over 41 UTE bidder rows in 240 procedures, the source publishes a real `U…` identifier for
-**2**; it publishes `-` for **31** and a `TEMP-00934`-style placeholder for **8**. A UTE does have a
-fiscal identifier of its own — `U88779475` and `U70551049` were both observed — so R17's mechanism
-is right in principle. What fails is the premise that it is there to read.
+R17 requires a UTE to be stored "as an operador, identified by its **own published fiscal
+identifier** under SPEC-0006 R3", and says such an identifier "begins with `U`". Measured over
+**613 bidder rows in 250 procedures**, neither half holds:
 
-Neither `-` nor `TEMP-00934` is empty, so under the rules **as written** every `-` UTE in the system
-must be catalogued as **one** operador holding the fiscal identifier `-` — the bids and awards of
-dozens of unrelated consortia merged under whichever name was published last — and every `TEMP-`
-value becomes exactly the "invented or placeholder" operador R5 exists to forbid. Both outcomes are
-silent: nothing fails, a catalogue is produced, and it is wrong.
+| Consortium rows (nested `<ul>`) | 35 |
+| --- | --- |
+| carrying a real `U…` identifier | **2** |
+| carrying `-` or empty | 25 |
+| carrying a `TEMP-…` placeholder | 8 |
+| published under a name **not** beginning `UTE` | **7** |
 
-**The amendment is three edits, not one.** R5's test widens from *empty* to *empty or a published
-placeholder*, naming `-` and the `TEMP-` form; **#8** widens to match R5's new wording; and **#9**
-is qualified, because as written it argues against the amended requirement. After that **R16 already
-says what follows** with nothing else altered — the party yields no operador, the licitación stays
-stored and visible, and every other party on the procedure is unaffected.
+So a UTE does have a fiscal identifier of its own — `U88779475` and `U70551049` were both observed
+— and the source publishes it for **6%** of them. R17's mechanism is right and unavailable.
 
-**It gates task 11, not task 13.** Task 11 resolves *every published bidder*, and a UTE row **is** a
-published bidder — so task 11 alone is sufficient to create the merged `-` operador, through the
-shipped `FiscalIdentifier.of` path. An earlier draft of this feature placed the dependency on the
-UTE task and described an interim in which placeholders were "left unresolved"; that is not
-achievable, because there is no way to leave `-` unresolved without exactly the test the amendment
-adds. Tasks 1–10 and 14–16 are unaffected.
+**What identifies a UTE is the structure of the bidder cell**, not its identifier and not its name:
+a consortium nests a second `<ul>` listing each member's own identifier and name. In 613 rows that
+test was exact — never firing on a single-firm bidder, never missing a consortium — while the name
+test would miss 7 of 35 and the `U`-prefix test would miss 33 of 35. This is not inference in the
+sense SPEC-0006 R6 forbids: the markup **is** the publication, which is precisely what R17's own
+"membership is published, not inferred" asks for.
 
-SPEC-0006 is itself `status: draft`, so this is a paragraph and two criteria in an unratified
-document. It may reasonably land in the same change as this feature rather than gating it — what it
-may not do is land in an adapter.
+**So a UTE is recorded whether or not it is identified**, and the amendment says how:
+
+- **a UTE with a published fiscal identifier** is an operador under SPEC-0006 R3, exactly as R17
+  says today — the 6% case, unchanged;
+- **a UTE without one** is recorded on the **participation** it made: its published name, its
+  membership, and the fact that the bidder was a consortium. It is *not* catalogued as an operador,
+  because SPEC-0006 R3 has no identity to catalogue it under and R5 rightly forbids inventing one;
+- **each member firm is an operador either way.** All **80** member entries measured carried an
+  ordinary identifier, so the firms that make up an unidentified consortium are perfectly
+  catalogueable, and the membership is stored in both cases;
+- **the award still belongs to the UTE alone.** Where the UTE is an operador the award is held by
+  it; where it is not, the award names the consortium and holds **no operador**, so it enters no
+  member's totals. Either way no euro is counted twice, which is the property R17 exists to
+  protect.
+
+**This is also the one exception to R18's no-per-row-name rule, and it needs stating.** R18 holds
+that this family stores no name of its own, because a name belongs on the operador an identifier
+resolves to. An unidentified UTE has no such operador, so the alternative to storing its published
+name on the participation is losing it — and a licitación page would then show a bidder that is
+nobody, which is worse than the rule R18 is protecting against. The exception is exactly one field
+on exactly one row type.
+
+**Why this is no longer a SPEC-0006 blocker.** `-` and `TEMP-…` appear **only** on consortium rows:
+0 of 578 single-firm rows carried either. Because the structural branch is taken *before* any
+identifier is resolved, a placeholder is never handed to `FiscalIdentifier.of` — which, per
+amendment 3, would otherwise catalogue one operador holding the identifier `-` for dozens of
+unrelated consortia. The safety comes from this feature's own parser, not from another spec moving
+first.
 
 ### 2. SPEC-0008 #9 and #10 have to admit a classification the source does not put on a lote
 
@@ -123,10 +142,32 @@ cannot store what the source publishes.
 
 The amendment is to widen #9 and #10 for **classification only**: held per lote *where the source
 publishes it per lote*, and against the procedure otherwise. The award and formalisation halves are
-untouched — those genuinely are per lote, exactly as R8 says. This is raised here on the same
-reasoning as the R5 amendment above rather than absorbed into the model, because #9 is the criterion
-that forbids the second copy, and a reader auditing the model against #9 as written would rightly
-conclude the model is wrong.
+untouched — those genuinely are per lote, exactly as R8 says. This is raised rather than absorbed
+into the model because #9 is the criterion that forbids the second copy, and a reader auditing the
+model against #9 as written would rightly conclude the model is wrong.
+
+### 3. SPEC-0006 R5 should treat a published placeholder as unusable — defensively
+
+[SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) R5 makes an identifier unusable only
+when it is "absent, or empty once surrounding whitespace is ignored", and says "nothing beyond the
+emptiness test is validated". Its criterion **#9** makes the consequence normative: "a contract
+published with an irregular but non-empty identifier **is** attached to an operador."
+
+`-` is not empty, and neither is `TEMP-00934`. `FiscalIdentifier.of` implements R5 exactly, so
+`of("-")` returns a present value. Reached through the ordinary bidder path, that would catalogue
+**one** operador holding the fiscal identifier `-`, carrying the bids of dozens of unrelated
+consortia under whichever name was published last, and every `TEMP-` value would become exactly the
+"invented or placeholder" operador R5 exists to forbid. Both failures are silent.
+
+**Amendment 1 closes that path**, because every measured `-` and `TEMP-` sat on a consortium row and
+the structural branch never offers one to R3. So this is **a guard, not a blocker**: 578 of 578
+single-firm rows carried an ordinary identifier, which is a measured negative over one sample rather
+than a rule the source states. If a single-firm row ever publishes `-`, the widening is what stops
+it corrupting the catalogue.
+
+The edit is three parts, so it lands complete: R5's test widens from *empty* to *empty or a
+published placeholder*, naming `-` and the `TEMP-` form; **#8** widens to match R5's new wording;
+and **#9** is qualified, because as written it argues against the amended requirement.
 
 ## Scope
 
@@ -141,9 +182,12 @@ conclude the model is wrong.
   resolution date, stated execution period), its bidder list and its formalisation. One place per
   thing awarded, and no second copy at procedure level.
 - **Domain (competition):** a **participation** per published bidder, marking which was awarded, and
-  a **UTE membership** between a consortium and each member firm. Both resolve to operadores under
+  a **UTE membership** between a consortium and each member firm, hung off the participation so one
+  shape serves an identified and an unidentified consortium alike. A single-firm bidder and a member
+  firm resolve to operadores under
   [SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) R3 and hold **no name of their own**
-  (R18). Each is a value type *and* a table, owned by named tasks below.
+  (R18); an unidentified consortium carries its **published name** on the participation, which is
+  R18's one exception (amendment 1). Each is a value type *and* a table, owned by named tasks below.
 - **Domain (source ports):** a `LicitacionListingSource` answering one **(Órgano, offset, order)**
   page, and a `LicitacionRecordSource` answering one **procedure** whole. Two ports because they are
   two mechanisms — one JSON, one HTML — and a single port would hide from its caller that one call
@@ -463,9 +507,10 @@ that promise for the whole catalogue.
 
 ### Operadores: extract the resolution, do not rewrite it
 
-Every award and every bidder resolves to an operador under SPEC-0006 R3, and **this family stores no
-name of its own** — not on an award and not on a bidder. That is R18's rule and it is why an unusable
-identifier leaves a party with nothing to display rather than a name without a link.
+Every award and every **single-firm** bidder resolves to an operador under SPEC-0006 R3, and this
+family stores no name of its own on either. That is R18's rule and it is why an unusable identifier
+leaves a party with nothing to display rather than a name without a link. **An unidentified UTE is
+the single exception**, described under *Consortia* below and legitimised by amendment 1.
 
 **The resolution already ships.** [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s
 derivation is done and `contrato_menor.operador_economico_id` is written today — but the logic lives
@@ -482,15 +527,41 @@ than assumed — `licitacion?N=822054` returns the licitación and `licitacion?N
 contrato menor, from the same address space and with no prefix distinguishing them. So `NomeRank`
 needs no family discriminator and R4's ordering stays total across families.
 
-The unusable-identifier rule is uniform across a bidder, an awardee and a UTE member: no operador,
-the party recorded as neither participant nor awardee, **the licitación stored and still visible**,
-and every other party on the procedure unaffected. A licitación can therefore show an award and name
-nobody, which R25 accepts here and SPEC-0005 R28 refuses for contratos menores — because there the
-award *was* the publication.
+The unusable-identifier rule is uniform across a single-firm bidder, an awardee and a UTE member: no
+operador, the party recorded as neither participant nor awardee, **the licitación stored and still
+visible**, and every other party on the procedure unaffected. A licitación can therefore show an
+award and name nobody, which R25 accepts here and SPEC-0005 R28 refuses for contratos menores —
+because there the award *was* the publication.
 
-A UTE is an operador in its own right, its members are operadores, the membership is stored, and
-**the award belongs to the UTE alone**. What this feature cannot do until SPEC-0006 R5 is amended is
-tell a published placeholder from an identifier.
+### Consortia: detected by structure, recorded either way
+
+**The parser takes the consortium branch before it resolves any identifier**, on the nested `<ul>`
+that a UTE cell carries. That ordering is the whole design, and it does three things at once: it is
+the only test that is exact (613 rows, no false positive, no miss, against 7 of 35 missed by a name
+test); it is what keeps `-` and `TEMP-…` away from `FiscalIdentifier.of`, since neither was ever
+observed on a single-firm row; and it means a UTE is recognised as one **before** the question of
+whether it can be catalogued arises.
+
+What is stored then depends only on whether the source published an identifier:
+
+| | UTE with a `U…` identifier (2 of 35) | UTE without one (33 of 35) |
+| --- | --- | --- |
+| The consortium | an operador under R3 | recorded on the participation, with its **published name** |
+| Its members | operadores under R3 | operadores under R3 |
+| The membership | stored | stored |
+| The award, if it won | held by the UTE operador | names the consortium, holds no operador |
+| Members' awarded totals | exclude it | exclude it |
+
+**Membership hangs off the participation in both cases**, rather than off the UTE operador in one
+and somewhere else in the other. That keeps one shape for a fact the source publishes one way, and
+it follows R17's own observation that "a UTE is constituted for one procedure" — the consortium is a
+property of a bid, and the member firms are the durable entities. A member's history reaches its
+consortia through its memberships, and an identified UTE reaches its members through its
+participations, so both directions R17 asks for are answerable without the UTE needing to be a
+catalogue entry.
+
+**No euro is counted twice under either branch**, which is the property R17 exists to protect: an
+award to a consortium is never attributed to a member, whether or not the consortium is catalogued.
 
 ### API surface
 
@@ -553,17 +624,21 @@ All sixteen are backend.
 9. **Record parse: the resolution, CPV, NUT and lotes tables** — awards per lote, classifications
    with `_` read as procedure-wide, and lotes taken from the award table rather than the lotes table.
    *Depends on 8.* *(SPEC-0008 #10 storage half, #9 as amended)*
-10. **Record parse: bidders, UTE member lists and the `Part.` cross-check** — the nested
-    `<ul>` member structure, and a count mismatch failing the procedure rather than storing a short
-    list. *Depends on 8.* *(SPEC-0008 #19 storage half)*
-11. **Extract `ResolveOperador`, and resolve awardees and bidders** — lift the resolution and
-    name-ranking out of `StoreContratosMenoresBatch` behind a collaborator both families call, then
-    resolve every award and every published bidder, recording which was awarded and holding no
-    per-row name. **Depends on the SPEC-0006 R5 amendment.** *(SPEC-0008 #19 storage half, #20
-    storage half, #23 storage half, #24 storage half)*
-12. **UTE membership** — the consortium as an operador, each member as an operador, and the
-    membership between them, with the award attributed to the UTE alone. *Depends on 11.*
-    *(SPEC-0008 #21 import half — unclaimed pending the amendment)*
+10. **Record parse: bidders, consortium detection and the `Part.` cross-check** — a bidder row
+    classified **by the nested `<ul>`**, never by its name or its identifier; a consortium's
+    published name and its member entries parsed out of the inner list; and a count mismatch failing
+    the procedure rather than storing a short list. *Depends on 8.* *(SPEC-0008 #19 storage half)*
+11. **Extract `ResolveOperador`, and resolve awardees and single-firm bidders** — lift the
+    resolution and name-ranking out of `StoreContratosMenoresBatch` behind a collaborator both
+    families call, then resolve every award and every single-firm bidder, recording which was
+    awarded and holding no per-row name. Consortium rows are routed past it by task 10's
+    classification, so no placeholder identifier reaches R3. *Depends on 10.* *(SPEC-0008 #19
+    storage half, #20 storage half, #23 storage half, #24 storage half)*
+12. **Consortia and their membership** — a UTE with a published identifier catalogued as an operador
+    under R3; one without recorded on its participation with its published name; each member firm an
+    operador either way; the membership stored in both cases; and the award attributed to the
+    consortium alone, entering no member's totals. *Depends on 11.* *(SPEC-0008 #21 import half, as
+    amendment 1 restates it)*
 13. **Reconciling a restated procedure** — `StoreLicitacion`, matching by publication identifier,
     refreshing in place, and marking withdrawn any lote, bidder or award the record no longer
     publishes. *Depends on 5, 6, 11.* *(SPEC-0008 #16 import half, #17)*
@@ -591,7 +666,6 @@ cannot prove:
   intervention* clause**;
 - **the yielding ADR and SPEC-0007's outcome vocabulary** own **#40's yield clauses** and **#12's
   *or by yielding the import guard* clause**; #12's progress-visibility half is SPEC-0007 R5–R7's;
-- **the SPEC-0006 R5 amendment** owns **#21**;
 - **the curation feature** owns **#15** and **#18** whole, and **#1's** resume, historical-re-read
   and remove/restore clauses;
 - **the browsing feature** owns **#2**, **#6's *its section says it is no longer being updated*
@@ -637,9 +711,18 @@ clause, and an earlier draft wrongly split them and assigned a phantom half to t
 - **A procedure whose `Relación de lotes` is empty but whose award table names two lotes** — the
   lotes exist. Taken from the award table, with description and estimated value left absent.
   *(SPEC-0008 #10)*
-- **A UTE published with `-` or a `TEMP-` placeholder** — 39 of 41 measured. Yields no operador and
-  no membership once SPEC-0006 R5 is amended; its member firms and every other bidder on the
-  procedure are unaffected, and the licitación stays visible. *(SPEC-0008 #20; #21 pending)*
+- **A consortium published with `-` or a `TEMP-` placeholder** — 33 of 35 measured. Detected by its
+  nested `<ul>` before any identifier is read, so the placeholder never reaches R3. It is recorded on
+  its participation under its published name, its member firms are catalogued normally, the
+  membership is stored, and any award it won names it while entering no member's totals.
+  *(SPEC-0008 #20, #21 as amended)*
+- **A consortium published under a name that does not begin `UTE`** — 7 of 35, such as
+  `MISTURAS-INGESAN`. Detected identically, because the test is the markup and not the name. A
+  name-prefix test would have recorded it as a single firm bidding under a placeholder identifier.
+  *(SPEC-0008 #21 as amended)*
+- **A single-firm bidder row carrying `-`** — never observed in 578 rows, and harmless if it appears:
+  amendment 3's widening makes it yield no operador rather than joining a shared one. The structural
+  branch is what makes this the unobserved case rather than the common one. *(SPEC-0008 #20)*
 - **An award whose fiscal identifier is unusable** — the licitación is stored and **stays visible**,
   showing an award that names nobody. This is the deliberate departure from SPEC-0005 R28, which
   withholds exactly that row. *(SPEC-0008 #20, #36)*
