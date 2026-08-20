@@ -120,7 +120,7 @@ public class ReadContratosMenoresWindow {
       if (!importRuns.holdsGuard(target.runId())) {
         return guardLost(target, added, refreshed);
       }
-      recordProgress(target, windowStart, windowEnd, lastPage, counts, recordBatch);
+      recordProgress(target, recordBatch, counts, windowStart, windowEnd, lastPage);
       offset += page.entries().size();
       if (!stillEligible.getAsBoolean()) {
         return noLongerEligible(target, added, refreshed);
@@ -164,11 +164,11 @@ public class ReadContratosMenoresWindow {
    */
   private void recordProgress(
       WalkTarget target,
+      BatchRecorder recordBatch,
+      UpsertCounts counts,
       LocalDate windowStart,
       LocalDate windowEnd,
-      boolean lastPage,
-      UpsertCounts counts,
-      BatchRecorder recordBatch) {
+      boolean lastPage) {
     try {
       recordBatch.record(counts, windowStart, windowEnd, lastPage);
       importRuns.advance(target.runId(), target.organoId(), counts.added(), counts.refreshed());

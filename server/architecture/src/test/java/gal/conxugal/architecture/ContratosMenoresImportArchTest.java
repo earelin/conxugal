@@ -37,11 +37,27 @@ class ContratosMenoresImportArchTest {
    * <em>reference</em> is not a call and would evade a call-only rule, and a caller injecting the
    * JDBC adapter concretely would reach the adapter's own re-declaration rather than the port's.
    *
+   * <p><strong>What this rule does not reach is {@code insert}</strong>, which writes the whole row
+   * and so could carry a cursor of its own. That path is closed by
+   * {@link gal.conxugal.domain.organo.ContratosMenoresImportState#startedAt} hardcoding the cursor
+   * to {@code null}, and by that factory being the only place the record is built outside the
+   * adapter — not by anything here. A change that let a caller choose the cursor at insertion time
+   * would need this rule extended, or it would open a second writer the rule cannot see.
+   *
+   * <p>The exemption is the whole class rather than the hook alone, because a lambda belongs to the
+   * class that declares it: "one writer" is enforced here as "one class". Any future method on
+   * {@link ImportOrganoContratosMenores} may therefore move the cursor unchecked, which is the
+   * intended latitude — that class is the walk that owns the resumption point.
+   *
    * <p>Micronaut writes the bean definition and the introduction proxy into the same output this
    * module reads, and the proxy is where the abstract write is implemented. Every one of those
    * classes is named with a leading {@code $}, which no hand-written class here is — matched on the
    * <em>full</em> name rather than the simple one, because the generated dispatcher is a nested
-   * class whose simple name is the innermost segment alone and carries no {@code $} at all.
+   * class whose simple name is the innermost segment alone and carries no {@code $} at all. Note
+   * that the {@code $Intercepted} proxy is <em>not</em> excluded by that match and stays in scope;
+   * it is clean only because the write is abstract and it dispatches through the interceptor chain
+   * rather than calling the method. A generated proxy that called {@code super} would be a false
+   * positive here — an exposure {@link ImportRunArchTest} shares.
    */
   @ArchTest
   static final ArchRule ONLY_THE_INITIAL_WALK_MOVES_THE_CURSOR =

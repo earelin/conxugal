@@ -356,6 +356,10 @@ class ImportOrganoContratosMenoresTest {
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
     assertThat(summary).isEqualTo(ContratosMenoresImportSummary.complete(1, 0));
+    // The advance shares the hook's try, so it is skipped too: the run loses that batch's counts
+    // along with its cursor. Sacrificing both is what keeps the contracts, and it is the ordering
+    // the sibling test pins from the other side.
+    verify(importRuns, never()).advance(any(), any(), anyInt(), anyInt());
   }
 
   @Test
