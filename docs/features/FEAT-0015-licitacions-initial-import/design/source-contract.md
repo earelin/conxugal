@@ -62,7 +62,7 @@ Plain `GET`, no cookies, no session, no CSRF token, no referer check. The respon
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `id` | integer | The publication identifier. Stable and **totally ordered**, which is what SPEC-0006 R4's tie-break and this feature's resumption cursor both need. Observed to increase with publication date (2013 → ~18 700, 2026 → ~829 000), but nothing here depends on that. |
+| `id` | integer | The publication identifier. Stable and **totally ordered**, which is what SPEC-0006 R4's tie-break and this feature's resumption cursor both need — and, per *One id space* below, totally ordered **across both families**, not merely within this one. Observed to increase with publication date (2013 → ~18 700, 2026 → ~829 000), but nothing here depends on that. |
 | `publicado` | string | Publication date, **`DD-MM-YYYY`**. Text, so it needs interpreting for R22's year scoping and R25's visibility test. |
 | `modificado` | string | **When the entry was last updated**, same format. This is the field contratos menores lacks entirely and the one SPEC-0008 R11's incremental promise rests on. |
 | `objeto` | string | Free text, no length cap. |
@@ -166,6 +166,29 @@ There is **no JSON equivalent**: `api/v1/licitaciones/{id}`, `…/licitacion/{id
 
 The same URL is SPEC-0008 R20's per-row route to the official source, and the record publishes it
 of itself, so it is **derivable from the stored `id`** with nothing extra captured at import time.
+
+### One id space, shared with contratos menores
+
+The `licitacion?N={id}` template is the one contratos menores already use for their own deep links
+(`ContratosMenoresPublicationConfiguration`, `"%s/licitacion?N=%d"`), which raises a question
+SPEC-0006 R4 depends on: its name tie-break is *"the higher contract identifier"*, and with a second
+family feeding one catalogue an identifier shared between families would make that tie-break
+ambiguous. The two families' observed id ranges **do overlap** — contratos menores run ~289 000 to
+~2 001 000 and licitacións ~18 700 to ~829 000 — so the question is not idle.
+
+Measured, it resolves cleanly. The same endpoint serves both families from **one publication id
+space**, and each identifier returns its own family's record:
+
+| Request | Answers |
+| --- | --- |
+| `licitacion?N=822054` | the **licitación** — 267 KB, `Nº lotes`, `Tipo de procedemento`, a bidder list |
+| `licitacion?N=2001090` | the **contrato menor** — 78 KB, no lotes field |
+| the same two with `&S=CM` appended | unchanged — the parameter does not select a family |
+
+So an identifier denotes one publication, whichever family it belongs to, and no two publications
+share one. **SPEC-0006 R4's tie-break therefore stays total across families** and `NomeRank` needs no
+family discriminator. Recorded because the property is load-bearing and the overlapping ranges make
+the opposite conclusion the natural guess.
 
 **Everything is in the one response.** The lotes list, the bidder list and the resolution table
 are pre-rendered into Bootstrap modals in the HTML — `mostrarInfoLotes()` and its siblings only
