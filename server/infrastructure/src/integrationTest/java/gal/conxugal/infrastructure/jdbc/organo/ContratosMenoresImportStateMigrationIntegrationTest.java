@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.jspecify.annotations.Nullable;
@@ -135,11 +136,8 @@ class ContratosMenoresImportStateMigrationIntegrationTest implements TestPropert
     assertThat(marks.refreshedThrough()).isNull();
   }
 
-  private List<String> columnNames() throws SQLException {
-    return queryStrings(
-        "SELECT column_name FROM information_schema.columns"
-            + " WHERE table_name = 'contrato_menor_import_state'",
-        "column_name");
+  private Set<String> columnNames() throws SQLException {
+    return columnTypes().keySet();
   }
 
   private Map<String, String> columnTypes() throws SQLException {
