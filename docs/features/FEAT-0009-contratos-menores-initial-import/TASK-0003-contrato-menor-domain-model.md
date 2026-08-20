@@ -58,7 +58,7 @@ rather than added to a table of millions later.
   large Órgano publishes carry a UUID each instead of two padded strings each.
 - It is **nullable by requirement**: SPEC-0006 R5 stores an award whose identifier is unusable
   under *no* operador rather than an invented one, and
-  [ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md) keeps the link
+  [ADR-0023](../../architecture/0023-operadores-as-a-stored-projection.md) keeps the link
   nullable for exactly that branch.
 
 > **Three spec obligations do not survive this, and they are named rather than discovered.**
