@@ -154,8 +154,9 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
     assertThat(states).hasNumberOfRows(1);
     assertThat(states).row(0).value("state").isEqualTo("INCOMPLETE");
     assertThat(states).row(0).value("cursor_date").isEqualTo(LocalDate.of(2018, 1, 1));
-    assertThat(storedMarks(organoId).coveredThrough()).isEqualTo(T_ZERO);
-    assertThat(storedMarks(organoId).refreshedThrough()).isEqualTo(T_ONE);
+    StoredMarks marks = storedMarks(organoId);
+    assertThat(marks.coveredThrough()).isEqualTo(T_ZERO);
+    assertThat(marks.refreshedThrough()).isEqualTo(T_ONE);
   }
 
   // Every write is scoped to its own Órgano: an unscoped UPDATE would advance a neighbour's
@@ -179,8 +180,9 @@ class JdbcContratosMenoresImportStateRepositoryIntegrationTest implements TestPr
     assertThat(states).row(1).value("organo_id").isEqualTo(untouched.value());
     assertThat(states).row(1).value("state").isEqualTo("INCOMPLETE");
     assertThat(states).row(1).value("cursor_date").isNull();
-    assertThat(storedMarks(untouched).coveredThrough()).isEqualTo(T_ZERO);
-    assertThat(storedMarks(untouched).refreshedThrough()).isNull();
+    StoredMarks marks = storedMarks(untouched);
+    assertThat(marks.coveredThrough()).isEqualTo(T_ZERO);
+    assertThat(marks.refreshedThrough()).isNull();
   }
 
   private static Table importStateTable() {
