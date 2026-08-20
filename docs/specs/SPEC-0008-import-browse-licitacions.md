@@ -61,18 +61,26 @@ in ways that drive several requirements below, so it is recorded rather than ass
   the formalisation. Nothing needs a third request.
 - **The listing is retrievable whole.** Unlike the contratos menores listing, which answers
   only over a bounded date range at a time, this one returns an Órgano's **entire published
-  history** in bounded pages, in a stable order. There is no date window to walk and none is
-  needed.
-- **The source states when an entry last changed.** This is the facility contratos menores
-  lack, and it changes what an incremental import can promise: a change to a procedure of any
-  age is **discoverable**, rather than reachable only by re-reading a window it happens to
-  fall in. SPEC-0005 R8's window design exists because that fact was unavailable; here it is
-  available and R11 uses it.
+  history** in bounded pages. There is no date window to walk and none is needed.
+- **The source states when an entry last changed, and will order by it.** The listing carries
+  two dates per entry — when the procedure was published in CPG, and **when it was last
+  updated** — and it can be asked to return entries **ordered by that update date, newest
+  first**. This is the facility contratos menores lacks entirely, and it decides what an
+  incremental import can promise: a change to a procedure of any age is **discoverable**, and
+  discoverable **cheaply**, rather than reachable only by re-reading a window it happens to fall
+  in. SPEC-0005 R8's window design exists because neither fact was available; here both are, and
+  R11 rests on them.
+
+  **The update order is not the order the listing comes back in by default**, and asking for it
+  is not optional for an incremental run: read in the default order, a run walking until it
+  recognises what it already has would stop in the wrong place and miss every change behind it.
+  A feature building this must order explicitly and must verify it got what it asked for.
 - **The volumes are one to two orders of magnitude smaller.** The largest publisher, SERGAS,
   holds **16 798** licitacións against roughly 1.4 million contratos menores; Axencia Turismo
-  de Galicia holds 1 064, Augas de Galicia 625, Portos de Galicia 385. The whole family is
-  small enough that an Órgano's listing can be re-read in full on every run — which is what
-  makes R11 affordable.
+  de Galicia holds 1 064, Augas de Galicia 625, Portos de Galicia 385. The family is small
+  enough that re-reading an Órgano's whole listing would be affordable — and, because the
+  listing orders by update date, a routine run need not: it reads recent updates until it
+  reaches what it already holds.
 - **The cost is in the pages, not the listing.** One retrieval per licitación means an
   initial import of SERGAS is ~16 800 retrievals — hours at a courteous rate (R31) — while
   its incremental runs cost one listing walk plus one retrieval per changed procedure.
@@ -303,6 +311,14 @@ One decision remains outside this spec:
   This is a stronger promise than SPEC-0005 R8's window, and it is the source that makes the
   difference: there, a correction was reachable only by re-reading a window it happened to fall
   in, so anything older was reachable only by R12. Here age is irrelevant.
+
+  **The source is asked for its listing in last-updated order, newest first**, which is what
+  makes the promises above cost a few pages rather than an Órgano's whole history. That is
+  stated as a requirement, not left as a feature's choice, because it is the one thing the
+  promises depend on that the source does not do by default — and getting it wrong yields a run
+  that reports success while reflecting nothing. What a run does with that order — where it
+  stops, and how much it re-reads to be sure — is a feature's to decide, and R14's idempotence
+  makes re-reading harmless.
 
   **What it still cannot promise is a change the source does not declare.** If the source
   amends a procedure without advancing its last-modified date, no routine run will notice, and
@@ -784,28 +800,31 @@ One decision remains outside this spec:
 13. **(R11)** A licitación the source declares changed is reflected by the next routine run
     **whatever its age** — including one published years before and modified today — and a
     licitación the source declares unchanged is not retrieved again by that run.
-14. **(R12)** An administrator can request a historical re-read of an already-loaded Órgano;
+14. **(R11)** An incremental run reads the Órgano's listing **ordered by last-updated date,
+    newest first**, and not in the order the source returns by default; a run that receives the
+    default order instead does not treat what it read as an account of what changed.
+15. **(R12)** An administrator can request a historical re-read of an already-loaded Órgano;
     it retrieves every procedure again regardless of what the source declares changed, and
     creates no duplicates.
-15. **(R13)** Re-importing after a procedure changes updates it in place, its identity
+16. **(R13)** Re-importing after a procedure changes updates it in place, its identity
     unchanged and its refreshed attributes shown; a lote or bidder the source no longer
     publishes for that procedure is **retained and marked withdrawn** — absent from every list,
     history and total — and an administrator can restore it. No import erases one.
-16. **(R14)** Two imports of the same published procedures in succession leave the same stored
+17. **(R14)** Two imports of the same published procedures in succession leave the same stored
     set with no duplicates and no attribute changes; a licitación stored earlier and absent
     from a later import is still present and unchanged.
-17. **(R15)** An administrator can remove a stored licitación, after which it appears in no
+18. **(R15)** An administrator can remove a stored licitación, after which it appears in no
     list, no operador history and no total; a later import that still finds it published does
     not re-add it; and an administrator can restore it.
-18. **(R16)** For a licitación with several bidders, every bidder the source publishes is
+19. **(R16)** For a licitación with several bidders, every bidder the source publishes is
     stored and shown with its name and fiscal identifier, the awarded one distinguished from
     the rest, and each resolves to the operador its identifier identifies under SPEC-0006 R3.
-19. **(R16, R25)** A licitación one of whose published fiscal identifiers is unusable under
+20. **(R16, R25)** A licitación one of whose published fiscal identifiers is unusable under
     SPEC-0006 R5 is **stored and stays visible**: that party is recorded as neither participant
     nor awardee, every other party on the same procedure is unaffected, and where the
     unresolvable party was the awardee the licitación shows an award naming nobody — offering
     no route that dead-ends.
-20. **(R17)** A licitación whose bidder is a UTE stores the UTE as an operador under its own
+21. **(R17)** A licitación whose bidder is a UTE stores the UTE as an operador under its own
     fiscal identifier, each member firm as an operador under its own, and the membership
     between them; opening the UTE names its members and opening a member names the UTEs it has
     belonged to. A member whose identifier is unusable yields no operador and no membership,
@@ -813,98 +832,98 @@ One decision remains outside this spec:
     > **Stated here, proved in [SPEC-0006](SPEC-0006-operadores-economicos.md).** The surfaces
     > this criterion describes are that spec's, and it cannot host them until the amendments
     > Scope names have landed. A feature under this spec owes the import and storage half.
-21. **(R17)** A licitación **awarded** to a UTE counts as one award to the UTE: the UTE's
+22. **(R17)** A licitación **awarded** to a UTE counts as one award to the UTE: the UTE's
     awarded total includes it, **no member's awarded total does**, and each member's history
     shows it identified as won through that UTE. *(Stated here, proved in SPEC-0006.)*
-22. **(R18)** An operador awarded a procedure with **no lotes** holds exactly **one** row in
+23. **(R18)** An operador awarded a procedure with **no lotes** holds exactly **one** row in
     its contract history, identified by that procedure's publication identifier alone; one
     awarded **two of a procedure's five lotes** holds **two**, each carrying that lote's own
     awarded amount and each naming the procedure and the awarding Órgano. No row carries an
     amount another operador was awarded.
-23. **(R18)** A licitación appears in its awardee's history in a *licitacións* section carrying
+24. **(R18)** A licitación appears in its awardee's history in a *licitacións* section carrying
     its **awarded amount** — never its base budget or estimated value — and every party named
     on any row is named under the name SPEC-0006 R4 selects for that operador, this family
     holding no per-row name of its own.
-24. **(R18)** An operador that bid for a licitación and did not win it sees that licitación in
+25. **(R18)** An operador that bid for a licitación and did not win it sees that licitación in
     a **participation** section of its history, separate from its awards, carrying no amount,
     and included in no awarded total. An operador that won one lote and lost another of the
     same procedure holds a row in each. *(Stated here, proved in SPEC-0006.)*
-25. **(R19)** An Órgano that publishes licitacións and **no** contratos menores is reachable by
+26. **(R19)** An Órgano that publishes licitacións and **no** contratos menores is reachable by
     a `USER` from the taxonomy tree and by name search, and its licitacións are viewable.
-26. **(R19, R26)** Opening an Órgano presents its contracts split by family with *licitacións*
+27. **(R19, R26)** Opening an Órgano presents its contracts split by family with *licitacións*
     alongside *contratos menores*; an Órgano with visible contracts of only one family shows
     only that family's section, and the absent one causes no error.
-27. **(R20)** An Órgano's licitacións list states how many licitacións the current selection
+28. **(R20)** An Órgano's licitacións list states how many licitacións the current selection
     contains and pages through exactly that many under SPEC-0005 R17's control — first,
     previous, next, last and a chosen page, none repeated, none skipped — with each row
     offering a route to the publication at the official source and no row naming the awarding
     Órgano.
-28. **(R20)** A row whose procedure has exactly one awardee names it and offers a route to that
+29. **(R20)** A row whose procedure has exactly one awardee names it and offers a route to that
     operador; a row whose lotes were awarded to more than one states how many awardees it has
     rather than naming one of them, and the page reached from it names them all.
-29. **(R20)** The list is ordered by publication date descending with the publication
+30. **(R20)** The list is ordered by publication date descending with the publication
     identifier descending as tie-break, so two procedures published on the same date have a
     determinate order; every ordering R23 offers is likewise total, and paging over any of them
     repeats and skips nothing.
-30. **(R21)** Opening a licitación from its row shows its lotes with each lote's
+31. **(R21)** Opening a licitación from its row shows its lotes with each lote's
     classification, award and formalisation, and its bidders with the winner distinguished,
     each bidder a route to its operador, each UTE naming its member firms, and states which
     bidders belong to which lote.
-31. **(R22)** An Órgano's licitacións are always scoped to one publication year: the section
+32. **(R22)** An Órgano's licitacións are always scoped to one publication year: the section
     opens on the most recent year with visible licitacións, the years offered are exactly those
     with visible licitacións, and no control produces an all-years list.
-32. **(R23)** Filtering a year by a CPV code returns exactly the licitacións of that year
+33. **(R23)** Filtering a year by a CPV code returns exactly the licitacións of that year
     carrying it — including one that carries it on **any** of its lotes — and filtering by
     state returns exactly those in it. Only codes and states the year's selection actually
     contains are offered, and the states offered are the source's own.
-33. **(R23)** Narrowing, sorting and counting apply to the **whole** year's selection: the
+34. **(R23)** Narrowing, sorting and counting apply to the **whole** year's selection: the
     first page after sorting by amount descending holds the highest-amount licitación of the
     year, not merely of the page previously displayed, and applying or clearing a filter
     returns the reader to the first page.
-34. **(R24)** An awarded licitación with no lotes states its **awarded amount**; one with
+35. **(R24)** An awarded licitación with no lotes states its **awarded amount**; one with
     lotes states the **sum of those awarded so far**, marked as covering part of the procedure
     while any lote is still undecided; one with nothing awarded states its **base budget**,
     labelled as a budget. Every total or sum over a selection counts **awarded amounts only**,
     and a sort by amount places each row by the figure it states.
-35. **(R25)** A licitación **not yet awarded** — open for offers, pending award, or suspended
+36. **(R25)** A licitación **not yet awarded** — open for offers, pending award, or suspended
     by appeal — is imported, stored and **shown**, stating its state and naming no awardee. A
     licitación whose publication date cannot be interpreted is stored and shown to no reader.
     > The administrator's view of undated licitacións is **unowned**, as SPEC-0005 carries the
     > anomalies surface its R28 requires: this requirement adds licitacións to that surface
     > rather than asking for a second one, and no feature claims it until that surface exists.
-36. **(R26)** An Órgano with no visible licitacións presents no licitacións section at all; one
+37. **(R26)** An Órgano with no visible licitacións presents no licitacións section at all; one
     whose initial licitacións import is still running presents it stating that what is shown is
     partial, distinguishably from one whose import has completed.
-37. **(R27)** An administrator can trigger a licitacións import scoped to all marked Órganos
+38. **(R27)** An administrator can trigger a licitacións import scoped to all marked Órganos
     and one scoped to a single Órgano, and the reported outcome states succeeded, failed or
     partially succeeded, the Órganos covered, which failed, and how many licitacións were added
     and refreshed.
-38. **(R28)** With no human trigger, the scheduler runs at least daily and covers each marked,
+39. **(R28)** With no human trigger, the scheduler runs at least daily and covers each marked,
     active Órgano in the mode its own licitacións state dictates — **initial** for one never
     loaded, resumed for one incomplete, incremental for one loaded — so an Órgano marked before
     this family existed becomes loaded without any administrator action.
-39. **(R29)** A trigger arriving while any import is running — of any family — is refused and
+40. **(R29)** A trigger arriving while any import is running — of any family — is refused and
     recorded as refused rather than queued; an initial licitacións import of a large Órgano does
     not prevent the day's scheduled work from running; and a run that yielded is reported
     distinguishably from one that failed or was stopped, related to the run that resumes it.
     *(The reporting half is proven by SPEC-0007 once its outcome vocabulary admits a yield.)*
-40. **(R30)** A run in which one Órgano fails reports **partially succeeded** and names it; a
+41. **(R30)** A run in which one Órgano fails reports **partially succeeded** and names it; a
     run in which a single procedure's retrieval fails records that procedure, completes the rest
     of its Órgano, and retrieves it on a later run; and in both cases every licitación already
     stored is present and unchanged afterwards.
-41. **(R31)** During an initial licitacións import — the longest sustained stream of outbound
+42. **(R31)** During an initial licitacións import — the longest sustained stream of outbound
     requests the system produces — the aggregate request rate against the source stays within
     the configured per-source bound, counted across every import running or yielding at the
     time.
-42. **(R32)** The measurements R32 names — first page and a deep page in the default order and
+43. **(R32)** The measurements R32 names — first page and a deep page in the default order and
     sorted by amount descending, a year's selection narrowed by CPV, and a single licitación's
     page with its lotes and bidders — are taken on the Órgano holding the most licitacións,
     under SPEC-0005 R24's reference environment, and recorded with the volume they were taken
     at.
-43. **(R33)** A licitación's published **text** values are stored trimmed of surrounding
+44. **(R33)** A licitación's published **text** values are stored trimmed of surrounding
     whitespace and otherwise byte-for-byte as published, while its amounts are stored as
     numbers and its dates interpreted; a value that cannot be interpreted is absent and the
     licitación is stored regardless. Its state is the one the source published, never one
     derived from whether it holds an award.
-44. **(R34)** Every read of a licitación, of a bidder list, and of an operador's participation
+45. **(R34)** Every read of a licitación, of a bidder list, and of an operador's participation
     history requires authentication; an unauthenticated visitor is denied all three.
