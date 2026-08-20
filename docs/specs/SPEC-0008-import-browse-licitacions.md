@@ -62,6 +62,14 @@ in ways that drive several requirements below, so it is recorded rather than ass
 - **The listing is retrievable whole.** Unlike the contratos menores listing, which answers
   only over a bounded date range at a time, this one returns an Órgano's **entire published
   history** in bounded pages. There is no date window to walk and none is needed.
+
+  **The two families' listings are genuinely different mechanisms**, and this is recorded
+  because the Órgano page makes them look alike: the date-range control it shows belongs to the
+  **contratos menores** tab alone, and the licitacións tab offers a state filter and no dates at
+  all. Requesting a date range against this listing is not an error and not a filter — it is
+  **silently ignored**, and every entry comes back regardless. A feature that assumed otherwise
+  would believe it had read a window and would in fact have read the whole history in an
+  arbitrary order, which is a failure that reports success.
 - **The source states when an entry last changed, and will order by it.** The listing carries
   two dates per entry — when the procedure was published in CPG, and **when it was last
   updated** — and it can be asked to return entries **ordered by that update date, newest
