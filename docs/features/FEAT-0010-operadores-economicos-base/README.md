@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0006
-adrs: [0001, 0002, 0008, 0018, 0019]
+adrs: [0001, 0002, 0008, 0019, 0023]
 status: draft
 ---
 
@@ -16,12 +16,12 @@ published name it is shown under (R4), the emptiness rule that decides when an a
 no operador at all (R5), and the link from a contract to its operador.
 
 It settles nothing about identity that
-**[ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md)** has not settled:
+**[ADR-0023](../../architecture/0023-operadores-as-a-stored-projection.md)** has not settled:
 the catalogue is **stored state maintained by the import**, keyed by the fiscal identifier in
 R3's canonical form, with each contract carrying a foreign key to its operador.
 
 > **The decision this feature builds onto is settled.**
-> [ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md) is `accepted`, so the
+> [ADR-0023](../../architecture/0023-operadores-as-a-stored-projection.md) is `accepted`, so the
 > whole of tasks 2 to 4 — which rest on the catalogue being stored rather than computed — stand on
 > a decision no longer up for debate. Nothing below hedges against it changing, and nothing needs
 > to.
@@ -88,16 +88,31 @@ import use case
   the two crossings; R10's year filter and sorts; R11's paging control; and R14's measurements
   over all of them. Nothing here is reachable over HTTP or on screen.
 - **Driving R7's lifecycle when a change subtracts.** An operador is *reachable exactly as long
-  as it has a visible contract*, and withdrawal is [SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md)
+  as it has at least one visible contract, one visible participation or one visible UTE
+  membership*, and withdrawal is [SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md)
   R13, which no feature builds yet. Until it does, no contract is ever invisible, so there is
   nothing for the lifecycle to subtract. What this feature owes the feature that builds it is
   stated in the design below, so the rule is not discovered late.
 - **Demoting a stale name.** Maintaining R4 forward — a newer contract wins — is a
   comparison this feature makes. Maintaining it *backward*, when the winning contract is
-  withdrawn or corrected out of the operador, is the open half ADR-0018 names, and it belongs
+  withdrawn or corrected out of the operador, is the open half ADR-0023 names, and it belongs
   with the feature that makes a contract invisible in the first place.
 - **Licitacións and any later family.** The catalogue is family-neutral by construction and this
   feature keeps it so, but contratos menores are the only family that exists to feed it.
+- **Participation and UTE membership (R16), and the privacy analysis R17 attaches to them.** The
+  two optional facts SPEC-0006 admits from a family able to supply them are held nowhere here: no
+  participation relation, no membership relation, and no column on the operador recording either.
+  Contratos menores can supply neither — the source publishes neither for that family — so the
+  only family feeding this catalogue today could not exercise them, and the family that can is
+  [SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md)'s, which has no feature yet.
+
+  **What their absence does not cost is the aggregate.** R16 makes a UTE **an operador in its own
+  right**, identified by its own published fiscal identifier and matched under R3 exactly like any
+  other, and a party that only ever bid and lost is an operador on the same rule. So the type this
+  feature builds already models every party R16 catalogues; what is missing is the two **relations**
+  between them, not a second kind of operador and not a flag distinguishing one. That is why R16
+  costs this feature nothing to accommodate later, and it is the reason to state it rather than
+  leave the silence to be read as an oversight.
 - **Anything the contracts do not say** — SPEC-0006's Scope rules out enrichment, sector or size
   classification, entity linking, and any inference of whether an identifier belongs to a person
   or an entity. No column here records any of it (R6).
@@ -131,7 +146,7 @@ flowchart LR
   score. So an operador's identity is settled by its first contract and never revised as more
   arrive: no row written today is later discovered to be two operadores, or two rows one. That is
   what makes the stored catalogue of
-  [ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md) safe to maintain
+  [ADR-0023](../../architecture/0023-operadores-as-a-stored-projection.md) safe to maintain
   incrementally, and it is why no task here has a merge, a split or a confidence threshold in it.
 - Two awards name the same operador when their published fiscal identifiers are equal **once
   trimmed and upper-cased** (R3). That **canonical form is the identifier the row holds**, and it
@@ -144,7 +159,7 @@ flowchart LR
   because over-merging two real suppliers into one is as wrong as splitting one into two. The
   canonicalising function is where that line is drawn, and it is unit-tested from both sides.
 - **One column, matched on and displayed.** There is no separate match key beside a published
-  spelling, so no reader can pick the wrong one — the con ADR-0018 carried in draft. The price is
+  spelling, so no reader can pick the wrong one — the con ADR-0023 carried in draft. The price is
   that the published **letter case is retained nowhere** and an operador published as `b12345678`
   shows as `B12345678`: a deliberate exception to R13, which states it, taken because case is the
   one difference R3 rules meaningless for identity.
@@ -181,7 +196,7 @@ flowchart LR
 - The operador row stores the winning **name** and the **rank** it came from. When the import
   stores a contract, it compares that contract's rank against the row's; if it wins, the name and
   the rank move to it together. That is one comparison per contract stored, rather than a
-  top-1-per-operador computed on every read (ADR-0018).
+  top-1-per-operador computed on every read (ADR-0023).
 - Storing the rank, not just the name, is what makes the choice **deterministic across runs**
   (#7): without it, "is this contract newer than whatever won last time?" has no answer, and two
   imports over the same data could disagree.
@@ -226,7 +241,7 @@ erDiagram
   internal spacing are two names. R13 forbids normalising a published name, and folding them here
   would invent a canonical form in the one place the system is meant to be remembering that
   several existed.
-- **What this buys, stated plainly.** ADR-0018 names one thing as the projection's real price: a
+- **What this buys, stated plainly.** ADR-0023 names one thing as the projection's real price: a
   name is correct only while the contract that won R4 still wins it, and nothing can
   recompute it from stored data when a correction or withdrawal demotes that contract. With the
   names retained, that fallback becomes a choice among rows already held instead of a re-read of
@@ -236,7 +251,7 @@ erDiagram
   published it, so SPEC-0006 #25's per-row name spelling stays amended: a history row still shows
   the operador's one name. The **fiscal identifier needs no equivalent** — R3 holds one canonical
   form reached from every contract identically, so there is no spelling that could go stale and
-  nothing to demote. **ADR-0018's open question is narrowed, not closed:** the data a backward fix
+  nothing to demote. **ADR-0023's open question is narrowed, not closed:** the data a backward fix
   needs now exists, but nothing performs the demotion, and R7's lifecycle still owns it.
 
 ### The link, and where it is written
@@ -263,11 +278,21 @@ erDiagram
   out of resolving on every upsert rather than only on insert, and it is half of SPEC-0006 #14.
   The other half — the previous operador becoming unreachable if that was its last contract — is
   R7's lifecycle and waits for the feature that makes a contract invisible.
-- **What this feature owes that feature:** reachability is *has at least one visible contract*,
-  and with the foreign key in place that is answerable either as a query or as a maintained count
-  on the row. ADR-0018 leaves the choice open deliberately; what it fixes is that whatever
-  answers it writes to **this** row, rather than introducing a second, computed notion of an
-  operador alongside the stored one.
+- **What this feature owes that feature:** reachability is *has at least one visible contract, one
+  visible participation, or one visible UTE membership* (R7 under R16). With the foreign key in
+  place, the **contract** third is answerable either as a query or as a maintained count on the
+  row; ADR-0023 leaves that choice open deliberately, and what it fixes is that whatever answers
+  it writes to **this** row, rather than introducing a second, computed notion of an operador
+  alongside the stored one.
+
+  **The other two thirds are not this feature's to owe, and are named anyway**, because the
+  cheapest-looking answer to the first is wrong for all three: a `visible_contract_count`
+  maintained on the row answers the whole predicate only while no family publishes participation
+  or UTE membership, and it silently answers the wrong question the day one does. A firm that has
+  only ever bid and lost, and one that has only ever been a **member** of an awarded UTE, both hold
+  **no contract of their own** — they are exactly the case R7's three-part predicate exists for, and
+  exactly the case a contract count would make unreachable. Whoever builds the lifecycle inherits
+  the choice; what this note fixes is that it is a choice about three facts, not one.
 
 ### Natural persons are not modelled as such
 Roughly one in seven awardees is a natural person, and the kind of identifier published does in
@@ -314,6 +339,15 @@ every *displayed* and *reachable* half — criteria #1, #5, #6's display, #8's l
 and #10's views, #11–#13, #15–#28, #31 and #32 — belongs to the read features, while #14's
 *becomes unreachable* half and #29's erasure guarantee wait on R7's lifecycle and
 SPEC-0005 R13's withdrawal.
+
+**R16 and R17's criteria — #38 to #43 — are left whole**, and not only because the read surfaces
+are elsewhere: they need a family that publishes participation or UTE membership, and no feature
+builds one. #40 is the only one this feature contributes to, and it contributes a third of it: *a
+party whose identifier is unusable produces no operador* is R5's emptiness rule, proved by tasks 1
+and 4, while *no participation and no membership* names two relations that do not exist. The
+criterion is therefore not claimed. Listing them here is what keeps them from looking covered by
+the feature that owns the operador aggregate, which is the trap the paragraph above exists to
+avoid.
 
 ## Edge cases
 - **The same identifier under three spellings** — ` B12345678 `, `b12345678`, `B12345678` — is

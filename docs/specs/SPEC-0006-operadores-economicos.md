@@ -137,7 +137,7 @@ One decision has since been taken:
 
 - **Whether the catalogue is stored state or computed on read**, which this spec left open as
   architecturally significant, is settled by
-  [ADR-0018](../architecture/0018-operadores-as-a-stored-projection.md): the catalogue is
+  [ADR-0023](../architecture/0023-operadores-as-a-stored-projection.md): the catalogue is
   **stored state maintained by the import**, with each contract carrying a foreign key to its
   operador. That record is `accepted`, so the features below rest on a decision that is no longer
   up for debate. What the choice decides — whether R7's lifecycle happens automatically or has to
@@ -263,7 +263,7 @@ One decision has since been taken:
   **What this makes possible, and what it does not.** R7 requires the catalogue to re-derive as
   the contracts currently stand; when a correction or withdrawal demotes the contract that won
   R4, the principal name has to fall back to whatever now ranks highest.
-  [ADR-0018](../architecture/0018-operadores-as-a-stored-projection.md) records that this cannot
+  [ADR-0023](../architecture/0023-operadores-as-a-stored-projection.md) records that this cannot
   be done from stored data today and names it as the projection's real price. With the names
   retained, the fallback is a choice among rows the system already holds rather than a re-read of
   every contract. **It does not restore per-contract spelling.** R13 shows an operador's history

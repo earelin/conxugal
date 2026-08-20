@@ -1,7 +1,7 @@
 ---
 feat: FEAT-0010
 domain: backend
-adrs: [0002, 0008, 0018, 0019]
+adrs: [0002, 0008, 0019, 0023]
 status: done
 depends_on: []
 ---
@@ -13,7 +13,7 @@ and the JDBC adapter are [TASK-0003](TASK-0003-operador-store.md)'s. Governed by
 [ADR-0002](../../architecture/0002-hexagonal-architecture.md), by
 [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md)
 (1:1 to its own table, carrying its own mapping annotations), by
-[ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md) (the catalogue is
+[ADR-0023](../../architecture/0023-operadores-as-a-stored-projection.md) (the catalogue is
 stored state the import maintains, not a view computed on read) and by
 [ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md) (a new aggregate takes a
 typed identifier).

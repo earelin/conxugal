@@ -1,7 +1,7 @@
 ---
 feat: FEAT-0010
 domain: backend
-adrs: [0002, 0018]
+adrs: [0002, 0023]
 status: done
 depends_on: [TASK-0001, TASK-0003]
 ---
@@ -10,7 +10,7 @@ depends_on: [TASK-0001, TASK-0003]
 
 The step that turns an awardee into an operador: resolve every stored contract to one inside the
 import's own batch transaction. This is where
-[ADR-0018](../../architecture/0018-operadores-as-a-stored-projection.md)'s stored projection is
+[ADR-0023](../../architecture/0023-operadores-as-a-stored-projection.md)'s stored projection is
 actually maintained, and it is the only thing that ever fills in a contract's `operadorEconomico`
 association — which, under the normalised schema, is the only thing that makes a contract's
 awardee knowable at all.

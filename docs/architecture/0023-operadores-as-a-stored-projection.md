@@ -6,10 +6,16 @@ supersedes: null
 superseded_by: null
 ---
 
-# 0018. Operadores económicos are a stored projection, maintained by the import that feeds it
+# 0023. Operadores económicos are a stored projection, maintained by the import that feeds it
 
 ## Status
 Accepted
+
+Recorded as `0018` when it was written, and renumbered to `0023` to resolve a collision with
+[ADR-0018](0018-frontend-acceptance-tests-against-a-stubbed-api.md), which took that number first.
+The decision, its date and its consequences are unchanged; only the number is. Anything citing
+`ADR-0018` for the operadores projection — including the pull request that introduced this record —
+means this one.
 
 ## Context
 [SPEC-0006](../specs/SPEC-0006-operadores-economicos.md) turns the awardee named on every
