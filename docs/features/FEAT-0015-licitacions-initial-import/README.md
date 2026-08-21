@@ -182,61 +182,34 @@ untouched — those genuinely are per lote, exactly as R8 says. This is raised r
 into the model because #9 is the criterion that forbids the second copy, and a reader auditing the
 model against #9 as written would rightly conclude the model is wrong.
 
-### 3. SPEC-0008 has to admit an awardee resolved by name
+### 3. SPEC-0008 has to admit an awardee resolved by name, for the minority that needs it
 
-**An award row publishes no fiscal identifier.** The resolution table's columns are *Lote, Part.,
-Resolución, Adxudicatario, Importe, Data difusión, Prazo de execución, Recurso/Prazo* — measured
-over **119 award rows across six Órganos, none contained anything NIF-shaped**. The only identifier
-on the page is in the bidder table.
+**The award row publishes no fiscal identifier** — over 119 award rows, not one carried one. But
+the **formalisation does**, per lote, holding the contratista's name and identifier in one cell
+(`EQUINSE, S.A. A41111220`), a UTE's own included. Measured over **284 award rows**:
 
-So R18's promise to supply SPEC-0006 with "awardee name **and fiscal identifier**" cannot be met
-from an award row alone, and #19's "the awarded one distinguished from the rest" needs a rule
-saying *which* bidder that is. Neither exists today, and both are load-bearing for #23 and #24.
-
-**The resolution is a two-step match, and only the second step is inference:**
-
-| Path | What it does | Measured |
+| Route | | Share |
 | --- | --- | --- |
-| **A** | match `Adxudicatario` against the **bidder rows of the same procedure** and take that bidder's published identifier | **46%** of award rows |
-| **B** | match the published name against the **operadores catalogue**, on any name SPEC-0006 R15 has retained, and link only on a **unique** hit | 6% on a 268-name index |
-| **C** | no match — the award is stored and **names nobody**, which R16 and R25 already permit | the remainder |
+| **A** | the **formalisation** publishes it | **58%** |
+| **B** | the procedure's **bidder list** publishes it | 7% |
+| **C** | name only — a catalogue match is the sole route | 36% |
 
-**Path A is not really inference.** The source publishes the award and the bidder list on the same
-page, and the award names one of the bidders; matching them recovers a link the publication already
-implies. Measured on 54 award rows that had a bidder list to match against: **52 exact, 2 differing
-only by a trailing legal-form abbreviation, 0 failures.**
+**65% is published, and the split is almost exactly the state.** A *formalizado* procedure
+publishes it for **96%** of its awards; an *adxudicado* one, which has no formalisation yet, for
+none. And the unresolved remainder is a **historical tail**: 59 of 60 such awards were published
+2008–2012, against every recent *adxudicado* award resolving. An initial import meets them; a
+routine run barely will.
 
-**Path A is unavailable more often than it is available.** 65 of 119 award rows — **55%** — sit on
-a procedure with no bidder list at all, and on those the identifier is usually nowhere on the page:
-of 12 such pages inspected, **6 contained no NIF-shaped token anywhere**, and one contained three
-against a single awardee. That is why path B is needed rather than optional.
+So the amendment is smaller than an earlier draft of this feature made it. R18 gains an ordered
+lookup — formalisation, then bidder list, then catalogue — of which **only the last infers**, and
+R33 admits that last step as its one exception. Its bounds are unchanged and still necessary: it
+never creates an operador, links only on a unique match, and is recorded as derived. SPEC-0006 R3
+gains the reciprocal, admitting an attachment whose identifier the contract did not publish.
 
-**Path B is inference, and it is bounded by four rules:**
-
-- **it never creates an operador.** Creating one requires a published fiscal identifier (SPEC-0006
-  R3, R5). A name that matches nothing yields path C, not a new catalogue entry;
-- **it links only on a unique match.** Two operadores sharing a normalised name yield no link.
-  Measured collision risk is **1 name in 268** — and that one is a source typo, `B88016098` against
-  `B88018098` for the same firm;
-- **it matches against every retained name**, not only the displayed one, since SPEC-0006 R15
-  keeps every spelling an operador has been published under. The production index is the whole
-  catalogue — fed by 1.4 million contratos menores as well — so B's real yield will be far above
-  the 6% a 268-name index produced;
-- **it is recorded as name-derived.** The award carries how its operador was resolved, so an
-  inferred link is distinguishable from a published one, can be shown as such by a later feature,
-  and can be withdrawn without touching path A's links.
-
-**What it amends.** SPEC-0008 **R33** forbids "inference", and path B is inference — a narrow,
-recorded, reversible kind, but inference. **R18** must say that the fiscal identifier is *derived*
-for this family rather than published. And **SPEC-0006 R3** describes attaching a contract to an
-operador by identifier only; it must admit a name-derived attachment that never creates or merges
-an operador. Marking the provenance is what keeps all three honest.
-
-**The alternative was rejected on measurement, not taste.** Storing the awardee's published name on
-the award row — R18's "no per-row name" rule waived a second time — would show a name on every row
-and link roughly half of them. It was rejected because a name with no operador is exactly the
-"route that dead-ends" #20 forbids, and because path B reaches the same rows through the catalogue
-that already holds those names.
+**The honest caveat is that path C is weakest where it is needed.** The catalogue it matches
+against is fed largely by contratos menores from 2018 onward, while the awards needing it are
+mostly 2008–2012 — so the firms may simply not be there. That is a reason to expect a modest
+yield, not a reason to skip the step, and R25 already accepts an award that names nobody.
 
 ### 4. SPEC-0006 R5 should treat a published placeholder as unusable — defensively
 
@@ -670,35 +643,38 @@ it.
 
 ### Which operador an award belongs to
 
-An award row names its awardee in text and publishes no identifier for it (amendment 3). The
-resolution is therefore ordered, and the order matters because only the last step infers anything:
+An award row names its awardee in text and publishes no identifier for it. Three routes exist, and
+the order matters because only the last one infers:
 
 ```mermaid
 flowchart TD
-  A[Award row: Adxudicatario text] --> B{Bidder list for this lote?}
-  B -- yes --> C{Name matches one bidder?}
-  C -- yes --> D[Path A: take the identifier that bidder published]
-  C -- no --> E{Unique match in the operadores catalogue?}
-  B -- no --> E
-  E -- yes --> F[Path B: link, marked name-derived]
-  E -- no or ambiguous --> G[Path C: award stored, names nobody]
+  A[Award row: Adxudicatario text] --> B{Formalisation for this lote?}
+  B -- yes --> C[Path A: take the identifier it publishes]
+  B -- no --> D{Awardee matches a bidder row?}
+  D -- yes --> E[Path B: take the identifier that bidder published]
+  D -- no --> F{Unique match in the operadores catalogue?}
+  F -- yes --> G[Path C: link, marked name-derived]
+  F -- no or ambiguous --> H[Award stored, names nobody]
 ```
 
-Three properties this ordering buys, each of which a different rule depends on:
+**Paths A and B are not inference.** The formalisation publishes the contratista's identifier
+beside its name, per lote, and the bidder list publishes every bidder's. Both are reading the
+record, not guessing at it, and between them they cover **65%** of awards — and **96%** of those
+on a formalised procedure.
 
-- **the cheap certain path is tried first**, so the 46% of awards whose bidder list settles the
-  question never reach the inferring one;
-- **an ambiguous name is a path C, not a guess.** SPEC-0006 R3 says merging two real suppliers is
-  as damaging as splitting one, and a name shared by two operadores is exactly that risk;
-- **path C is a supported outcome, not a failure.** R16 and R25 already say a licitación may show
-  an award and name nobody, and R25 explicitly refuses to make a resolvable awardee a condition of
-  visibility. So an unresolved awardee costs a link, never a procedure.
+**Path C is the only inferring step**, and it is bounded: it never creates an operador, links only
+where exactly one catalogued operador matches the published name, and records the link as derived
+so it stays distinguishable and reversible. Measured ambiguity is 1 name in 268, and that one is a
+source typo.
+
+**Path H is a supported outcome, not a failure.** R16 and R25 already say a licitación may show an
+award and name nobody, and R25 refuses to make a resolvable awardee a condition of visibility. So
+an unresolved awardee costs a link, never a procedure.
 
 **Normalisation for matching is not normalisation for storage.** R33 stores every value as
-published; the comparison used to match folds case, accents, punctuation and surrounding
-whitespace, and is used for **nothing but the comparison**. Nothing normalised is ever stored or
-displayed, which is what keeps this clear of R33's rule about values while amendment 3 covers the
-inference itself.
+published; the comparison used by paths B and C folds case, accents, punctuation and surrounding
+whitespace and is used for **nothing but the comparison**. Nothing normalised is stored or
+displayed.
 
 ### Consortia: detected by structure, recorded either way
 
@@ -800,8 +776,10 @@ an amendment blocks say so.
    same client and **decoded as ISO-8859-1** on the existing jsoup precedent, parsing the nine
    `<dt>`/`<dd>` scalars, with the Galician amount format and the two date formats handled here.
    *(SPEC-0008 #7, #44)*
-9. **Record parse: the resolution, CPV, NUT and lotes tables** — awards per lote, classifications
-   with `_` read as procedure-wide, and lotes taken from the award table rather than the lotes table.
+9. **Record parse: the resolution, formalisation, CPV, NUT and lotes tables** — awards per lote;
+   the **formalisation, whose `Contratista` cell carries the awardee's name and fiscal identifier
+   together** and is the primary route to it; classifications with `_` read as procedure-wide; and
+   lotes taken from the award table rather than the lotes table.
    *Depends on 3, 8.* *(SPEC-0008 #10 storage half, #9 as amended)*
 10. **Record parse: bidders, consortium detection and the `Part.` cross-check** — a bidder row
     classified **by the nested `<ul>`**, never by its name or its identifier; a consortium's
@@ -816,10 +794,11 @@ an amendment blocks say so.
     lotes of one procedure awarded to the same operador under different spellings would tie exactly
     and the displayed name would fall to arrival order — which SPEC-0006 #36 asserts cannot happen.
     *Depends on 6, 10.* *(SPEC-0008 #19 storage half)*
-12. **Resolve the awardee: bidder-list match, then catalogue name match** — path A against the
-    procedure's own bidder rows, path B as a unique match over SPEC-0006 R15's retained names, path C
-    storing the award with no operador; the match normalisation used for comparison only and never
-    stored; and the resolution path recorded on the award. *Depends on 11.* *(SPEC-0008 #19 awarded-one half, #20 storage half, #23 storage half, #24 storage half)*
+12. **Resolve the awardee: formalisation, then bidder list, then catalogue** — path A from the
+    formalisation's published identifier, path B from the procedure's own bidder rows, path C as a
+    unique match over SPEC-0006 R15's retained names, and an award stored with no operador where
+    none hits; the match normalisation used for comparison only and never stored; and the
+    resolution path recorded on the award. *Depends on 9, 11.* *(SPEC-0008 #19 awarded-one half, #20 storage half, #23 storage half, #24 storage half)*
 13. **Consortia and their membership** — a UTE with a published identifier catalogued as an operador
     under R3; one without recorded on its participation with its published name; each member firm an
     operador either way; the membership stored in both cases; and the award attributed to the

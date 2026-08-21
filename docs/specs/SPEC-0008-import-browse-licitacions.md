@@ -116,12 +116,21 @@ in ways that drive several requirements below, so it is recorded rather than ass
 
   R17 therefore rests on the publication, as it always did — but on the part of it the source
   reliably provides.
-- **An award publishes no fiscal identifier for its awardee.** The resolution a procedure
-  publishes names the awardee **in text only**: measured over **119 award rows across six
-  Órganos**, not one carried an identifier. Where the procedure also publishes a bidder list the
-  awardee is one of the bidders and their identifier is there to be found — but **55% of award
-  rows sit on a procedure with no bidder list**, and on those the identifier is generally absent
-  from the publication entirely. R18 states what follows.
+- **An awardee's fiscal identifier is published — by the formalisation, not by the award.** The
+  resolution names its awardee **in text only**: over **119 award rows**, not one carried an
+  identifier. The **formalisation** does, per lote, holding the contratista's name and identifier
+  together, a UTE's own included. Measured over **284 award rows**, the identifier is published by
+  the formalisation for **58%** and recoverable from the procedure's own bidder list for a further
+  **7%**, leaving **36%** with a name and nothing else.
+
+  **That split is almost exactly the state.** A **formalizado** procedure — the terminal state, in
+  which the contract is signed — publishes it for **96%** of its awards; an **adxudicado** one,
+  which by definition has no formalisation yet, for none, and depends on its bidder list. And the
+  awards that resolve by neither route are **overwhelmingly pre-2013 records left in an
+  intermediate state**: of those measured, 59 of 60 were published between 2008 and 2012 and one
+  in 2026, while every recent adxudicado award resolved. So the gap is a **historical tail an
+  initial import meets and a routine run barely sees**, not a standing property of the family.
+  R18 states what follows for the tail.
 - **Not every procedure has an awardee.** A licitación open for offers, pending award, or
   suspended by appeal has no award and no awarded amount, and may never acquire one — a
   procedure can end deserted or withdrawn. This is the single largest departure from
@@ -293,7 +302,8 @@ One decision remains outside this spec:
   Whichever it is, the facts held are the same: a **CPV** and **NUTS** classification, an
   **award** — the awarded operador, the awarded amount, the resolution and its date, and the
   stated execution period — a list of **bidders** (R16), and a **formalisation** where there is
-  one. A procedure with lotes also holds each lote's number and description.
+  one. The formalisation is **where the awarded operador's fiscal identifier is published**, which
+  the award itself does not carry; R18 says what that means for a procedure not yet formalised. A procedure with lotes also holds each lote's number and description.
 
   **Classification is the exception, and the source is the reason.** A procedure that has lotes
   does not reliably publish its CPV and NUTS per lote — it often states them for the procedure as
@@ -503,14 +513,20 @@ One decision remains outside this spec:
   all nine for licitacións, which supplies every one. The seven required first:
 
   - **awardee name and fiscal identifier** — the name as published at the award point (R8),
-    and for a UTE the UTE's own (R17). **The identifier is not published with the award and is
-    therefore derived**, which is a departure from every other family and is stated rather than
-    glossed: an award names its awardee in text only, so the identifier is recovered from the
-    **bidder list of the same procedure**, where the awardee appears with its own identifier;
-    and, where the procedure publishes no bidder list, from the **catalogue**, by matching the
-    published name.
+    and for a UTE the UTE's own (R17). **The identifier is published elsewhere on the record than
+    the award**, which is a departure from every other family and is stated rather than glossed.
+    It is taken from the first of these that has it:
 
-    **What the derivation may and may not do** is fixed here, because it is the only inference
+    - the **formalisation**, which publishes the contratista's identifier per lote and is the
+      route for the majority of awards, and for 96% of those on a formalised procedure;
+    - the **bidder list of the same procedure**, where the awardee appears among the bidders with
+      its own identifier;
+    - the **catalogue**, by matching the published name — the only step that infers anything, and
+      the only route left for a procedure that is awarded but not yet formalised and published no
+      bidder list. That population is dominated by pre-2013 records, so it is a historical tail
+      rather than a standing gap.
+
+    **What the last step may and may not do** is fixed here, because it is the only inference
     this spec permits (R33) and an unbounded one would silently merge suppliers:
 
     - it **never creates an operador**. Only a published fiscal identifier does that
@@ -1033,10 +1049,11 @@ One decision remains outside this spec:
     derived from whether it holds an award.
 45. **(R34)** Every read of a licitación, of a bidder list, and of an operador's participation
     history requires authentication; an unauthenticated visitor is denied all three.
-46. **(R18, R33)** An award whose awardee also appears in the procedure's **bidder list** is
-    linked to the operador that bidder's published identifier identifies. One on a procedure with
-    **no bidder list** is linked to an operador only where the published name matches **exactly
-    one** in the catalogue; where it matches none or several, the licitación is stored, stays
-    visible, and **shows an award naming nobody**. No such match ever creates an operador, and a
-    link made this way is recorded as **derived** and is distinguishable from one the source
-    published.
+46. **(R18, R33)** An award on a **formalised** procedure is linked to the operador the
+    formalisation's published identifier identifies; one whose awardee appears in the procedure's
+    **bidder list** is linked to the operador that bidder's published identifier identifies.
+    Neither is a derived link. An award with **neither** is linked only where the published name
+    matches **exactly one** operador in the catalogue; where it matches none or several, the
+    licitación is stored, stays visible, and **shows an award naming nobody**. No such match ever
+    creates an operador, and a link made this way is recorded as **derived** and is
+    distinguishable from one the source published.

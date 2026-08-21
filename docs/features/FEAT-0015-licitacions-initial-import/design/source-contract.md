@@ -281,50 +281,78 @@ about **2.8 GB over 16 798 requests** — roughly **4.7 hours at one request per
 figure is what SPEC-0008 R29's yielding exists for, and it is recorded here so the feature that
 builds yielding argues from a measurement rather than an estimate.
 
-## The award row publishes no fiscal identifier
+## Where an awardee's fiscal identifier actually is
 
-The resolution table names its awardee in text only. Measured over **119 award rows across six
-Órganos, not one contained anything NIF-shaped** — the only identifier on the whole page is in the
-bidder table. SPEC-0008 R18 nonetheless requires this family to supply SPEC-0006 with "awardee name
-**and fiscal identifier**", and #19 requires "the awarded one distinguished from the rest".
+**The resolution table does not carry one.** Its columns are *Lote, Part., Resolución,
+Adxudicatario, Importe, Data difusión, Prazo de execución, Recurso/Prazo*, and over **119 award
+rows across six Órganos not one carried an identifier** — the awardee is named in text only.
 
-### How far a name match gets
+**The formalisation table does carry one**, and this is the route that matters. Its columns are
+*Data formalización, Lote, Contratista, Nacionalidade, Importe, Data difusión*, and the
+**`Contratista` cell holds the name and the fiscal identifier together**:
 
-Measured over 236 award rows and a name index built from every bidder row seen (bidders do publish
-identifiers), across 239 procedures and fifteen Órganos:
+```text
+Data formalización | Lote | Contratista                          | Nacionalidade | Importe
+28-06-2012         | 01   | EQUINSE, S.A. A41111220              | España        | 25.627,12 EUR
+29-06-2012         | 02   | PLUS-MER, S.L. B36801942             | España        | 47.293,00 EUR
+25-06-2012         | 05   | EQUIPAMIENTOS DEPORTIVOS, SA A30082945 | España      | 41.720,00 EUR
+```
 
-| Path | Result |
-| --- | --- |
-| **A** — the awardee matches a bidder row **on its own procedure** | **109 rows, 46%** |
-| **B** — no local bidder list, but the name matches **exactly one** operador elsewhere | 14 rows, 6% |
-| **C** — the name is unknown to the index | 113 rows, 48% |
+It is published **per lote**, exactly where R8 puts the award, and it carries a **UTE's own
+identifier** too where the awardee is one — `UTE CARLOS GARCÍA SAORÍN-MIGUEL JIMÉNEZ MARTÍN
+U86486669` on procedure 16938.
 
-Path A is the reliable one, and where it applies it is close to exact: of the 54 award rows that had
-a bidder list to match against, **52 matched a bidder's name exactly** and 2 differed only by a
-trailing legal-form abbreviation. **None failed.**
+### How an award's identifier is reached, measured over 284 award rows
 
-**Path A is unavailable more often than it is available.** 65 of 119 award rows — **55%** — sit on a
-procedure that publishes no bidder list at all, and on those the identifier is usually nowhere to be
-found: of 12 such pages inspected, **6 held no NIF-shaped token anywhere on the page**, and one held
-three against a single awardee. So the missing link cannot be recovered from the record by any
-means; it has to come from the catalogue or not at all.
+| Route | | Share |
+| --- | --- | --- |
+| **A** | the **formalisation** publishes it | **164 — 58%** |
+| **B** | the **bidder list** for that lote publishes it | 19 — 7% |
+| **C** | neither: only the published name is available | 101 — 36% |
 
-**Path B's 6% is a floor, not an estimate.** The index behind it held only **268 distinct names**,
-built from 239 procedures' bidder lists. In production the match target is the whole operadores
-catalogue — SPEC-0006 R14 expects hundreds of thousands of operadores, R15 retains *every* name each
-has been published under, and 1.4 million contratos menores feed it, every one publishing a name
-beside a NIF. The realistic yield is far higher, and it is worth measuring again once the catalogue
-is populated rather than guessed at now.
+**So 65% of awards publish their awardee's identifier somewhere on the record**, and no inference
+is required for them. That is the correction that matters: an earlier reading of this source
+recorded only the award row's silence and concluded the identifier was usually absent.
 
-### The false-merge risk is small but real
+### It splits almost perfectly by state
 
-Of 268 distinct normalised names, **exactly one mapped to two different identifiers** —
-`INDRA SOLUCIONES TECNOLOGIAS DE LA INFORMACION S L U` against `B88016098` and `B88018098`, which
-differ by a single digit and are plainly the same firm with a typo at the source. Stripping legal-form
-suffixes did not increase collisions.
+| Estado | award rows | A: formalisation | B: bidder list | C: name only |
+| --- | --- | --- | --- | --- |
+| Formalizado | 172 | **164** | 1 | **7** |
+| Adxudicado | 107 | 0 | 18 | **89** |
+| Adxudicado provisional | 5 | 0 | 0 | 5 |
 
-So ambiguity is rare, but a rule that guessed on it would merge two suppliers — the failure SPEC-0006
-R3 calls as damaging as splitting one. **A name matching more than one operador must yield no link.**
+**A formalised procedure publishes its awardee's identifier in 96% of cases**, which follows from
+what the states mean: *Formalizado* is the terminal state in which the contract has been signed
+and the formalisation section filled in, and *Adxudicado* is the intermediate one where it has
+not. Separately measured: of **112** formalised award-bearing pages inspected, **none** lacked a
+recoverable identifier altogether.
+
+### And the unresolved remainder is a historical tail
+
+Publication years of the *Adxudicado* awards with no identifier recoverable at all:
+
+| Year | 2008 | 2009 | 2011 | 2012 | 2026 |
+| --- | --- | --- | --- | --- | --- |
+| Count | 13 | 5 | 35 | 6 | **1** |
+
+Against which the *Adxudicado* awards that **do** resolve are published 2023 (1), 2025 (1) and
+2026 (11). So the population needing a name match is overwhelmingly **pre-2013 records left in an
+intermediate state**, not the current flow: an initial import meets them, and routine incremental
+runs over live publications will barely see them.
+
+### The name match, and its false-merge risk
+
+For the remainder, matching the published name against the operadores catalogue is the only route.
+Measured against a name index built from bidder rows across 239 procedures: of 236 award rows, 46%
+matched a bidder on their own procedure, 6% matched a unique operador elsewhere, and 48% matched
+nothing — though that index held only **268 distinct names**, where production matches against the
+whole catalogue.
+
+Of those 268 names, **exactly one mapped to two identifiers** — `INDRA SOLUCIONES TECNOLOGIAS DE
+LA INFORMACION S L U` against `B88016098` and `B88018098`, which differ by one digit and are
+plainly the same firm mistyped at the source. Ambiguity is rare; a rule that guessed on it would
+merge two suppliers, which SPEC-0006 R3 calls as damaging as splitting one.
 
 ## The awarded amount's VAT basis is unmarked, and only inferable
 
