@@ -74,25 +74,22 @@ stored projection of **[ADR-0023](../../architecture/0023-operadores-as-a-stored
 > that "ordering parameters were not made to work". Correcting it, and asking whether the full
 > payload makes FEAT-0014's window walk cheaper, is a **follow-up this feature does not take**.
 
-## What this feature needs before it can be finished
+## The amendments this feature rests on
 
-Four amendments, all to `draft` documents, none large. They are named here so no task claims a
-criterion the system would currently get wrong, and so that no rule belonging to another spec is
-quietly worked around in an adapter.
+Four amendments were needed before any task here could be written against a criterion that says
+what the design does. **All four have landed**, in the same change as this feature; they are
+recorded below because each is load-bearing, and a reader of either spec should be able to see why
+its wording changed.
 
-**Three of them do block tasks, and the table says which.** An earlier draft of this feature
-claimed none did; that was wrong, and wrong in the direction that hurts — a task author would have
-built against a criterion that forbids what the design requires.
+| Amendment | Where | What it settles |
+| --- | --- | --- |
+| 1. The unidentified consortium | SPEC-0008 R16/R17/R18, #20/#21/#22/#24; SPEC-0006 R16, R9, #40 | a UTE is recorded whether or not the source identifies it |
+| 2. Classification not per lote | SPEC-0008 R8, #9/#10 | a CPV may hang off the procedure even where lotes exist |
+| 3. The awardee resolved by name | SPEC-0008 R18/R33, #46; SPEC-0006 R3 | an award publishes no identifier, so one is derived — within bounds |
+| 4. Placeholders are unusable | SPEC-0006 R5, #8/#9 | a dash or `TEMP-…` is not an identity, defensively |
 
-| Amendment | Blocks |
-| --- | --- |
-| 1. SPEC-0008 R16/R17/R18 and #20/#21/#22/#24 — the unidentified consortium | tasks 4, 6, 12 |
-| 2. SPEC-0008 #9/#10 — classification not per lote | tasks 4, 9 |
-| 3. SPEC-0008 R18/R33 and SPEC-0006 R3 — the awardee resolved by name | tasks 11, 12 |
-| 4. SPEC-0006 R5, #8 and #9 — placeholders unusable | nothing (defensive) |
-
-Amendments 1 and 3 both touch SPEC-0006 as well as SPEC-0008, and together they are why this
-feature is not yet ready to be broken into tasks.
+Each section below states the measurement the amendment rests on, so the evidence stays with the
+reasoning rather than only in the spec's own summary.
 
 ### 1. SPEC-0008 R17 has to admit a UTE the source does not identify — and SPEC-0006 R16 with it
 
@@ -784,7 +781,7 @@ an amendment blocks say so.
    lote reference**, award (carrying **how its operador was resolved**, per amendment 3),
    formalisation, participation (carrying the **consortium marker and published name**, per
    amendment 1) and UTE membership, under R8's one-place rule with no second copy at procedure level.
-   *Blocked by amendments 1 and 2.* *(SPEC-0008 #9 as amended, #10 storage half)*
+   *(SPEC-0008 #9 as amended, #10 storage half)*
 5. **Licitacións store: the procedure and its award points** — migrations creating `licitacion`,
    `lote`, the two classification tables, `award` and `formalisation` (unique publication identifier,
    FK to the Órgano, the withdrawal marker R13 needs, and the `(organo_id, publication_date)` index
@@ -793,8 +790,8 @@ an amendment blocks say so.
 6. **Licitacións store: the competition tables** — `participation` and `ute_membership` migrations
    and repositories. A participation carries a nullable operador FK, a **consortium marker**, and the
    **published consortium name** that amendment 1 makes R18's one exception; a membership carries its
-   participation and its member operador, and takes its visibility from that participation. *Depends
-   on 4, 5. Blocked by amendment 1.* *(SPEC-0008 #21 storage half)*
+   participation and its member operador, and takes its visibility from that participation.
+   *Depends on 4, 5.* *(SPEC-0008 #21 storage half)*
 7. **`LicitacionListingSource` port + JSON adapter** — one (Órgano, offset, order) page over the
    shared `contratosdegalicia` client, sending the **full DataTables payload**, surfacing
    `recordsTotal`, and failing cleanly when the source is unreachable or its response unusable.
@@ -805,7 +802,7 @@ an amendment blocks say so.
    *(SPEC-0008 #7, #44)*
 9. **Record parse: the resolution, CPV, NUT and lotes tables** — awards per lote, classifications
    with `_` read as procedure-wide, and lotes taken from the award table rather than the lotes table.
-   *Depends on 3, 8. Blocked by amendment 2.* *(SPEC-0008 #10 storage half, #9 as amended)*
+   *Depends on 3, 8.* *(SPEC-0008 #10 storage half, #9 as amended)*
 10. **Record parse: bidders, consortium detection and the `Part.` cross-check** — a bidder row
     classified **by the nested `<ul>`**, never by its name or its identifier; a consortium's
     published name and its member entries parsed out of the inner list; and a count mismatch failing
@@ -822,13 +819,11 @@ an amendment blocks say so.
 12. **Resolve the awardee: bidder-list match, then catalogue name match** — path A against the
     procedure's own bidder rows, path B as a unique match over SPEC-0006 R15's retained names, path C
     storing the award with no operador; the match normalisation used for comparison only and never
-    stored; and the resolution path recorded on the award. *Depends on 11. Blocked by amendment 3.*
-    *(SPEC-0008 #19 awarded-one half, #20 storage half, #23 storage half, #24 storage half)*
+    stored; and the resolution path recorded on the award. *Depends on 11.* *(SPEC-0008 #19 awarded-one half, #20 storage half, #23 storage half, #24 storage half)*
 13. **Consortia and their membership** — a UTE with a published identifier catalogued as an operador
     under R3; one without recorded on its participation with its published name; each member firm an
     operador either way; the membership stored in both cases; and the award attributed to the
-    consortium alone, entering no member's totals. *Depends on 6, 12. Blocked by amendments 1 and 3.*
-    *(SPEC-0008 #21 import half, as amendment 1 restates it)*
+    consortium alone, entering no member's totals. *Depends on 6, 12.* *(SPEC-0008 #21 import half, as amendment 1 restates it)*
 14. **Reconciling a restated procedure** — `StoreLicitacion`, matching by publication identifier,
     refreshing in place, and marking withdrawn any lote, classification, bidder, award **or UTE
     membership** the record no longer publishes, a membership's visibility following its
@@ -874,8 +869,9 @@ cannot prove:
 - **SPEC-0006's own features** own **#22**, **#23's and #24's history halves** and **#25**, which
   that spec's note marks *proved in SPEC-0006*. **#22 is deferred but not intact**: it requires a
   UTE's awarded total to include the award, and 94% of consortia have no total to include it in, so
-  amendment 1 has to reach it before the feature that proves it can. Handing it on without that note
-  would pass a broken criterion to someone with no reason to doubt it;
+  amendment 1 rewrote it so the no-double-counting property it tests holds whether or not the
+  consortium is catalogued. Handing it on unrepaired would have passed a broken criterion to
+  someone with no reason to doubt it;
 - **#43** measures reads that do not exist yet;
 - **#36's administrator view of undated licitacións** is carried **unowned by SPEC-0008 itself**,
   which adds licitacións to the anomalies surface SPEC-0005 R28 already owes.
@@ -930,7 +926,7 @@ would never claim it. The "half" wording is gone from both citations.
   name-prefix test would have recorded it as a single firm bidding under a placeholder identifier.
   *(SPEC-0008 #21 as amended)*
 - **A single-firm bidder row carrying `-`** — never observed in 578 rows, and harmless if it appears:
-  amendment 3's widening makes it yield no operador rather than joining a shared one. The structural
+  amendment 4's widening makes it yield no operador rather than joining a shared one. The structural
   branch is what makes this the unobserved case rather than the common one. *(SPEC-0008 #20)*
 - **An award whose fiscal identifier is unusable** — the licitación is stored and **stays visible**,
   showing an award that names nobody. This is the deliberate departure from SPEC-0005 R28, which
