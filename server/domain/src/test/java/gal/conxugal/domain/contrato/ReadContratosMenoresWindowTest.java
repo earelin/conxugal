@@ -66,7 +66,6 @@ class ReadContratosMenoresWindowTest {
   private final List<Slice> requestedSlices = new ArrayList<>();
   private final List<RecordedBatch> recordedBatches = new ArrayList<>();
   private final List<ContratoMenorSourceEntry> handedToTheStore = new ArrayList<>();
-  private final List<String> bookkeeping = new ArrayList<>();
 
   /** One call the source port received, which is what the paging is asserted on. */
   private record Slice(int offset, int pageSize) {}
@@ -194,13 +193,14 @@ class ReadContratosMenoresWindowTest {
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(1, entries(1));
+    List<String> bookkeeping = new ArrayList<>();
     doAnswer(invocation -> bookkeeping.add("run advanced"))
         .when(importRuns)
         .advance(any(), any(), anyInt(), anyInt());
 
-    read();
+    read(() -> true, (counts, windowStart, windowEnd, lastPage) -> bookkeeping.add("batch"));
 
-    assertThat(bookkeeping).containsExactly("batch recorded", "run advanced");
+    assertThat(bookkeeping).containsExactly("batch", "run advanced");
   }
 
   // The conservative rule the initial import's cursor depends on: only the page that exhausts the
@@ -288,10 +288,8 @@ class ReadContratosMenoresWindowTest {
   }
 
   private BatchRecorder recordingBatches() {
-    return (counts, windowStart, windowEnd, lastPage) -> {
-      bookkeeping.add("batch recorded");
-      recordedBatches.add(new RecordedBatch(counts, windowStart, windowEnd, lastPage));
-    };
+    return (counts, windowStart, windowEnd, lastPage) ->
+        recordedBatches.add(new RecordedBatch(counts, windowStart, windowEnd, lastPage));
   }
 
   /** Answers true until the boundary that follows page {@code page}, where the mark is gone. */
