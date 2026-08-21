@@ -1,89 +1,76 @@
 package gal.conxugal.application.scheduling.contratosmenores;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
-import gal.conxugal.application.contrato.StartContratosMenoresImport;
-import gal.conxugal.domain.contrato.ContratoMenorRepository;
-import gal.conxugal.domain.contrato.ContratoMenorSource;
-import gal.conxugal.domain.importrun.ImportAlreadyRunningException;
 import gal.conxugal.domain.importrun.ImportRunId;
+import gal.conxugal.domain.importrun.ImportRunReport;
 import gal.conxugal.domain.importrun.ImportRunRepository;
-import gal.conxugal.domain.operador.OperadorRepository;
-import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
-import gal.conxugal.domain.organo.OrganoRepository;
-import io.micronaut.test.annotation.MockBean;
+import gal.conxugal.domain.importrun.ImportRunState;
+import gal.conxugal.domain.importrun.Importer;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 /**
- * The scheduled method while another import holds the guard, simulated by the refusal it produces
- * rather than waited out: the tick logs and ends normally — the refusal reaching Micronaut's
- * scheduled-task handler would be an error report for the system working as intended — and the
- * tick after the guard frees claims.
+ * The scheduled method wired to the real trigger, with the guard refusing the first tick: a
+ * nightly sweep can be turned away by an import it has never heard of, and it neither queues nor
+ * retries when it is. Every other test in this package mocks the trigger itself, so none of them
+ * can see past the delegation to what a refused tick actually does.
+ *
+ * <p>The long import holding the guard is simulated by the refusal it produces rather than waited
+ * out. What the tick that finally claims goes on to cover is not this test's — here the catalogue
+ * has nothing marked, which is the sweep that settles {@code SUCCEEDED} having imported nothing.
  */
 @MicronautTest
-class ContratosMenoresImportSchedulerGuardIntegrationTest {
+class ContratosMenoresImportSchedulerGuardIntegrationTest
+    extends ContratosMenoresImportPortsTestSupport {
+
+  private static final ImportRunId RUN_ID = new ImportRunId(UUID.randomUUID());
 
   @Inject
   ContratosMenoresImportScheduler scheduler;
 
   @Inject
-  StartContratosMenoresImport startImport;
-
-  @MockBean(StartContratosMenoresImport.class)
-  StartContratosMenoresImport startContratosMenoresImportMock() {
-    return mock(StartContratosMenoresImport.class);
-  }
-
-  // The mock proxy above still resolves the real constructor's dependencies, and the whole import
-  // hangs off them: the claim, the walk beneath it and the store beneath that all reach adapters
-  // wanting a datasource this suite deliberately runs without.
-  @MockBean(ImportRunRepository.class)
-  ImportRunRepository importRunsMock() {
-    return mock(ImportRunRepository.class);
-  }
-
-  @MockBean(OrganoRepository.class)
-  OrganoRepository organosMock() {
-    return mock(OrganoRepository.class);
-  }
-
-  @MockBean(ContratoMenorRepository.class)
-  ContratoMenorRepository contratosMock() {
-    return mock(ContratoMenorRepository.class);
-  }
-
-  @MockBean(OperadorRepository.class)
-  OperadorRepository operadoresMock() {
-    return mock(OperadorRepository.class);
-  }
-
-  @MockBean(ContratosMenoresImportStateRepository.class)
-  ContratosMenoresImportStateRepository importStatesMock() {
-    return mock(ContratosMenoresImportStateRepository.class);
-  }
-
-  @MockBean(ContratoMenorSource.class)
-  ContratoMenorSource contratoMenorSourceMock() {
-    return mock(ContratoMenorSource.class);
-  }
+  ImportRunRepository importRuns;
 
   @Test
-  void refused_tick_completes_normally_and_the_next_tick_claims() {
-    when(startImport.startAll())
-        .thenThrow(new ImportAlreadyRunningException())
-        .thenReturn(new ImportRunId(UUID.randomUUID()));
+  void refused_tick_completes_normally_and_the_next_tick_claims() throws Exception {
+    CompletableFuture<ImportRunState> settled = new CompletableFuture<>();
+    when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of()))
+        .thenReturn(Optional.empty())
+        .thenReturn(Optional.of(RUN_ID));
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
+    when(importRuns.findRun(RUN_ID)).thenReturn(Optional.of(runCovering()));
+    doAnswer(invocation -> settled.complete(invocation.getArgument(1, ImportRunState.class)))
+        .when(importRuns)
+        .complete(eq(RUN_ID), eq(ImportRunState.SUCCEEDED), anyInt(), anyInt());
 
     assertThatCode(scheduler::run).doesNotThrowAnyException();
-
     scheduler.run();
 
-    verify(startImport, times(2)).startAll();
+    assertThat(settled.get(5, TimeUnit.SECONDS)).isEqualTo(ImportRunState.SUCCEEDED);
+  }
+
+  private static ImportRunReport runCovering() {
+    return new ImportRunReport(
+        RUN_ID,
+        Importer.CONTRATOS_MENORES,
+        ImportRunState.IN_PROGRESS,
+        Instant.EPOCH,
+        null,
+        0,
+        0,
+        List.of());
   }
 }
