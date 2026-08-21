@@ -24,13 +24,15 @@ task about two endpoints.
 | `StartContratosMenoresImport:42,55` | the `IMPORT_EXECUTOR` constant and its `@Named` injection site |
 | `application/src/main/resources/application.yml:27` | the `micronaut.executors.contratos-menores-import` key |
 | `ContratosMenoresImportExecutorIntegrationTest:27` | asserts the executor exists under that name — **FEAT-0009 TASK-0010's own acceptance criterion** |
-| `FEAT-0014/TASK-0006-the-scheduler.md:52,53,60` | a `status: todo` task that names the string as a **prohibition** |
+| `application.yml:23–24` | the comment explaining which scheduler takes which pool, which names the executor |
+| `FEAT-0014/TASK-0006-the-scheduler.md:52,53,60` | a **shipped** task recording that the scheduler *"must not reuse"* the string |
 | `FEAT-0014/README.md:316,317` | the same, in prose |
 
-The FEAT-0014 rows are why this is not a two-line change. That task says the scheduler *"must not
-reuse `contratos-menores-import`"*; after the rename its text names a string that no longer exists,
-and nobody working on FEAT-0014 has any reason to look. The rename either carries those two
-documents with it or it silently invalidates a sibling feature's instructions.
+The FEAT-0014 rows are why this is not a two-line change. That task is `done` and its scheduler is
+live: it takes the default `scheduled` pool precisely **because** it must not occupy this executor,
+and it hands its work here in milliseconds. After the rename its text names a string that no longer
+exists, so the record of a shipped decision stops being checkable against the code. The rename
+carries those two documents with it.
 
 It fails loudly rather than silently if botched — the integration test exists to catch exactly a
 name mismatch — which is what makes it safe to do at all.

@@ -337,10 +337,12 @@ left recording the superseded rule.
   **[SPEC-0007](../../specs/SPEC-0007-monitor-import-runs.md) cannot yet describe a yielded run**,
   whose R4 vocabulary would read it as *abandoned*.
 
-  **What that costs is a real collision, not a hypothetical one.** The guard is system-wide across
-  every importer, so the question is not whether a licitacións scheduler exists but whether **any**
-  scheduled run does. FEAT-0006's daily catalogue import at 03:00 is shipped, and FEAT-0014's
-  contratos menores scheduler at 05:00 is drafted and will be. A 4.7-hour SERGAS walk begun at 02:00 **refuses both**.
+  **What that costs is a real collision, and both halves of it now ship.** The guard is system-wide
+  across every importer, so the question is not whether a licitacións scheduler exists but whether
+  **any** scheduled run does. FEAT-0006's daily catalogue import at 03:00 is shipped, and
+  **FEAT-0014's contratos menores refresh at 05:00 now is too** (`conxugal.contratos-menores.import.schedule`,
+  `0 0 5 * * *`). A 4.7-hour SERGAS walk begun at 02:00 **refuses both** — which was a prediction
+  when this feature was drafted and is an observable consequence today.
   FEAT-0009 accepted the same cost and said so plainly; so does this. It is tolerable only because
   the population is small — the only publishers measured above 600 licitacións are SERGAS
   (16 798), Axencia Turismo de Galicia (1 064) and Augas de Galicia (625), with Portos de Galicia

@@ -34,9 +34,16 @@ neither its siblings nor the run is this task's.
 - **The mode is decided per Órgano from its own state**, through
   [TASK-0002](TASK-0002-licitacions-per-organo-import-state.md)'s `LicitacionImportMode.of(status)`
   — never from the trigger that arrived, which is how a half-loaded Órgano ends up restarted or
-  skipped. An Órgano answering `INCREMENTAL` is **skipped with that reason recorded**, neither done
-  nor failed. *That skip is the placeholder for #11's incremental clause, which this feature does
-  not claim; what it proves is the initial and resumed branches.*
+  skipped. An Órgano answering `INCREMENTAL` is **recorded `SKIPPED`, with that reason**, neither
+  done nor failed. *That skip is the placeholder for #11's incremental clause, which this feature
+  does not claim; what it proves is the initial and resumed branches.*
+
+  **This revives a state contratos menores has just retired, and that is deliberate.**
+  `ImportRunOrganoState.SKIPPED` now says *"is history and nothing settles it any more"* — FEAT-0014
+  shipped the incremental refresh, so an already-loaded Órgano is refreshed rather than passed over.
+  For licitacións there is no incremental mode yet, so `SKIPPED` means exactly what it used to mean
+  and is the honest record. Its Javadoc needs one sentence saying so, or the next reader takes a
+  live value for a legacy one.
 - **The verdict rule is the shipped one**, read off the **failed** count rather than invented:
   `SUCCEEDED` when nothing failed, `FAILED` when everything did, `PARTIALLY_SUCCEEDED` otherwise. So
   a run in which every covered Órgano was **skipped or stopped** — nothing failed and nothing
@@ -87,8 +94,9 @@ R29's yielding.
 - **A run that loses the guard mid-walk stops walking the Órganos after it, writes no further
   coverage row and settles no verdict** — its record is left as the live run's.
   ([ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md))
-- An Órgano at `COMPLETE` is **skipped** with the reason recorded, and the run does not count it as
-  a failure. *(The placeholder for #11's incremental clause, not a claim on it.)*
+- An Órgano at `COMPLETE` is recorded **`SKIPPED`** with the reason, and the run does not count it
+  as a failure. `ImportRunOrganoState`'s Javadoc no longer says nothing settles that value.
+  *(The placeholder for #11's incremental clause, not a claim on it.)*
 - An Órgano at `NEVER_STARTED` takes the initial mode and one at `INCOMPLETE` the resumed mode,
   decided from the Órgano's state and not from which trigger claimed the run.
   (SPEC-0008 #5 run half, #11 initial-and-resumed modes only)
