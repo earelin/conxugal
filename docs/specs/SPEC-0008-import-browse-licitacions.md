@@ -27,9 +27,11 @@ What it adds is everything that follows from a procedure being competitive:
   and who competed and lost — is information the contratos menores family cannot produce at
   all.
 - **A bidder or an awardee may be a UTE** (*unión temporal de empresas*): a temporary
-  consortium with a fiscal identifier of its own, published together with the fiscal
-  identifier and name of **each member firm**. A UTE is an operador económico in its own
-  right and its membership is stored, so *what has this firm been part of* is answerable.
+  consortium published together with the fiscal identifier and name of **each member firm**. Its
+  membership is stored, so *what has this firm been part of* is answerable. A UTE **has** a fiscal
+  identifier of its own, and where the source publishes it the UTE is an operador económico in its
+  own right; the source usually does not, so R17 records the consortium on the bid it made
+  instead. Either way the award belongs to it and to no member.
 - **A licitación is worth opening.** Where a contrato menor's row is the whole record
   (SPEC-0005 R16), a licitación carries a procedure type, a classification, budget and
   estimated value, lotes, bidders, an award and a formalisation — so it has a page of its
@@ -93,17 +95,52 @@ in ways that drive several requirements below, so it is recorded rather than ass
   initial import of SERGAS is ~16 800 retrievals — hours at a courteous rate (R31) — while
   its incremental runs cost one listing walk plus one retrieval per changed procedure.
   R29's yielding and R30 exist because of that asymmetry.
-- **Most procedures have no lotes, and the ones that do publish everything per lote.** CPV
-  codes, NUTS codes, the award and the bidder list are published **per lote** on a procedure
-  that has them, and against the procedure as a whole on one that does not; a procedure states
-  how many it has, or states none. **Lotes are the minority case**: of a sample of licitacións
-  taken on 2026-08-20, **4 of 100** procedures across three Órganos — SERGAS, Augas de Galicia and Axencia Turismo de Galicia — had any at all. The requirements below are written so the common case —
+- **Most procedures have no lotes, and the ones that do publish the award per lote.** The award
+  and the bidder list are published **per lote** on a procedure that has them, and against the
+  procedure as a whole on one that does not; a procedure states how many it has, or states none.
+  **CPV and NUTS are looser**: they carry a lote reference, but a procedure with lotes often
+  publishes them against itself as a whole — measured on procedure 822054, which has two lotes and
+  two separate awards while every one of its CPV and NUT rows is procedure-wide. R8 holds a
+  classification where the source puts it rather than where the lotes are. **Lotes are the minority case**: of a sample of licitacións
+  taken on 2026-08-20, **4 of 100** procedures across three Órganos — SERGAS, Augas de Galicia and
+  Axencia Turismo de Galicia — had any at all. A **later sample of 100 across five Órganos,
+  weighted toward the largest publishers, found 15**; the direction is unchanged and the design
+  below stands, but the second figure is the one to size against, since multi-lote procedures are
+  commoner among the big publishers an initial import spends its time on. The requirements below are written so the common case —
   one procedure, one award, one bidder list — reads as the plain one, and lotes are what that
   case generalises to rather than the shape everything is modelled on.
-- **A UTE is published with its members.** A bidder row carries one fiscal identifier and one
-  name for the UTE, plus each member's own fiscal identifier and name. A UTE identifier is
-  distinguishable by its form — it begins with `U` — but membership is **published**, not
-  inferred, and R17 rests on the publication rather than on the prefix.
+- **A UTE is published with its members, and usually without an identifier of its own.** A
+  bidder row for a consortium carries the UTE's name plus **each member's own fiscal identifier
+  and name**. What it usually does not carry is a fiscal identifier for the UTE: measured over
+  **35 consortium rows in 250 procedures**, only **2** published a real one, while 25 published
+  a placeholder dash and 8 a `TEMP-…` value that is local to the publication and identifies
+  nothing. Members are unaffected — all **80** member entries carried ordinary identifiers.
+
+  **A consortium is recognisable by how the row is structured**, not by its identifier and not
+  by its name. Membership is **published**, and the publication is the structure: a consortium's
+  entry lists its members beneath it, and a single firm's does not. An earlier reading of this
+  source recorded that a UTE "is distinguishable by its form — it begins with `U`"; that holds
+  for the 6% the source identifies and fails for the rest. **7 of the 35** are published under a
+  name that does not begin *UTE* at all, so the name is no better a test.
+
+  R17 therefore rests on the publication, as it always did — but on the part of it the source
+  reliably provides.
+- **An awardee's fiscal identifier is published — by the formalisation, not by the award.** The
+  resolution names its awardee **in text only**: over **119 award rows**, not one carried an
+  identifier. The **formalisation** does, per lote, holding the contratista's name and identifier
+  together, a UTE's own included. Measured over **284 award rows**, the identifier is published by
+  the formalisation for **58%** and recoverable from the procedure's own bidder list for a further
+  **7%**, leaving **36%** with a name and nothing else.
+
+  **That split is almost exactly the state.** A **formalizado** procedure — the terminal state, in
+  which the contract is signed — publishes it for **96%** of its awards; an **adxudicado** one,
+  which by definition has no formalisation yet, for none, and depends on its bidder list. And the
+  awards that resolve by neither route are **overwhelmingly pre-2013 records left in an
+  intermediate state**: of 60 such procedures measured, 59 were published between 2008 and 2012
+  and one in 2026, against 13 recent adxudicado procedures that did resolve. So the gap is
+  **weighted heavily toward a historical tail** an initial import meets and a routine run largely
+  does not — though the single 2026 case says it is a tail rather than a closed set.
+  R18 states what follows for the tail.
 - **Not every procedure has an awardee.** A licitación open for offers, pending award, or
   suspended by appeal has no award and no awarded amount, and may never acquire one — a
   procedure can end deserted or withdrawn. This is the single largest departure from
@@ -155,6 +192,16 @@ claims an acceptance criterion whose surface another spec still contradicts:
   supply and this family can; and its new **R16** and **R17** state what the catalogue does with
   them and what they add to its privacy analysis.
 
+  **A second round of amendments followed**, once the source was measured against rather than
+  assumed, and they are named on the same principle. In SPEC-0006: **R5** treats a published
+  placeholder — a lone dash, a `TEMP-…` value — as unusable, so it cannot become an identity;
+  **R16** and **#40** admit a membership whose consortium the source did not identify, and **R9**
+  notes that such a consortium has no totals of its own; and **R3** admits a contract attaching to
+  an operador whose identifier it did not publish, where its family bounds the derivation. In this
+  spec: **R8**, **#9** and **#10** admit a classification the source does not put on a lote;
+  **R16**, **R17**, **R18** and **#20**–**#24** admit the unidentified consortium; and **R18**,
+  **R33** and a new **#46** settle how an awardee's identifier is reached.
+
   Criteria #20, #21 and #24 below are consequently **stated here and proved there**, on the
   device [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) uses for the same situation:
   the surfaces belong to that spec, the import and storage half belongs to this one.
@@ -176,11 +223,17 @@ Five decisions are **settled** by this spec and stated here so no feature reopen
    per lote — was rejected because it makes an Órgano's count mean something other than
    *procedures* and repeats a procedure across a list a reader is scanning, and it would do so
    to accommodate a minority of procedures.
-2. **A UTE is an operador, its members are operadores, and the award belongs to the UTE
-   alone** (R17). A member's history shows the award as won *through* the UTE and excludes it
-   from that member's own totals. Attributing it to every member as well was rejected: the
-   same euro would be counted once per member and every cross-operador total would overstate
-   real spending.
+2. **A UTE's members are operadores, the UTE is one where the source identifies it, and the
+   award belongs to the UTE alone either way** (R17). A member's history shows the award as won
+   *through* the UTE and excludes it from that member's own totals. Attributing it to every
+   member as well was rejected: the same euro would be counted once per member and every
+   cross-operador total would overstate real spending.
+
+   **The identified/unidentified split is the source's doing, not a design choice.** It publishes
+   a fiscal identifier for 2 of every 35 consortia, so the catalogue can hold only those; the rest
+   are recorded on the bid they made, under their published name and with their membership. The
+   no-double-counting property above holds under both, which is what makes the split acceptable
+   rather than a compromise.
 3. **Losing bidders are shown, and kept away from the money** (R18). Participation appears in
    an operador's history in a section of its own, and never in any awarded total.
 4. **Open procedures are imported and shown**, marked by their state (R25). The system is
@@ -257,8 +310,10 @@ One decision remains outside this spec:
   **estimated value** (*valor estimado*, VAT-exclusive) — together with a stable identity by
   which the same procedure is recognised across successive imports.
 
-  **Its classification, its award and its formalisation are held where R8 puts them**, which is
-  per lote on a procedure that has lotes and against the procedure itself on one that does not.
+  **Its classification, its award and its formalisation are held where R8 puts them** — the award
+  and the formalisation per lote on a procedure that has lotes and against the procedure itself on
+  one that does not, and the classification wherever the source publishes it, which R8 says need
+  not be the lote.
   This requirement does not hold a second copy of them at procedure level: R8 promises exactly
   one place for each, and two would be one too many to keep in step.
 
@@ -275,7 +330,21 @@ One decision remains outside this spec:
   Whichever it is, the facts held are the same: a **CPV** and **NUTS** classification, an
   **award** — the awarded operador, the awarded amount, the resolution and its date, and the
   stated execution period — a list of **bidders** (R16), and a **formalisation** where there is
-  one. A procedure with lotes also holds each lote's number and description.
+  one. The formalisation is **where the awarded operador's fiscal identifier is published**, which
+  the award itself does not carry; R18 says what that means for a procedure not yet formalised. A procedure with lotes also holds each lote's number and description.
+
+  **Classification is the exception, and the source is the reason.** A procedure that has lotes
+  does not reliably publish its CPV and NUTS per lote — it often states them for the procedure as
+  a whole while awarding each lote separately. So a classification is held **per lote where the
+  source publishes it per lote, and against the procedure otherwise**, which is true of a
+  procedure with lotes as well as one without. The award and the formalisation are unaffected:
+  those genuinely are per lote, and the one-place rule holds for them exactly as stated.
+
+  This is narrower than it looks. It does not create a second copy of anything — a classification
+  still lives in exactly one place — it only admits that which place that is, is the source's
+  choice rather than a consequence of whether the procedure has lotes. R23's CPV filter is
+  written to match: a licitación is in the selection when **any** of its classifications carries
+  the code, wherever it hangs.
 
   So every licitación has **exactly one place** its award and bidders are recorded, or several
   where it has several lotes, and no requirement below has to distinguish the two cases. Where
@@ -404,31 +473,62 @@ One decision remains outside this spec:
   So a licitación can show an award and name nobody, and R25 says why that is accepted here
   when [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R28 refuses it there.
 
+  **A consortium is the one party this rule does not remove**, because the source names it,
+  structures it and lists its members while publishing no identifier for it in 94% of cases. A
+  party the source declines to identify is not the same as a party it does not publish: the
+  first has nothing to catalogue, the second has nothing at all. So an unidentified consortium
+  **is recorded as a participant** — under its published name, with its membership — and R17
+  states what that record holds. Removing it would discard the competitive information this
+  spec exists to expose, on 33 of every 35 consortia.
+
   This is information the contratos menores family cannot produce at all, and it is the reason
   this spec touches SPEC-0006's shape rather than merely feeding it.
 - **R17** — **A UTE is an operador in its own right, and its membership is stored.** Where the
   source publishes a bidder or awardee as a *unión temporal de empresas*, the system stores:
 
-  - the **UTE itself** as an operador, identified by its own published fiscal identifier under
-    SPEC-0006 R3;
+  - the **UTE itself** as an operador **where the source publishes a fiscal identifier for
+    it — anywhere on the procedure**, under SPEC-0006 R3, and **as a named consortium on the bid
+    it made** where it does not. *Anywhere* is load-bearing: the bidder list and the formalisation
+    are both places one may appear, and a consortium identified by either is the same consortium.
+    A procedure must not hold it twice — catalogued on its award and uncatalogued on its bid — or
+    the operador would hold an award and no members, which is what SPEC-0006 #40 forbids. Both are records of the same fact; they differ only in whether the catalogue can hold
+    one, and the source settles that, not the system;
   - **each member firm** as an operador, identified by its own published fiscal identifier —
     and a member whose identifier is unusable yields no operador and no membership, under
     R16's rule, without costing the UTE or its other members anything;
   - the **membership** between them, so a UTE states who its members are and a member states
     which UTEs it has been part of.
 
-  A UTE's identifier is recognisable by its form — in Spain it begins with `U` — which is how a
-  reader tells one apart on a row. That is a fact about how the identifier reads, not a test the
-  system identifies UTEs by; the paragraph below says what the system actually relies on.
+  **A consortium the source does not identify is still recorded in full.** It cannot be
+  catalogued as an operador — SPEC-0006 R3 makes the fiscal identifier the identity and R5
+  rightly forbids inventing one — so what holds it is the **bid itself**: the consortium's
+  published name, the fact that the bidder was a consortium, and each membership. Its members
+  are operadores either way, since they publish ordinary identifiers, so *what has this firm
+  been part of* stays answerable from the member's end. What is not answerable is the reverse:
+  an unidentified consortium has no catalogue entry to open, and its members are named on the
+  licitación that published it rather than on a page of its own.
 
-  **The award belongs to the UTE alone.** A licitación awarded to a UTE is one award, held by
-  the UTE, counted in the UTE's totals and in no member's. A member's history shows it as an
-  award won **through** that UTE, kept clear of and excluded from the member's own awarded
-  totals, so no euro is counted twice. The same holds for participation (R18): a bid submitted
-  by a UTE is the UTE's bid, visible from each member as *through* it.
+  A UTE's identifier, where there is one, is recognisable by its form — in Spain it begins with
+  `U`. That is a fact about how the identifier reads and **not a test the system identifies
+  consortia by**: the source publishes such an identifier for only 6% of them, and 7 of every 35
+  are published under a name that does not begin *UTE* either. The paragraph below says what the
+  system actually relies on.
 
-  **Membership is published, not inferred**, and this requirement rests on the publication.
-  The `U` prefix corroborates what the source states; it is not the source of the fact. This
+  **The award belongs to the UTE alone**, catalogued or not. A licitación awarded to a UTE is
+  one award, held by the UTE where it is an operador and naming the consortium where it is not —
+  and in **neither case** does it enter a member's totals. That property does not depend on the
+  UTE being catalogued, which is what makes the two records above equivalent where it matters:
+  no euro is counted twice under either. Where the consortium is uncatalogued there is simply no
+  total of its own for the award to appear in, and a member's history shows it as won *through*
+  that consortium exactly as it would otherwise.
+
+  The same holds for participation (R18): a bid submitted by a UTE is the UTE's bid, visible
+  from each member as *through* it, and counted as no member's own.
+
+  **Membership is published, not inferred**, and this requirement rests on the publication —
+  on the way a consortium's entry is **structured**, listing its members beneath it, which is
+  what the source reliably provides. The `U` prefix corroborates it where present and is absent
+  far more often than not; it is not the source of the fact. This
   is why the requirement does not breach
   [SPEC-0006](SPEC-0006-operadores-economicos.md) R6's refusal to classify operadores: that
   rule declines to **derive** whether an operador is a natural person or a legal entity, while
@@ -443,13 +543,50 @@ One decision remains outside this spec:
   family and admits two further ones from a family able to supply them. This requirement settles
   all nine for licitacións, which supplies every one. The seven required first:
 
-  - **awardee name and fiscal identifier** — as published at the award point (R8), and for a
-    UTE the UTE's own (R17). **The name is supplied, not stored on the contract**: as in
-    SPEC-0005 R7 it is held once on the operador the identifier resolves to, so what any row
-    shows is the name SPEC-0006 R4 selects and every published spelling feeds that spec's
-    retained names (R15). This family stores no per-row name of its own — not on an award and
-    not on a bidder — which is why R16's unusable identifier leaves a party with nothing to
-    display rather than a name without a link;
+  - **awardee name and fiscal identifier** — the name as published at the award point (R8),
+    and for a UTE the UTE's own (R17). **The identifier is published elsewhere on the record than
+    the award**, which is a departure from every other family and is stated rather than glossed.
+    It is taken from the first of these that has it:
+
+    - the **formalisation**, which publishes the contratista's identifier per lote and is the
+      route for the majority of awards, and for 96% of those on a formalised procedure;
+    - the **bidder list of the same procedure**, where the awardee appears among the bidders with
+      its own identifier;
+    - the **catalogue**, by matching the published name — the only step that infers anything, and
+      the only route left for a procedure that is awarded but not yet formalised and published no
+      bidder list. That population is dominated by pre-2013 records, so it is a historical tail
+      rather than a standing gap.
+
+    **A name matched in either of the last two steps must match exactly one party**, and a name
+    matching two yields no awardee. That bound belongs to the bidder-list step as much as to the
+    catalogue one: both compare a published name, and the first differs only in being scoped to
+    one procedure.
+
+    **Where the formalisation and the award name different parties, the award's name governs**
+    and the identifier is not taken from the formalisation. The resolution is what states who was
+    awarded; a formalisation naming someone else is a fact about the contract's signing that this
+    spec does not model, and silently attributing the award to that party would put money against
+    an operador the source never awarded it to.
+
+    **What the catalogue step may and may not do** is fixed here, because it is the only
+    inference this spec permits (R33) and an unbounded one would silently merge suppliers:
+
+    - it **never creates an operador**. Only a published fiscal identifier does that
+      (SPEC-0006 R3, R5), so a name that matches nothing yields **no awardee**, and R16's
+      consequences follow unchanged;
+    - it **links only where exactly one operador matches**. Two operadores sharing a name yield
+      no link, because SPEC-0006 R3 holds that merging two real suppliers is as damaging as
+      splitting one;
+    - it **is recorded as derived**, so a link the system inferred is distinguishable from one
+      the source published, and can be withdrawn without disturbing the rest.
+
+    **The name is supplied, not stored on the contract**: as in SPEC-0005 R7 it is held once on
+    the operador the identifier resolves to, so what any row shows is the name SPEC-0006 R4
+    selects and every published spelling feeds that spec's retained names (R15). This family
+    stores **one** per-row name and no other: the published name of a **consortium the source
+    does not identify** (R17), which has no operador to hold it and would otherwise appear as a
+    bidder that is nobody. Every other party is named through its operador, which is why R16's
+    unusable identifier leaves it with nothing to display rather than a name without a link;
   - **a comparable date** — the licitación's **publication date**, which every licitación has
     from the day it appears, including one never awarded. The award date is published too and
     is shown on the licitación, but it is not what orders the history: an open procedure has
@@ -515,7 +652,10 @@ One decision remains outside this spec:
   scoped to one.
 
   **A row names its awardee only when it has exactly one** — which a procedure with no lotes
-  does once it is awarded, as does one whose lotes all went to the same operador. Where a
+  does once it is awarded, as does one whose lotes all went to the same operador. An awardee the
+  system holds but has not catalogued — an unidentified consortium (R17) — **is named and offers
+  no route**, since the name is published and there is no operador page to reach; that is a named
+  party without a link, not a link that dead-ends, and the two are different things. Where a
   procedure's lotes were awarded to more than one, the row states **how many** rather than
   picking one of them, and R21's page is where they are named. A row that names an awardee is a route to that operador under SPEC-0006 R8; a row that
   states a count is a route to the procedure, which is where the routes then are. Nothing here
@@ -531,15 +671,22 @@ One decision remains outside this spec:
   total.
 - **R21** — **A licitación has a page of its own**, reached from its row, showing everything
   the system holds about it: its reference, object, state, types of contract, procedure and
-  processing, its base budget and estimated value, its classification, award and formalisation —
-  held once for the procedure, or once per **lote** where it has them, each lote also naming
-  itself — and its **bidders** —
-  each named with its fiscal identifier, each a route to its operador, each UTE showing its
-  member firms — with the winning bidder distinguished from the rest. Every party is named
-  under the name SPEC-0006 R4 selects for that operador and that operador's canonical fiscal
-  identifier, since R18 holds no per-row name of its own. The page states which
-  bidders belong to which lote wherever the procedure has them, and links to the publication
-  at the official source.
+  processing, its base budget and estimated value, its award and formalisation — held once for the
+  procedure, or once per **lote** where it has them, each lote also naming itself — its
+  classification, held wherever R8 says the source put it, and its **bidders**, with the winning
+  bidder distinguished from the rest. The page states which bidders belong to which lote wherever
+  the procedure has them, and links to the publication at the official source.
+
+  **How a party is named depends on what the system could catalogue**, and the page shows all
+  three cases rather than only the ordinary one:
+
+  - an operador — the usual case, and a **UTE the source identified** — is named under the name
+    SPEC-0006 R4 selects and that operador's canonical fiscal identifier, and is a **route** to
+    it, since R18 holds no per-row name for any party the catalogue can hold;
+  - a **consortium the source did not identify** (R17) is named under its **published** name, the
+    one per-row name R18 admits, shows its member firms — each of them a route — and offers no
+    route of its own, having no operador page to reach;
+  - a party whose identifier is **unusable** (R16) is not shown as a party at all.
 
   This is where this family departs from contratos menores, which deliberately have no detail
   view because the row is the whole record (SPEC-0005 R16). A licitación's record does not fit
@@ -565,8 +712,9 @@ One decision remains outside this spec:
   **The CPV filter closes a promise this spec inherited.** SPEC-0005 offers none because the
   source publishes no CPV for contratos menores, and defers CPV-based querying explicitly to
   this spec. A licitación whose CPV is published **per lote** (R8) is in the selection when
-  **any** of its lotes carries the chosen code, since the licitación is the unit selected
-  (R8).
+  **any** of its classifications carries the chosen code — one hanging off a lote or one held
+  against the procedure as a whole, which R8 admits because the source publishes both — since the
+  licitación is the unit selected (R8).
 - **R24** — **Which amount a row states, and what a total counts.** An **awarded** licitación
   states its **awarded amount**, VAT-inclusive — and where the procedure has lotes, the **sum of
   the lotes awarded so far**, which for the ordinary lotless procedure is simply the one amount
@@ -724,9 +872,16 @@ One decision remains outside this spec:
   this family adds: **a year's selection narrowed by CPV**, and **a single licitación's page
   with its lotes and bidders**.
 - **R33** — Published values are stored and displayed **as published**, with no correction,
-  normalisation or inference, and enriched from no other source, under SPEC-0005 R27's rule
-  and its narrowings: text values trimmed of surrounding whitespace and nothing else, amounts
-  stored as numbers, and dates interpreted rather than kept as text. A value that cannot be
+  normalisation or inference, and enriched from no other source — save the **one** inference
+  R18 defines and bounds, which is the derivation of an awardee's fiscal identifier the source
+  does not publish. That exception exists because the alternative is a family that cannot supply
+  an awardee at all, and it is confined to **which operador a row links to**: no published value
+  is altered by it, the comparison it uses is never stored or displayed, and a link it produces
+  is recorded as derived. Everything below governs values and is unqualified.
+
+  The rule for values follows SPEC-0005 R27 and its narrowings: text values trimmed of
+  surrounding whitespace and nothing else, amounts stored as numbers, and dates interpreted
+  rather than kept as text. A value that cannot be
   interpreted leaves that value absent and the licitación **stored**, never rejected — losing
   a real procedure is the larger harm.
 
@@ -788,13 +943,16 @@ One decision remains outside this spec:
    base budget and estimated value.
 8. **(R7)** Wherever a base budget or an estimated value is shown, it is labelled as
    VAT-inclusive or VAT-exclusive respectively, and the two are never presented as one figure.
-9. **(R7, R8)** A procedure's classification, award and formalisation are held in exactly one
-   place — per lote where it has lotes, against the procedure where it does not — and nowhere
-   is a second copy of them held at procedure level.
+9. **(R7, R8)** A procedure's award and formalisation are held in exactly one place — per lote
+   where it has lotes, against the procedure where it does not — and nowhere is a second copy of
+   them held at procedure level. A **classification** is likewise held in exactly one place, but
+   which place is the source's: per lote where it publishes it per lote, and against the
+   procedure otherwise, **including on a procedure that has lotes**.
 10. **(R8)** A licitación with **no lotes** holds one CPV, NUTS, award and bidder list against
-    the procedure itself; one with several holds them per lote, stored as **one** licitación
-    holding those lotes. Neither appears more than once in any list or count, and no requirement
-    reads differently for the two.
+    the procedure itself; one with several holds its awards and bidder lists per lote, stored as
+    **one** licitación holding those lotes, and holds each classification wherever the source
+    published it — against a lote, or against the procedure as a whole. Neither appears more than
+    once in any list or count, and no requirement reads differently for the two.
 11. **(R9)** One run covering several Órganos runs **initially** for an Órgano never loaded,
     **resumes** one whose initial import is incomplete, and runs **incrementally** for one
     already loaded — the mode differing per Órgano within the same run, and per family for the
@@ -824,34 +982,46 @@ One decision remains outside this spec:
 18. **(R15)** An administrator can remove a stored licitación, after which it appears in no
     list, no operador history and no total; a later import that still finds it published does
     not re-add it; and an administrator can restore it.
-19. **(R16)** For a licitación with several bidders, every bidder the source publishes is
-    stored and shown with its name and fiscal identifier, the awarded one distinguished from
-    the rest, and each resolves to the operador its identifier identifies under SPEC-0006 R3.
+19. **(R16)** For a licitación with several bidders, every bidder the source publishes is stored
+    and shown, the awarded one distinguished from the rest. A bidder published with a usable
+    fiscal identifier is shown with it and resolves to the operador that identifier identifies
+    under SPEC-0006 R3; the two exceptions the requirements name — a party whose identifier is
+    unusable (#20) and a consortium the source does not identify (#21) — are shown and resolved
+    as those criteria state.
 20. **(R16, R25)** A licitación one of whose published fiscal identifiers is unusable under
     SPEC-0006 R5 is **stored and stays visible**: that party is recorded as neither participant
     nor awardee, every other party on the same procedure is unaffected, and where the
     unresolvable party was the awardee the licitación shows an award naming nobody — offering
-    no route that dead-ends.
-21. **(R17)** A licitación whose bidder is a UTE stores the UTE as an operador under its own
-    fiscal identifier, each member firm as an operador under its own, and the membership
-    between them; opening the UTE names its members and opening a member names the UTEs it has
-    belonged to. A member whose identifier is unusable yields no operador and no membership,
-    and the UTE and its other members are unaffected.
+    no route that dead-ends. **A consortium the source does not identify is not such a party**:
+    it is recorded as a participant under its published name, with its membership, per R17.
+21. **(R17)** A licitación whose bidder is a UTE **the source identifies** stores the UTE as an
+    operador under its own fiscal identifier, each member firm as an operador under its own, and
+    the membership between them; opening the UTE names its members and opening a member names
+    the UTEs it has belonged to. One whose UTE the source **does not** identify — the ordinary
+    case — stores the consortium on the bid it made, under its published name and with the same
+    membership, and each member firm as an operador; opening a member still names it, while the
+    consortium itself has no page to open and is named on the licitación instead. In both cases
+    a member whose own identifier is unusable yields no operador and no membership, and the
+    consortium and its other members are unaffected.
     > **Stated here, proved in [SPEC-0006](SPEC-0006-operadores-economicos.md).** The surfaces
     > this criterion describes are that spec's, and it cannot host them until the amendments
     > Scope names have landed. A feature under this spec owes the import and storage half.
-22. **(R17)** A licitación **awarded** to a UTE counts as one award to the UTE: the UTE's
-    awarded total includes it, **no member's awarded total does**, and each member's history
-    shows it identified as won through that UTE. *(Stated here, proved in SPEC-0006.)*
+22. **(R17)** A licitación **awarded** to a UTE counts as one award to that UTE and to no
+    member: **no member's awarded total includes it**, and each member's history shows it
+    identified as won through that consortium. Where the source identifies the UTE, the award
+    also appears in the UTE's own awarded total; where it does not, there is no such total and
+    the award is named on the licitación — the no-double-counting property holds either way, and
+    it is the property this criterion exists to test. *(Stated here, proved in SPEC-0006.)*
 23. **(R18)** An operador awarded a procedure with **no lotes** holds exactly **one** row in
     its contract history, identified by that procedure's publication identifier alone; one
     awarded **two of a procedure's five lotes** holds **two**, each carrying that lote's own
     awarded amount and each naming the procedure and the awarding Órgano. No row carries an
     amount another operador was awarded.
 24. **(R18)** A licitación appears in its awardee's history in a *licitacións* section carrying
-    its **awarded amount** — never its base budget or estimated value — and every party named
-    on any row is named under the name SPEC-0006 R4 selects for that operador, this family
-    holding no per-row name of its own.
+    its **awarded amount** — never its base budget or estimated value — and every party named on
+    any row is named under the name SPEC-0006 R4 selects for that operador. This family holds no
+    per-row name for any party the catalogue can hold; its **one** exception is the published
+    name of a consortium the source does not identify (R17), which no operador can carry.
 25. **(R18)** An operador that bid for a licitación and did not win it sees that licitación in
     a **participation** section of its history, separate from its awards, carrying no amount,
     and included in no awarded total. An operador that won one lote and lost another of the
@@ -881,7 +1051,8 @@ One decision remains outside this spec:
     opens on the most recent year with visible licitacións, the years offered are exactly those
     with visible licitacións, and no control produces an all-years list.
 33. **(R23)** Filtering a year by a CPV code returns exactly the licitacións of that year
-    carrying it — including one that carries it on **any** of its lotes — and filtering by
+    carrying it — including one that carries it on **any** of its lotes, and one that carries it
+    against the procedure as a whole while having lotes — and filtering by
     state returns exactly those in it. Only codes and states the year's selection actually
     contains are offered, and the states offered are the source's own.
 34. **(R23)** Narrowing, sorting and counting apply to the **whole** year's selection: the
@@ -935,3 +1106,11 @@ One decision remains outside this spec:
     derived from whether it holds an award.
 45. **(R34)** Every read of a licitación, of a bidder list, and of an operador's participation
     history requires authentication; an unauthenticated visitor is denied all three.
+46. **(R18, R33)** An award on a **formalised** procedure is linked to the operador the
+    formalisation's published identifier identifies; one whose awardee appears in the procedure's
+    **bidder list** is linked to the operador that bidder's published identifier identifies.
+    Neither is a derived link. An award with **neither** is linked only where the published name
+    matches **exactly one** operador in the catalogue; where it matches none or several, the
+    licitación is stored, stays visible, and **shows an award naming nobody**. No such match ever
+    creates an operador, and a link made this way is recorded as **derived** and is
+    distinguishable from one the source published.
