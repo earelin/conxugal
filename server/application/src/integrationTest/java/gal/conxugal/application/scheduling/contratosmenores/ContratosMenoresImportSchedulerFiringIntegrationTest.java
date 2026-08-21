@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
  * startOrgano} — a scheduler that named Órganos would be a fourth trigger able to disagree with
  * the other three about which ones an import covers.
  */
-@MicronautTest
+@MicronautTest(startApplication = false)
 @Property(name = "conxugal.contratos-menores.import.schedule", value = "*/1 * * * * *")
 class ContratosMenoresImportSchedulerFiringIntegrationTest
     extends ContratosMenoresImportPortsTestSupport {
@@ -36,14 +36,14 @@ class ContratosMenoresImportSchedulerFiringIntegrationTest
 
   @MockBean(StartContratosMenoresImport.class)
   StartContratosMenoresImport startContratosMenoresImportMock() {
-    StartContratosMenoresImport startImport = mock(StartContratosMenoresImport.class);
-    when(startImport.startAll())
+    StartContratosMenoresImport mocked = mock(StartContratosMenoresImport.class);
+    when(mocked.startAll())
         .thenAnswer(
             invocation -> {
               START_ALL_INVOKED.countDown();
               return new ImportRunId(UUID.randomUUID());
             });
-    return startImport;
+    return mocked;
   }
 
   @Test

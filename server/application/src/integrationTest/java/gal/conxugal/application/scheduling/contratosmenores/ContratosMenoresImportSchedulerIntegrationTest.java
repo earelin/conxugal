@@ -11,16 +11,16 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 /**
- * The zone the nightly hour is read in, which is what puts the sweep after the catalogue import
- * rather than wherever the host's default zone happens to place it.
+ * The nightly hour and the zone it is read in — the two halves of <em>after the catalogue
+ * import</em>. Both would be safe under the guard, but one of two triggers firing at the same
+ * instant always loses, and losing nightly is not a schedule.
  *
- * <p>Only asserts {@code zoneId}, not the resolved {@code cron} value: Micronaut resolves a bean
- * method's {@code @Scheduled} placeholder once per JVM and caches it on the compiled annotation
- * metadata, so a cron assertion here could read back whatever value another test's context
- * resolved first. {@link ContratosMenoresImportSchedulerFiringIntegrationTest} proves the cron is
- * genuinely configuration-driven by observing an overridden schedule actually fire.
+ * <p>The cron is read off the environment rather than the resolved {@code @Scheduled} metadata,
+ * which is the annotation's own placeholder and not the shipped value.
+ * {@link ContratosMenoresImportSchedulerFiringIntegrationTest} is what proves the annotation
+ * genuinely drives the schedule, by overriding it and watching a tick arrive.
  */
-@MicronautTest
+@MicronautTest(startApplication = false)
 class ContratosMenoresImportSchedulerIntegrationTest {
 
   @Inject
@@ -33,5 +33,13 @@ class ContratosMenoresImportSchedulerIntegrationTest {
     ExecutableMethod<ContratosMenoresImportScheduler, ?> run = definition.getRequiredMethod("run");
 
     assertThat(run.stringValue(Scheduled.class, "zoneId")).hasValue("Europe/Madrid");
+  }
+
+  @Test
+  void the_shipped_schedule_is_daily_at_five() {
+    assertThat(
+            applicationContext.getProperty(
+                "conxugal.contratos-menores.import.schedule", String.class))
+        .hasValue("0 0 5 * * *");
   }
 }

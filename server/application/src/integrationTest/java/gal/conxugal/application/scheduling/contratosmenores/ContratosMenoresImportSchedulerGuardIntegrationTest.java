@@ -2,6 +2,7 @@ package gal.conxugal.application.scheduling.contratosmenores;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -32,7 +33,7 @@ import org.junit.jupiter.api.Test;
  * out. What the tick that finally claims goes on to cover is not this test's — here the catalogue
  * has nothing marked, which is the sweep that settles {@code SUCCEEDED} having imported nothing.
  */
-@MicronautTest
+@MicronautTest(startApplication = false)
 class ContratosMenoresImportSchedulerGuardIntegrationTest
     extends ContratosMenoresImportPortsTestSupport {
 
@@ -52,11 +53,17 @@ class ContratosMenoresImportSchedulerGuardIntegrationTest
         .thenReturn(Optional.of(RUN_ID));
     when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
     when(importRuns.findRun(RUN_ID)).thenReturn(Optional.of(runCovering()));
-    doAnswer(invocation -> settled.complete(invocation.getArgument(1, ImportRunState.class)))
+    doAnswer(
+            invocation -> {
+              settled.complete(invocation.getArgument(1, ImportRunState.class));
+              return null;
+            })
         .when(importRuns)
-        .complete(eq(RUN_ID), eq(ImportRunState.SUCCEEDED), anyInt(), anyInt());
+        .complete(eq(RUN_ID), any(ImportRunState.class), anyInt(), anyInt());
 
     assertThatCode(scheduler::run).doesNotThrowAnyException();
+    assertThat(settled).isNotDone();
+
     scheduler.run();
 
     assertThat(settled.get(5, TimeUnit.SECONDS)).isEqualTo(ImportRunState.SUCCEEDED);

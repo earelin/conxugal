@@ -15,9 +15,9 @@ import org.slf4j.LoggerFactory;
  * other trigger asks them, so this one cannot disagree.
  *
  * <p>It declares no executor of its own, unlike the catalogue import's scheduler: that one holds
- * its thread for the whole run, while {@code startAll()} claims in milliseconds and hands the
- * walking to the import's own executor. The default {@code scheduled} pool is enough for a tick
- * that short.
+ * its thread for the whole run, while {@code startAll()} claims and hands the walking to the
+ * import's own executor. A claim is a catalogue read and a row per covered Órgano, not the days
+ * the walk takes, so the default {@code scheduled} pool carries this tick.
  *
  * <p>A refusal while another import holds the guard is the system working as intended — asking
  * again later is the schedule's own next tick — so it is logged rather than allowed to reach the
