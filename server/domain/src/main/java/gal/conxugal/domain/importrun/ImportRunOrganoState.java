@@ -7,10 +7,14 @@ package gal.conxugal.domain.importrun;
  * is triggered rather than discovered as the run reaches it, so a run that dies at the fortieth of
  * four hundred can still name what it was going to cover.
  *
- * <p>{@link #STOPPED} and {@link #SKIPPED} exist so the normal case is not reported as a failure.
- * An Órgano is stopped when it was unmarked — before the run reached it, or at a batch boundary
- * while it was being walked — keeping everything already stored; an Órgano already complete is
- * skipped because there is no incremental mode to run for it yet. Neither is a fault of the run.
+ * <p>{@link #STOPPED} exists so the normal case is not reported as a failure: an Órgano is stopped
+ * when it was unmarked — before the run reached it, or at a batch boundary while it was being
+ * walked — keeping everything already stored, which is no fault of the run.
+ *
+ * <p><strong>{@link #SKIPPED} is history and nothing settles it any more.</strong> It was what an
+ * already-loaded Órgano was recorded as while there was no incremental mode to run for it; such an
+ * Órgano is now refreshed. The value is kept because runs recorded before then still carry it, and
+ * a value removed is a stored row that no longer reads.
  *
  * <p><strong>A run that stops holding the guard settles no row at all.</strong> Its coverage is
  * left exactly as the process that gave up left it, which is why a run read as abandoned can carry

@@ -164,9 +164,9 @@ class ExecuteContratosMenoresImportTest {
     verify(importRuns).complete(RUN_ID, ImportRunState.PARTIALLY_SUCCEEDED, 0, 0);
   }
 
-  // Nothing was imported and nothing failed. Read the other way round — nothing succeeded,
-  // therefore failed — this is the ordinary nightly state of a loaded catalogue reported as a
-  // fault, which is the lie the skipped state exists to avoid.
+  // Nothing produces the skipped state any more, but runs recorded before the refresh existed
+  // carry it. Read the other way round — nothing succeeded, therefore failed — such a run would
+  // turn into a fault years after the fact, every time an administrator opened it.
   @Test
   void records_the_run_as_succeeded_when_every_covered_organo_was_skipped() {
     runCovers(FIRST, SECOND);

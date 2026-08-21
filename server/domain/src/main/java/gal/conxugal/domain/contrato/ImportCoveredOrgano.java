@@ -42,14 +42,17 @@ public class ImportCoveredOrgano {
   private final OrganoRepository organos;
   private final ImportRunRepository importRuns;
   private final ImportOrganoContratosMenores walk;
+  private final RefreshOrganoContratosMenores refresh;
 
   public ImportCoveredOrgano(
       OrganoRepository organos,
       ImportRunRepository importRuns,
-      ImportOrganoContratosMenores walk) {
+      ImportOrganoContratosMenores walk,
+      RefreshOrganoContratosMenores refresh) {
     this.organos = organos;
     this.importRuns = importRuns;
     this.walk = walk;
+    this.refresh = refresh;
   }
 
   /**
@@ -74,14 +77,6 @@ public class ImportCoveredOrgano {
   private record Settlement(ImportRunOrganoState state, @Nullable String reason) {
 
     /**
-     * Recorded on an Órgano whose history is already loaded. It is neither imported nor failed, and
-     * reporting it as either would be untrue; naming the mode says why nothing was done.
-     */
-    private static final String ALREADY_LOADED =
-        "Nothing to import: this Órgano's history is loaded, and the %s mode does not exist yet"
-            .formatted(ContratosMenoresImportMode.INCREMENTAL);
-
-    /**
      * The two ways a mark can be withdrawn, told apart on the row. Both leave the Órgano exactly as
      * it stands, but only one of them read anything at all, and an administrator looking at a
      * stopped Órgano has no other way to know which happened.
@@ -98,10 +93,19 @@ public class ImportCoveredOrgano {
             + " the source's; this Órgano is imported as far as it can be and stays incomplete";
 
     /**
-     * The Órgano read its history out: its stored count reached the one the source reports. This
-     * is the only ending that leaves nothing more to say, so it is the only one with no reason.
+     * The Órgano read its history out: its stored count reached the one the source reports. One of
+     * the two endings that leave nothing more to say, and so one of the two carrying no reason.
      */
     static Settlement readItsHistoryOut() {
+      return new Settlement(ImportRunOrganoState.SUCCEEDED, null);
+    }
+
+    /**
+     * The other one: a refresh that read every window down to its floor. An already-loaded Órgano
+     * is now current, which is the whole of what happened — and a reason here would be a sentence
+     * an administrator reads on every Órgano of every recurring run.
+     */
+    static Settlement refreshedItsRecentWindow() {
       return new Settlement(ImportRunOrganoState.SUCCEEDED, null);
     }
 
@@ -120,10 +124,6 @@ public class ImportCoveredOrgano {
 
     static Settlement unmarkedMidWalk() {
       return new Settlement(ImportRunOrganoState.STOPPED, UNMARKED_MID_WALK);
-    }
-
-    static Settlement alreadyLoaded() {
-      return new Settlement(ImportRunOrganoState.SKIPPED, ALREADY_LOADED);
     }
 
     static Settlement goneFromTheCatalogue() {
@@ -150,8 +150,8 @@ public class ImportCoveredOrgano {
 
   /**
    * The mode rule decides what happens to an Órgano, not the trigger that arrived — so a mark, a
-   * manual sweep and a future scheduler all resume a half-loaded Órgano and all leave a loaded one
-   * alone.
+   * manual sweep and a future scheduler all resume a half-loaded Órgano and all refresh a loaded
+   * one.
    *
    * <p>Eligibility is asked again first, because a sweep reaches its four-hundredth Órgano days
    * after the run enumerated it, and one unmarked in between must have nothing read for it at all.
@@ -167,7 +167,7 @@ public class ImportCoveredOrgano {
     }
     return switch (ContratosMenoresImportMode.of(organo.importStatus())) {
       case INITIAL, RESUMED -> walked(runId, organo, organoId);
-      case INCREMENTAL -> Optional.of(Settlement.alreadyLoaded());
+      case INCREMENTAL -> refreshed(runId, organo, organoId);
     };
   }
 
@@ -181,6 +181,23 @@ public class ImportCoveredOrgano {
     ContratosMenoresImportSummary summary = walk.run(runId, organo, () -> stillEligible(organoId));
     return switch (summary.stoppedBy()) {
       case null -> Optional.of(endedOnItsOwnTerms(summary));
+      case UNMARKED -> Optional.of(Settlement.unmarkedMidWalk());
+      case GUARD_LOST -> Optional.empty();
+    };
+  }
+
+  /**
+   * The refresh, and what its ending means. Both interruptions mean to it exactly what they mean to
+   * a walk, and it is handed the same eligibility check, so an unmark stops it at a batch boundary
+   * just the same. Only its clean ending differs: a refresh reads down to its own floor and reaches
+   * no history floor, so it settles with nothing left to explain.
+   */
+  private Optional<Settlement> refreshed(
+      ImportRunId runId, OrganoDeContratacion organo, OrganoId organoId) {
+    ContratosMenoresRefreshSummary summary =
+        refresh.refresh(runId, organo, () -> stillEligible(organoId));
+    return switch (summary.stoppedBy()) {
+      case null -> Optional.of(Settlement.refreshedItsRecentWindow());
       case UNMARKED -> Optional.of(Settlement.unmarkedMidWalk());
       case GUARD_LOST -> Optional.empty();
     };

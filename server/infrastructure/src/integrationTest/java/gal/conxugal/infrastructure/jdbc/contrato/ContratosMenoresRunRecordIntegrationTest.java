@@ -78,6 +78,9 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
   private static final LocalDate SECOND_WINDOW_START = LocalDate.of(2026, 2, 10);
   private static final LocalDate THIRD_WINDOW_START = LocalDate.of(2025, 11, 13);
 
+  /** Where a refresh of an Órgano covered through T₀ starts: the lookback margin back from it. */
+  private static final LocalDate REFRESH_WINDOW_START = LocalDate.of(2026, 7, 8);
+
   @Container
   static PostgreSQLContainer<?> postgres = PostgresContainer.create();
 
@@ -216,22 +219,37 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
     assertThat(coverageTable()).column("state").containsValues("SUCCEEDED", "SUCCEEDED");
   }
 
-  // Nothing was imported and nothing failed. This is the ordinary state of a loaded catalogue, and
-  // reporting it as a failure every night is exactly what the skipped state exists to avoid.
+  // A sweep of a loaded catalogue is a refresh of every Órgano in it rather than a run that passes
+  // over them: each is read from its own floor, what it published since is stored, and the mark
+  // moves. This is the ordinary recurring outcome, and it reads as the success it is.
   @Test
-  void run_where_every_covered_organo_is_already_loaded_is_recorded_succeeded() throws Exception {
+  void run_where_every_covered_organo_is_already_loaded_refreshes_them_all() throws Exception {
     OrganoId first = insertOrgano("first", true, true);
     OrganoId second = insertOrgano("second", true, true);
     insertImportState(first, "COMPLETE");
     insertImportState(second, "COMPLETE");
+    publishesSinceTheRefreshFloor("first", 11);
+    publishesSinceTheRefreshFloor("second", 22);
 
     run();
 
     assertRunState("SUCCEEDED");
-    Table coverage = coverageTable();
-    assertThat(coverage).column("state").containsValues("SKIPPED", "SKIPPED");
-    assertThat(reasonFor(first)).contains("INCREMENTAL");
-    assertThat(fetchedSourceKeys).isEmpty();
+    assertCoverage(first, "SUCCEEDED");
+    assertCoverage(second, "SUCCEEDED");
+    // A refresh reaches no history floor, so neither row has anything left to explain.
+    assertThat(reasonFor(first)).isNull();
+    assertThat(reasonFor(second)).isNull();
+    assertThat(fetchedSourceKeys).containsExactlyInAnyOrder("first", "second");
+    assertThat(contratoTable()).hasNumberOfRows(2);
+    Table states = importStateTable();
+    // The three-state fact is not a refresh's to move, and neither is the cursor: a refresh keeps
+    // no resumption state, so the only mark it leaves is how far it refreshed through.
+    assertThat(states).column("state").containsValues("COMPLETE", "COMPLETE");
+    assertThat(states).row(0).value("cursor_date").isNull();
+    assertThat(states).row(1).value("cursor_date").isNull();
+    // The instant the walk began, not the one it ended at, and not a window boundary.
+    assertThat(refreshMarkOf(first)).isEqualTo(T_ZERO);
+    assertThat(refreshMarkOf(second)).isEqualTo(T_ZERO);
   }
 
   // The administrator withdraws the mark while the first batch is in flight. Everything that batch
@@ -314,7 +332,20 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
 
   /** One window's worth of history, so the walk reads the Órgano out in a single request. */
   private void publishes(String sourceKey, long... sourceIds) {
-    published.put(sourceKey, Map.of(FIRST_WINDOW_START, entries(sourceIds)));
+    publishesIn(FIRST_WINDOW_START, sourceKey, sourceIds);
+  }
+
+  /**
+   * Inside the single window a refresh of an Órgano covered through T₀ reads, rather than a walk's
+   * first one. Which window a contract sits in is what tells the two walks apart from outside: the
+   * source is asked for one window at a time and answers nothing for any other.
+   */
+  private void publishesSinceTheRefreshFloor(String sourceKey, long... sourceIds) {
+    publishesIn(REFRESH_WINDOW_START, sourceKey, sourceIds);
+  }
+
+  private void publishesIn(LocalDate windowStart, String sourceKey, long... sourceIds) {
+    published.put(sourceKey, Map.of(windowStart, entries(sourceIds)));
     recordsTotals.put(sourceKey, (long) sourceIds.length);
   }
 
@@ -380,6 +411,11 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
     assertThat(coverageOf(organoId).state())
         .as("state of Órgano %s", organoId)
         .isEqualTo(state);
+  }
+
+  /** How far the Órgano has been refreshed through, read the way the walk suites read it. */
+  private static Instant refreshMarkOf(OrganoId organoId) throws SQLException {
+    return new ContratosMenoresImportFixture(postgres).storedMarks(organoId).refreshedThrough();
   }
 
   private static String reasonFor(OrganoId organoId) throws SQLException {
