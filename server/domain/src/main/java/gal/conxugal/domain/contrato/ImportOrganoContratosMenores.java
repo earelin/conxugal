@@ -1,5 +1,8 @@
 package gal.conxugal.domain.contrato;
 
+import static gal.conxugal.domain.contrato.ReadContratosMenoresWindow.SOURCE_ZONE;
+import static gal.conxugal.domain.contrato.ReadContratosMenoresWindow.WINDOW_DAYS;
+
 import gal.conxugal.commons.time.Dates;
 import gal.conxugal.domain.contrato.ReadContratosMenoresWindow.BatchRecorder;
 import gal.conxugal.domain.importrun.ImportRunId;
@@ -11,7 +14,6 @@ import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.time.Clock;
 import jakarta.inject.Singleton;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import org.slf4j.Logger;
@@ -31,8 +33,9 @@ import org.slf4j.LoggerFactory;
  *
  * <p>The window is the source's own measured limit, honoured by construction rather than discovered
  * from its behaviour — an over-wide window answers a bare {@code 500} that nothing can tell from a
- * server fault. Reading one out is {@link ReadContratosMenoresWindow}'s, along with the page that
- * is also the batch; what this class decides is where the windows are.
+ * server fault. Its width lives with {@link ReadContratosMenoresWindow} alongside the page that is
+ * also the batch, and reading one out is that class's; what this class decides is where the windows
+ * are.
  *
  * <p><strong>The walk ends when the stored count reaches the count the source reports</strong>, not
  * at the first empty window. For the small Órganos that are most of the catalogue a quarter with no
@@ -54,31 +57,6 @@ import org.slf4j.LoggerFactory;
  */
 @Singleton
 public class ImportOrganoContratosMenores {
-
-  /**
-   * The widest window the source answers is three months, and this is that bound expressed in the
-   * unit a walk stepping <em>backwards</em> can hold it in: 89 days is the shortest three calendar
-   * months there is (1 February to 1 May outside a leap year), so a window this wide is within
-   * three months of its start whatever the months around it are.
-   *
-   * <p>Stepping back by months instead would not be, and the asymmetry is silent: {@code
-   * minusMonths} clamps to the shorter month and {@code plusMonths} does not undo the clamp, so
-   * {@code 2026-05-31} steps back to {@code 2026-02-28}, whose own three months end on
-   * {@code 2026-05-28} — a 92-day window the source would have answered, refused as over-wide by
-   * arithmetic alone, and refused identically on every resumption because the cursor keeps
-   * pointing at it.
-   *
-   * <p>The step of a walk, not a property of one window, which is why it stays here while the page
-   * size moved to the read it bounds.
-   */
-  static final int WINDOW_DAYS = 89;
-
-  /**
-   * The zone the source publishes its dates in. The walk needs it to turn the covered-through
-   * instant into the day its first window ends; every date below is a published date, not an
-   * instant.
-   */
-  private static final ZoneId SOURCE_ZONE = ZoneId.of("Europe/Madrid");
 
   private static final Logger LOG = LoggerFactory.getLogger(ImportOrganoContratosMenores.class);
 
