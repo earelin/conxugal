@@ -1,5 +1,7 @@
 package gal.conxugal.infrastructure.jdbc.contrato;
 
+import static gal.conxugal.infrastructure.jdbc.contrato.ContratosMenoresImportFixture.SOURCE_KEY;
+import static gal.conxugal.infrastructure.jdbc.contrato.ContratosMenoresImportFixture.organo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.db.api.Assertions.assertThat;
@@ -24,10 +26,8 @@ import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.organo.ContratosMenoresImportState;
 import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
-import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.time.Clock;
-import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.annotation.MockBean;
@@ -35,22 +35,15 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
 import jakarta.inject.Inject;
 import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -84,8 +77,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvider {
 
-  private static final String SOURCE_KEY = "242";
-
   /** When the Órgano's initial import took its first window, months before any refresh. */
   private static final Instant COVERED_THROUGH = Instant.parse("2026-01-15T09:00:00Z");
 
@@ -110,6 +101,7 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
   @Container
   static PostgreSQLContainer<?> postgres = PostgresContainer.create();
 
+  private final ContratosMenoresImportFixture fixture = new ContratosMenoresImportFixture(postgres);
   private final AtomicReference<Instant> now = new AtomicReference<>(NOW);
   private final List<ContratoMenorSourceEntry> published = new ArrayList<>();
   private final List<LocalDate> readWindows = new ArrayList<>();
@@ -170,9 +162,7 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
 
   @AfterEach
   void cleanUp() throws Exception {
-    try (Connection connection = rawConnection()) {
-      DatabaseCleanup.truncateAllTables(connection);
-    }
+    fixture.truncateEveryTable();
   }
 
   // The mark is the instant the walk began, not the one it ended at: a refresh reads the source
@@ -188,7 +178,7 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
     assertThat(summary).isEqualTo(ContratosMenoresRefreshSummary.clean(1, 0));
     assertThat(readWindows).containsExactly(FLOOR_FROM_PREVIOUS_REFRESH);
     assertThat(now.get()).isEqualTo(NOW.plusSeconds(600));
-    assertThat(storedMarks(organoId).refreshedThrough()).isEqualTo(NOW);
+    assertThat(fixture.storedMarks(organoId).refreshedThrough()).isEqualTo(NOW);
   }
 
   // A refresh leaves the Órgano exactly as loaded as it found it, and the resumption point an
@@ -200,12 +190,12 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
 
     refresh(organoId);
 
-    Table states = importStateTable();
+    Table states = fixture.importStateTable();
     assertThat(states).hasNumberOfRows(1);
     assertThat(states).row(0).value("organo_id").isEqualTo(organoId.value());
     assertThat(states).row(0).value("state").isEqualTo("COMPLETE");
     assertThat(states).row(0).value("cursor_date").isEqualTo(LocalDate.of(2026, 3, 4));
-    assertThat(storedMarks(organoId).coveredThrough()).isEqualTo(COVERED_THROUGH);
+    assertThat(fixture.storedMarks(organoId).coveredThrough()).isEqualTo(COVERED_THROUGH);
   }
 
   @Test
@@ -214,7 +204,7 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
 
     interruptedRefreshOf(organoId);
 
-    assertThat(storedMarks(organoId).refreshedThrough()).isEqualTo(PREVIOUS_REFRESH);
+    assertThat(fixture.storedMarks(organoId).refreshedThrough()).isEqualTo(PREVIOUS_REFRESH);
   }
 
   // Which is what makes an interruption cost freshness rather than data: the next run reads the
@@ -242,8 +232,8 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
     importRuns.complete(runId, ImportRunState.PARTIALLY_SUCCEEDED, 0, 0);
 
     assertThat(summary.stoppedBy()).isEqualTo(StopReason.UNMARKED);
-    assertThat(contratoTable()).hasNumberOfRows(1);
-    assertThat(storedMarks(organoId).refreshedThrough()).isEqualTo(PREVIOUS_REFRESH);
+    assertThat(fixture.contratoTable()).hasNumberOfRows(1);
+    assertThat(fixture.storedMarks(organoId).refreshedThrough()).isEqualTo(PREVIOUS_REFRESH);
   }
 
   // The fallback is what makes an Órgano's first refresh after its initial import cover everything
@@ -255,7 +245,7 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
     refresh(organoId);
 
     assertThat(readWindows).last().isEqualTo(FLOOR_FROM_COVERED_THROUGH);
-    assertThat(storedMarks(organoId).refreshedThrough()).isEqualTo(NOW);
+    assertThat(fixture.storedMarks(organoId).refreshedThrough()).isEqualTo(NOW);
   }
 
   /**
@@ -277,23 +267,23 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
             LocalDate.of(2025, 8, 15),
             LocalDate.of(2025, 7, 7));
     assertThat(summary.stoppedBy()).isNull();
-    assertThat(storedMarks(organoId).refreshedThrough()).isEqualTo(NOW);
+    assertThat(fixture.storedMarks(organoId).refreshedThrough()).isEqualTo(NOW);
   }
 
   @Test
   void two_refreshes_over_unchanged_publications_store_the_same_set() throws Exception {
     OrganoId organoId = loadedOrganoRefreshedThrough(PREVIOUS_REFRESH);
     refresh(organoId);
-    final UUID identityBeforeTheSecondRefresh = storedIdentityOf(1);
+    final UUID identityBeforeTheSecondRefresh = fixture.storedIdentityOf(1);
 
     ContratosMenoresRefreshSummary second = refresh(organoId);
 
     assertThat(second).isEqualTo(ContratosMenoresRefreshSummary.clean(0, 1));
-    Table contratos = contratoTable();
+    Table contratos = fixture.contratoTable();
     assertThat(contratos).hasNumberOfRows(1);
     assertThat(contratos).row(0).value("obxecto").isEqualTo("Servizos eléctricos");
     assertThat(contratos).row(0).value("amount").isEqualTo(new BigDecimal("3630.00"));
-    assertThat(storedIdentityOf(1)).isEqualTo(identityBeforeTheSecondRefresh);
+    assertThat(fixture.storedIdentityOf(1)).isEqualTo(identityBeforeTheSecondRefresh);
   }
 
   // The lookback margin's whole purpose: the source offers no *changed since* facility, so a
@@ -306,7 +296,7 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
 
     refresh(organoId);
 
-    Table contratos = contratoTable();
+    Table contratos = fixture.contratoTable();
     assertThat(contratos).hasNumberOfRows(1);
     assertThat(contratos).row(0).value("obxecto").isEqualTo("Servizos eléctricos, corrixido");
     assertThat(contratos).row(0).value("amount").isEqualTo(new BigDecimal("4000.00"));
@@ -317,7 +307,8 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
     unreachableWindow = FLOOR_FROM_PREVIOUS_REFRESH;
     ImportRunId runId = claim(organoId);
     assertThatExceptionOfType(ContratoMenorSourceUnavailableException.class)
-        .isThrownBy(() -> refreshContratosMenores.refresh(runId, organo(organoId), () -> true));
+        .isThrownBy(
+            () -> refreshContratosMenores.refresh(runId, organo(organoId), () -> true));
     importRuns.complete(runId, ImportRunState.FAILED, 0, 0);
     unreachableWindow = null;
   }
@@ -325,14 +316,15 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
   private ContratosMenoresRefreshSummary refresh(OrganoId organoId) {
     ImportRunId runId = claim(organoId);
     ContratosMenoresRefreshSummary summary =
-        refreshContratosMenores.refresh(runId, organo(organoId), () -> true);
+        refreshContratosMenores.refresh(
+            runId, organo(organoId), () -> true);
     importRuns.complete(runId, ImportRunState.SUCCEEDED, 0, 0);
     return summary;
   }
 
   /** An Órgano whose initial import completed, which is the only kind that is refreshed at all. */
   private OrganoId loadedOrganoRefreshedThrough(@Nullable Instant refreshMark) throws SQLException {
-    OrganoId organoId = insertOrgano();
+    OrganoId organoId = fixture.insertOrgano();
     importStates.insert(ContratosMenoresImportState.startedAt(organoId, COVERED_THROUGH));
     importStates.updateState(organoId, ContratosMenoresImportStatus.COMPLETE);
     if (refreshMark != null) {
@@ -342,8 +334,8 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
   }
 
   /** The resumption point the Órgano's own initial walk left behind when it finished. */
-  private static void cursorLeftAt(LocalDate cursorDate) throws SQLException {
-    execute("UPDATE contrato_menor_import_state SET cursor_date = ?", cursorDate);
+  private void cursorLeftAt(LocalDate cursorDate) throws SQLException {
+    fixture.execute("UPDATE contrato_menor_import_state SET cursor_date = ?", cursorDate);
   }
 
   private static boolean within(ContratoMenorSourceEntry entry, LocalDate from, LocalDate to) {
@@ -357,11 +349,6 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
         .orElseThrow(() -> new IllegalStateException("the import guard was already held"));
   }
 
-  private static OrganoDeContratacion organo(OrganoId organoId) {
-    return new OrganoDeContratacion(
-        organoId, SOURCE_KEY, "Axencia Turismo de Galicia", true, true, null);
-  }
-
   private static ContratoMenorSourceEntry entry(long sourceId, String obxecto, String amount) {
     return new ContratoMenorSourceEntry(
         sourceId,
@@ -371,99 +358,5 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
         "1 mes",
         "ACME SL",
         "B12345678");
-  }
-
-  private static Table contratoTable() {
-    return table("contrato_menor", "source_id");
-  }
-
-  private static Table importStateTable() {
-    return table("contrato_menor_import_state", "organo_id");
-  }
-
-  // Off the container rather than the injected DataSource: with no ambient transaction every write
-  // under test really commits, and these assertions are about what it committed.
-  private static Table table(String name, String order) {
-    return AssertDbConnectionFactory.of(
-            postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
-        .create()
-        .table(name)
-        .columnsToOrder(new Table.Order[] {Table.Order.asc(order)})
-        .build();
-  }
-
-  private record StoredMarks(Instant coveredThrough, @Nullable Instant refreshedThrough) {}
-
-  // Read through JDBC rather than asserted on the table, because AssertJ DB compares a timestamptz
-  // against the session time zone and the claims here are about the instants. Both columns come
-  // back together so the query stays a literal.
-  private static StoredMarks storedMarks(OrganoId organoId) throws SQLException {
-    String sql =
-        "SELECT covered_through, refreshed_through FROM contrato_menor_import_state"
-            + " WHERE organo_id = ?";
-    try (Connection connection = rawConnection();
-        PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setObject(1, organoId.value());
-      try (ResultSet resultSet = statement.executeQuery()) {
-        if (!resultSet.next()) {
-          throw new IllegalStateException("No state stored for Órgano %s".formatted(organoId));
-        }
-        return new StoredMarks(
-            instantAt(resultSet, "covered_through"), instantAt(resultSet, "refreshed_through"));
-      }
-    }
-  }
-
-  private static @Nullable Instant instantAt(ResultSet resultSet, String column)
-      throws SQLException {
-    Timestamp stored = resultSet.getTimestamp(column);
-    return stored == null ? null : stored.toInstant().truncatedTo(ChronoUnit.MILLIS);
-  }
-
-  private static UUID storedIdentityOf(long sourceId) throws SQLException {
-    try (Connection connection = rawConnection();
-        PreparedStatement statement =
-            connection.prepareStatement("SELECT id FROM contrato_menor WHERE source_id = ?")) {
-      statement.setLong(1, sourceId);
-      try (ResultSet resultSet = statement.executeQuery()) {
-        if (!resultSet.next()) {
-          throw new IllegalStateException(
-              "No contract stored for source id %d".formatted(sourceId));
-        }
-        return resultSet.getObject("id", UUID.class);
-      }
-    }
-  }
-
-  private static OrganoId insertOrgano() throws SQLException {
-    String sql =
-        "INSERT INTO organo_contratacion (id, source_key, name, active, importable)"
-            + " VALUES (uuidv7(), ?, ?, TRUE, TRUE) RETURNING id";
-    try (Connection connection = rawConnection();
-        PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setString(1, SOURCE_KEY);
-      statement.setString(2, "Axencia Turismo de Galicia");
-      try (ResultSet resultSet = statement.executeQuery()) {
-        if (!resultSet.next()) {
-          throw new IllegalStateException("Insert did not return a generated id");
-        }
-        return new OrganoId(resultSet.getObject("id", UUID.class));
-      }
-    }
-  }
-
-  private static void execute(String sql, Object... parameters) throws SQLException {
-    try (Connection connection = rawConnection();
-        PreparedStatement statement = connection.prepareStatement(sql)) {
-      for (int index = 0; index < parameters.length; index++) {
-        statement.setObject(index + 1, parameters[index]);
-      }
-      statement.executeUpdate();
-    }
-  }
-
-  private static Connection rawConnection() throws SQLException {
-    return DriverManager.getConnection(
-        postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
   }
 }

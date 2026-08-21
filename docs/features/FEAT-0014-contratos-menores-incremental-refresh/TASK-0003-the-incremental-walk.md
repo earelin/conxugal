@@ -44,12 +44,26 @@ choosing one: this task adds no second pacing mechanism and no retry policy of i
 - **The walk**: floor from `state.incrementalFloor(lookback)`, converted to a `LocalDate` in
   `Europe/Madrid`, then windows of `WINDOW_DAYS` ending at today, stepping back until one covers the
   floor. For almost every Órgano that is a single window.
+
+  **The floor is clamped to today**, which the first draft of this task did not say and a review
+  caught. A stored T₁ ahead of the reading node's clock by more than the lookback — skew between two
+  nodes, or a lookback configured down to minutes — otherwise puts the floor past today and has the
+  first window asked for with its start after its end. The source answers a window it cannot parse
+  with a bare `500`, so the Órgano is recorded `FAILED` for what reads as an outage. Clamped, the
+  same skew costs one day-wide window.
 - **The zone is shared, not copied.** `SOURCE_ZONE` is `private static final` inside
   `ImportOrganoContratosMenores` today; it becomes package-private so both walks read the one
   constant. [TASK-0001](TASK-0001-refresh-floor-on-import-state.md) keeps the floor rule free of a
   zone precisely so that no second copy exists to disagree with the first, and answering the floor
   as an `Instant` would buy nothing if this class then declared `Europe/Madrid` again. `WINDOW_DAYS`
   is read from the same place, for the same reason.
+
+  **Corrected while implementing:** both constants went to `ReadContratosMenoresWindow` beside
+  `PAGE_SIZE` rather than staying on the initial walk. Widening them in place would have given the
+  refresh a compile-time dependency on a sibling use case it never calls, and both are measured
+  limits of the source — the category [TASK-0002](TASK-0002-extract-the-shared-window-read.md)
+  already moved `PAGE_SIZE` there for. `WINDOW_DAYS`' own *"the step of a walk, not a property of
+  one window"* justification stopped holding the moment there were two walks stepping by it.
 - **T₁ is written only when the walk finishes cleanly** — `updateRefreshedThrough` after the last
   window, and never after a walk a source failure, an unmark or the guard going cut off. Those
   leave T₁ where it was, so the next run re-reads the same period from the same floor. **The write
@@ -124,6 +138,12 @@ sequenceDiagram
 - `lookback` defaults to 30 days with no configuration present, and is overridable by
   `conxugal.contratos-menores.import.lookback`.
 - A negative or zero `conxugal.contratos-menores.import.lookback` is refused at startup rather than
-  producing a floor ahead of T₁.
+  producing a floor ahead of T₁. **This needs `@Context` on the configuration record**, which the
+  first draft of this task did not say: Micronaut builds a configuration bean the first time
+  something asks for it, and everything that asks for this one hangs off a trigger — so without
+  eager creation an unusable value binds silently at boot and fails at the first nightly sweep,
+  which is the outcome the refusal exists to prevent.
+- A refresh whose floor would fall after today — a T₁ ahead of the clock by more than the lookback —
+  asks the source for a single day-wide window rather than one whose start is after its end.
 - The source is reached through the same `contratosdegalicia` client the initial import uses; this
   class configures no timeout, no retry and no rate limit. (SPEC-0005 #38 incremental mode)

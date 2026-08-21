@@ -1,7 +1,7 @@
 package gal.conxugal.domain.contrato;
 
-import static gal.conxugal.domain.contrato.ImportOrganoContratosMenores.SOURCE_ZONE;
-import static gal.conxugal.domain.contrato.ImportOrganoContratosMenores.WINDOW_DAYS;
+import static gal.conxugal.domain.contrato.ReadContratosMenoresWindow.SOURCE_ZONE;
+import static gal.conxugal.domain.contrato.ReadContratosMenoresWindow.WINDOW_DAYS;
 
 import gal.conxugal.commons.time.Dates;
 import gal.conxugal.domain.contrato.ReadContratosMenoresWindow.BatchRecorder;
@@ -96,12 +96,12 @@ public class RefreshOrganoContratosMenores {
     OrganoId organoId =
         Objects.requireNonNull(organo.id(), "organo must be stored before its contracts are");
     Instant refreshedThrough = clock.instant();
-    LocalDate floor = floorFor(organoId);
+    LocalDate today = LocalDate.ofInstant(refreshedThrough, SOURCE_ZONE);
     ContratosMenoresRefreshSummary summary =
         walk(
             new WalkTarget(runId, organoId, organo.sourceKey()),
-            LocalDate.ofInstant(refreshedThrough, SOURCE_ZONE),
-            floor,
+            today,
+            floorFor(organoId, today),
             stillEligible);
     if (summary.stoppedBy() == null) {
       importStates.updateRefreshedThrough(organoId, refreshedThrough);
@@ -112,13 +112,20 @@ public class RefreshOrganoContratosMenores {
   /**
    * The day the walk reaches back to: the Órgano's refresh mark if it has one and the instant its
    * history is covered through otherwise, less the lookback margin, on the day the source publishes
-   * in.
+   * in — and never later than {@code today}.
    *
    * <p>The state row is read rather than created. Only an Órgano whose initial import completed is
    * refreshed at all, and that completion is a write on this very row, so its absence is a
    * contradiction rather than a first import — reported as one instead of quietly inventing a mark.
+   *
+   * <p><strong>The clamp is what keeps the window the right way round.</strong> A stored mark ahead
+   * of the reading node's clock by more than the lookback — clock skew between two nodes, or a
+   * lookback configured down to minutes — would otherwise put the floor past today, and the walk's
+   * first window would be asked for with its start after its end. The source answers a window it
+   * cannot parse with a bare {@code 500}, so the Órgano would be recorded failed for what reads as
+   * an outage. Clamped, the same skew costs a single day-wide window that finds what it finds.
    */
-  private LocalDate floorFor(OrganoId organoId) {
+  private LocalDate floorFor(OrganoId organoId, LocalDate today) {
     ContratosMenoresImportState state =
         importStates
             .findByOrganoId(organoId)
@@ -128,7 +135,9 @@ public class RefreshOrganoContratosMenores {
                         ("Órgano %s has no contratos menores import state, so there is nothing to"
                                 + " refresh from")
                             .formatted(organoId)));
-    return LocalDate.ofInstant(state.incrementalFloor(configuration.lookback()), SOURCE_ZONE);
+    LocalDate floor =
+        LocalDate.ofInstant(state.incrementalFloor(configuration.lookback()), SOURCE_ZONE);
+    return Dates.earliest(floor, today);
   }
 
   /**

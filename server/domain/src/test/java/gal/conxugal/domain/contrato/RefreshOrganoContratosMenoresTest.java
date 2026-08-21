@@ -25,14 +25,13 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.stream.LongStream;
 import org.junit.jupiter.api.Test;
@@ -82,7 +81,9 @@ class RefreshOrganoContratosMenoresTest {
   @Mock
   private Clock clock;
 
+  private final AtomicReference<Instant> now = new AtomicReference<>(T_ONE);
   private final List<Slice> requestedSlices = new ArrayList<>();
+  private boolean theWalkTakesTime;
 
   /** One call the source port received, which is what the walk's shape is asserted on. */
   private record Slice(LocalDate from, LocalDate to, int offset) {}
@@ -90,7 +91,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void reads_one_window_from_today_back_to_the_floor_its_refresh_mark_decides() {
     refreshedThrough(PREVIOUS_REFRESH);
-    clockReads(T_ONE);
+    clockReads();
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(Map.of());
@@ -106,7 +107,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void organo_never_refreshed_measures_its_floor_from_the_covered_instant() {
     neverRefreshed();
-    clockReads(T_ONE);
+    clockReads();
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(Map.of());
@@ -119,7 +120,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void subtracts_the_lookback_it_is_configured_with() {
     refreshedThrough(PREVIOUS_REFRESH);
-    clockReads(T_ONE);
+    clockReads();
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(Map.of());
@@ -136,7 +137,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void covers_year_long_gap_in_one_refresh_by_as_many_windows_as_it_takes() {
     refreshedThrough(REFRESHED_LAST_YEAR);
-    clockReads(T_ONE);
+    clockReads();
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(Map.of());
@@ -159,7 +160,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void steps_back_in_windows_that_overlap_by_their_boundary_day() {
     refreshedThrough(Instant.parse("2026-01-06T09:00:00Z"));
-    clockReads(T_ONE);
+    clockReads();
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(Map.of());
@@ -179,7 +180,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void asks_for_windows_no_wider_than_the_shortest_three_calendar_months() {
     refreshedThrough(REFRESHED_LAST_YEAR);
-    clockReads(T_ONE);
+    clockReads();
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(Map.of());
@@ -197,14 +198,56 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void answers_what_it_added_and_what_it_refreshed() {
     refreshedThrough(PREVIOUS_REFRESH);
-    clockReads(T_ONE);
+    clockReads();
     runIsLive();
-    storeAcceptsEverything();
+    storeAddsTheFirstOfEachPageAndRefreshesTheRest();
     sourcePublishes(Map.of(FLOOR_FROM_PREVIOUS_REFRESH, entries(3)));
 
     ContratosMenoresRefreshSummary summary = refresh().refresh(RUN_ID, organo(), () -> true);
 
-    assertThat(summary).isEqualTo(ContratosMenoresRefreshSummary.clean(3, 0));
+    assertThat(summary).isEqualTo(ContratosMenoresRefreshSummary.clean(1, 2));
+  }
+
+  /**
+   * Every window's counts, not the last one's. A walk covering a year reads five windows, and an
+   * accumulator that assigned rather than added would report whatever the oldest one found — which
+   * for a refresh is usually nothing, so the summary the orchestrator settles on, and the figures
+   * an administrator reads off the run, would silently under-report.
+   */
+  @Test
+  void adds_up_what_every_window_stored_rather_than_the_last_one_alone() {
+    refreshedThrough(REFRESHED_LAST_YEAR);
+    clockReads();
+    runIsLive();
+    storeAddsTheFirstOfEachPageAndRefreshesTheRest();
+    sourcePublishes(
+        Map.of(
+            LocalDate.of(2026, 5, 9), entries(2),
+            LocalDate.of(2025, 11, 12), entries(3)));
+
+    ContratosMenoresRefreshSummary summary = refresh().refresh(RUN_ID, organo(), () -> true);
+
+    assertThat(summary).isEqualTo(ContratosMenoresRefreshSummary.clean(2, 3));
+  }
+
+  /**
+   * A refresh mark ahead of the reading clock by more than the lookback — clock skew between two
+   * nodes, or a lookback configured down to minutes — would put the floor past today and have the
+   * walk ask for a window whose start is after its end. The source answers one it cannot parse with
+   * a bare {@code 500}, so the Órgano would be recorded failed for what reads as an outage.
+   */
+  @Test
+  void clamps_the_floor_to_today_when_the_refresh_mark_is_ahead_of_the_clock() {
+    refreshedThrough(T_ONE.plus(Duration.ofDays(365)));
+    clockReads();
+    runIsLive();
+    storeAcceptsEverything();
+    sourcePublishes(Map.of());
+
+    ContratosMenoresRefreshSummary summary = refresh().refresh(RUN_ID, organo(), () -> true);
+
+    assertThat(requestedSlices).containsExactly(new Slice(TODAY, TODAY, 0));
+    assertThat(summary).isEqualTo(ContratosMenoresRefreshSummary.clean(0, 0));
   }
 
   /**
@@ -216,20 +259,22 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void writes_the_refresh_mark_stamped_at_the_instant_the_walk_began() {
     refreshedThrough(PREVIOUS_REFRESH);
-    clockReads(T_ONE, T_ONE.plusSeconds(600));
+    clockReads();
+    theWalkTakesTenMinutes();
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(Map.of());
 
     refresh().refresh(RUN_ID, organo(), () -> true);
 
+    assertThat(now.get()).isEqualTo(T_ONE.plusSeconds(600));
     verify(importStates).updateRefreshedThrough(ORGANO_ID, T_ONE);
   }
 
   @Test
   void writes_the_refresh_mark_once_however_many_windows_it_took() {
     refreshedThrough(REFRESHED_LAST_YEAR);
-    clockReads(T_ONE);
+    clockReads();
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(Map.of());
@@ -244,7 +289,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void leaves_the_refresh_mark_alone_when_the_source_becomes_unreachable() {
     refreshedThrough(PREVIOUS_REFRESH);
-    clockReads(T_ONE);
+    clockReads();
     runIsLive();
     sourceIsUnreachable();
 
@@ -257,7 +302,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void leaves_the_refresh_mark_alone_when_the_organo_is_unmarked_mid_walk() {
     refreshedThrough(PREVIOUS_REFRESH);
-    clockReads(T_ONE);
+    clockReads();
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(Map.of(FLOOR_FROM_PREVIOUS_REFRESH, entries(1)));
@@ -273,7 +318,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void leaves_the_refresh_mark_alone_when_the_run_stops_holding_the_guard() {
     refreshedThrough(PREVIOUS_REFRESH);
-    clockReads(T_ONE);
+    clockReads();
     when(importRuns.holdsGuard(RUN_ID)).thenReturn(false);
 
     ContratosMenoresRefreshSummary summary = refresh().refresh(RUN_ID, organo(), () -> true);
@@ -292,7 +337,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void lets_the_failure_to_write_the_refresh_mark_out() {
     refreshedThrough(PREVIOUS_REFRESH);
-    clockReads(T_ONE);
+    clockReads();
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(Map.of());
@@ -312,7 +357,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void moves_neither_the_import_status_nor_the_resumption_cursor() {
     refreshedThrough(PREVIOUS_REFRESH);
-    clockReads(T_ONE);
+    clockReads();
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(Map.of(FLOOR_FROM_PREVIOUS_REFRESH, entries(2)));
@@ -329,7 +374,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void refuses_to_refresh_an_organo_with_no_import_state_at_all() {
     when(importStates.findByOrganoId(ORGANO_ID)).thenReturn(Optional.empty());
-    clockReads(T_ONE);
+    clockReads();
 
     assertThatExceptionOfType(IllegalStateException.class)
         .isThrownBy(() -> refresh().refresh(RUN_ID, organo(), () -> true))
@@ -375,11 +420,18 @@ class RefreshOrganoContratosMenoresTest {
                     refreshMark)));
   }
 
-  /** The instants the clock answers in order, the last of them repeating once they run out. */
-  private void clockReads(Instant... instants) {
-    Deque<Instant> remaining = new ArrayDeque<>(List.of(instants));
-    when(clock.instant())
-        .thenAnswer(invocation -> remaining.size() == 1 ? remaining.peek() : remaining.poll());
+  /**
+   * A clock that answers {@link #NOW} until something moves it, which is what
+   * {@link #theWalkTakesTenMinutes()} does from inside the source. A fixed clock cannot tell a mark
+   * stamped at the walk's start from one stamped at its end.
+   */
+  private void clockReads() {
+    when(clock.instant()).thenAnswer(invocation -> now.get());
+  }
+
+  /** Moves the clock on as the walk reads its first page, as a real one would. */
+  private void theWalkTakesTenMinutes() {
+    theWalkTakesTime = true;
   }
 
   private void runIsLive() {
@@ -394,6 +446,9 @@ class RefreshOrganoContratosMenoresTest {
           int offset = invocation.getArgument(3);
           int pageSize = invocation.getArgument(4);
           requestedSlices.add(new Slice(from, invocation.getArgument(2), offset));
+          if (theWalkTakesTime) {
+            now.set(T_ONE.plusSeconds(600));
+          }
           List<ContratoMenorSourceEntry> window = published.getOrDefault(from, List.of());
           int start = Math.min(offset, window.size());
           return new ContratoMenorSourcePage(
@@ -404,6 +459,17 @@ class RefreshOrganoContratosMenoresTest {
   private void sourceIsUnreachable() {
     when(contratoMenorSource.fetchPage(eq(SOURCE_KEY), any(), any(), anyInt(), anyInt()))
         .thenThrow(new ContratoMenorSourceUnavailableException("source is down"));
+  }
+
+  /** Counts split across both columns, so a summary reporting only one of them is visible. */
+  private void storeAddsTheFirstOfEachPageAndRefreshesTheRest() {
+    when(batch.store(anyList(), eq(ORGANO_ID)))
+        .thenAnswer(invocation -> {
+          List<ContratoMenorSourceEntry> page = invocation.getArgument(0);
+          return page.isEmpty()
+              ? new UpsertCounts(0, 0)
+              : new UpsertCounts(1, page.size() - 1);
+        });
   }
 
   private void storeAcceptsEverything() {

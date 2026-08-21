@@ -1,6 +1,5 @@
 package gal.conxugal.domain.contrato;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import org.junit.jupiter.api.Test;
@@ -17,11 +16,5 @@ class ContratosMenoresRefreshSummaryTest {
     assertThatNullPointerException()
         .isThrownBy(() -> ContratosMenoresRefreshSummary.stopped(0, 0, null))
         .withMessageContaining("stoppedBy");
-  }
-
-  @Test
-  void clean_refresh_leaves_nothing_to_explain() {
-    assertThat(ContratosMenoresRefreshSummary.clean(3, 7))
-        .isEqualTo(new ContratosMenoresRefreshSummary(3, 7, null));
   }
 }

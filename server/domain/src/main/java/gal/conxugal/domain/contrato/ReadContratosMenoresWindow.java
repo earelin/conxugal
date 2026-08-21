@@ -3,6 +3,7 @@ package gal.conxugal.domain.contrato;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import jakarta.inject.Singleton;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.function.BooleanSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,37 @@ public class ReadContratosMenoresWindow {
 
   /** The largest page the source answers, and so the batch a run advances after. */
   static final int PAGE_SIZE = 100;
+
+  /**
+   * The widest window the source answers is three months, and this is that bound expressed in the
+   * unit a walk stepping <em>backwards</em> can hold it in: 89 days is the shortest three calendar
+   * months there is (1 February to 1 May outside a leap year), so a window this wide is within
+   * three months of its start whatever the months around it are.
+   *
+   * <p>Stepping back by months instead would not be, and the asymmetry is silent: {@code
+   * minusMonths} clamps to the shorter month and {@code plusMonths} does not undo the clamp, so
+   * {@code 2026-05-31} steps back to {@code 2026-02-28}, whose own three months end on
+   * {@code 2026-05-28} — a 92-day window the source would have answered, refused as over-wide by
+   * arithmetic alone, and refused identically on every resumption because the cursor keeps
+   * pointing at it.
+   *
+   * <p>It lives here rather than with either walk for the reason {@link #PAGE_SIZE} does: it is a
+   * measured limit of the source, and both walks step by it. A copy in each is one that eventually
+   * disagrees with the other.
+   */
+  static final int WINDOW_DAYS = 89;
+
+  /**
+   * The zone the source publishes its dates in. A walk needs it to turn an instant into the day a
+   * window ends — the covered-through instant for an initial import, the refresh floor for an
+   * incremental one — and every date either of them hands this class is a published date, not an
+   * instant.
+   *
+   * <p>Here for the same reason as the two above, and it is why the floor rule on the import state
+   * answers an {@code Instant} and borrows no zone: there is one {@code Europe/Madrid} in the walk
+   * and nothing beside it to disagree with.
+   */
+  static final ZoneId SOURCE_ZONE = ZoneId.of("Europe/Madrid");
 
   private static final Logger LOG = LoggerFactory.getLogger(ReadContratosMenoresWindow.class);
 

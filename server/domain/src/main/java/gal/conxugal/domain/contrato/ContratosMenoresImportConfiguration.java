@@ -1,6 +1,7 @@
 package gal.conxugal.domain.contrato;
 
 import io.micronaut.context.annotation.ConfigurationProperties;
+import io.micronaut.context.annotation.Context;
 import io.micronaut.core.bind.annotation.Bindable;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -23,6 +24,12 @@ import java.time.LocalDate;
  * entry, and 30 days is chosen to be comfortably longer than a plausible administrative correction
  * cycle. Its cost is the last month of every marked Órgano re-read every night, for ever.
  *
+ * <p><strong>{@link Context} because a bound value here is refused rather than corrected.</strong>
+ * Micronaut creates a configuration bean the first time something asks for it, and the only things
+ * that ask for this one are reached from a trigger — so without eager creation an unusable value
+ * would bind silently at boot and fail at the first import instead, which is the whole of what the
+ * compact constructor exists to prevent.
+ *
  * <p><strong>What is here and what is not follows one rule.</strong> The source's own
  * <em>measured limits</em> — the three-month window and the hundred-row page — are not
  * configurable, because they are facts about the source rather than guesses, and the page is also
@@ -30,6 +37,7 @@ import java.time.LocalDate;
  * negotiable against a figure the source decides. The <em>educated guesses about it</em> — both
  * numbers below — are, since they are the ones a measurement would move.
  */
+@Context
 @ConfigurationProperties(ContratosMenoresImportConfiguration.PREFIX)
 public record ContratosMenoresImportConfiguration(
     @Bindable(defaultValue = "2018-01-01") LocalDate historyFloor,
@@ -48,7 +56,8 @@ public record ContratosMenoresImportConfiguration(
 
   /**
    * A margin that is not a margin at all is refused where the property binds, so a typo in a config
-   * file fails the application at startup rather than at the first nightly sweep.
+   * file fails the application at startup rather than at the first nightly sweep — which is what
+   * the {@link Context} above buys, and is not true of a configuration bean without it.
    *
    * <p>The refresh floor subtracts whatever it is given. A negative lookback therefore moves that
    * floor <em>ahead</em> of the instant the refresh stamps, and everything published in between
