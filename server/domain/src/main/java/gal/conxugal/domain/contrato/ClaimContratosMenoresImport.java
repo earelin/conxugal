@@ -22,7 +22,7 @@ import java.util.Objects;
  * enumerates the coverage, and every one of those is over before the first Órgano is touched.
  *
  * <p><strong>Eligibility is decided here and nowhere else.</strong> Every trigger — a mark, an
- * administrator's button, a future scheduler — asks the same question of the same code, so none of
+ * administrator's button, the scheduler — asks the same question of the same code, so none of
  * them can disagree with the others about which Órganos an import covers.
  *
  * <p><strong>The covered Órganos are fixed now, not discovered as the run reaches them</strong>, so

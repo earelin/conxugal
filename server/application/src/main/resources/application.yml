@@ -1,4 +1,7 @@
 conxugal:
+  contratos-menores:
+    import:
+      schedule: "0 0 5 * * *"
   metrics:
     stream:
       sample-interval: 5s

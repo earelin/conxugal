@@ -150,7 +150,7 @@ public class ImportCoveredOrgano {
 
   /**
    * The mode rule decides what happens to an Órgano, not the trigger that arrived — so a mark, a
-   * manual sweep and a future scheduler all resume a half-loaded Órgano and all refresh a loaded
+   * manual sweep and a scheduled sweep all resume a half-loaded Órgano and all refresh a loaded
    * one.
    *
    * <p>Eligibility is asked again first, because a sweep reaches its four-hundredth Órgano days
