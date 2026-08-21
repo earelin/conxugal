@@ -236,15 +236,20 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
     assertRunState("SUCCEEDED");
     assertCoverage(first, "SUCCEEDED");
     assertCoverage(second, "SUCCEEDED");
-    // A refresh reaches no history floor, so its row has nothing left to explain.
+    // A refresh reaches no history floor, so neither row has anything left to explain.
     assertThat(reasonFor(first)).isNull();
+    assertThat(reasonFor(second)).isNull();
     assertThat(fetchedSourceKeys).containsExactlyInAnyOrder("first", "second");
     assertThat(contratoTable()).hasNumberOfRows(2);
     Table states = importStateTable();
-    // The three-state fact is not a refresh's to move, and the mark says how far it got.
+    // The three-state fact is not a refresh's to move, and neither is the cursor: a refresh keeps
+    // no resumption state, so the only mark it leaves is how far it refreshed through.
     assertThat(states).column("state").containsValues("COMPLETE", "COMPLETE");
-    assertThat(states).row(0).value("refreshed_through").isNotNull();
-    assertThat(states).row(1).value("refreshed_through").isNotNull();
+    assertThat(states).row(0).value("cursor_date").isNull();
+    assertThat(states).row(1).value("cursor_date").isNull();
+    // The instant the walk began, not the one it ended at, and not a window boundary.
+    assertThat(refreshMarkOf(first)).isEqualTo(T_ZERO);
+    assertThat(refreshMarkOf(second)).isEqualTo(T_ZERO);
   }
 
   // The administrator withdraws the mark while the first batch is in flight. Everything that batch
@@ -399,6 +404,22 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
     assertThat(coverageOf(organoId).state())
         .as("state of Órgano %s", organoId)
         .isEqualTo(state);
+  }
+
+  /** How far the Órgano has been refreshed through, as the refresh itself stamped it. */
+  private static Instant refreshMarkOf(OrganoId organoId) throws SQLException {
+    String sql = "SELECT refreshed_through FROM contrato_menor_import_state WHERE organo_id = ?";
+    try (Connection connection = rawConnection();
+        PreparedStatement statement = connection.prepareStatement(sql)) {
+      statement.setObject(1, organoId.value());
+      try (ResultSet resultSet = statement.executeQuery()) {
+        if (!resultSet.next()) {
+          throw new IllegalStateException("No import state for Órgano %s".formatted(organoId));
+        }
+        Timestamp stored = resultSet.getTimestamp("refreshed_through");
+        return stored == null ? null : stored.toInstant();
+      }
+    }
   }
 
   private static String reasonFor(OrganoId organoId) throws SQLException {

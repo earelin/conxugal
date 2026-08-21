@@ -43,7 +43,7 @@ public interface OrganoRepository {
    * One Órgano, carrying its contratos menores import state on the same left join
    * {@link #findAllOrderByName} uses. The state travels with it because the mode an import takes
    * for this Órgano is read from it: without the join it would come back absent for every Órgano,
-   * and every already-loaded one would be walked from the top again rather than skipped.
+   * and every already-loaded one would be walked from the top again rather than refreshed.
    */
   @Join(value = "importState", type = Join.Type.LEFT_FETCH)
   Optional<OrganoDeContratacion> findById(OrganoId id);

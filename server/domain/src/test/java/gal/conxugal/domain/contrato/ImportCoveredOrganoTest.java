@@ -310,6 +310,16 @@ class ImportCoveredOrganoTest {
   }
 
   @Test
+  void tells_the_refresh_the_organo_is_still_eligible_while_it_stays_marked() {
+    organoIs(loaded(ContratosMenoresImportStatus.COMPLETE));
+    refreshAnswers(organoId -> ContratosMenoresRefreshSummary.clean(3, 12));
+
+    importCoveredOrgano().run(RUN_ID, ORGANO_ID);
+
+    assertThat(eligibilityChecks.getFirst().getAsBoolean()).isTrue();
+  }
+
+  @Test
   void tells_the_refresh_the_organo_is_no_longer_eligible_once_it_is_unmarked() {
     when(organos.findById(ORGANO_ID))
         .thenReturn(Optional.of(loaded(ContratosMenoresImportStatus.COMPLETE)))

@@ -71,11 +71,13 @@ public class ExecuteContratosMenoresImport {
    * and, asked to execute a run that is already over, would overwrite the verdict and the failed
    * Órganos it named.
    *
-   * <p>The per-Órgano rows are best-effort by comparison: an Órgano that needs no walk — already
-   * loaded, unmarked before its turn, gone from the catalogue — is settled without asking the guard
-   * again, because those take no measurable time and asking would double the reads a sweep of a
-   * loaded catalogue makes. A stall long enough to lose the guard between two of them leaves a row
-   * written against a run nobody reads any more; the verdict is what stops that being visible.
+   * <p>The per-Órgano rows are best-effort by comparison: an Órgano that reads nothing at all —
+   * unmarked before its turn, gone from the catalogue — is settled without asking the guard again,
+   * because those take no measurable time and asking would double the reads settling them makes.
+   * One that walks or refreshes needs no ask here either, having put the question to the guard
+   * twice per page from inside its own loop. A stall long enough to lose the guard between two of
+   * them leaves a row written against a run nobody reads any more; the verdict is what stops that
+   * being visible.
    */
   public void execute(ImportRunId runId) {
     if (!importRuns.holdsGuard(runId)) {
