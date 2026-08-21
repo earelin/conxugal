@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import gal.conxugal.domain.contrato.ContratoMenorRepository;
 import gal.conxugal.domain.contrato.ContratosMenoresImportConfiguration;
 import gal.conxugal.domain.contrato.ImportOrganoContratosMenores;
+import gal.conxugal.domain.contrato.ReadContratosMenoresWindow;
 import gal.conxugal.domain.contrato.StoreContratosMenoresBatch;
 import gal.conxugal.domain.contrato.UpsertCounts;
 import gal.conxugal.domain.importrun.ImportRunId;
@@ -112,11 +113,12 @@ class ContratosMenoresWalkSliceLimitsTest {
 
   private ImportOrganoContratosMenores walk() {
     return new ImportOrganoContratosMenores(
-        new ContratosDeGaliciaContratoMenorSourceAdapter(contratosMenoresClient),
-        new StoreContratosMenoresBatch(operadores, contratos),
+        new ReadContratosMenoresWindow(
+            new ContratosDeGaliciaContratoMenorSourceAdapter(contratosMenoresClient),
+            new StoreContratosMenoresBatch(operadores, contratos),
+            importRuns),
         contratos,
         importStates,
-        importRuns,
         (Clock) Instant::now,
         new ContratosMenoresImportConfiguration(HISTORY_FLOOR));
   }

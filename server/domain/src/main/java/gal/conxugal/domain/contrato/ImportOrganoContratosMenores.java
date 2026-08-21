@@ -1,9 +1,8 @@
 package gal.conxugal.domain.contrato;
 
 import gal.conxugal.commons.time.Dates;
-import gal.conxugal.domain.contrato.ContratosMenoresImportSummary.StopReason;
+import gal.conxugal.domain.contrato.ReadContratosMenoresWindow.BatchRecorder;
 import gal.conxugal.domain.importrun.ImportRunId;
-import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportState;
 import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
@@ -15,7 +14,6 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,11 +29,10 @@ import org.slf4j.LoggerFactory;
  * most-consulted contracts become browsable within hours rather than at the end, and a partial
  * history that grows backwards is one missing its oldest contracts rather than its newest.
  *
- * <p>The window and the page are the source's own measured limits, honoured by construction rather
- * than discovered from its behaviour — an over-wide window answers a bare {@code 500} that nothing
- * can tell from a server fault. The page is also the batch: one page read, one page upserted and
- * one progress advance are the same beat, which is what keeps the batch tied to the source rather
- * than being a second thing to tune against the guard's abandonment bound.
+ * <p>The window is the source's own measured limit, honoured by construction rather than discovered
+ * from its behaviour — an over-wide window answers a bare {@code 500} that nothing can tell from a
+ * server fault. Reading one out is {@link ReadContratosMenoresWindow}'s, along with the page that
+ * is also the batch; what this class decides is where the windows are.
  *
  * <p><strong>The walk ends when the stored count reaches the count the source reports</strong>, not
  * at the first empty window. For the small Órganos that are most of the catalogue a quarter with no
@@ -45,16 +42,15 @@ import org.slf4j.LoggerFactory;
  * target. The configured history floor is what bounds a walk whose count never converges, and
  * reaching it leaves the Órgano incomplete.
  *
- * <p><strong>A batch is stored with the operadores its contracts name</strong>, by {@link
- * StoreContratosMenoresBatch} and in one transaction. The published awardee reaches nothing beyond
- * that call: a stored contract keeps neither the name nor the identifier it was published with, so
- * the page read here is the only thing the derivation ever has to read them from.
- *
  * <p><strong>Contracts commit first, the record of them afterwards</strong>, in transactions of
  * their own. A progress write that fails is logged and abandoned: the import wins and the record is
  * what is sacrificed. That leaves the cursor a conservative hint rather than a ledger — a crash
  * between a batch's commit and its cursor write leaves it behind what is stored, and the resumption
  * re-reads that overlap harmlessly, because storing a contract again refreshes it in place.
+ *
+ * <p><strong>The cursor is this walk's alone.</strong> It is written from the hook handed to the
+ * shared window read, which can reach no import state of its own; a resumption is only correct
+ * while one writer decides where the walk left off.
  */
 @Singleton
 public class ImportOrganoContratosMenores {
@@ -71,11 +67,11 @@ public class ImportOrganoContratosMenores {
    * {@code 2026-05-28} — a 92-day window the source would have answered, refused as over-wide by
    * arithmetic alone, and refused identically on every resumption because the cursor keeps
    * pointing at it.
+   *
+   * <p>The step of a walk, not a property of one window, which is why it stays here while the page
+   * size moved to the read it bounds.
    */
   static final int WINDOW_DAYS = 89;
-
-  /** The largest page the source answers, and so the batch a run advances after. */
-  static final int PAGE_SIZE = 100;
 
   /**
    * The zone the source publishes its dates in. The walk needs it to turn the covered-through
@@ -86,27 +82,21 @@ public class ImportOrganoContratosMenores {
 
   private static final Logger LOG = LoggerFactory.getLogger(ImportOrganoContratosMenores.class);
 
-  private final ContratoMenorSource contratoMenorSource;
-  private final StoreContratosMenoresBatch batch;
+  private final ReadContratosMenoresWindow windows;
   private final ContratoMenorRepository contratos;
   private final ContratosMenoresImportStateRepository importStates;
-  private final ImportRunRepository importRuns;
   private final Clock clock;
   private final ContratosMenoresImportConfiguration configuration;
 
   public ImportOrganoContratosMenores(
-      ContratoMenorSource contratoMenorSource,
-      StoreContratosMenoresBatch batch,
+      ReadContratosMenoresWindow windows,
       ContratoMenorRepository contratos,
       ContratosMenoresImportStateRepository importStates,
-      ImportRunRepository importRuns,
       Clock clock,
       ContratosMenoresImportConfiguration configuration) {
-    this.contratoMenorSource = contratoMenorSource;
-    this.batch = batch;
+    this.windows = windows;
     this.contratos = contratos;
     this.importStates = importStates;
-    this.importRuns = importRuns;
     this.clock = clock;
     this.configuration = configuration;
   }
@@ -132,17 +122,10 @@ public class ImportOrganoContratosMenores {
       ImportRunId runId, OrganoDeContratacion organo, BooleanSupplier stillEligible) {
     OrganoId organoId =
         Objects.requireNonNull(organo.id(), "organo must be stored before its contracts are");
-    Target target = new Target(runId, organoId, organo.sourceKey());
+    WalkTarget target = new WalkTarget(runId, organoId, organo.sourceKey());
     ContratosMenoresImportState state = stateOf(organoId);
     return walk(target, resumePointOf(state), stillEligible);
   }
-
-  /**
-   * What one walk is about: the Órgano it is loading, the key the source knows that Órgano by, and
-   * the run it reports its progress against. None of the three moves while the walk runs, so they
-   * travel together rather than as three more parameters on every step of it.
-   */
-  private record Target(ImportRunId runId, OrganoId organoId, String sourceKey) {}
 
   /**
    * The state row as this walk found it, created at T₀ if this is the Órgano's first import. T₀ is
@@ -170,31 +153,21 @@ public class ImportOrganoContratosMenores {
         : cursorDate;
   }
 
-  /**
-   * How one window ended: what it stored, and the count the source reported as it was read.
-   *
-   * <p>{@code stoppedBy} is present when the window was cut off part-way. The pages already stored
-   * stand and are counted here, but nothing beyond that window is this walk's to read — and {@code
-   * recordsTotal} then says nothing, because the window it would have been judged against was never
-   * read out.
-   */
-  private record WindowRead(
-      int added, int refreshed, long recordsTotal, @Nullable StopReason stoppedBy) {}
-
   /** Window by window, newest first, until one of the three endings arrives. */
   private ContratosMenoresImportSummary walk(
-      Target target, LocalDate resumePoint, BooleanSupplier stillEligible) {
+      WalkTarget target, LocalDate resumePoint, BooleanSupplier stillEligible) {
     LocalDate historyFloor = configuration.historyFloor();
     LocalDate windowEnd = resumePoint;
     int added = 0;
     int refreshed = 0;
+    BatchRecorder cursorWrite = cursorWriteFor(target);
     // Strictly after the floor, so a walk resuming from a cursor an earlier one left *at* the
     // floor asks the source for nothing. It has already read every window there is; the day-wide
     // window it would otherwise re-read cannot converge a count that did not converge over the
     // whole history.
     while (windowEnd.isAfter(historyFloor)) {
       LocalDate windowStart = Dates.latest(windowEnd.minusDays(WINDOW_DAYS), historyFloor);
-      WindowRead read = readWindow(target, windowStart, windowEnd, stillEligible);
+      WindowRead read = windows.read(target, windowStart, windowEnd, stillEligible, cursorWrite);
       added += read.added();
       refreshed += read.refreshed();
       StopReason stoppedBy = read.stoppedBy();
@@ -224,102 +197,16 @@ public class ImportOrganoContratosMenores {
   }
 
   /**
-   * One window, a page at a time until the source answers a short one — which is what says the
-   * window holds nothing further, since it only ever answers a full page while more remains.
-   *
-   * <p>The guard is asked twice a page, and both asks are interruptions rather than the loop's
-   * business. The first means a walk handed a run that is already gone reads nothing at all. The
-   * second is the one that does the work the guard exists for: it sits <em>after</em> the batch
-   * commits and <em>before</em> the progress write, because the progress write renews the run's own
-   * last-advanced stamp — so a walk that asked only before fetching would be reading a liveness it
-   * had just written itself, and a stall long enough to lose the guard would be invisible to it.
-   * Between those two points the answer is still the one the stalled request left behind.
-   *
-   * <p><strong>Eligibility is asked once a page, at the very bottom.</strong> That reasoning does
-   * not carry over: the mark is written by an administrator rather than by this walk, so nothing
-   * here can answer its own question. What matters instead is that the batch is wholly settled
-   * first — asked before the progress write, a withdrawn mark would leave the batch's contracts
-   * committed while its cursor and its counts were not. Asked only at the top of the loop it would
-   * never be evaluated after a window's last page, and the walk would go on to test the stored
-   * count and could mark an Órgano complete on a history it was told to stop reading.
-   */
-  private WindowRead readWindow(
-      Target target, LocalDate windowStart, LocalDate windowEnd, BooleanSupplier stillEligible) {
-    int added = 0;
-    int refreshed = 0;
-    int offset = 0;
-    long recordsTotal = 0;
-    boolean lastPage = false;
-    while (!lastPage) {
-      if (!importRuns.holdsGuard(target.runId())) {
-        return guardLost(target, added, refreshed);
-      }
-      ContratoMenorSourcePage page =
-          contratoMenorSource.fetchPage(
-              target.sourceKey(), windowStart, windowEnd, offset, PAGE_SIZE);
-      recordsTotal = page.recordsTotal();
-      lastPage = page.entries().size() < PAGE_SIZE;
-      UpsertCounts counts = batch.store(page.entries(), target.organoId());
-      added += counts.added();
-      refreshed += counts.refreshed();
-      if (!importRuns.holdsGuard(target.runId())) {
-        return guardLost(target, added, refreshed);
-      }
-      recordProgress(target, lastPage ? windowStart : windowEnd, counts);
-      offset += page.entries().size();
-      if (!stillEligible.getAsBoolean()) {
-        return noLongerEligible(target, added, refreshed);
-      }
-    }
-    return new WindowRead(added, refreshed, recordsTotal, null);
-  }
-
-  /**
-   * The window abandoned part-way, because the run behind it stopped holding the guard. What the
-   * batches before it stored stands, and the cursor is left where the last of them put it — the
-   * conservative pair, so the window is re-read on resumption and nothing is stored twice.
-   */
-  private WindowRead guardLost(Target target, int added, int refreshed) {
-    LOG.warn(
-        "Contratos menores walk of Órgano {} stopped: its run {} no longer holds the import guard,"
-            + " so another import may already have claimed it",
-        target.organoId(), target.runId());
-    return new WindowRead(added, refreshed, 0, StopReason.GUARD_LOST);
-  }
-
-  /**
-   * The window abandoned at a batch boundary, because the Órgano stopped being one to import. Every
-   * batch it read stands and the cursor points at the last of them, which is what makes a later
-   * mark resume this Órgano rather than start it again.
-   */
-  private WindowRead noLongerEligible(Target target, int added, int refreshed) {
-    LOG.info(
-        "Contratos menores walk of Órgano {} stopped at a batch boundary: it is no longer active"
-            + " and marked for import, and run {} leaves it where it reached",
-        target.organoId(), target.runId());
-    return new WindowRead(added, refreshed, 0, StopReason.UNMARKED);
-  }
-
-  /**
-   * The batch boundary: the cursor moves and the run is advanced, each in its own short transaction
-   * and both after the contracts committed. Neither may break the import, so a failure here is
-   * logged and let go — a batch that committed has already happened, and nothing about bookkeeping
-   * may undo it.
+   * The cursor write this walk hands the shared read, run at every batch boundary and inside the
+   * catch that keeps a bookkeeping failure from breaking the import. It is the only thing this walk
+   * adds to that read, and the only writer the resumption point has.
    *
    * <p>The cursor is written conservatively. Within a window it stays at the window's end, because
    * a resumption from anywhere inside a window it has not finished paging would skip the rest of
    * it; only the page that exhausts the window moves it back.
    */
-  private void recordProgress(Target target, LocalDate cursorDate, UpsertCounts counts) {
-    try {
-      importStates.updateCursorDate(target.organoId(), cursorDate);
-      importRuns.advance(
-          target.runId(), target.organoId(), counts.added(), counts.refreshed());
-    } catch (RuntimeException e) {
-      LOG.warn(
-          "Contratos menores batch for Órgano {} committed but its progress against run {} was not"
-              + " recorded; the contracts stand and the walk continues",
-          target.organoId(), target.runId(), e);
-    }
+  private BatchRecorder cursorWriteFor(WalkTarget target) {
+    return (counts, windowStart, windowEnd, lastPage) ->
+        importStates.updateCursorDate(target.organoId(), lastPage ? windowStart : windowEnd);
   }
 }

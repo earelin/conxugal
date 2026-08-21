@@ -39,18 +39,17 @@ class ContratosMenoresImportSummaryTest {
                     0,
                     0,
                     ContratosMenoresImportStatus.COMPLETE,
-                    ContratosMenoresImportSummary.StopReason.UNMARKED));
+                    StopReason.UNMARKED));
   }
 
   @Test
   void leaves_the_stopped_walk_incomplete() {
     ContratosMenoresImportSummary summary =
-        ContratosMenoresImportSummary.stopped(
-            100, 3, ContratosMenoresImportSummary.StopReason.GUARD_LOST);
+        ContratosMenoresImportSummary.stopped(100, 3, StopReason.GUARD_LOST);
 
     assertThat(summary.status()).isEqualTo(ContratosMenoresImportStatus.INCOMPLETE);
     assertThat(summary.stoppedBy())
-        .isEqualTo(ContratosMenoresImportSummary.StopReason.GUARD_LOST);
+        .isEqualTo(StopReason.GUARD_LOST);
   }
 
   /** Incomplete is not stopped: a walk that reached the history floor ended on its own terms. */

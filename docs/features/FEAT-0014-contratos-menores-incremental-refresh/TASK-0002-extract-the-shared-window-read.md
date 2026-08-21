@@ -2,7 +2,7 @@
 feat: FEAT-0014
 domain: backend
 adrs: [0002]
-status: todo
+status: done
 depends_on: []
 ---
 
@@ -72,10 +72,12 @@ exist yet).
 - No new criterion. This task must leave
   [SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) **#14**, **#17** and **#32**
   exactly as they were, and the existing tests of `ImportOrganoContratosMenores` — unit, and
-  `OrganoContratosMenoresImportIntegrationTest` — pass with **no change beyond `StopReason` being
-  requalified**. `ContratosMenoresImportSummaryTest` names it qualified today
-  (`ContratosMenoresImportSummary.StopReason.UNMARKED`), so it is requalified rather than
-  re-imported; no assertion in any of them changes.
+  `OrganoContratosMenoresImportIntegrationTest` — must pass with **no existing assertion weakened,
+  removed or changed in meaning**. `ContratosMenoresImportSummaryTest` names `StopReason` qualified
+  today (`ContratosMenoresImportSummary.StopReason.UNMARKED`), so it is requalified rather than
+  re-imported. Two mechanical changes are expected and are not a breach of this: the constructor
+  call sites that hand-wire the class gain the collaborator, and a test may gain an assertion where
+  one is needed to pin behaviour the extraction newly puts at risk.
 - The guard is still asked twice a page, and the second ask still sits between the batch commit and
   the progress write: a test in which the guard is lost only after the batch commits still ends the
   walk with nothing advanced. (SPEC-0005 #32)

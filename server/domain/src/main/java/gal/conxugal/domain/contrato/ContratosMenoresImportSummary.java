@@ -14,26 +14,16 @@ import org.jspecify.annotations.Nullable;
  * treated as loaded. {@link ContratosMenoresImportStatus#NEVER_STARTED} is never answered here: a
  * walk that ran has started by definition.
  *
- * <p>{@code stoppedBy} is the second, separate fact, and it is a reason rather than a flag because
- * its two values ask opposite things of the caller. An Órgano unmarked mid-walk is an ordinary,
- * deliberate ending and the rest of the run carries on; a run that stopped holding the guard is the
- * run itself being over, and carrying on would have this process writing to a record another import
- * has already claimed. Only the walk can tell them apart — asking afterwards would read a catalogue
- * and a guard that may both have moved since. Absent means the walk ended on its own terms.
+ * <p>{@code stoppedBy} is the second, separate fact, and it is a {@link StopReason} rather than a
+ * flag because its two values ask opposite things of the caller. Only the walk can tell them apart
+ * — asking afterwards would read a catalogue and a guard that may both have moved since. Absent
+ * means the walk ended on its own terms.
  */
 public record ContratosMenoresImportSummary(
     int added,
     int refreshed,
     ContratosMenoresImportStatus status,
     @Nullable StopReason stoppedBy) {
-
-  /** What cut a walk off before it could decide how far the history had been loaded. */
-  public enum StopReason {
-    /** The Órgano stopped being active and marked while the walk was running. */
-    UNMARKED,
-    /** The run behind the walk stopped being the live one, so it is no longer the walk's to use. */
-    GUARD_LOST
-  }
 
   public ContratosMenoresImportSummary {
     Objects.requireNonNull(status, "status must not be null");
