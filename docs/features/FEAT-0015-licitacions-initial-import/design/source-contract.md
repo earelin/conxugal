@@ -316,13 +316,18 @@ recorded only the award row's silence and concluded the identifier was usually a
 
 ### It splits almost perfectly by state
 
+**Award rows**, not procedures — the tables in this section and the next count different things and
+are not summed against each other. A procedure with five lotes contributes five award rows here and
+one procedure there.
+
 | Estado | award rows | A: formalisation | B: bidder list | C: name only |
 | --- | --- | --- | --- | --- |
 | Formalizado | 172 | **164** | 1 | **7** |
 | Adxudicado | 107 | 0 | 18 | **89** |
 | Adxudicado provisional | 5 | 0 | 0 | 5 |
 
-**A formalised procedure publishes its awardee's identifier in 96% of cases**, which follows from
+**A formalised procedure publishes its awardee's identifier for 95% of its awards through the
+formalisation, and 96% counting the one its bidder list answers**, which follows from
 what the states mean: *Formalizado* is the terminal state in which the contract has been signed
 and the formalisation section filled in, and *Adxudicado* is the intermediate one where it has
 not. Separately measured: of **112** formalised award-bearing pages inspected, **none** lacked a
@@ -330,16 +335,18 @@ recoverable identifier altogether.
 
 ### And the unresolved remainder is a historical tail
 
-Publication years of the *Adxudicado* awards with no identifier recoverable at all:
+Counted in **procedures** this time, over a separate pass: of 73 *adxudicado* award-bearing
+procedures, **60 had no identifier recoverable by any route** and 13 did. Their publication years:
 
 | Year | 2008 | 2009 | 2011 | 2012 | 2026 |
 | --- | --- | --- | --- | --- | --- |
 | Count | 13 | 5 | 35 | 6 | **1** |
 
-Against which the *Adxudicado* awards that **do** resolve are published 2023 (1), 2025 (1) and
-2026 (11). So the population needing a name match is overwhelmingly **pre-2013 records left in an
-intermediate state**, not the current flow: an initial import meets them, and routine incremental
-runs over live publications will barely see them.
+Against which the 13 that **do** resolve are published 2023 (1), 2025 (1) and 2026 (11). So the
+population needing a name match is **weighted heavily toward pre-2013 records left in an
+intermediate state** rather than the current flow: an initial import meets them and a routine run
+largely does not. **It is a tail, not a closed set** — the single 2026 entry says a current
+procedure can land in it, and will stay there until it formalises.
 
 ### The name match, and its false-merge risk
 

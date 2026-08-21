@@ -123,6 +123,15 @@ R16 states what the catalogue does with them. A family supplying neither is a fu
 this catalogue exactly as before, which is what keeps the two optional rather than a new
 barrier to entry.
 
+**One family does not publish its awardee's identifier with the award at all**, and the bar is
+stated here so a future family knows what is permitted rather than inferring it from that one's
+requirements. [SPEC-0008](SPEC-0008-import-browse-licitacions.md) R18 recovers it from elsewhere
+on the same record, and for a minority derives it by matching the published name against this
+catalogue. A family may do that where **its own requirements bound the derivation**: it must never
+create an operador, never link on a name matching more than one, and record the link as derived so
+it is distinguishable from a published one (R3). What it may not do is supply an identifier the
+source did not publish and present it as one that was.
+
 ### Decisions taken, and what is left open
 
 **How reads are paged** is settled, and not by an ADR.
@@ -782,7 +791,9 @@ One decision has since been taken:
 41. **(R9, R16)** An operador that lost a bid sees that contract in a **bid for and did not win**
     section carrying no amount; an operador whose UTE was awarded a contract sees it in a **won
     through a UTE** section naming the UTE. Neither section changes any count or total on the
-    page, and the same award counted in the UTE's own total appears in no member's.
+    page, and the award appears in **no member's** total — in the UTE's own where the source
+    identified it and the catalogue therefore holds one, and in no total at all where it did not
+    (R16). The property tested is that no member's arithmetic includes it, which holds either way.
 42. **(R9)** An operador holding only participations or only UTE memberships opens a history with
     those sections present and every family section omitted, stating no awarded total rather than
     a total of zero.

@@ -165,7 +165,15 @@ flowchart LR
   one difference R3 rules meaningless for identity.
 - An identifier that is **absent, or empty once trimmed**, is *unusable* (R5): the contract is
   stored and gets **no operador** — never a placeholder, never a shared "unknown" row that would
-  silently pool unrelated awards. Its `operador_economico_id` stays null, and because the schema is
+  silently pool unrelated awards.
+
+  > **R5 has since been widened** and this feature's implementation has not caught up. A
+  > **published placeholder** — a lone dash, a `TEMP-…` value — is now unusable too, because the
+  > licitacións family meets them and, under the emptiness-only test, every dash-published contract
+  > would pool under one operador holding the fiscal identifier `-` — exactly the shared "unknown"
+  > row this bullet refuses. `FiscalIdentifier.of` still implements emptiness only;
+  > [FEAT-0015](../FEAT-0015-licitacions-initial-import/README.md) task 19 widens it, since that is
+  > the feature that meets the case, and the factory is shared by both families. Its `operador_economico_id` stays null, and because the schema is
   normalised that contract records **no awardee name either**, which the R5 branch did not cost
   when the contract carried its own.
   Nothing beyond emptiness is validated: the source publishes irregular but genuine identifiers,
@@ -361,7 +369,10 @@ avoid.
   consequence, no awardee at all; no placeholder row is created, and unrelated awards are never
   pooled under one. *(SPEC-0006 #8)*
 - **An irregular but non-empty identifier** — a foreign VAT number, a malformed NIF — is attached
-  to an operador like any other. Only emptiness disqualifies. *(SPEC-0006 #9)*
+  to an operador like any other. Emptiness disqualifies, and since R5's widening a **published
+  placeholder** does too; nothing else does. **#8 and #9 are not fully met until
+  [FEAT-0015](../FEAT-0015-licitacions-initial-import/README.md) task 19 lands**, which is recorded
+  here rather than left for a reader to discover from a passing test suite. *(SPEC-0006 #9)*
 - **An operador all of whose contracts are undated** — still displayed under exactly one
   name, chosen by the higher contract identifier among them. *(SPEC-0006 #7)*
 - **An undated contract stored after a dated one** — never displaces it, because undated ranks
