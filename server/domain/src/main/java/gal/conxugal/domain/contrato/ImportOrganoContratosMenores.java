@@ -74,11 +74,17 @@ public class ImportOrganoContratosMenores {
   static final int WINDOW_DAYS = 89;
 
   /**
-   * The zone the source publishes its dates in. The walk needs it to turn the covered-through
-   * instant into the day its first window ends; every date below is a published date, not an
+   * The zone the source publishes its dates in. A walk needs it to turn an instant into the day a
+   * window ends — the covered-through instant here, the refresh floor in
+   * {@link RefreshOrganoContratosMenores} — and every date below is a published date, not an
    * instant.
+   *
+   * <p>Package-private so both walks read the one constant. The floor rule on the import state
+   * answers an {@code Instant} and borrows no zone precisely so that no second copy of
+   * {@code Europe/Madrid} exists to disagree with this one; declaring it again next door would
+   * spend that.
    */
-  private static final ZoneId SOURCE_ZONE = ZoneId.of("Europe/Madrid");
+  static final ZoneId SOURCE_ZONE = ZoneId.of("Europe/Madrid");
 
   private static final Logger LOG = LoggerFactory.getLogger(ImportOrganoContratosMenores.class);
 
