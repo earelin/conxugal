@@ -58,17 +58,23 @@ stored projection of **[ADR-0023](../../architecture/0023-operadores-as-a-stored
 
 > **The source contract is measured, not assumed.** Every field, limit, size and frequency cited
 > below was taken against the live site on **2026-08-20** and is recorded in
-> [`design/source-contract.md`](design/source-contract.md). Five of those measurements
-> **correct SPEC-0008 or a sibling document**: the listing's `importe` is a **budget, not an
-> award**; **an award row publishes no fiscal identifier at all**, which is what the *Which
-> operador an award belongs to* section exists to answer; the listing **can** be ordered by
-> last-modified date once the full DataTables payload is sent, which
-> [FEAT-0009's contract](../FEAT-0009-contratos-menores-initial-import/design/source-contract.md)
-> concluded was impossible; **a UTE's fiscal identifier is usually not published**; and
-> **classification is not reliably per lote** even on a procedure that has them. A sixth
-> measurement *confirms* rather than corrects: the two families **share one publication id
-> space**, which is what keeps SPEC-0006 R4's tie-break total now that a second family feeds the
-> catalogue.
+> [`design/source-contract.md`](design/source-contract.md). **Six** of those measurements
+> correct SPEC-0008 or a sibling document:
+>
+> - the listing's `importe` is a **budget, not an award**;
+> - **an award row publishes no fiscal identifier — the formalisation does**, which is what the
+>   *Which operador an award belongs to* section is built on;
+> - the listing **can** be ordered by last-modified date once the full DataTables payload is sent,
+>   which
+>   [FEAT-0009's contract](../FEAT-0009-contratos-menores-initial-import/design/source-contract.md)
+>   concluded was impossible;
+> - **a UTE's fiscal identifier is usually not published**, and a consortium is recognised by how
+>   its entry is structured rather than by that identifier or its name;
+> - **classification is not reliably per lote** even on a procedure that has them;
+> - **lotes are 15 of 100 procedures**, not the 4 of 100 the spec's own sample recorded.
+>
+> A seventh *confirms* rather than corrects: the two families **share one publication id space**,
+> which is what keeps SPEC-0006 R4's tie-break total now that a second family feeds the catalogue.
 >
 > The ordering finding leaves a paragraph in FEAT-0009's own contract false — it still records
 > that "ordering parameters were not made to work". Correcting it, and asking whether the full
@@ -85,7 +91,7 @@ its wording changed.
 | --- | --- | --- |
 | 1. The unidentified consortium | SPEC-0008 R16/R17/R18, #20/#21/#22/#24; SPEC-0006 R16, R9, #40 | a UTE is recorded whether or not the source identifies it |
 | 2. Classification not per lote | SPEC-0008 R8, #9/#10 | a CPV may hang off the procedure even where lotes exist |
-| 3. The awardee resolved by name | SPEC-0008 R18/R33, #46; SPEC-0006 R3 | an award publishes no identifier, so one is derived — within bounds |
+| 3. The awardee resolved by name | SPEC-0008 R8/R18/R33, #46; SPEC-0006 R3 | the identifier is published by the formalisation, and derived for the minority without one |
 | 4. Placeholders are unusable | SPEC-0006 R5, #8/#9 | a dash or `TEMP-…` is not an identity, defensively |
 
 Each section below states the measurement the amendment rests on, so the evidence stays with the
@@ -907,9 +913,19 @@ would never claim it. The "half" wording is gone from both citations.
 - **A single-firm bidder row carrying `-`** — never observed in 578 rows, and harmless if it appears:
   amendment 4's widening makes it yield no operador rather than joining a shared one. The structural
   branch is what makes this the unobserved case rather than the common one. *(SPEC-0008 #20)*
-- **An award whose fiscal identifier is unusable** — the licitación is stored and **stays visible**,
-  showing an award that names nobody. This is the deliberate departure from SPEC-0005 R28, which
-  withholds exactly that row. *(SPEC-0008 #20, #36)*
+- **An award no route resolves** — no formalisation, the awardee absent from the bidder list or
+  none published, and no unique catalogue match. The licitación is stored and **stays visible**,
+  showing an award that names nobody: the deliberate departure from SPEC-0005 R28, which withholds
+  exactly that row. Measured, this is **an old *adxudicado* procedure** — 59 of 60 such awards were
+  published 2008–2012 — so an initial import meets a tail of them and a routine run over current
+  publications almost never does. *(SPEC-0008 #20, #36, #46)*
+- **An award on a procedure not yet formalised** — the formalisation route does not exist yet, so
+  the bidder list or the catalogue answers, and the award may name nobody until the procedure
+  formalises. **R11's incremental refresh is what later fills it in**: a procedure moving to
+  *formalizado* advances its last-modified date, so the run that re-reads it picks up the published
+  identifier and the awardee stops being anonymous. That is a property of the two features
+  together, and it is the reason this gap is not permanent. *(SPEC-0008 #46; #13 with the
+  incremental feature)*
 - **A publication date that cannot be interpreted** — the procedure is stored with the column null
   and never rejected; it is invisible to readers under R25, which is a rule about readers and changes
   nothing this feature does. Expected to be negligible: the source publishes dates in one fixed form.

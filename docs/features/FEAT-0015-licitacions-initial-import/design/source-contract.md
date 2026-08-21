@@ -3,7 +3,7 @@
 What contratosdegalicia.gal actually offers for an Órgano's **licitacións**, measured against the
 live site on **2026-08-20**. This is the answer [FEAT-0015](../README.md) needs before its adapter
 can be written, and it is recorded here rather than in a task because several of the feature's
-decisions — and **five corrections to [SPEC-0008](../../../specs/SPEC-0008-import-browse-licitacions.md)
+decisions — and **six corrections to [SPEC-0008](../../../specs/SPEC-0008-import-browse-licitacions.md)
 or a sibling document** — rest on it.
 
 It is the sibling of
