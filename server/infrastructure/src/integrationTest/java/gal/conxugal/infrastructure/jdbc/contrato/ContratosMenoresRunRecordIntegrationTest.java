@@ -406,20 +406,9 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
         .isEqualTo(state);
   }
 
-  /** How far the Órgano has been refreshed through, as the refresh itself stamped it. */
+  /** How far the Órgano has been refreshed through, read the way the walk suites read it. */
   private static Instant refreshMarkOf(OrganoId organoId) throws SQLException {
-    String sql = "SELECT refreshed_through FROM contrato_menor_import_state WHERE organo_id = ?";
-    try (Connection connection = rawConnection();
-        PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setObject(1, organoId.value());
-      try (ResultSet resultSet = statement.executeQuery()) {
-        if (!resultSet.next()) {
-          throw new IllegalStateException("No import state for Órgano %s".formatted(organoId));
-        }
-        Timestamp stored = resultSet.getTimestamp("refreshed_through");
-        return stored == null ? null : stored.toInstant();
-      }
-    }
+    return new ContratosMenoresImportFixture(postgres).storedMarks(organoId).refreshedThrough();
   }
 
   private static String reasonFor(OrganoId organoId) throws SQLException {
