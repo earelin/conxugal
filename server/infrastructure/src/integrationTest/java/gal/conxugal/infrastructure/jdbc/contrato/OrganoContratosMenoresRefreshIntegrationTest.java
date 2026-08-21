@@ -22,7 +22,6 @@ import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.domain.importrun.Importer;
-import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.organo.ContratosMenoresImportState;
 import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
@@ -350,13 +349,6 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
   }
 
   private static ContratoMenorSourceEntry entry(long sourceId, String obxecto, String amount) {
-    return new ContratoMenorSourceEntry(
-        sourceId,
-        PUBLISHED_ON,
-        obxecto,
-        new Money(new BigDecimal(amount)),
-        "1 mes",
-        "ACME SL",
-        "B12345678");
+    return ContratosMenoresImportFixture.entry(sourceId, PUBLISHED_ON, obxecto, amount);
   }
 }

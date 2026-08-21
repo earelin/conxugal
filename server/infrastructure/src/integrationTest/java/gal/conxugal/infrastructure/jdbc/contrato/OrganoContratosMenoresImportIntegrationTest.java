@@ -21,7 +21,6 @@ import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.domain.importrun.Importer;
-import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.organo.ContratosMenoresImportState;
 import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
@@ -69,6 +68,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvider {
 
   private static final Instant T_ZERO = Instant.parse("2026-08-07T09:00:00Z");
+
+  /** Inside every window these tests read, so which window it lands in is never the claim. */
+  private static final LocalDate PUBLISHED_ON = LocalDate.of(2026, 6, 1);
 
   private static final LocalDate FIRST_WINDOW_START = LocalDate.of(2026, 5, 10);
   private static final LocalDate SECOND_WINDOW_START = LocalDate.of(2026, 2, 10);
@@ -322,14 +324,7 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
   }
 
   private static ContratoMenorSourceEntry entry(long sourceId, String obxecto, String amount) {
-    return new ContratoMenorSourceEntry(
-        sourceId,
-        LocalDate.of(2026, 6, 1),
-        obxecto,
-        new Money(new BigDecimal(amount)),
-        "1 mes",
-        "ACME SL",
-        "B12345678");
+    return ContratosMenoresImportFixture.entry(sourceId, PUBLISHED_ON, obxecto, amount);
   }
 
   /** The cursor as a crash between a batch's commit and its cursor write would have left it. */

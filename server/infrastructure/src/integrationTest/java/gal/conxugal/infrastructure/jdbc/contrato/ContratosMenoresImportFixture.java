@@ -1,8 +1,11 @@
 package gal.conxugal.infrastructure.jdbc.contrato;
 
+import gal.conxugal.domain.contrato.ContratoMenorSourceEntry;
+import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -10,6 +13,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.assertj.db.type.AssertDbConnectionFactory;
@@ -57,6 +61,23 @@ final class ContratosMenoresImportFixture {
         return new OrganoId(resultSet.getObject("id", UUID.class));
       }
     }
+  }
+
+  /**
+   * One published contrato menor. Its duration and awardee are the same in every suite because no
+   * claim either makes is about them — what a walk is asserted on is which window a publication
+   * falls in, and that is the date each caller supplies.
+   */
+  static ContratoMenorSourceEntry entry(
+      long sourceId, LocalDate publishedOn, String obxecto, String amount) {
+    return new ContratoMenorSourceEntry(
+        sourceId,
+        publishedOn,
+        obxecto,
+        new Money(new BigDecimal(amount)),
+        "1 mes",
+        "ACME SL",
+        "B12345678");
   }
 
   static OrganoDeContratacion organo(OrganoId organoId) {
