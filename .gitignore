@@ -1,3 +1,4 @@
+.attach_pid*
 .claude/worktrees/
 .jdtls-workspace/
 .vscode
