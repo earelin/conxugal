@@ -28,6 +28,14 @@ choosing one: this task adds no second pacing mechanism and no retry policy of i
   entry; 30 days is chosen to be comfortably longer than a plausible administrative correction
   cycle. R8 requires the margin because the source offers no *changed since* facility, so a
   correction is discoverable only by re-reading the period it falls in.
+
+  **A negative or zero lookback is refused where the property binds**, in the record's compact
+  constructor, the way `ContratosDeGaliciaResilienceConfiguration` refuses every `Duration` bound
+  it takes. `incrementalFloor` subtracts whatever it is given, so a negative margin moves the floor
+  *ahead* of T₁ and everything published in between falls below every future floor — the silent
+  hole the second instant exists to prevent, arriving through a typo in a config file. Refusing it
+  at the binding boundary fails the application at startup rather than at the first nightly sweep,
+  which is why the check belongs here and not in the rule.
 - **T₁ is stamped when the refresh starts, not when it finishes.** `clock.instant()` is read before
   the first window and held; a refresh reads the source while publications keep arriving, so an
   instant taken at the *end* would put everything published mid-walk below the next run's floor and
@@ -115,5 +123,7 @@ sequenceDiagram
   absence cannot be shown by dependencies.)
 - `lookback` defaults to 30 days with no configuration present, and is overridable by
   `conxugal.contratos-menores.import.lookback`.
+- A negative or zero `conxugal.contratos-menores.import.lookback` is refused at startup rather than
+  producing a floor ahead of T₁.
 - The source is reached through the same `contratosdegalicia` client the initial import uses; this
   class configures no timeout, no retry and no rate limit. (SPEC-0005 #38 incremental mode)

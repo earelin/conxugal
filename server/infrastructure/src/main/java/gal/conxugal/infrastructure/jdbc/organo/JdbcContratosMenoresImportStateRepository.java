@@ -10,11 +10,12 @@ import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.GenericRepository;
 import io.micronaut.transaction.TransactionDefinition;
 import io.micronaut.transaction.annotation.Transactional;
+import java.time.Instant;
 import java.time.LocalDate;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Every query here is derived from its own name; the two writes are declared only to carry their
+ * Every query here is derived from its own name; the three writes are declared only to carry their
  * propagation.
  *
  * <p>They take a transaction of their own, whatever the caller is inside, because the walk's cursor
@@ -34,4 +35,8 @@ public abstract class JdbcContratosMenoresImportStateRepository
   @Override
   @Transactional(propagation = TransactionDefinition.Propagation.REQUIRES_NEW)
   public abstract void updateState(@Id OrganoId organoId, ContratosMenoresImportStatus state);
+
+  @Override
+  @Transactional(propagation = TransactionDefinition.Propagation.REQUIRES_NEW)
+  public abstract void updateRefreshedThrough(@Id OrganoId organoId, Instant refreshedThrough);
 }

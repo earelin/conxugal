@@ -3,6 +3,7 @@ package gal.conxugal.domain.organo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -13,6 +14,8 @@ class ContratosMenoresImportStateTest {
 
   private static final OrganoId ORGANO_ID = new OrganoId(UUID.randomUUID());
   private static final Instant T_ZERO = Instant.parse("2026-08-06T09:00:00Z");
+  private static final Instant T_ONE = Instant.parse("2026-08-19T22:00:00Z");
+  private static final Duration LOOKBACK = Duration.ofDays(30);
 
   @Test
   void starting_an_import_leaves_it_incomplete_stamped_and_without_cursor() {
@@ -24,6 +27,7 @@ class ContratosMenoresImportStateTest {
       softly.assertThat(state.state()).isEqualTo(ContratosMenoresImportStatus.INCOMPLETE);
       softly.assertThat(state.cursorDate()).isNull();
       softly.assertThat(state.coveredThrough()).isEqualTo(T_ZERO);
+      softly.assertThat(state.refreshedThrough()).isNull();
     });
   }
 
@@ -38,7 +42,7 @@ class ContratosMenoresImportStateTest {
   @Test
   void completed_import_takes_the_incremental_mode() {
     ContratosMenoresImportState state = new ContratosMenoresImportState(
-        ORGANO_ID, ContratosMenoresImportStatus.COMPLETE, LocalDate.of(2018, 1, 1), T_ZERO);
+        ORGANO_ID, ContratosMenoresImportStatus.COMPLETE, LocalDate.of(2018, 1, 1), T_ZERO, null);
 
     assertThat(state.mode()).isEqualTo(ContratosMenoresImportMode.INCREMENTAL);
   }
@@ -51,7 +55,7 @@ class ContratosMenoresImportStateTest {
     ContratosMenoresImportState started =
         ContratosMenoresImportState.startedAt(ORGANO_ID, T_ZERO);
     ContratosMenoresImportState advanced = new ContratosMenoresImportState(
-        ORGANO_ID, ContratosMenoresImportStatus.COMPLETE, LocalDate.of(2019, 3, 31), T_ZERO);
+        ORGANO_ID, ContratosMenoresImportStatus.COMPLETE, LocalDate.of(2019, 3, 31), T_ZERO, null);
 
     assertThat(started).isNotEqualTo(advanced);
   }
@@ -79,8 +83,59 @@ class ContratosMenoresImportStateTest {
   @Test
   void refuses_state_without_the_instant_its_history_is_covered_through() {
     assertThatThrownBy(() -> new ContratosMenoresImportState(
-        ORGANO_ID, ContratosMenoresImportStatus.INCOMPLETE, null, null))
+        ORGANO_ID, ContratosMenoresImportStatus.INCOMPLETE, null, null, null))
         .isInstanceOf(NullPointerException.class)
         .hasMessageContaining("coveredThrough");
+  }
+
+  // The fallback, and the reason the column is nullable: an Órgano's first refresh measures from
+  // when its initial import *began*, so everything published while that import was walking — days,
+  // for a large publisher — falls inside the window rather than into a hole nothing reads.
+  @Test
+  void never_refreshed_organo_takes_its_floor_from_the_instant_it_is_covered_through() {
+    ContratosMenoresImportState state = ContratosMenoresImportState.startedAt(ORGANO_ID, T_ZERO);
+
+    assertThat(state.incrementalFloor(LOOKBACK))
+        .isEqualTo(Instant.parse("2026-07-07T09:00:00Z"));
+  }
+
+  @Test
+  void refreshed_organo_takes_its_floor_from_the_refresh_and_ignores_the_older_mark() {
+    ContratosMenoresImportState state = refreshedThrough(T_ONE);
+
+    assertThat(state.incrementalFloor(LOOKBACK))
+        .isEqualTo(Instant.parse("2026-07-20T22:00:00Z"));
+  }
+
+  // The two marks are chosen between by presence, not by which is later — with T₁ ahead of T₀, as
+  // it always is in normal operation, "the one that is set" and "the later one" cannot be told
+  // apart. This is the case that separates them, and it is the criterion's "ignores coveredThrough
+  // entirely".
+  @Test
+  void refresh_mark_behind_the_covered_instant_still_decides_the_floor() {
+    ContratosMenoresImportState state = refreshedThrough(Instant.parse("2026-08-01T00:00:00Z"));
+
+    assertThat(state.incrementalFloor(LOOKBACK))
+        .isEqualTo(Instant.parse("2026-07-02T00:00:00Z"));
+  }
+
+  // A window is only as wide as the margin it is given, so a caller with none in hand has not
+  // decided how far back corrections are looked for — answering T₁ itself would silently pick zero.
+  @Test
+  void refuses_to_answer_floor_without_lookback() {
+    ContratosMenoresImportState state = refreshedThrough(T_ONE);
+
+    assertThatThrownBy(() -> state.incrementalFloor(null))
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("lookback");
+  }
+
+  private static ContratosMenoresImportState refreshedThrough(Instant refreshedThrough) {
+    return new ContratosMenoresImportState(
+        ORGANO_ID,
+        ContratosMenoresImportStatus.COMPLETE,
+        LocalDate.of(2018, 1, 1),
+        T_ZERO,
+        refreshedThrough);
   }
 }
