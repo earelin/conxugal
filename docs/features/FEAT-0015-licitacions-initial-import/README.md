@@ -545,9 +545,9 @@ One record per procedure, at a **median of 138 KB**. For SERGAS that is 16 798 r
 about **4.7 hours** at one request per second.
 
 This feature does not make that cheaper and does not pretend to. What it does is make it **wasted at
-most once**: the cursor, the covered-through instant and the outstanding ledger live with the Órgano
-rather than with the run, so pruning run history under SPEC-0007 R17 cannot strand a half-loaded
-Órgano, and an interrupted import resumes rather than restarts. R29's yielding, which would keep the
+most once**: the cursor and the outstanding ledger live with the Órgano rather than with the run, so
+pruning run history under SPEC-0007 R17 cannot strand a half-loaded Órgano, and an interrupted
+import resumes rather than restarts. R29's yielding, which would keep the
 guard free during those hours, is the deferred piece named in Scope.
 
 ### Retrieval and the two adapters ([ADR-0014](../../architecture/0014-resilient-throttled-outbound-http-client.md))
@@ -644,6 +644,17 @@ made ambiguous. **It does not**: the two families share one publication id space
 than assumed — `licitacion?N=822054` returns the licitación and `licitacion?N=2001090` returns the
 contrato menor, from the same address space and with no prefix distinguishing them. So `NomeRank`
 needs no family discriminator and R4's ordering stays total across families.
+
+**The lote is the half that id space does not settle**, and it is the one that bites. SPEC-0006
+records this family's contract identity as *a publication identifier **together with a lote***,
+while `NomeRank` is `(date, sourceId)` over a single `BIGINT`. Two lotes of one procedure awarded to
+the same operador under two published spellings therefore tie **exactly** — same date, same
+publication identifier — so `outranks` answers false in both directions and the displayed name falls
+to whichever row was written last. SPEC-0006 #36 asserts that choice is deterministic *by
+construction*, so this is a defect rather than an untidiness. Task 11 settles what a licitación award
+supplies as its rank identity; the plain answer is that the lote joins the tuple, but it is a change
+to a shipped type that contratos menores also rank on, which is why it is a task's decision and not
+an aside here.
 
 **R16's unusable-identifier rule holds for three of the four party kinds, and not for the fourth.**
 A single-firm bidder, an awardee and a UTE **member** whose identifier is unusable yield no
