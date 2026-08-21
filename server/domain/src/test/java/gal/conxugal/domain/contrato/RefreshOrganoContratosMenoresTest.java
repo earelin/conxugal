@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.stream.LongStream;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -399,16 +400,12 @@ class RefreshOrganoContratosMenoresTest {
     return () -> boundaries.incrementAndGet() < batch;
   }
 
-  private void refreshedThrough(Instant refreshMark) {
-    loadedOrganoRefreshedThrough(refreshMark);
-  }
-
   private void neverRefreshed() {
-    loadedOrganoRefreshedThrough(null);
+    refreshedThrough(null);
   }
 
   /** A loaded Órgano, which is the only kind that is refreshed at all. */
-  private void loadedOrganoRefreshedThrough(Instant refreshMark) {
+  private void refreshedThrough(@Nullable Instant refreshMark) {
     when(importStates.findByOrganoId(ORGANO_ID))
         .thenReturn(
             Optional.of(
