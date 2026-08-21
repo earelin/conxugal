@@ -18,4 +18,11 @@ public final class Dates {
     Objects.requireNonNull(other, "other must not be null");
     return one.isBefore(other) ? other : one;
   }
+
+  /** The earlier of the two, and {@code one} when they are the same date. */
+  public static LocalDate earliest(LocalDate one, LocalDate other) {
+    Objects.requireNonNull(one, "one must not be null");
+    Objects.requireNonNull(other, "other must not be null");
+    return one.isAfter(other) ? other : one;
+  }
 }

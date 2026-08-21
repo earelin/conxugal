@@ -1,4 +1,7 @@
 conxugal:
+  contratos-menores:
+    import:
+      schedule: "0 0 5 * * *"
   metrics:
     stream:
       sample-interval: 5s
@@ -15,8 +18,10 @@ micronaut:
     # — disables Micronaut's default unbounded virtual thread-per-task executor and
     # replaces it with a capped platform-backed pool, undermining ADR-0011. Every
     # HTTP request shares this executor via thread-selection: BLOCKING below, so it
-    # stays on Micronaut's default. The scheduled import gets its own executor
-    # instead, so its pool sizing never constrains request-serving capacity.
+    # stays on Micronaut's default. The catalogue import gets its own executor
+    # instead, so its pool sizing never constrains request-serving capacity. Whether a
+    # scheduler needs one is per-scheduler: the contratos menores one takes the default
+    # `scheduled` pool, because it hands its work to the executor below in milliseconds.
     organos-import:
       type: scheduled
       core-pool-size: 1

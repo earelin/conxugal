@@ -115,6 +115,27 @@ class ImportRunControllerIntegrationTest extends AuthenticationTestSupport {
     assertThat(response.jsonPath().getInt("refreshed")).isEqualTo(17);
   }
 
+  // Nothing settles this state any more. A run recorded before the incremental refresh existed is
+  // still a run an administrator opens, and it must read as what it was rather than fail to render.
+  @Test
+  void run_recorded_before_the_refresh_existed_still_reports_its_skipped_organo(
+      RequestSpecification spec) {
+    Response response =
+        readAsAdmin(
+            spec,
+            report(
+                ImportRunState.SUCCEEDED,
+                FINISHED_AT,
+                0,
+                0,
+                new ImportRunOrganoCoverage(
+                    SERGAS, ImportRunOrganoState.SKIPPED, 0, 0, "its history was already loaded")));
+
+    assertThat(response.jsonPath().getString("coveredOrganos[0].state")).isEqualTo("SKIPPED");
+    assertThat(response.jsonPath().getString("coveredOrganos[0].failureReason"))
+        .isEqualTo("its history was already loaded");
+  }
+
   // The wrappers stop at this boundary, so the id a trigger returned is the one this read
   // accepts and answers with — never a {"value": …} around it.
   @Test

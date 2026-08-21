@@ -18,7 +18,11 @@ import gal.conxugal.domain.importrun.ImportRunReport;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.domain.importrun.Importer;
+import gal.conxugal.domain.organo.ContratosMenoresImportState;
+import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
+import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
+import gal.conxugal.domain.organo.OrganoRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,6 +46,7 @@ class ExecuteContratosMenoresImportTest {
   private static final OrganoId FIRST = new OrganoId(UUID.randomUUID());
   private static final OrganoId SECOND = new OrganoId(UUID.randomUUID());
   private static final OrganoId THIRD = new OrganoId(UUID.randomUUID());
+  private static final OrganoId FOURTH = new OrganoId(UUID.randomUUID());
   private static final Instant T_ZERO = Instant.parse("2026-08-06T09:00:00Z");
 
   @Mock
@@ -50,13 +55,17 @@ class ExecuteContratosMenoresImportTest {
   @Mock
   private ImportCoveredOrgano coveredOrgano;
 
+  @Mock
+  private OrganoRepository organos;
+
   private final List<OrganoId> imported = new ArrayList<>();
 
-  // Serial, and in the order the run recorded: a run is working on one identifiable Órgano at any
-  // moment, which is what makes its per-Órgano outcomes reportable.
+  // Serial, and within a mode in the order the run recorded: a run is working on one identifiable
+  // Órgano at any moment, which is what makes its per-Órgano outcomes reportable.
   @Test
   void imports_the_covered_organos_one_after_another_in_the_order_the_run_holds_them() {
     runCovers(FIRST, SECOND, THIRD);
+    catalogueHolds(FIRST, SECOND, THIRD);
     eachOrganoSettles(organoId -> ImportRunOrganoState.SUCCEEDED);
 
     executeContratosMenoresImport().execute(RUN_ID);
@@ -67,6 +76,7 @@ class ExecuteContratosMenoresImportTest {
   @Test
   void carries_on_to_the_next_organo_when_one_of_them_failed() {
     runCovers(FIRST, SECOND);
+    catalogueHolds(FIRST, SECOND);
     eachOrganoSettles(
         organoId ->
             organoId.equals(FIRST)
@@ -100,6 +110,105 @@ class ExecuteContratosMenoresImportTest {
     verifyNoInteractions(coveredOrgano);
   }
 
+  // --------------------------------------------------------- the sweep's order
+
+  // R22's delegated prioritisation: the cheap work first, so a catalogue's freshness is never
+  // hostage to the position of one row.
+  @Test
+  void walks_incremental_then_resumed_then_initial_whatever_order_the_run_recorded() {
+    runCovers(FIRST, SECOND, THIRD);
+    catalogueHolds(FIRST, ContratosMenoresImportStatus.NEVER_STARTED);
+    catalogueHolds(SECOND, ContratosMenoresImportStatus.INCOMPLETE);
+    catalogueHolds(THIRD, ContratosMenoresImportStatus.COMPLETE);
+    eachOrganoSettles(organoId -> ImportRunOrganoState.SUCCEEDED);
+
+    executeContratosMenoresImport().execute(RUN_ID);
+
+    assertThat(imported).containsExactly(THIRD, SECOND, FIRST);
+  }
+
+  // A newly marked Órgano's multi-day load runs after the refreshes, and both are still covered by
+  // the one run — the exhaustive assertion is the membership proof.
+  @Test
+  void walks_the_newly_marked_organo_after_every_loaded_one() {
+    runCovers(FIRST, SECOND, THIRD);
+    catalogueHolds(FIRST, ContratosMenoresImportStatus.NEVER_STARTED);
+    catalogueHolds(SECOND, THIRD);
+    eachOrganoSettles(organoId -> ImportRunOrganoState.SUCCEEDED);
+
+    executeContratosMenoresImport().execute(RUN_ID);
+
+    assertThat(imported).containsExactly(SECOND, THIRD, FIRST);
+  }
+
+  // Gone from the catalogue costs nothing to settle, so it goes first — and it is still walked:
+  // the ordering read never drops an Órgano from the coverage. What its turn amounts to stays
+  // ImportCoveredOrgano's and is stubbed here as the failure that class settles it with.
+  @Test
+  void walks_the_organo_gone_from_the_catalogue_before_any_other() {
+    runCovers(FIRST, SECOND);
+    catalogueHolds(FIRST);
+    goneFromTheCatalogue(SECOND);
+    eachOrganoSettles(
+        organoId ->
+            organoId.equals(SECOND)
+                ? ImportRunOrganoState.FAILED
+                : ImportRunOrganoState.SUCCEEDED);
+
+    executeContratosMenoresImport().execute(RUN_ID);
+
+    assertThat(imported).containsExactly(SECOND, FIRST);
+  }
+
+  // Interleaved modes rather than uniform ones, so keeping the recorded order proves the sort is
+  // stable and not merely order-preserving on input it never had to move.
+  @Test
+  void keeps_the_recorded_order_between_organos_sharing_the_same_mode() {
+    runCovers(FIRST, SECOND, THIRD, FOURTH);
+    catalogueHolds(FIRST, THIRD);
+    catalogueHolds(SECOND, ContratosMenoresImportStatus.NEVER_STARTED);
+    catalogueHolds(FOURTH, ContratosMenoresImportStatus.NEVER_STARTED);
+    eachOrganoSettles(organoId -> ImportRunOrganoState.SUCCEEDED);
+
+    executeContratosMenoresImport().execute(RUN_ID);
+
+    assertThat(imported).containsExactly(FIRST, THIRD, SECOND, FOURTH);
+  }
+
+  // A momentary failure to read one row while ordering must not abandon the sweep: that Órgano is
+  // taken last — after even an initial load — and its own turn re-reads the catalogue and settles
+  // it properly.
+  @Test
+  void walks_every_covered_organo_when_the_ordering_read_of_one_of_them_throws() {
+    runCovers(FIRST, SECOND);
+    when(organos.findById(FIRST)).thenThrow(new IllegalStateException("the row is unreadable"));
+    catalogueHolds(SECOND, ContratosMenoresImportStatus.NEVER_STARTED);
+    eachOrganoSettles(organoId -> ImportRunOrganoState.SUCCEEDED);
+
+    executeContratosMenoresImport().execute(RUN_ID);
+
+    assertThat(imported).containsExactly(SECOND, FIRST);
+  }
+
+  // Ordering changes when an outcome is produced, never which one it is: a failure moved to the
+  // end of the sweep still counts against the verdict exactly as the recorded order would have
+  // counted it.
+  @Test
+  void counts_the_failing_organo_when_the_order_moved_it_to_the_end() {
+    runCovers(FIRST, SECOND);
+    catalogueHolds(FIRST, ContratosMenoresImportStatus.NEVER_STARTED);
+    catalogueHolds(SECOND, ContratosMenoresImportStatus.COMPLETE);
+    eachOrganoSettles(
+        organoId ->
+            organoId.equals(FIRST)
+                ? ImportRunOrganoState.FAILED
+                : ImportRunOrganoState.SUCCEEDED);
+
+    executeContratosMenoresImport().execute(RUN_ID);
+
+    verify(importRuns).complete(RUN_ID, ImportRunState.PARTIALLY_SUCCEEDED, 0, 0);
+  }
+
   // ------------------------------------------------------------ the guard going
 
   // The run has been claimed by whoever triggered after this one went quiet. Its record is theirs
@@ -107,6 +216,7 @@ class ExecuteContratosMenoresImportTest {
   @Test
   void settles_nothing_at_all_when_the_run_stops_holding_the_guard_mid_sweep() {
     runCovers(FIRST, SECOND);
+    catalogueHolds(FIRST, SECOND);
     theRunIsTakenOverAt(FIRST);
 
     executeContratosMenoresImport().execute(RUN_ID);
@@ -133,6 +243,7 @@ class ExecuteContratosMenoresImportTest {
   @Test
   void records_the_run_as_succeeded_when_no_covered_organo_failed() {
     runCovers(FIRST, SECOND);
+    catalogueHolds(FIRST, SECOND);
     eachOrganoSettles(organoId -> ImportRunOrganoState.SUCCEEDED);
 
     executeContratosMenoresImport().execute(RUN_ID);
@@ -143,6 +254,7 @@ class ExecuteContratosMenoresImportTest {
   @Test
   void records_the_run_as_failed_when_every_covered_organo_failed() {
     runCovers(FIRST, SECOND);
+    catalogueHolds(FIRST, SECOND);
     eachOrganoSettles(organoId -> ImportRunOrganoState.FAILED);
 
     executeContratosMenoresImport().execute(RUN_ID);
@@ -153,6 +265,7 @@ class ExecuteContratosMenoresImportTest {
   @Test
   void records_the_run_as_partially_succeeded_when_some_failed_and_some_did_not() {
     runCovers(FIRST, SECOND);
+    catalogueHolds(FIRST, SECOND);
     eachOrganoSettles(
         organoId ->
             organoId.equals(SECOND)
@@ -164,12 +277,13 @@ class ExecuteContratosMenoresImportTest {
     verify(importRuns).complete(RUN_ID, ImportRunState.PARTIALLY_SUCCEEDED, 0, 0);
   }
 
-  // Nothing was imported and nothing failed. Read the other way round — nothing succeeded,
-  // therefore failed — this is the ordinary nightly state of a loaded catalogue reported as a
-  // fault, which is the lie the skipped state exists to avoid.
+  // Nothing produces the skipped state any more, but runs recorded before the refresh existed
+  // carry it. Read the other way round — nothing succeeded, therefore failed — such a run would
+  // turn into a fault years after the fact, every time an administrator opened it.
   @Test
   void records_the_run_as_succeeded_when_every_covered_organo_was_skipped() {
     runCovers(FIRST, SECOND);
+    catalogueHolds(FIRST, SECOND);
     eachOrganoSettles(organoId -> ImportRunOrganoState.SKIPPED);
 
     executeContratosMenoresImport().execute(RUN_ID);
@@ -180,6 +294,7 @@ class ExecuteContratosMenoresImportTest {
   @Test
   void records_the_run_as_succeeded_when_every_covered_organo_was_stopped() {
     runCovers(FIRST, SECOND);
+    catalogueHolds(FIRST, SECOND);
     eachOrganoSettles(organoId -> ImportRunOrganoState.STOPPED);
 
     executeContratosMenoresImport().execute(RUN_ID);
@@ -282,7 +397,31 @@ class ExecuteContratosMenoresImportTest {
             });
   }
 
+  /** All of them in the catalogue at the same status, so the sweep keeps the recorded order. */
+  private void catalogueHolds(OrganoId... organoIds) {
+    for (OrganoId organoId : organoIds) {
+      catalogueHolds(organoId, ContratosMenoresImportStatus.COMPLETE);
+    }
+  }
+
+  private void catalogueHolds(OrganoId organoId, ContratosMenoresImportStatus status) {
+    when(organos.findById(organoId)).thenReturn(Optional.of(organoAt(organoId, status)));
+  }
+
+  private void goneFromTheCatalogue(OrganoId organoId) {
+    when(organos.findById(organoId)).thenReturn(Optional.empty());
+  }
+
+  private static OrganoDeContratacion organoAt(
+      OrganoId organoId, ContratosMenoresImportStatus status) {
+    ContratosMenoresImportState state =
+        status == ContratosMenoresImportStatus.NEVER_STARTED
+            ? null
+            : new ContratosMenoresImportState(organoId, status, null, T_ZERO, null);
+    return new OrganoDeContratacion(organoId, "source-key", "Órgano", true, true, null, state);
+  }
+
   private ExecuteContratosMenoresImport executeContratosMenoresImport() {
-    return new ExecuteContratosMenoresImport(importRuns, coveredOrgano);
+    return new ExecuteContratosMenoresImport(importRuns, coveredOrgano, organos);
   }
 }

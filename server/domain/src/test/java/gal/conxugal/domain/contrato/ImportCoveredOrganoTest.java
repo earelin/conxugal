@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.Answer;
 
 /**
  * One Órgano's turn: whether it is still to be imported, which mode its history calls for, and the
@@ -51,7 +52,11 @@ class ImportCoveredOrganoTest {
   @Mock
   private ImportOrganoContratosMenores walk;
 
+  @Mock
+  private RefreshOrganoContratosMenores refresh;
+
   private final List<OrganoId> walked = new ArrayList<>();
+  private final List<OrganoId> refreshed = new ArrayList<>();
   private final List<BooleanSupplier> eligibilityChecks = new ArrayList<>();
 
   // ---------------------------------------------------------------- the mode rule
@@ -76,21 +81,16 @@ class ImportCoveredOrganoTest {
     assertThat(walked).containsExactly(ORGANO_ID);
   }
 
-  // Neither imported nor failed, and saying so is the point: reported as either, a fully loaded
-  // catalogue would read as a nightly failure or as work that never happened.
+  // The whole point of the rule living here: whichever trigger arrived, an Órgano whose history is
+  // loaded is brought up to date rather than passed over, and never walked from the top again.
   @Test
-  void skips_the_organo_whose_history_is_loaded_naming_the_mode_that_does_not_exist() {
+  void refreshes_the_organo_whose_history_is_loaded() {
     organoIs(loaded(ContratosMenoresImportStatus.COMPLETE));
+    refreshAnswers(organoId -> ContratosMenoresRefreshSummary.clean(3, 12));
 
-    Optional<ImportRunOrganoState> settled = importCoveredOrgano().run(RUN_ID, ORGANO_ID);
+    importCoveredOrgano().run(RUN_ID, ORGANO_ID);
 
-    assertThat(settled).contains(ImportRunOrganoState.SKIPPED);
-    verify(importRuns)
-        .finishOrgano(
-            eq(RUN_ID),
-            eq(ORGANO_ID),
-            eq(ImportRunOrganoState.SKIPPED),
-            argThat(reason -> reason != null && reason.contains("INCREMENTAL")));
+    assertThat(refreshed).containsExactly(ORGANO_ID);
     verifyNoInteractions(walk);
   }
 
@@ -212,7 +212,69 @@ class ImportCoveredOrganoTest {
     verifyNoInteractions(importRuns);
   }
 
-  // ------------------------------------------------ the walk's eligibility check
+  // ---------------------------------------------------------------- how a refresh ended
+
+  // A refresh reaches no history floor, so routing it through the walk's clean ending would put
+  // that floor's sentence on every Órgano of every recurring run. Nothing was left unread here.
+  @Test
+  void settles_the_organo_it_refreshed_as_succeeded_with_no_reason_at_all() {
+    organoIs(loaded(ContratosMenoresImportStatus.COMPLETE));
+    refreshAnswers(organoId -> ContratosMenoresRefreshSummary.clean(3, 12));
+
+    Optional<ImportRunOrganoState> settled = importCoveredOrgano().run(RUN_ID, ORGANO_ID);
+
+    assertThat(settled).contains(ImportRunOrganoState.SUCCEEDED);
+    verify(importRuns).finishOrgano(RUN_ID, ORGANO_ID, ImportRunOrganoState.SUCCEEDED, null);
+  }
+
+  @Test
+  void settles_the_organo_unmarked_mid_refresh_as_stopped_naming_what_stopped_it() {
+    organoIs(loaded(ContratosMenoresImportStatus.COMPLETE));
+    refreshAnswers(organoId -> ContratosMenoresRefreshSummary.stopped(3, 12, StopReason.UNMARKED));
+
+    Optional<ImportRunOrganoState> settled = importCoveredOrgano().run(RUN_ID, ORGANO_ID);
+
+    assertThat(settled).contains(ImportRunOrganoState.STOPPED);
+    verify(importRuns)
+        .finishOrgano(
+            eq(RUN_ID),
+            eq(ORGANO_ID),
+            eq(ImportRunOrganoState.STOPPED),
+            argThat(Objects::nonNull));
+  }
+
+  @Test
+  void records_nothing_when_the_run_stopped_holding_the_guard_mid_refresh() {
+    organoIs(loaded(ContratosMenoresImportStatus.COMPLETE));
+    refreshAnswers(
+        organoId -> ContratosMenoresRefreshSummary.stopped(3, 12, StopReason.GUARD_LOST));
+
+    Optional<ImportRunOrganoState> settled = importCoveredOrgano().run(RUN_ID, ORGANO_ID);
+
+    assertThat(settled).isEmpty();
+    verifyNoInteractions(importRuns);
+  }
+
+  // The refresh mark is written where the walk would write its completion, and not best-effort, so
+  // a database failure surfaces here. What the refresh stored stands and the next run re-reads the
+  // same period; what must not happen is the run abandoning the Órganos after this one.
+  @Test
+  void settles_the_organo_whose_refresh_mark_could_not_be_written_as_failed() {
+    organoIs(loaded(ContratosMenoresImportStatus.COMPLETE));
+    refreshAnswers(
+        organoId -> {
+          throw new IllegalStateException("the import state is unreachable");
+        });
+
+    Optional<ImportRunOrganoState> settled = importCoveredOrgano().run(RUN_ID, ORGANO_ID);
+
+    assertThat(settled).contains(ImportRunOrganoState.FAILED);
+    verify(importRuns)
+        .finishOrgano(
+            RUN_ID, ORGANO_ID, ImportRunOrganoState.FAILED, "the import state is unreachable");
+  }
+
+  // ------------------------------------ the eligibility check both walks are handed
 
   @Test
   void tells_the_walk_the_organo_is_still_eligible_while_it_stays_marked() {
@@ -242,6 +304,28 @@ class ImportCoveredOrganoTest {
         .thenReturn(Optional.of(marked()))
         .thenReturn(Optional.empty());
     walkAnswers(organoId -> ContratosMenoresImportSummary.complete(1, 0));
+
+    importCoveredOrgano().run(RUN_ID, ORGANO_ID);
+
+    assertThat(eligibilityChecks.getFirst().getAsBoolean()).isFalse();
+  }
+
+  @Test
+  void tells_the_refresh_the_organo_is_still_eligible_while_it_stays_marked() {
+    organoIs(loaded(ContratosMenoresImportStatus.COMPLETE));
+    refreshAnswers(organoId -> ContratosMenoresRefreshSummary.clean(3, 12));
+
+    importCoveredOrgano().run(RUN_ID, ORGANO_ID);
+
+    assertThat(eligibilityChecks.getFirst().getAsBoolean()).isTrue();
+  }
+
+  @Test
+  void tells_the_refresh_the_organo_is_no_longer_eligible_once_it_is_unmarked() {
+    when(organos.findById(ORGANO_ID))
+        .thenReturn(Optional.of(loaded(ContratosMenoresImportStatus.COMPLETE)))
+        .thenReturn(Optional.of(organo(true, false)));
+    refreshAnswers(organoId -> ContratosMenoresRefreshSummary.clean(3, 12));
 
     importCoveredOrgano().run(RUN_ID, ORGANO_ID);
 
@@ -319,28 +403,36 @@ class ImportCoveredOrganoTest {
   // ---------------------------------------------------------------- fixtures
 
   private ImportCoveredOrgano importCoveredOrgano() {
-    return new ImportCoveredOrgano(organos, importRuns, walk);
+    return new ImportCoveredOrgano(organos, importRuns, walk, refresh);
   }
 
   private void organoIs(OrganoDeContratacion organo) {
     when(organos.findById(ORGANO_ID)).thenReturn(Optional.of(organo));
   }
 
-  /**
-   * The one place the walk is stubbed. Every walk records the Órgano it was for and the eligibility
-   * check it was handed, whatever it goes on to answer.
-   */
+  /** The one place the walk is stubbed. */
   private void walkAnswers(Function<OrganoId, ContratosMenoresImportSummary> answer) {
-    when(walk.run(eq(RUN_ID), any(), any()))
-        .thenAnswer(
-            invocation -> {
-              OrganoId organoId =
-                  Objects.requireNonNull(
-                      invocation.<OrganoDeContratacion>getArgument(1).id());
-              walked.add(organoId);
-              eligibilityChecks.add(invocation.getArgument(2));
-              return answer.apply(organoId);
-            });
+    when(walk.run(eq(RUN_ID), any(), any())).thenAnswer(recordingInto(walked, answer));
+  }
+
+  /** The refresh's counterpart. */
+  private void refreshAnswers(Function<OrganoId, ContratosMenoresRefreshSummary> answer) {
+    when(refresh.refresh(eq(RUN_ID), any(), any())).thenAnswer(recordingInto(refreshed, answer));
+  }
+
+  /**
+   * Whichever of the two was handed the Órgano, the two facts worth keeping about the call are the
+   * same: which Órgano it was for, and the eligibility check it was given to ask at every batch
+   * boundary. Both walks take the same three arguments in the same order, so one recorder serves.
+   */
+  private <T> Answer<T> recordingInto(List<OrganoId> calls, Function<OrganoId, T> answer) {
+    return invocation -> {
+      OrganoId organoId =
+          Objects.requireNonNull(invocation.<OrganoDeContratacion>getArgument(1).id());
+      calls.add(organoId);
+      eligibilityChecks.add(invocation.getArgument(2));
+      return answer.apply(organoId);
+    };
   }
 
   /** Collects the reason recorded on every Órgano settled as stopped. */

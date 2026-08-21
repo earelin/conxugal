@@ -23,6 +23,7 @@ import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.time.Clock;
 import io.micronaut.http.HttpResponse;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -54,6 +55,7 @@ class ContratosMenoresWalkSliceLimitsTest {
   private static final ImportRunId RUN_ID = new ImportRunId(UUID.randomUUID());
   private static final String SOURCE_KEY = "242";
   private static final LocalDate HISTORY_FLOOR = LocalDate.of(2018, 1, 1);
+  private static final Duration LOOKBACK = Duration.ofDays(30);
 
   private final ContratosMenoresClient contratosMenoresClient = mock(ContratosMenoresClient.class);
   private final ContratoMenorRepository contratos = mock(ContratoMenorRepository.class);
@@ -120,7 +122,7 @@ class ContratosMenoresWalkSliceLimitsTest {
         contratos,
         importStates,
         (Clock) Instant::now,
-        new ContratosMenoresImportConfiguration(HISTORY_FLOOR));
+        new ContratosMenoresImportConfiguration(HISTORY_FLOOR, LOOKBACK));
   }
 
   private static OrganoDeContratacion organo() {

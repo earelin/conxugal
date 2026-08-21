@@ -382,7 +382,11 @@ export const strings = {
           partial:
             'Gárdase o que xa se importou e tamén por onde continuar; ' +
             'a seguinte importación retoma desde aí.',
-          imported: 'Está todo o historial que a fonte publicaba no momento da importación.',
+          // The refresh window reaches back a bounded margin, so a correction older
+          // than it needs the historical re-read: *recentes* is the honest claim.
+          imported:
+            'Está todo o historial publicado pola fonte, e o refresco diario incorpora as ' +
+            'novidades e as correccións recentes.',
           // Which of the two stored states it holds, so *resumable* versus
           // *completo* stays reachable without a fifth badge.
           stalePartial:
@@ -469,11 +473,14 @@ export const strings = {
           dismiss: 'Pechar',
 
           succeededNote:
-            'Ata que exista o refresco periódico, estes órganos non se actualizan sós.',
-          failedNote: 'Os contratos xa gardados consérvanse; volver disparala retoma onde quedou.',
+            'O refresco diario volve a estes órganos e incorpora o publicado desde a última ' +
+            'execución.',
+          failedNote:
+            'Os contratos xa gardados consérvanse; a seguinte execución programada retoma onde ' +
+            'quedou.',
           abandonedNote:
             'O proceso deixou de avanzar e nunca escribiu o seu remate. Os contratos xa ' +
-            'gardados consérvanse; volver disparala retoma onde quedou.',
+            'gardados consérvanse; a seguinte execución programada retoma onde quedou.',
 
           errorTitle: 'Non se puido consultar a execución',
           errorNotFound: 'Xa non existe ningunha execución con ese identificador.',
@@ -491,9 +498,11 @@ export const strings = {
             `Xa se está a executar outra importación. A marca de ${name} quedou gardada.`,
           guardTrigger:
             'Xa se está a executar outra importación, así que non comezou ningunha nova.',
+          // Read after either refusal — the mark's and the trigger's — so it names no
+          // single Órgano: what the wait costs is freshness, and never a contract.
           guardNote:
-            'Mentres non exista o refresco periódico, ningún proceso a retoma: hai que volver ' +
-            'disparala.',
+            'Non se perde ningún dato, só frescura: a seguinte execución programada cobre os ' +
+            'órganos marcados.',
 
           notEligibleMark: (name: string) =>
             `${name} está inactivo: só se importan os órganos activos e marcados.`,

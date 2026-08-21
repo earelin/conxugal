@@ -2265,9 +2265,11 @@ components:
     ImportRunOrgano:
       type: object
       description: >-
-        One Órgano a run covers, and how it fared. `STOPPED` and `SKIPPED` are not failures — an
-        Órgano is stopped when its mark was withdrawn, keeping everything already stored, and
-        skipped when its history is already complete and there is no incremental mode to run yet.
+        One Órgano a run covers, and how it fared. `STOPPED` is not a failure: an Órgano is
+        stopped when its mark was withdrawn, keeping everything already stored. `SKIPPED` is not
+        one either, and nothing produces it any more — it is carried only by runs recorded before
+        the incremental refresh existed, when an Órgano whose history was already complete was
+        passed over instead of being refreshed.
       required: [organoId, state, added, refreshed, failureReason]
       example:
         organoId: "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa"

@@ -23,6 +23,7 @@ import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
 import gal.conxugal.domain.time.Clock;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -55,6 +56,7 @@ class ImportOrganoContratosMenoresTest {
   private static final LocalDate SECOND_WINDOW_START = LocalDate.of(2026, 2, 9);
   private static final LocalDate THIRD_WINDOW_START = LocalDate.of(2025, 11, 12);
   private static final LocalDate HISTORY_FLOOR = LocalDate.of(2018, 1, 1);
+  private static final Duration LOOKBACK = Duration.ofDays(30);
 
   @Mock
   private ContratoMenorSource contratoMenorSource;
@@ -522,7 +524,7 @@ class ImportOrganoContratosMenoresTest {
         contratos,
         importStates,
         clock,
-        new ContratosMenoresImportConfiguration(historyFloor));
+        new ContratosMenoresImportConfiguration(historyFloor, LOOKBACK));
   }
 
   /** Answers true until the boundary that follows batch {@code batch}, where the mark is gone. */

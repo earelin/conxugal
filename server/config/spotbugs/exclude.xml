@@ -31,10 +31,10 @@
     <Field name="~(organo|termo)Repository"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
-  <!-- And once more for the contratos menores walk: ContratosMenoresImportStateRepository declares
-       insert, which is all the heuristic needs to read the injected port as mutable. -->
+  <!-- And once more for the two contratos menores walks: ContratosMenoresImportStateRepository
+       declares insert, which is all the heuristic needs to read the injected port as mutable. -->
   <Match>
-    <Class name="gal.conxugal.domain.contrato.ImportOrganoContratosMenores"/>
+    <Class name="~gal\.conxugal\.domain\.contrato\.(Import|Refresh)OrganoContratosMenores"/>
     <Field name="importStates"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>

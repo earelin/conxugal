@@ -5,9 +5,15 @@ import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.ImportRunState;
+import gal.conxugal.domain.organo.ContratosMenoresImportMode;
+import gal.conxugal.domain.organo.OrganoDeContratacion;
 import gal.conxugal.domain.organo.OrganoId;
+import gal.conxugal.domain.organo.OrganoRepository;
 import jakarta.inject.Singleton;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +30,14 @@ import org.slf4j.LoggerFactory;
  * <p><strong>Órganos are walked one at a time</strong>, each finished before the next begins. The
  * reason is reportability rather than pacing: it gives the per-Órgano outcomes a well-defined
  * order, so at any moment a run is working on one identifiable Órgano.
+ *
+ * <p><strong>The cheap work goes first.</strong> The coverage is walked in mode order — Órganos
+ * gone from the catalogue, then incremental, then resumed, then initial — derived once as the run
+ * starts, from each Órgano's current import state, and stored nowhere; within a mode the run's
+ * recorded order stands. A newly marked Órgano's multi-day initial load therefore runs after every
+ * refresh rather than holding the sweep in front of them. Order is all this decides: which Órganos
+ * the run covers was fixed at the claim, and what each turn amounts to stays {@link
+ * ImportCoveredOrgano}'s.
  *
  * <p><strong>A failing Órgano does not take the run down with it.</strong> The run moves to the
  * next; what it and the Órganos before it stored stands. A run of four hundred Órganos that gave up
@@ -46,13 +60,18 @@ public class ExecuteContratosMenoresImport {
 
   private static final Logger LOG = LoggerFactory.getLogger(ExecuteContratosMenoresImport.class);
 
+  /** After every rank {@link #sweepRankOf} can answer, whatever modes are ever added to it. */
+  private static final int UNREADABLE_LAST = Integer.MAX_VALUE;
+
   private final ImportRunRepository importRuns;
   private final ImportCoveredOrgano coveredOrgano;
+  private final OrganoRepository organos;
 
   public ExecuteContratosMenoresImport(
-      ImportRunRepository importRuns, ImportCoveredOrgano coveredOrgano) {
+      ImportRunRepository importRuns, ImportCoveredOrgano coveredOrgano, OrganoRepository organos) {
     this.importRuns = importRuns;
     this.coveredOrgano = coveredOrgano;
+    this.organos = organos;
   }
 
   /**
@@ -71,11 +90,13 @@ public class ExecuteContratosMenoresImport {
    * and, asked to execute a run that is already over, would overwrite the verdict and the failed
    * Órganos it named.
    *
-   * <p>The per-Órgano rows are best-effort by comparison: an Órgano that needs no walk — already
-   * loaded, unmarked before its turn, gone from the catalogue — is settled without asking the guard
-   * again, because those take no measurable time and asking would double the reads a sweep of a
-   * loaded catalogue makes. A stall long enough to lose the guard between two of them leaves a row
-   * written against a run nobody reads any more; the verdict is what stops that being visible.
+   * <p>The per-Órgano rows are best-effort by comparison: an Órgano that reads nothing at all —
+   * unmarked before its turn, gone from the catalogue — is settled without asking the guard again,
+   * because those take no measurable time and asking would double the reads settling them makes.
+   * One that walks or refreshes needs no ask here either, having put the question to the guard
+   * twice per page from inside its own loop. A stall long enough to lose the guard between two of
+   * them leaves a row written against a run nobody reads any more; the verdict is what stops that
+   * being visible.
    */
   public void execute(ImportRunId runId) {
     if (!importRuns.holdsGuard(runId)) {
@@ -105,7 +126,7 @@ public class ExecuteContratosMenoresImport {
   private record Walked(int covered, int failed, boolean stillTheLiveRun) {}
 
   private Walked walkCoveredOrganos(ImportRunId runId) {
-    List<OrganoId> covered = coveredOrganosOf(runId);
+    List<OrganoId> covered = inSweepOrder(coveredOrganosOf(runId));
     int failed = 0;
     for (OrganoId organoId : covered) {
       Optional<ImportRunOrganoState> settled = coveredOrgano.run(runId, organoId);
@@ -142,6 +163,52 @@ public class ExecuteContratosMenoresImport {
                   runId);
               return List.of();
             });
+  }
+
+  /**
+   * The coverage, cheapest mode first: Órganos gone from the catalogue, then incremental, then
+   * resumed, then initial, keeping the run's recorded order within a rank. This reads the
+   * catalogue once per covered Órgano <em>in addition to</em> the read {@link ImportCoveredOrgano}
+   * makes when each turn comes — deliberately, because that later read exists to defeat exactly
+   * the staleness a row loaded before the run began would carry. What is read here decides order
+   * and nothing else: every id handed in comes back, and none is added. A row that cannot be read
+   * is ranked last rather than allowed to abort the sweep — the order is a hint, and the Órgano's
+   * own turn re-reads the catalogue and settles it properly.
+   */
+  private List<OrganoId> inSweepOrder(List<OrganoId> covered) {
+    Map<OrganoId, Integer> rank = HashMap.newHashMap(covered.size());
+    int unreadable = 0;
+    RuntimeException firstCause = null;
+    for (OrganoId organoId : covered) {
+      try {
+        rank.put(organoId, sweepRankOf(organoId));
+      } catch (RuntimeException e) {
+        rank.put(organoId, UNREADABLE_LAST);
+        unreadable++;
+        if (firstCause == null) {
+          firstCause = e;
+        }
+      }
+    }
+    if (unreadable > 0) {
+      LOG.warn(
+          "{} of the {} Órganos this run covers could not be read to order the sweep; they are"
+              + " taken last, and their own turns re-read them",
+          unreadable, covered.size(), firstCause);
+    }
+    return covered.stream().sorted(Comparator.comparingInt(rank::get)).toList();
+  }
+
+  private int sweepRankOf(OrganoId organoId) {
+    Optional<OrganoDeContratacion> organo = organos.findById(organoId);
+    if (organo.isEmpty()) {
+      return 0;
+    }
+    return switch (ContratosMenoresImportMode.of(organo.get().importStatus())) {
+      case INCREMENTAL -> 1;
+      case RESUMED -> 2;
+      case INITIAL -> 3;
+    };
   }
 
   /**
