@@ -21,6 +21,13 @@ import org.slf4j.LoggerFactory;
  * upserted and one progress advance are the same beat, which is what keeps the batch tied to the
  * source rather than being a second thing to tune against the guard's abandonment bound.
  *
+ * <p><strong>It is also where the source's other two measured limits live</strong> — the width of a
+ * window and the zone the source publishes in — even though nothing here reads either. Both are a
+ * walk's to apply and both belong to the source rather than to either walk, so they sit beside the
+ * page size in the one class both walks already depend on. A copy in each walk is a pair that
+ * eventually disagrees, and the floor rule on the import state answers an {@code Instant} and
+ * borrows no zone precisely so that no such second copy exists.
+ *
  * <p><strong>A batch is stored with the operadores its contracts name</strong>, by {@link
  * StoreContratosMenoresBatch} and in one transaction. The published awardee reaches nothing beyond
  * that call: a stored contract keeps neither the name nor the identifier it was published with, so
