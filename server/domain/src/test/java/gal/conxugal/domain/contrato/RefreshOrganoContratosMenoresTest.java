@@ -85,14 +85,15 @@ class RefreshOrganoContratosMenoresTest {
 
   private final AtomicReference<Instant> now = new AtomicReference<>(T_ONE);
   private final List<Slice> requestedSlices = new ArrayList<>();
-  private boolean theWalkTakesTime;
+  /** Set by the one test that needs the clock to move while the walk is running. */
+  private boolean theWalkTakesTenMinutes;
 
   /** One call the source port received, which is what the walk's shape is asserted on. */
   private record Slice(LocalDate from, LocalDate to, int offset) {}
 
   /**
    * Every refresh reads the clock, so it is stubbed for every test. It answers {@link #T_ONE} until
-   * something moves it, which is what {@link #theWalkTakesTenMinutes()} does from inside the
+   * something moves it, which is what {@link #theWalkTakesTenMinutes} does from inside the
    * source: a fixed clock cannot tell a mark stamped at the walk's start from one stamped at its
    * end.
    */
@@ -263,7 +264,7 @@ class RefreshOrganoContratosMenoresTest {
   @Test
   void writes_the_refresh_mark_stamped_at_the_instant_the_walk_began() {
     refreshedThrough(PREVIOUS_REFRESH);
-    theWalkTakesTenMinutes();
+    theWalkTakesTenMinutes = true;
     runIsLive();
     storeAcceptsEverything();
     sourcePublishes(Map.of());
@@ -412,11 +413,6 @@ class RefreshOrganoContratosMenoresTest {
                     refreshMark)));
   }
 
-  /** Moves the clock on as the walk reads its first page, as a real one would. */
-  private void theWalkTakesTenMinutes() {
-    theWalkTakesTime = true;
-  }
-
   private void runIsLive() {
     when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
   }
@@ -429,7 +425,7 @@ class RefreshOrganoContratosMenoresTest {
           int offset = invocation.getArgument(3);
           int pageSize = invocation.getArgument(4);
           requestedSlices.add(new Slice(from, invocation.getArgument(2), offset));
-          if (theWalkTakesTime) {
+          if (theWalkTakesTenMinutes) {
             now.set(T_ONE.plusSeconds(600));
           }
           List<ContratoMenorSourceEntry> window = published.getOrDefault(from, List.of());

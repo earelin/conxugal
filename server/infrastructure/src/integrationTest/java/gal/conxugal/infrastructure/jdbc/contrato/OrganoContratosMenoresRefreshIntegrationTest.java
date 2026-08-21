@@ -105,7 +105,8 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
   private final List<ContratoMenorSourceEntry> published = new ArrayList<>();
   private final List<LocalDate> readWindows = new ArrayList<>();
   private LocalDate unreachableWindow;
-  private boolean theWalkTakesTime;
+  /** Set by the one test that needs the clock to move while the walk is running. */
+  private boolean theWalkTakesTenMinutes;
 
   @Override
   public @NonNull Map<String, String> getProperties() {
@@ -141,7 +142,7 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
     published.add(entry(1, "Servizos eléctricos", "3630.00"));
     readWindows.clear();
     unreachableWindow = null;
-    theWalkTakesTime = false;
+    theWalkTakesTenMinutes = false;
     when(contratoMenorSource.fetchPage(eq(SOURCE_KEY), any(), any(), anyInt(), anyInt()))
         .thenAnswer(invocation -> {
           LocalDate from = invocation.getArgument(1);
@@ -149,7 +150,7 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
             throw new ContratoMenorSourceUnavailableException("source is down");
           }
           readWindows.add(from);
-          if (theWalkTakesTime) {
+          if (theWalkTakesTenMinutes) {
             now.set(NOW.plusSeconds(600));
           }
           LocalDate to = invocation.getArgument(2);
@@ -170,7 +171,7 @@ class OrganoContratosMenoresRefreshIntegrationTest implements TestPropertyProvid
   @Test
   void clean_refresh_writes_the_instant_the_walk_began() throws Exception {
     OrganoId organoId = loadedOrganoRefreshedThrough(PREVIOUS_REFRESH);
-    theWalkTakesTime = true;
+    theWalkTakesTenMinutes = true;
 
     ContratosMenoresRefreshSummary summary = refresh(organoId);
 
