@@ -176,8 +176,9 @@ flowchart LR
   > the feature that meets the case, and the factory is shared by both families. Its `operador_economico_id` stays null, and because the schema is
   normalised that contract records **no awardee name either**, which the R5 branch did not cost
   when the contract carried its own.
-  Nothing beyond emptiness is validated: the source publishes irregular but genuine identifiers,
-  and rejecting them would discard real awards.
+  Nothing beyond emptiness **and the two published placeholder forms named above** is validated:
+  the source publishes irregular but genuine identifiers, and rejecting those would discard real
+  awards.
 
   **This branch is expected never to be taken.** Every contract the source publishes names its
   awardee with a NIF/CIF, which is why the mapping is unambiguous in the first place; SPEC-0005
@@ -320,7 +321,8 @@ dependencies**, and 2 and 3 are the ones FEAT-0009 waits on, so 2 can be taken f
    store and no framework. Unit-tested from both sides: identifiers differing only in padding or
    case canonicalise to one value; identifiers differing in internal spacing, punctuation or any
    character do not.
-   Needed by task 4, not by tasks 2 or 3. *(SPEC-0006 #3 matching half, #4, #7, #9)*
+   Needed by task 4, not by tasks 2 or 3. *(SPEC-0006 #3 matching half, #4, #7, #9 — the last
+   only as R5 read before amendment 4 widened it; FEAT-0015 task 19 carries the widening.)*
 2. **`OperadorEconomico` domain model + repository port** — the aggregate (`OperadorId` identity,
    canonical fiscal identifier, published name, and the rank the name was taken from), the
    `NomeAlternativo` it holds many of (the published name plus the rank it was last seen at), and
@@ -340,7 +342,8 @@ dependencies**, and 2 and 3 are the ones FEAT-0009 waits on, so 2 can be taken f
    otherwise, advance the name when the contract outranks the incumbent, **retain the
    name the contract published**, and repoint the reference when a re-import changes a contract's
    published identifier. *Depends on FEAT-0009's single-Órgano import task.* *(SPEC-0006 #2, #6
-   storage half, #7, #8 no-operador half, #9, #14 moves-and-creates half, #33, #34, #37)*
+   storage half, #7, #8 no-operador half, #9, #14 moves-and-creates half, #33, #34, #37 — #8 and #9
+   only as R5 read before amendment 4; FEAT-0015 task 19 carries the widening.)*
 
 **Criteria this feature deliberately leaves incomplete**, so no task claims what it cannot prove:
 every *displayed* and *reachable* half — criteria #1, #5, #6's display, #8's list appearance,

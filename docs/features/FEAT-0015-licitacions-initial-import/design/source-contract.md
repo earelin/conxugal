@@ -1,9 +1,10 @@
 # The licitacións source contract
 
 What contratosdegalicia.gal actually offers for an Órgano's **licitacións**, measured against the
-live site on **2026-08-20**. This is the answer [FEAT-0015](../README.md) needs before its adapter
+live site on **2026-08-20**, with the lote-spelling and join measurements added on **2026-08-22**.
+This is the answer [FEAT-0015](../README.md) needs before its adapter
 can be written, and it is recorded here rather than in a task because several of the feature's
-decisions — and **six corrections to [SPEC-0008](../../../specs/SPEC-0008-import-browse-licitacions.md)
+decisions — and **seven corrections to [SPEC-0008](../../../specs/SPEC-0008-import-browse-licitacions.md)
 or a sibling document** — rest on it.
 
 It is the sibling of
@@ -234,11 +235,52 @@ Lote | Part. | Resolución | Adxudicatario                       | Importe      
 ```
 
 So SPEC-0008 R8's "one place per thing awarded" is exactly how the source publishes it: **the award
-table is keyed by lote**, and a procedure with no lotes has one row whose lote cell is empty.
+table is keyed by lote**, and a procedure with no lotes has one row standing for the procedure as a
+whole.
 
 **`Part.` is the count of bidders for that lote** (10 and 7 above), which is a free cross-check on
 the parsed bidder list — a parse that produced a different count has failed and should say so
 rather than store a short list.
+
+#### How each table spells a lote, and what the join costs if you believe them
+
+Measured over **240 procedures** across ten Órganos on **2026-08-22**, counting the literal cell
+value in each table's lote column. This supersedes an earlier draft of this document, which said
+the award table's lotless cell is *empty*; it is not.
+
+| Table | Procedure-wide row | Per-lote rows |
+| --- | --- | --- |
+| Award (resolution) | **`_`** × 189 | `1`…`7`, and **`01`, `02`, `03`, `05`** |
+| Formalisation | **`_`** × 99 | `1`…`10` |
+| NUT | **`_`** × 217 | `1`…`8` |
+| Bidders (`tr.filaLic_*`) | **`-`** × 274 | `1`…`10` |
+
+Three things follow, and the third was not anticipated:
+
+- **The procedure-wide marker is not one character.** The award, formalisation and NUT tables write
+  `_`; the bidder table writes `-`. A parse that hard-codes either loses the other.
+- **Zero-padding varies *within* a table, not between tables.** The award table produced `1` and
+  `05` in the same sample, so "the formalisation pads and the award table does not" — as an earlier
+  draft of the feature had it — is wrong. Padding must be stripped wherever a lote is read.
+- **A lote identifier is not always a number.** `OU0028`, `LU4001`, `LU4031` and `CO0642` were all
+  observed in award-table lote cells. So a lote's identifier is **text**, and a model storing it as
+  an integer would reject a real procedure.
+
+**What believing the raw cell costs**, on the same 240 procedures — joining the award table's
+`Part.` against the bidder rows counted for that lote:
+
+| Join | Agree | Differ |
+| --- | --- | --- |
+| on the **raw** cell value | 63 | **95** |
+| on the **normalised** key | **158** | 0 |
+
+So the naive join fails on 60% of award rows and every failure is an artefact — `_` against `-`, or
+`05` against `5`. Normalised, agreement is total. This matters more than a join usually would,
+because a `Part.` mismatch is what sends a procedure to the outstanding ledger: unnormalised, the
+cross-check would fail most procedures the source publishes perfectly well.
+
+**The normalisation, therefore:** `_`, `-`, the empty string and a blank string all mean *the
+procedure as a whole*; leading zeros are stripped; and what remains is compared as text.
 
 #### Two places the per-lote model is looser than SPEC-0008 assumes
 
