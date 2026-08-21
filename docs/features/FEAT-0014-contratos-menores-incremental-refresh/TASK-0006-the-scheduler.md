@@ -2,7 +2,7 @@
 feat: FEAT-0014
 domain: backend
 adrs: [0001]
-status: todo
+status: done
 depends_on: [TASK-0004]
 ---
 

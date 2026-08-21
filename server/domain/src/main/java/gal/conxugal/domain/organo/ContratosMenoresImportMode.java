@@ -5,9 +5,9 @@ package gal.conxugal.domain.organo;
  * already been loaded.
  *
  * <p>The rule is {@link #of(ContratosMenoresImportStatus)} and it lives here alone so that the
- * manual trigger, the mark trigger and the future scheduler cannot disagree about it — a mode
- * chosen from the trigger that arrived rather than from the Órgano's own state is how a
- * half-loaded Órgano ends up restarted or skipped.
+ * manual trigger, the mark trigger and the scheduler cannot disagree about it — a mode chosen from
+ * the trigger that arrived rather than from the Órgano's own state is how a half-loaded Órgano
+ * ends up restarted or skipped.
  *
  * <p>A historical re-read is deliberately not a value here. No trigger selects one automatically,
  * so it cannot be the answer to <em>what should happen to this Órgano now</em>.

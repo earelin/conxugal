@@ -458,6 +458,12 @@ javadoc and the contract description both become historical rather than current.
 - **The scheduler firing while any import runs** — including SPEC-0004's catalogue import — is
   refused by the guard, logged, and neither queued nor retried within that tick. The next tick
   claims. *(SPEC-0005 #32, #35)*
+- **A tick nobody was up to receive** — a restart, a deploy or a host being down across 05:00 loses
+  that day's sweep entirely, because a cron has no catch-up and the next tick is tomorrow's. The
+  floor absorbs it exactly as the case below, so the cost is hours of freshness rather than data —
+  but a *recurring* window over 05:00, a nightly deploy at that hour, suppresses the sweep for as
+  long as it stands, and nothing reports that it has. Choosing the hour is therefore an operational
+  decision and not only a scheduling one. *(SPEC-0005 #35, #45)*
 - **The scheduler down, or locked out, for a month** — the floor is T₁ from the last clean refresh,
   so the run that finally happens covers the entire gap in as many 89-day windows as it takes.
   Waiting costs freshness, never data, which is the property R8's floor exists to give R22.
