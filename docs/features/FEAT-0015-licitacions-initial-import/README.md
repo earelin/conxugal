@@ -1,6 +1,6 @@
 ---
 spec: SPEC-0008
-adrs: [0001, 0002, 0005, 0006, 0008, 0010, 0011, 0012, 0014, 0017, 0019, 0020, 0023]
+adrs: [0001, 0002, 0005, 0006, 0008, 0010, 0011, 0012, 0014, 0017, 0019, 0020, 0021, 0023]
 status: draft
 ---
 
@@ -58,26 +58,43 @@ stored projection of **[ADR-0023](../../architecture/0023-operadores-as-a-stored
 
 > **The source contract is measured, not assumed.** Every field, limit, size and frequency cited
 > below was taken against the live site on **2026-08-20** and is recorded in
-> [`design/source-contract.md`](design/source-contract.md). Four of those measurements
+> [`design/source-contract.md`](design/source-contract.md). Five of those measurements
 > **correct SPEC-0008 or a sibling document**: the listing's `importe` is a **budget, not an
-> award**; the listing **can** be ordered by last-modified date once the full DataTables payload is
-> sent, which
+> award**; **an award row publishes no fiscal identifier at all**, which is what the *Which
+> operador an award belongs to* section exists to answer; the listing **can** be ordered by
+> last-modified date once the full DataTables payload is sent, which
 > [FEAT-0009's contract](../FEAT-0009-contratos-menores-initial-import/design/source-contract.md)
-> concluded was impossible; **a UTE's fiscal identifier is usually not published**; and the two
-> families **share one publication id space**, which is what keeps SPEC-0006 R4's tie-break total
-> now that a second family feeds the catalogue.
+> concluded was impossible; **a UTE's fiscal identifier is usually not published**; and
+> **classification is not reliably per lote** even on a procedure that has them. A sixth
+> measurement *confirms* rather than corrects: the two families **share one publication id
+> space**, which is what keeps SPEC-0006 R4's tie-break total now that a second family feeds the
+> catalogue.
+>
+> The ordering finding leaves a paragraph in FEAT-0009's own contract false — it still records
+> that "ordering parameters were not made to work". Correcting it, and asking whether the full
+> payload makes FEAT-0014's window walk cheaper, is a **follow-up this feature does not take**.
 
 ## What this feature needs before it can be finished
 
-Two amendments, plus one defensive change to a sibling spec. Each is narrow, each is to a `draft`
-document, and each is named here so no task claims a criterion the system would currently get
-wrong — and so that no rule belonging to another spec is quietly worked around in an adapter.
+Four amendments, all to `draft` documents, none large. They are named here so no task claims a
+criterion the system would currently get wrong, and so that no rule belonging to another spec is
+quietly worked around in an adapter.
 
-**None of them blocks a task from starting.** An earlier draft of this feature named the SPEC-0006
-change as a blocker; the structural UTE branch described below removes that dependency, and the
-reasoning is recorded in amendment 1 rather than deleted.
+**Three of them do block tasks, and the table says which.** An earlier draft of this feature
+claimed none did; that was wrong, and wrong in the direction that hurts — a task author would have
+built against a criterion that forbids what the design requires.
 
-### 1. SPEC-0008 R17 has to admit a UTE the source does not identify
+| Amendment | Blocks |
+| --- | --- |
+| 1. SPEC-0008 R16/R17/R18 and #20/#21/#22/#24 — the unidentified consortium | tasks 4, 6, 12 |
+| 2. SPEC-0008 #9/#10 — classification not per lote | tasks 4, 9 |
+| 3. SPEC-0008 R18/R33 and SPEC-0006 R3 — the awardee resolved by name | tasks 11, 12 |
+| 4. SPEC-0006 R5, #8 and #9 — placeholders unusable | nothing (defensive) |
+
+Amendments 1 and 3 both touch SPEC-0006 as well as SPEC-0008, and together they are why this
+feature is not yet ready to be broken into tasks.
+
+### 1. SPEC-0008 R17 has to admit a UTE the source does not identify — and SPEC-0006 R16 with it
 
 R17 requires a UTE to be stored "as an operador, identified by its **own published fiscal
 identifier** under SPEC-0006 R3", and says such an identifier "begins with `U`". Measured over
@@ -122,7 +139,25 @@ name on the participation is losing it — and a licitación page would then sho
 nobody, which is worse than the rule R18 is protecting against. The exception is exactly one field
 on exactly one row type.
 
-**Why this is no longer a SPEC-0006 blocker.** `-` and `TEMP-…` appear **only** on consortium rows:
+**This also amends four things the earlier draft did not name.** Each, as written, forbids what
+the model requires:
+
+- **SPEC-0008 R16 and #20** say a party whose identifier is unusable "is recorded as **no
+  participant and no awardee**" — precisely what an unidentified consortium now *is* recorded as.
+  R16 gains the consortium as its stated exception;
+- **SPEC-0008 #21** requires the UTE stored "as an operador under its own fiscal identifier" and
+  "opening the UTE names its members". It becomes: catalogued where identified, recorded on the
+  participation otherwise, with the *open the UTE* half holding only for the identified case;
+- **SPEC-0008 #22** ("the UTE's awarded total includes it") is unsatisfiable for an uncatalogued
+  consortium, which has no total. It needs the same split — deferring it to SPEC-0006's features
+  does not repair it;
+- **SPEC-0006 R16 and #40** are the sibling half. R16 relates a member "to **the UTE operador**…
+  identified by its own published fiscal identifier", and says a party with an unusable identifier
+  yields "no participation to relate and no membership to hold"; #40 restates it normatively. Both
+  must admit a membership whose consortium is not an operador, and **SPEC-0006 R9's *won through a
+  UTE* section** needs a note for the same reason.
+
+**Why this is not a SPEC-0006 R5 blocker.** `-` and `TEMP-…` appear **only** on consortium rows:
 0 of 578 single-firm rows carried either. Because the structural branch is taken *before* any
 identifier is resolved, a placeholder is never handed to `FiscalIdentifier.of` — which, per
 amendment 3, would otherwise catalogue one operador holding the identifier `-` for dozens of
@@ -146,7 +181,63 @@ untouched — those genuinely are per lote, exactly as R8 says. This is raised r
 into the model because #9 is the criterion that forbids the second copy, and a reader auditing the
 model against #9 as written would rightly conclude the model is wrong.
 
-### 3. SPEC-0006 R5 should treat a published placeholder as unusable — defensively
+### 3. SPEC-0008 has to admit an awardee resolved by name
+
+**An award row publishes no fiscal identifier.** The resolution table's columns are *Lote, Part.,
+Resolución, Adxudicatario, Importe, Data difusión, Prazo de execución, Recurso/Prazo* — measured
+over **119 award rows across six Órganos, none contained anything NIF-shaped**. The only identifier
+on the page is in the bidder table.
+
+So R18's promise to supply SPEC-0006 with "awardee name **and fiscal identifier**" cannot be met
+from an award row alone, and #19's "the awarded one distinguished from the rest" needs a rule
+saying *which* bidder that is. Neither exists today, and both are load-bearing for #23 and #24.
+
+**The resolution is a two-step match, and only the second step is inference:**
+
+| Path | What it does | Measured |
+| --- | --- | --- |
+| **A** | match `Adxudicatario` against the **bidder rows of the same procedure** and take that bidder's published identifier | **46%** of award rows |
+| **B** | match the published name against the **operadores catalogue**, on any name SPEC-0006 R15 has retained, and link only on a **unique** hit | 6% on a 268-name index |
+| **C** | no match — the award is stored and **names nobody**, which R16 and R25 already permit | the remainder |
+
+**Path A is not really inference.** The source publishes the award and the bidder list on the same
+page, and the award names one of the bidders; matching them recovers a link the publication already
+implies. Measured on 54 award rows that had a bidder list to match against: **52 exact, 2 differing
+only by a trailing legal-form abbreviation, 0 failures.**
+
+**Path A is unavailable more often than it is available.** 65 of 119 award rows — **55%** — sit on
+a procedure with no bidder list at all, and on those the identifier is usually nowhere on the page:
+of 12 such pages inspected, **6 contained no NIF-shaped token anywhere**, and one contained three
+against a single awardee. That is why path B is needed rather than optional.
+
+**Path B is inference, and it is bounded by four rules:**
+
+- **it never creates an operador.** Creating one requires a published fiscal identifier (SPEC-0006
+  R3, R5). A name that matches nothing yields path C, not a new catalogue entry;
+- **it links only on a unique match.** Two operadores sharing a normalised name yield no link.
+  Measured collision risk is **1 name in 268** — and that one is a source typo, `B88016098` against
+  `B88018098` for the same firm;
+- **it matches against every retained name**, not only the displayed one, since SPEC-0006 R15
+  keeps every spelling an operador has been published under. The production index is the whole
+  catalogue — fed by 1.4 million contratos menores as well — so B's real yield will be far above
+  the 6% a 268-name index produced;
+- **it is recorded as name-derived.** The award carries how its operador was resolved, so an
+  inferred link is distinguishable from a published one, can be shown as such by a later feature,
+  and can be withdrawn without touching path A's links.
+
+**What it amends.** SPEC-0008 **R33** forbids "inference", and path B is inference — a narrow,
+recorded, reversible kind, but inference. **R18** must say that the fiscal identifier is *derived*
+for this family rather than published. And **SPEC-0006 R3** describes attaching a contract to an
+operador by identifier only; it must admit a name-derived attachment that never creates or merges
+an operador. Marking the provenance is what keeps all three honest.
+
+**The alternative was rejected on measurement, not taste.** Storing the awardee's published name on
+the award row — R18's "no per-row name" rule waived a second time — would show a name on every row
+and link roughly half of them. It was rejected because a name with no operador is exactly the
+"route that dead-ends" #20 forbids, and because path B reaches the same rows through the catalogue
+that already holds those names.
+
+### 4. SPEC-0006 R5 should treat a published placeholder as unusable — defensively
 
 [SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) R5 makes an identifier unusable only
 when it is "absent, or empty once surrounding whitespace is ignored", and says "nothing beyond the
@@ -159,7 +250,7 @@ published with an irregular but non-empty identifier **is** attached to an opera
 consortia under whichever name was published last, and every `TEMP-` value would become exactly the
 "invented or placeholder" operador R5 exists to forbid. Both failures are silent.
 
-**Amendment 1 closes that path**, because every measured `-` and `TEMP-` sat on a consortium row and
+**Amendment 1's structural branch closes that path**, because every measured `-` and `TEMP-` sat on a consortium row and
 the structural branch never offers one to R3. So this is **a guard, not a blocker**: 578 of 578
 single-firm rows carried an ordinary identifier, which is a measured negative over one sample rather
 than a rule the source states. If a single-firm row ever publishes `-`, the widening is what stops
@@ -192,9 +283,12 @@ and **#9** is qualified, because as written it argues against the amended requir
   page, and a `LicitacionRecordSource` answering one **procedure** whole. Two ports because they are
   two mechanisms — one JSON, one HTML — and a single port would hide from its caller that one call
   is a thousand times cheaper than the other.
-- **Domain (per-Órgano, per-family import state):** the three-state fact, the resumption cursor, the
-  covered-through instant and the **outstanding-record ledger** for **licitacións**, held apart from
-  the contratos menores state so neither family's progress can be read as the other's (R4).
+- **Domain (per-Órgano, per-family import state):** the three-state fact, the resumption cursor and
+  the **outstanding-record ledger** for **licitacións**, held apart from the contratos menores state
+  so neither family's progress can be read as the other's (R4). **No covered-through instant**: T₀
+  exists in `contrato_menor_import_state` because that family's incremental window is measured from
+  it, and this family's incremental mode is driven by `modificado` ordering instead. Adding a column
+  the incremental feature has not asked for is the speculative generality CLAUDE.md forbids.
 - **Domain (the run record):** the change that lets **one run cover two families** for one Órgano,
   which R27 requires and the shipped schema forbids — see *One run, two families* below.
 - **Domain (use cases):** `ClaimLicitacionsImport` decides who a run covers and whether it may
@@ -235,11 +329,12 @@ and **#9** is qualified, because as written it argues against the amended requir
 
   **What that costs is a real collision, not a hypothetical one.** The guard is system-wide across
   every importer, so the question is not whether a licitacións scheduler exists but whether **any**
-  scheduled run does — and two do: FEAT-0006's daily catalogue import at 03:00, and FEAT-0014's
-  contratos menores scheduler at 05:00. A 4.7-hour SERGAS walk begun at 02:00 **refuses both**.
+  scheduled run does. FEAT-0006's daily catalogue import at 03:00 is shipped, and FEAT-0014's
+  contratos menores scheduler at 05:00 is drafted and will be. A 4.7-hour SERGAS walk begun at 02:00 **refuses both**.
   FEAT-0009 accepted the same cost and said so plainly; so does this. It is tolerable only because
-  the population is small — four Órganos hold over 600 licitacións and one holds over 16 000, so
-  every other initial import finishes in minutes — and **the yielding feature must land before R28
+  the population is small — the only publishers measured above 600 licitacións are SERGAS
+  (16 798), Axencia Turismo de Galicia (1 064) and Augas de Galicia (625), with Portos de Galicia
+  next at 385, so every other initial import finishes in minutes — and **the yielding feature must land before R28
   covers this family**, at which point the collision stops being occasional. **Criterion #40's
   yield clauses are unclaimed here.**
 - **The historical re-read (R12), and removal/restore of a licitación, lote or participation
@@ -345,7 +440,13 @@ property intact:
   contract families. The run-level column keeps its meaning — *what was triggered* — rather than
   becoming a derived summary of its coverage;
 - **`claim` takes (Órgano, family) pairs** instead of Órganos, so the coverage is still enumerated
-  up front in one insertion.
+  up front in one insertion;
+- **the run-level `added` and `refreshed` become per family too.** They are published today as
+  "**contratos menores** new to the store across every Órgano this run covered"; summing two
+  families into one pair would make #38's "how many **licitacións** were added and refreshed"
+  unreadable from the run. They move onto the coverage row, which already has a pair, and the
+  run-level pair is dropped rather than redefined — a cross-family total is a number nothing asked
+  for.
 
 Two alternatives were rejected. **A run per family** breaks R27's "within one run" and would need the
 second one to claim a guard the first holds. **Deriving the run-level importer from its coverage**
@@ -372,8 +473,16 @@ The cursor is the **offset already consumed**, written after each page's procedu
 between the commit and the cursor write leaves the cursor slightly behind what is stored, and the
 resumption re-reads that overlap — safe because storing a procedure again refreshes it in place.
 The resumption additionally **steps back one page** rather than trusting the offset exactly, on the
-same reasoning FEAT-0009 applied to its window boundary: the stability argument above is sound but
-unproven, and re-reading 100 entries costs one listing request against a walk of thousands.
+same reasoning FEAT-0009 applied to its window boundary — the stability argument above is sound
+but unproven.
+
+**What the step-back costs is stated honestly, because it is not one request.** The walk retrieves
+one record per listing entry, so re-reading a page means **100 record fetches — about 13.8 MB at
+the measured median**, not the single listing call the overlap might suggest. That is accepted for
+a walk of thousands, and it is the price of not trusting an unmeasured property. The cheap fix —
+skip an entry whose stored last-modified equals the listing's `modificado` — is deliberately **not**
+built here: it is the incremental feature's mechanism, and building half of it early is how two
+walks end up disagreeing about what *unchanged* means.
 
 ### What ends the walk, and what happens to a record that failed
 
@@ -494,9 +603,14 @@ Every retrieval of a record restates the whole procedure, so R13's reconciliatio
 path rather than an exception:
 
 - the **procedure** is matched by its publication identifier and refreshed in place;
-- its **lotes, classifications, bidders and awards** are reconciled to what the record now
-  publishes — one the source no longer publishes is **retained and marked withdrawn**, appearing in
-  no list, history or total;
+- its **lotes, classifications, bidders, awards and UTE memberships** are reconciled to what the
+  record now publishes — one the source no longer publishes is **retained and marked withdrawn**,
+  appearing in no list, history or total;
+- **a membership's visibility follows its participation's.** Memberships are named explicitly
+  because they are easy to forget and expensive to forget: SPEC-0006 R7 counts "one visible UTE
+  membership" toward an operador's reachability, so a member firm whose only tie is a membership
+  under a withdrawn participation would stay reachable through an invisible fact — which is exactly
+  what SPEC-0006 #39 tests for;
 - a **licitación absent from a later import is retained unchanged** (R14). Absence is not evidence of
   withdrawal, and the explicit removal that is (R15) is a later feature's.
 
@@ -533,6 +647,38 @@ visible**, and every other party on the procedure unaffected. A licitación can 
 award and name nobody, which R25 accepts here and SPEC-0005 R28 refuses for contratos menores —
 because there the award *was* the publication.
 
+### Which operador an award belongs to
+
+An award row names its awardee in text and publishes no identifier for it (amendment 3). The
+resolution is therefore ordered, and the order matters because only the last step infers anything:
+
+```mermaid
+flowchart TD
+  A[Award row: Adxudicatario text] --> B{Bidder list for this lote?}
+  B -- yes --> C{Name matches one bidder?}
+  C -- yes --> D[Path A: take the identifier that bidder published]
+  C -- no --> E{Unique match in the operadores catalogue?}
+  B -- no --> E
+  E -- yes --> F[Path B: link, marked name-derived]
+  E -- no or ambiguous --> G[Path C: award stored, names nobody]
+```
+
+Three properties this ordering buys, each of which a different rule depends on:
+
+- **the cheap certain path is tried first**, so the 46% of awards whose bidder list settles the
+  question never reach the inferring one;
+- **an ambiguous name is a path C, not a guess.** SPEC-0006 R3 says merging two real suppliers is
+  as damaging as splitting one, and a name shared by two operadores is exactly that risk;
+- **path C is a supported outcome, not a failure.** R16 and R25 already say a licitación may show
+  an award and name nobody, and R25 explicitly refuses to make a resolvable awardee a condition of
+  visibility. So an unresolved awardee costs a link, never a procedure.
+
+**Normalisation for matching is not normalisation for storage.** R33 stores every value as
+published; the comparison used to match folds case, accents, punctuation and surrounding
+whitespace, and is used for **nothing but the comparison**. Nothing normalised is ever stored or
+displayed, which is what keeps this clear of R33's rule about values while amendment 3 covers the
+inference itself.
+
 ### Consortia: detected by structure, recorded either way
 
 **The parser takes the consortium branch before it resolves any identifier**, on the nested `<ul>`
@@ -557,8 +703,10 @@ and somewhere else in the other. That keeps one shape for a fact the source publ
 it follows R17's own observation that "a UTE is constituted for one procedure" — the consortium is a
 property of a bid, and the member firms are the durable entities. A member's history reaches its
 consortia through its memberships, and an identified UTE reaches its members through its
-participations, so both directions R17 asks for are answerable without the UTE needing to be a
-catalogue entry.
+participations. **Only one of those directions survives for an uncatalogued consortium**, and this
+says so rather than asserting parity: *member → its consortia* is answerable from the catalogue,
+while *consortium → its members* has no catalogue entry to open and is answerable only on the
+licitación's own page under R21 — a later feature's surface.
 
 **No euro is counted twice under either branch**, which is the property R17 exists to protect: an
 award to a consortium is never attributed to a member, whether or not the consortium is catalogued.
@@ -590,29 +738,39 @@ the long load last.
 
 ## Sequencing (tasks, one small change each)
 
-All sixteen are backend.
+Seventeen backend, one frontend (task 18). Each names what it depends on, and the three tasks
+an amendment blocks say so.
 
 1. **Per-family run coverage, `Importer`, and the published contract** — the migration adding
-   `family` to `import_run_organo` and re-keying it `(run_id, organo_id, family)`; `Importer` gaining
-   `LICITACIONS` and `CONTRATOS`; `claim` taking (Órgano, family) pairs; and the matching
-   `openapi.yaml` edit to the `ImportRun` schema. *(SPEC-0008 #38 coverage half)*
+   `family` to `import_run_organo`, re-keying it `(run_id, organo_id, family)` and moving `added`
+   and `refreshed` onto it; a new two-value `ContractFamily` enum for that column, **not** `Importer`
+   (whose `ORGANOS` and `AMBAS_FAMILIAS` values are nonsense in a coverage row); `Importer` gaining
+   `LICITACIONS` and `AMBAS_FAMILIAS` — named so rather than `CONTRATOS`, which reads as a superset
+   of `CONTRATOS_MENORES` by name alone; `claim` taking (Órgano, family) pairs; and the `openapi.yaml`
+   edits, which are the `importer` enum on `ImportRun` **and a new `family` field on
+   `ImportRunOrgano`**, under ADR-0021's conformance test. *(SPEC-0008 #38 coverage half)*
 2. **Licitacións per-Órgano import state** — the `licitacion_import_state` migration, its
    `LicitacionImportStatus` / `LicitacionImportMode` / repository, and the outstanding-record ledger
    table, with the contratos menores state deliberately untouched. *(SPEC-0008 #5 state half)*
 3. **`Licitacion` domain model + repository port** — a `LicitacionId` under ADR-0019, the publication
    identifier as stable identity, the Órgano, both dates, expediente, object, **state code and
    label**, the three types, the lote count, and the two economic figures as `Money`, plus the port.
-   *(SPEC-0008 #7 storage half, #44 storage half)*
+   *(SPEC-0008 #7, #44)*
 4. **Award points and competition value types** — lote, CPV/NUT classification with its **nullable
-   lote reference**, award, formalisation, participation and UTE membership, under R8's one-place
-   rule with no second copy at procedure level. *(SPEC-0008 #9 as amended, #10 storage half)*
+   lote reference**, award (carrying **how its operador was resolved**, per amendment 3),
+   formalisation, participation (carrying the **consortium marker and published name**, per
+   amendment 1) and UTE membership, under R8's one-place rule with no second copy at procedure level.
+   *Blocked by amendments 1 and 2.* *(SPEC-0008 #9 as amended, #10 storage half)*
 5. **Licitacións store: the procedure and its award points** — migrations creating `licitacion`,
    `lote`, the two classification tables, `award` and `formalisation` (unique publication identifier,
    FK to the Órgano, the withdrawal marker R13 needs, and the `(organo_id, publication_date)` index
    the year-scoped read will want) and their JDBC repositories. *Depends on 3, 4.*
    *(SPEC-0008 #17 no-duplicates half)*
 6. **Licitacións store: the competition tables** — `participation` and `ute_membership` migrations
-   and repositories, each carrying a nullable operador FK and no name. *Depends on 4, 5.*
+   and repositories. A participation carries a nullable operador FK, a **consortium marker**, and the
+   **published consortium name** that amendment 1 makes R18's one exception; a membership carries its
+   participation and its member operador, and takes its visibility from that participation. *Depends
+   on 4, 5. Blocked by amendment 1.* *(SPEC-0008 #21 storage half)*
 7. **`LicitacionListingSource` port + JSON adapter** — one (Órgano, offset, order) page over the
    shared `contratosdegalicia` client, sending the **full DataTables payload**, surfacing
    `recordsTotal`, and failing cleanly when the source is unreachable or its response unusable.
@@ -620,43 +778,59 @@ All sixteen are backend.
 8. **`LicitacionRecordSource` port, fetch and the labelled fields** — one procedure fetched on the
    same client and **decoded as ISO-8859-1** on the existing jsoup precedent, parsing the nine
    `<dt>`/`<dd>` scalars, with the Galician amount format and the two date formats handled here.
-   *(SPEC-0008 #7 storage half, #44)*
+   *(SPEC-0008 #7, #44)*
 9. **Record parse: the resolution, CPV, NUT and lotes tables** — awards per lote, classifications
    with `_` read as procedure-wide, and lotes taken from the award table rather than the lotes table.
-   *Depends on 8.* *(SPEC-0008 #10 storage half, #9 as amended)*
+   *Depends on 3, 8. Blocked by amendment 2.* *(SPEC-0008 #10 storage half, #9 as amended)*
 10. **Record parse: bidders, consortium detection and the `Part.` cross-check** — a bidder row
     classified **by the nested `<ul>`**, never by its name or its identifier; a consortium's
     published name and its member entries parsed out of the inner list; and a count mismatch failing
     the procedure rather than storing a short list. *Depends on 8.* *(SPEC-0008 #19 storage half)*
-11. **Extract `ResolveOperador`, and resolve awardees and single-firm bidders** — lift the
-    resolution and name-ranking out of `StoreContratosMenoresBatch` behind a collaborator both
-    families call, then resolve every award and every single-firm bidder, recording which was
-    awarded and holding no per-row name. Consortium rows are routed past it by task 10's
-    classification, so no placeholder identifier reaches R3. *Depends on 10.* *(SPEC-0008 #19
-    storage half, #20 storage half, #23 storage half, #24 storage half)*
-12. **Consortia and their membership** — a UTE with a published identifier catalogued as an operador
+11. **Extract `ResolveOperador`, and resolve bidders** — lift the resolution and name-ranking out of
+    `StoreContratosMenoresBatch` behind a collaborator both families call, then resolve every
+    single-firm bidder from its published identifier. Consortium rows are routed past it by task 10's
+    classification, so no placeholder identifier reaches R3. Also settles what a licitación award
+    supplies as its **name-rank identity**: `NomeRank` is `(date, sourceId)`, but SPEC-0006 records
+    this family's contract identity as *publication identifier **together with a lote***, so two
+    lotes of one procedure awarded to the same operador under different spellings would tie exactly
+    and the displayed name would fall to arrival order — which SPEC-0006 #36 asserts cannot happen.
+    *Depends on 6, 10.* *(SPEC-0008 #19 storage half)*
+12. **Resolve the awardee: bidder-list match, then catalogue name match** — path A against the
+    procedure's own bidder rows, path B as a unique match over SPEC-0006 R15's retained names, path C
+    storing the award with no operador; the match normalisation used for comparison only and never
+    stored; and the resolution path recorded on the award. *Depends on 11. Blocked by amendment 3.*
+    *(SPEC-0008 #19 awarded-one half, #20 storage half, #23 storage half, #24 storage half)*
+13. **Consortia and their membership** — a UTE with a published identifier catalogued as an operador
     under R3; one without recorded on its participation with its published name; each member firm an
     operador either way; the membership stored in both cases; and the award attributed to the
-    consortium alone, entering no member's totals. *Depends on 11.* *(SPEC-0008 #21 import half, as
-    amendment 1 restates it)*
-13. **Reconciling a restated procedure** — `StoreLicitacion`, matching by publication identifier,
-    refreshing in place, and marking withdrawn any lote, bidder or award the record no longer
-    publishes. *Depends on 5, 6, 11.* *(SPEC-0008 #16 import half, #17)*
-14. **A single Órgano's initial import** — the `id`-ascending walk paged at 100, one record per
+    consortium alone, entering no member's totals. *Depends on 6, 12. Blocked by amendments 1 and 3.*
+    *(SPEC-0008 #21 import half, as amendment 1 restates it)*
+14. **Reconciling a restated procedure** — `StoreLicitacion`, matching by publication identifier,
+    refreshing in place, and marking withdrawn any lote, classification, bidder, award **or UTE
+    membership** the record no longer publishes, a membership's visibility following its
+    participation's. *Depends on 5, 6, 9, 13.* *(SPEC-0008 #16 import half, #17)*
+15. **A single Órgano's initial import** — the `id`-ascending walk paged at 100, one record per
     entry, **ending when the listing is exhausted**, `COMPLETE` only when nothing is outstanding,
     the ledger retried before the cursor resumes, cursor advanced after each page, resumption
     stepping back one page and adding no duplicates, and a clean stop when the Órgano is unmarked
-    mid-run. *Depends on 2, 7, 13.* *(SPEC-0008 #6 retrieval half, #12
+    mid-run. *Depends on 2, 7, 14.* *(SPEC-0008 #6 retrieval half, #12
     retained-and-resumed-on-demand halves only, #17, #41 retry half)*
-15. **Multi-Órgano orchestration and failure isolation** — eligibility filtering, Órganos processed
+16. **Multi-Órgano orchestration and failure isolation** — eligibility filtering, Órganos processed
     serially, per-Órgano failure isolation, **a failed record failing neither its Órgano nor the
-    run**, and the run's per-family per-Órgano states and counts. *Depends on 1, 14.*
+    run**, and the run's per-family per-Órgano states and counts. *Depends on 1, 15.*
     *(SPEC-0008 #3, #11 initial-and-resumed modes only, #38 outcome half, #41)*
-16. **Triggers, and the mark that requests both families** — the two `POST` endpoints returning
+17. **Triggers, and the mark that requests both families** — the two `POST` endpoints returning
     `202` and a run identifier, the two distinct refusal reasons, and marking wired to request
-    contratos menores then licitacións within one run. OpenAPI-first. *Depends on 15.*
-    *(SPEC-0008 #1 trigger half, #4 immediate-and-refusal halves only, #38 trigger half, #40 refusal
-    half)*
+    contratos menores then licitacións within one run. The published description of the existing
+    mark endpoint ("Opt an Órgano into having its **contratos menores** imported") becomes false and
+    is corrected here. OpenAPI-first. *Depends on 16.* *(SPEC-0008 #1 trigger half, #4
+    immediate-and-refusal halves only, #38 trigger half, #40 refusal half)*
+18. **The admin run banner, after the coverage re-key** *(frontend)* — task 1 makes a run over N
+    Órganos return **2N** coverage entries, and `ui/src/features/organos/imports/importRunOutcome.ts`
+    counts that array directly: marking one Órgano would report "2 Órganos covered" and "1 of 2
+    completed" while the licitacións half still runs. Updates the count to group by Órgano, adds
+    `family` to the `ImportRunOrgano` TypeScript type, and refreshes the WireMock stub the SPA
+    acceptance tests read under ADR-0018. *Depends on 1, 17.* *(SPEC-0008 #38 display half)*
 
 **Criteria this feature deliberately leaves incomplete**, so no task is written against something it
 cannot prove:
@@ -668,16 +842,20 @@ cannot prove:
   *or by yielding the import guard* clause**; #12's progress-visibility half is SPEC-0007 R5–R7's;
 - **the curation feature** owns **#15** and **#18** whole, and **#1's** resume, historical-re-read
   and remove/restore clauses;
-- **the browsing feature** owns **#2**, **#6's *its section says it is no longer being updated*
-  half**, the *displayed* halves of **#19** and **#20**, and **#26–#37** and **#45** whole;
+- **the browsing feature** owns **#2**, **#8** (VAT labelling wherever a figure is shown), **#6's
+  *its section says it is no longer being updated* half**, the *displayed* halves of **#19**, **#20**
+  and **#36**, **#33**, and **#26–#35**, **#37** and **#45** whole. **#36's import-and-store half is
+  this feature's** — an undecided procedure is imported and stored here and merely rendered there —
+  which is why the edge cases below cite it;
 - **SPEC-0006's own features** own **#22**, **#23's and #24's history halves** and **#25**, which
   that spec's note marks *proved in SPEC-0006*;
 - **#43** measures reads that do not exist yet;
 - **#36's administrator view of undated licitacións** is carried **unowned by SPEC-0008 itself**,
   which adds licitacións to the anomalies surface SPEC-0005 R28 already owes.
 
-**#7 and #44 are claimed whole across tasks 3, 8 and 9** — both are storage criteria with no display
-clause, and an earlier draft wrongly split them and assigned a phantom half to the browsing feature.
+**#7 and #44 are claimed whole across tasks 3 and 8** — both are storage criteria with no display
+clause, so an earlier draft's "storage half" split assigned a phantom other half to a feature that
+would never claim it. The "half" wording is gone from both citations.
 
 ## Edge cases
 
@@ -695,9 +873,13 @@ clause, and an earlier draft wrongly split them and assigned a phantom half to t
   clause and the one this family adds: 16 798 retrievals per Órgano make an occasional failure a
   certainty rather than an incident. *(SPEC-0008 #41)*
 - **A record that fails every time** — the Órgano stays `INCOMPLETE` for ever and is re-walked by
-  every run. That is the honest state, and it is cheap: the ledger retry is one request and the walk
-  behind it re-reads a listing, not 16 798 records. What it must not do is read as `COMPLETE`.
-  *(SPEC-0008 #12, #41)*
+  every run. That is the honest state at the store, and the retry itself is cheap — one record
+  fetch plus a listing walk, not 16 798 records. **What it is not cheap in is what a reader is
+  told**: `INCOMPLETE` is exactly what SPEC-0008 #37 renders as *still filling*, so one bad record
+  out of 16 798 would make SERGAS's licitacións section announce itself partial for ever. It clears
+  when the record parses or when an administrator removes it under R15 — neither of which this
+  feature builds, so the honest summary is that the state is correct and its **escape hatch is a
+  later feature's**. *(SPEC-0008 #12, #37, #41)*
 - **A bidder list whose length disagrees with the award table's `Part.` count** — the parse has
   failed and the procedure goes to the ledger, because a silently short list is indistinguishable
   from a genuine one and would understate competition for ever. *(SPEC-0008 #19, #41)*
@@ -749,8 +931,8 @@ clause, and an earlier draft wrongly split them and assigned a phantom half to t
   refusal half)*
 - **An initial import of a large Órgano refuses both nightly schedulers** — FEAT-0006's 03:00
   catalogue import and FEAT-0014's 05:00 contratos menores sweep, for as long as ~4.7 hours. The
-  known consequence of deferring R29's yielding, tolerable only while the large-Órgano population is
-  five, and the reason the yielding feature must precede R28's coverage of this family.
+  known consequence of deferring R29's yielding, tolerable only while one Órgano dominates the
+  population, and the reason the yielding feature must precede R28's coverage of this family.
   *(SPEC-0008 #40, deferred)*
 - **A record decoded as UTF-8** — corrupts every accented name and object. The record is ISO-8859-1
   while the listing it came from is UTF-8, which is the kind of mismatch that passes every test

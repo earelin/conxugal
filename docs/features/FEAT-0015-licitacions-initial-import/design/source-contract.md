@@ -3,7 +3,7 @@
 What contratosdegalicia.gal actually offers for an Órgano's **licitacións**, measured against the
 live site on **2026-08-20**. This is the answer [FEAT-0015](../README.md) needs before its adapter
 can be written, and it is recorded here rather than in a task because several of the feature's
-decisions — and **four corrections to [SPEC-0008](../../../specs/SPEC-0008-import-browse-licitacions.md)
+decisions — and **five corrections to [SPEC-0008](../../../specs/SPEC-0008-import-browse-licitacions.md)
 or a sibling document** — rest on it.
 
 It is the sibling of
@@ -281,6 +281,72 @@ about **2.8 GB over 16 798 requests** — roughly **4.7 hours at one request per
 figure is what SPEC-0008 R29's yielding exists for, and it is recorded here so the feature that
 builds yielding argues from a measurement rather than an estimate.
 
+## The award row publishes no fiscal identifier
+
+The resolution table names its awardee in text only. Measured over **119 award rows across six
+Órganos, not one contained anything NIF-shaped** — the only identifier on the whole page is in the
+bidder table. SPEC-0008 R18 nonetheless requires this family to supply SPEC-0006 with "awardee name
+**and fiscal identifier**", and #19 requires "the awarded one distinguished from the rest".
+
+### How far a name match gets
+
+Measured over 236 award rows and a name index built from every bidder row seen (bidders do publish
+identifiers), across 239 procedures and fifteen Órganos:
+
+| Path | Result |
+| --- | --- |
+| **A** — the awardee matches a bidder row **on its own procedure** | **109 rows, 46%** |
+| **B** — no local bidder list, but the name matches **exactly one** operador elsewhere | 14 rows, 6% |
+| **C** — the name is unknown to the index | 113 rows, 48% |
+
+Path A is the reliable one, and where it applies it is close to exact: of the 54 award rows that had
+a bidder list to match against, **52 matched a bidder's name exactly** and 2 differed only by a
+trailing legal-form abbreviation. **None failed.**
+
+**Path A is unavailable more often than it is available.** 65 of 119 award rows — **55%** — sit on a
+procedure that publishes no bidder list at all, and on those the identifier is usually nowhere to be
+found: of 12 such pages inspected, **6 held no NIF-shaped token anywhere on the page**, and one held
+three against a single awardee. So the missing link cannot be recovered from the record by any
+means; it has to come from the catalogue or not at all.
+
+**Path B's 6% is a floor, not an estimate.** The index behind it held only **268 distinct names**,
+built from 239 procedures' bidder lists. In production the match target is the whole operadores
+catalogue — SPEC-0006 R14 expects hundreds of thousands of operadores, R15 retains *every* name each
+has been published under, and 1.4 million contratos menores feed it, every one publishing a name
+beside a NIF. The realistic yield is far higher, and it is worth measuring again once the catalogue
+is populated rather than guessed at now.
+
+### The false-merge risk is small but real
+
+Of 268 distinct normalised names, **exactly one mapped to two different identifiers** —
+`INDRA SOLUCIONES TECNOLOGIAS DE LA INFORMACION S L U` against `B88016098` and `B88018098`, which
+differ by a single digit and are plainly the same firm with a typo at the source. Stripping legal-form
+suffixes did not increase collisions.
+
+So ambiguity is rare, but a rule that guessed on it would merge two suppliers — the failure SPEC-0006
+R3 calls as damaging as splitting one. **A name matching more than one operador must yield no link.**
+
+## The awarded amount's VAT basis is unmarked, and only inferable
+
+The budget and the estimated value label themselves in the published text (`con IVE` / `sen IVE`).
+**The resolution table's `Importe` carries no such marker** — 0 of 119 rows. SPEC-0008 R18 requires
+the amount supplied to SPEC-0006 to be VAT-inclusive so it is comparable with a contrato menor's, and
+SPEC-0006 R9 states it as fact, so the basis matters and the source does not state it.
+
+Inferred from ratios on **30 lotless awarded procedures** carrying all three figures:
+
+| Ratio | Median |
+| --- | --- |
+| award ÷ base budget (VAT-inclusive) | **0.938** |
+| award ÷ estimated value (VAT-exclusive) | 1.003 |
+| awards exceeding the VAT-inclusive budget | **0 of 30** |
+
+A VAT-exclusive award would have to sit near 0.83 × a competitive discount against the
+VAT-inclusive budget — well below the 0.938 observed. **So the evidence leans VAT-inclusive**, which
+is what R18 assumes. It is not conclusive: the estimated value often covers extensions and options,
+so it is not simply the budget less VAT, which is why the second ratio does not corroborate as
+cleanly as it should. Recorded as **consistent with R18's assumption and not a proof of it**.
+
 ## UTEs: identified by structure, and usually without a fiscal identifier
 
 SPEC-0008 R17 requires a UTE to be stored "as an operador, identified by its **own published
@@ -385,6 +451,13 @@ accordingly.
   ordinary identifier. The structural branch's safety rests on that, and it is a measured negative
   over one sample rather than a rule the source states. The SPEC-0006 R5 widening is the guard for
   the row this sample did not contain, which is why FEAT-0015 still wants it.
+- **The name-match recovery rate will change once the catalogue is populated**, and the 6% figure
+  above should not be planned against. It was produced by a 268-name index; the production index is
+  the operadores catalogue.
+- **The awarded amount's VAT basis is inferred, not read.** If it turns out to be VAT-exclusive,
+  every cross-family total in SPEC-0006 mixes bases silently — the exact defect that spec labels
+  everything to avoid. One authoritative statement from the source, or one procedure whose
+  formalisation restates the figure with a marker, would settle it.
 - **Consortium detection was verified on 35 rows**, all from the same renderer. The nested `<ul>`
   is markup the source emits, not a documented contract, and a template change would break it
   silently — a parse that finds a flat cell where a consortium was published would record a bidder
