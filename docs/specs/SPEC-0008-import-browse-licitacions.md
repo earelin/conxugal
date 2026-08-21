@@ -97,7 +97,11 @@ in ways that drive several requirements below, so it is recorded rather than ass
   codes, NUTS codes, the award and the bidder list are published **per lote** on a procedure
   that has them, and against the procedure as a whole on one that does not; a procedure states
   how many it has, or states none. **Lotes are the minority case**: of a sample of licitacións
-  taken on 2026-08-20, **4 of 100** procedures across three Órganos — SERGAS, Augas de Galicia and Axencia Turismo de Galicia — had any at all. The requirements below are written so the common case —
+  taken on 2026-08-20, **4 of 100** procedures across three Órganos — SERGAS, Augas de Galicia and
+  Axencia Turismo de Galicia — had any at all. A **later sample of 100 across five Órganos,
+  weighted toward the largest publishers, found 15**; the direction is unchanged and the design
+  below stands, but the second figure is the one to size against, since multi-lote procedures are
+  commoner among the big publishers an initial import spends its time on. The requirements below are written so the common case —
   one procedure, one award, one bidder list — reads as the plain one, and lotes are what that
   case generalises to rather than the shape everything is modelled on.
 - **A UTE is published with its members, and usually without an identifier of its own.** A
@@ -182,6 +186,16 @@ claims an acceptance criterion whose surface another spec still contradicts:
   supply and this family can; and its new **R16** and **R17** state what the catalogue does with
   them and what they add to its privacy analysis.
 
+  **A second round of amendments followed**, once the source was measured against rather than
+  assumed, and they are named on the same principle. In SPEC-0006: **R5** treats a published
+  placeholder — a lone dash, a `TEMP-…` value — as unusable, so it cannot become an identity;
+  **R16** and **#40** admit a membership whose consortium the source did not identify, and **R9**
+  notes that such a consortium has no totals of its own; and **R3** admits a contract attaching to
+  an operador whose identifier it did not publish, where its family bounds the derivation. In this
+  spec: **R8**, **#9** and **#10** admit a classification the source does not put on a lote;
+  **R16**, **R17**, **R18** and **#20**–**#24** admit the unidentified consortium; and **R18**,
+  **R33** and a new **#46** settle how an awardee's identifier is reached.
+
   Criteria #20, #21 and #24 below are consequently **stated here and proved there**, on the
   device [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) uses for the same situation:
   the surfaces belong to that spec, the import and storage half belongs to this one.
@@ -203,11 +217,17 @@ Five decisions are **settled** by this spec and stated here so no feature reopen
    per lote — was rejected because it makes an Órgano's count mean something other than
    *procedures* and repeats a procedure across a list a reader is scanning, and it would do so
    to accommodate a minority of procedures.
-2. **A UTE is an operador, its members are operadores, and the award belongs to the UTE
-   alone** (R17). A member's history shows the award as won *through* the UTE and excludes it
-   from that member's own totals. Attributing it to every member as well was rejected: the
-   same euro would be counted once per member and every cross-operador total would overstate
-   real spending.
+2. **A UTE's members are operadores, the UTE is one where the source identifies it, and the
+   award belongs to the UTE alone either way** (R17). A member's history shows the award as won
+   *through* the UTE and excludes it from that member's own totals. Attributing it to every
+   member as well was rejected: the same euro would be counted once per member and every
+   cross-operador total would overstate real spending.
+
+   **The identified/unidentified split is the source's doing, not a design choice.** It publishes
+   a fiscal identifier for 2 of every 35 consortia, so the catalogue can hold only those; the rest
+   are recorded on the bid they made, under their published name and with their membership. The
+   no-double-counting property above holds under both, which is what makes the split acceptable
+   rather than a compromise.
 3. **Losing bidders are shown, and kept away from the money** (R18). Participation appears in
    an operador's history in a section of its own, and never in any awarded total.
 4. **Open procedures are imported and shown**, marked by their state (R25). The system is
@@ -660,8 +680,9 @@ One decision remains outside this spec:
   **The CPV filter closes a promise this spec inherited.** SPEC-0005 offers none because the
   source publishes no CPV for contratos menores, and defers CPV-based querying explicitly to
   this spec. A licitación whose CPV is published **per lote** (R8) is in the selection when
-  **any** of its lotes carries the chosen code, since the licitación is the unit selected
-  (R8).
+  **any** of its classifications carries the chosen code — one hanging off a lote or one held
+  against the procedure as a whole, which R8 admits because the source publishes both — since the
+  licitación is the unit selected (R8).
 - **R24** — **Which amount a row states, and what a total counts.** An **awarded** licitación
   states its **awarded amount**, VAT-inclusive — and where the procedure has lotes, the **sum of
   the lotes awarded so far**, which for the ordinary lotless procedure is simply the one amount
@@ -995,7 +1016,8 @@ One decision remains outside this spec:
     opens on the most recent year with visible licitacións, the years offered are exactly those
     with visible licitacións, and no control produces an all-years list.
 33. **(R23)** Filtering a year by a CPV code returns exactly the licitacións of that year
-    carrying it — including one that carries it on **any** of its lotes — and filtering by
+    carrying it — including one that carries it on **any** of its lotes, and one that carries it
+    against the procedure as a whole while having lotes — and filtering by
     state returns exactly those in it. Only codes and states the year's selection actually
     contains are offered, and the states offered are the source's own.
 34. **(R23)** Narrowing, sorting and counting apply to the **whole** year's selection: the
