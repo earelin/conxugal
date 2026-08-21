@@ -149,8 +149,12 @@ the model requires:
   "opening the UTE names its members". It becomes: catalogued where identified, recorded on the
   participation otherwise, with the *open the UTE* half holding only for the identified case;
 - **SPEC-0008 #22** ("the UTE's awarded total includes it") is unsatisfiable for an uncatalogued
-  consortium, which has no total. It needs the same split — deferring it to SPEC-0006's features
-  does not repair it;
+  consortium, which has no total to include it in. It needs the same split — and deferring it to
+  SPEC-0006's features does **not** repair it, so the deferral below carries the note;
+- **SPEC-0008 #24** ends "this family holding **no per-row name of its own**", which the
+  participation's consortium name makes false. It narrows to *no per-row name for any party the
+  catalogue can hold*, which is every party except an unidentified consortium — the same exception
+  R18 takes, stated in the criterion that tests it;
 - **SPEC-0006 R16 and #40** are the sibling half. R16 relates a member "to **the UTE operador**…
   identified by its own published fiscal identifier", and says a party with an unusable identifier
   yields "no participation to relate and no membership to hold"; #40 restates it normatively. Both
@@ -641,11 +645,20 @@ than assumed — `licitacion?N=822054` returns the licitación and `licitacion?N
 contrato menor, from the same address space and with no prefix distinguishing them. So `NomeRank`
 needs no family discriminator and R4's ordering stays total across families.
 
-The unusable-identifier rule is uniform across a single-firm bidder, an awardee and a UTE member: no
-operador, the party recorded as neither participant nor awardee, **the licitación stored and still
-visible**, and every other party on the procedure unaffected. A licitación can therefore show an
+**R16's unusable-identifier rule holds for three of the four party kinds, and not for the fourth.**
+A single-firm bidder, an awardee and a UTE **member** whose identifier is unusable yield no
+operador, are recorded as neither participant nor awardee, leave **the licitación stored and still
+visible**, and cost no other party on the procedure anything. A licitación can therefore show an
 award and name nobody, which R25 accepts here and SPEC-0005 R28 refuses for contratos menores —
 because there the award *was* the publication.
+
+**A consortium is the exception, and it is the whole of amendment 1.** R16 as written would have an
+unidentified UTE recorded as *no participant*, which is precisely what the model refuses to do: it
+is recorded as a participant, under its published name, with its membership intact. The distinction
+is not a softening of R16 — a party the source names and structures as a bidder **is** a bidder,
+and R16's rule exists for a party the source names and cannot identify, which is a different case.
+Stating the rule uniformly, as an earlier draft of this section did, contradicted the table below
+it.
 
 ### Which operador an award belongs to
 
@@ -848,7 +861,10 @@ cannot prove:
   this feature's** — an undecided procedure is imported and stored here and merely rendered there —
   which is why the edge cases below cite it;
 - **SPEC-0006's own features** own **#22**, **#23's and #24's history halves** and **#25**, which
-  that spec's note marks *proved in SPEC-0006*;
+  that spec's note marks *proved in SPEC-0006*. **#22 is deferred but not intact**: it requires a
+  UTE's awarded total to include the award, and 94% of consortia have no total to include it in, so
+  amendment 1 has to reach it before the feature that proves it can. Handing it on without that note
+  would pass a broken criterion to someone with no reason to doubt it;
 - **#43** measures reads that do not exist yet;
 - **#36's administrator view of undated licitacións** is carried **unowned by SPEC-0008 itself**,
   which adds licitacións to the anomalies surface SPEC-0005 R28 already owes.
