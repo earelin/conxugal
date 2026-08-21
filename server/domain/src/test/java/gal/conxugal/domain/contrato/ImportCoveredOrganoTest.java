@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.Answer;
 
 /**
  * One Órgano's turn: whether it is still to be imported, which mode its history calls for, and the
@@ -409,35 +410,29 @@ class ImportCoveredOrganoTest {
     when(organos.findById(ORGANO_ID)).thenReturn(Optional.of(organo));
   }
 
-  /**
-   * The one place the walk is stubbed. Every walk records the Órgano it was for and the eligibility
-   * check it was handed, whatever it goes on to answer.
-   */
+  /** The one place the walk is stubbed. */
   private void walkAnswers(Function<OrganoId, ContratosMenoresImportSummary> answer) {
-    when(walk.run(eq(RUN_ID), any(), any()))
-        .thenAnswer(
-            invocation -> {
-              OrganoId organoId =
-                  Objects.requireNonNull(
-                      invocation.<OrganoDeContratacion>getArgument(1).id());
-              walked.add(organoId);
-              eligibilityChecks.add(invocation.getArgument(2));
-              return answer.apply(organoId);
-            });
+    when(walk.run(eq(RUN_ID), any(), any())).thenAnswer(recordingInto(walked, answer));
   }
 
-  /** The refresh's counterpart, recording the same two facts about every refresh. */
+  /** The refresh's counterpart. */
   private void refreshAnswers(Function<OrganoId, ContratosMenoresRefreshSummary> answer) {
-    when(refresh.refresh(eq(RUN_ID), any(), any()))
-        .thenAnswer(
-            invocation -> {
-              OrganoId organoId =
-                  Objects.requireNonNull(
-                      invocation.<OrganoDeContratacion>getArgument(1).id());
-              refreshed.add(organoId);
-              eligibilityChecks.add(invocation.getArgument(2));
-              return answer.apply(organoId);
-            });
+    when(refresh.refresh(eq(RUN_ID), any(), any())).thenAnswer(recordingInto(refreshed, answer));
+  }
+
+  /**
+   * Whichever of the two was handed the Órgano, the two facts worth keeping about the call are the
+   * same: which Órgano it was for, and the eligibility check it was given to ask at every batch
+   * boundary. Both walks take the same three arguments in the same order, so one recorder serves.
+   */
+  private <T> Answer<T> recordingInto(List<OrganoId> calls, Function<OrganoId, T> answer) {
+    return invocation -> {
+      OrganoId organoId =
+          Objects.requireNonNull(invocation.<OrganoDeContratacion>getArgument(1).id());
+      calls.add(organoId);
+      eligibilityChecks.add(invocation.getArgument(2));
+      return answer.apply(organoId);
+    };
   }
 
   /** Collects the reason recorded on every Órgano settled as stopped. */
