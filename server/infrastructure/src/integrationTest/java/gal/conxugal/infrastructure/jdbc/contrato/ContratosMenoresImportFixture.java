@@ -80,7 +80,7 @@ final class ContratosMenoresImportFixture {
   }
 
   /** Ordered so {@code row(n)} is stable, which is what lets a suite assert every row it set up. */
-  Table table(String name, String order) {
+  private Table table(String name, String order) {
     return AssertDbConnectionFactory.of(
             postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
         .create()
