@@ -356,6 +356,24 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     });
   }
 
+  // Nothing settles this state any more, but runs recorded before the incremental refresh existed
+  // carry it. Reading one back is what keeps the value's removal off the table: an enum value gone
+  // is a stored row that no longer deserialises at all.
+  @Test
+  void organo_settled_as_skipped_before_the_refresh_existed_still_reads_back() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    ImportRunId runId =
+        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+
+    importRunRepository.finishOrgano(
+        runId, organoId, ImportRunOrganoState.SKIPPED, "its history was already loaded");
+
+    ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
+    assertThat(coverageFor(report, organoId))
+        .isEqualTo(new ImportRunOrganoCoverage(
+            organoId, ImportRunOrganoState.SKIPPED, 0, 0, "its history was already loaded"));
+  }
+
   @Test
   void settling_organo_the_run_does_not_cover_records_nothing() throws Exception {
     OrganoId covered = insertOrgano("consorcio-x");
