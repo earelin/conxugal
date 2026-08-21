@@ -332,14 +332,21 @@ class ContratosMenoresRunRecordIntegrationTest implements TestPropertyProvider {
 
   /** One window's worth of history, so the walk reads the Órgano out in a single request. */
   private void publishes(String sourceKey, long... sourceIds) {
-    published.put(sourceKey, Map.of(FIRST_WINDOW_START, entries(sourceIds)));
-    recordsTotals.put(sourceKey, (long) sourceIds.length);
+    publishesIn(FIRST_WINDOW_START, sourceKey, sourceIds);
   }
 
-  /** One contract inside the single window a refresh of an Órgano covered through T₀ reads. */
-  private void publishesSinceTheRefreshFloor(String sourceKey, long sourceId) {
-    published.put(sourceKey, Map.of(REFRESH_WINDOW_START, entries(sourceId)));
-    recordsTotals.put(sourceKey, 1L);
+  /**
+   * Inside the single window a refresh of an Órgano covered through T₀ reads, rather than a walk's
+   * first one. Which window a contract sits in is what tells the two walks apart from outside: the
+   * source is asked for one window at a time and answers nothing for any other.
+   */
+  private void publishesSinceTheRefreshFloor(String sourceKey, long... sourceIds) {
+    publishesIn(REFRESH_WINDOW_START, sourceKey, sourceIds);
+  }
+
+  private void publishesIn(LocalDate windowStart, String sourceKey, long... sourceIds) {
+    published.put(sourceKey, Map.of(windowStart, entries(sourceIds)));
+    recordsTotals.put(sourceKey, (long) sourceIds.length);
   }
 
   /** One contract in each of the three windows, so a walk can be interrupted part-way through. */
