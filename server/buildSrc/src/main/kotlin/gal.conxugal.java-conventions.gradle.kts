@@ -45,9 +45,6 @@ spotbugs {
 }
 
 tasks.withType<SpotBugsTask>().configureEach {
-    // MAX effort, with fb-contrib and findsecbugs on top, spends most of a run in GC on the
-    // default worker heap. Which detectors run is unchanged.
-    maxHeapSize = "2g"
     reports.create("html")
     reports.create("xml")
 }
