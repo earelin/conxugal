@@ -105,9 +105,11 @@ the `ContratoMenor` / `ContratoMenorId` precedent.
 - The withdrawal marker R13 needs is on the record, declared here so the aggregate is whole; its
   column is TASK-0005's and the reconciliation that writes it is TASK-0014's.
 - **`LicitacionRepository`** — the port. `upsert` matching on `publicationId` and answering an
-  `UpsertOutcome` (the identity the children attach to, and whether the row was added, neither of
-  which is recoverable after the write), plus `findByPublicationId`. No SQL and no Micronaut Data
-  annotations on the interface itself.
+  `UpsertOutcome` (the identity the children attach to, and an `UpsertOperation` naming which
+  branch the write took — `ADDED` or `REFRESHED`, on `UpsertCounts`' vocabulary — neither of which
+  is recoverable after the write), plus `findByPublicationId`. The branch is an enum rather than a
+  boolean because it is what the run's outcome counts, and a caller reading `false` would have to
+  know which branch it stood for. No SQL and no Micronaut Data annotations on the interface itself.
 - **One port per vocabulary** — `LicitacionStateRepository` matching on `code`, and one each for
   the three types matching on `name`. **Each has an `upsert` and nothing else**: no finder, because
   the upsert already answers the stored value carrying the identity the procedure refers to, so
