@@ -1,5 +1,6 @@
 package gal.conxugal.domain.contrato;
 
+import gal.conxugal.domain.importrun.ContractFamily;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
 import gal.conxugal.domain.importrun.ImportRunRepository;
@@ -221,7 +222,12 @@ public class ImportCoveredOrgano {
 
   private void settleOrgano(ImportRunId runId, OrganoId organoId, Settlement settlement) {
     try {
-      importRuns.finishOrgano(runId, organoId, settlement.state(), settlement.reason());
+      importRuns.finishOrgano(
+          runId,
+          organoId,
+          ContractFamily.CONTRATOS_MENORES,
+          settlement.state(),
+          settlement.reason());
     } catch (RuntimeException e) {
       LOG.warn(
           "Contratos menores import of Órgano {} ended as {} but run {} does not record it; the"

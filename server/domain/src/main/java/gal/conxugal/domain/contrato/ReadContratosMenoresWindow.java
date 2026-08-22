@@ -1,5 +1,6 @@
 package gal.conxugal.domain.contrato;
 
+import gal.conxugal.domain.importrun.ContractFamily;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import jakarta.inject.Singleton;
 import java.time.LocalDate;
@@ -210,7 +211,12 @@ public class ReadContratosMenoresWindow {
       boolean lastPage) {
     try {
       recordBatch.record(counts, windowStart, windowEnd, lastPage);
-      importRuns.advance(target.runId(), target.organoId(), counts.added(), counts.refreshed());
+      importRuns.advance(
+          target.runId(),
+          target.organoId(),
+          ContractFamily.CONTRATOS_MENORES,
+          counts.added(),
+          counts.refreshed());
     } catch (RuntimeException e) {
       LOG.warn(
           "Contratos menores batch for Órgano {} committed but its progress against run {} was not"

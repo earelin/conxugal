@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.db.api.Assertions.assertThat;
 
+import gal.conxugal.domain.importrun.ContractFamily;
+import gal.conxugal.domain.importrun.CoveredOrgano;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
@@ -29,6 +31,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +41,7 @@ import org.assertj.core.api.SoftAssertions;
 import org.assertj.db.type.AssertDbConnection;
 import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -105,7 +109,7 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     OrganoId first = insertOrgano("consorcio-x");
     OrganoId second = insertOrgano("axencia-y");
 
-    importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(first, second));
+    importRunRepository.claim(Importer.CONTRATOS_MENORES, contratosMenores(first, second));
 
     Table runs = runTable();
     assertThat(runs).hasNumberOfRows(1);
@@ -129,7 +133,9 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     OrganoId second = insertOrgano("axencia-y");
 
     ImportRunId runId =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(first, second)).orElseThrow();
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(first, second))
+            .orElseThrow();
 
     ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
     assertThat(report.coveredOrganos())
@@ -157,19 +163,110 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
 
     ImportRunId runId =
         importRunRepository
-            .claim(Importer.CONTRATOS_MENORES, List.of(organoId, organoId))
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId, organoId))
             .orElseThrow();
 
     assertThat(importRunRepository.findRun(runId).orElseThrow().coveredOrganos()).hasSize(1);
   }
 
+  // What a mark asking for both families claims: one run, one guard taken once, and two rows for
+  // the one Órgano — which is exactly what the shipped two-column key forbade.
+  @Test
+  void claim_covering_one_organo_for_both_families_records_one_row_per_family() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+
+    ImportRunId runId = bothFamiliesOf(organoId);
+
+    assertThat(importRunRepository.findRun(runId).orElseThrow().coveredOrganos())
+        .extracting(ImportRunOrganoCoverage::organoId, ImportRunOrganoCoverage::family)
+        .containsExactlyInAnyOrder(
+            tuple(organoId, ContractFamily.CONTRATOS_MENORES),
+            tuple(organoId, ContractFamily.LICITACIONS));
+  }
+
+  // The two rows fare separately, which is the whole point of the re-key: one family failing has
+  // to be reportable beside the other's counts rather than overwriting them.
+  @Test
+  void each_family_of_one_organo_carries_its_own_state_counts_and_reason() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    ImportRunId runId = bothFamiliesOf(organoId);
+
+    importRunRepository.advance(runId, organoId, ContractFamily.CONTRATOS_MENORES, 100, 4);
+    importRunRepository.finishOrgano(
+        runId, organoId, ContractFamily.CONTRATOS_MENORES, ImportRunOrganoState.SUCCEEDED, null);
+    importRunRepository.finishOrgano(
+        runId,
+        organoId,
+        ContractFamily.LICITACIONS,
+        ImportRunOrganoState.FAILED,
+        "the record would not parse");
+
+    ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
+    SoftAssertions.assertSoftly(softly -> {
+      softly.assertThat(coverageFor(report, organoId, ContractFamily.CONTRATOS_MENORES))
+          .isEqualTo(contratosMenoresCoverage(
+              organoId, ImportRunOrganoState.SUCCEEDED, 100, 4, null));
+      softly.assertThat(coverageFor(report, organoId, ContractFamily.LICITACIONS))
+          .isEqualTo(new ImportRunOrganoCoverage(
+              organoId,
+              ContractFamily.LICITACIONS,
+              ImportRunOrganoState.FAILED,
+              0,
+              0,
+              "the record would not parse"));
+    });
+  }
+
+  // Addressing a coverage row by (run, Órgano) alone would now update whichever of the two the
+  // database returned first, silently and differently on different runs.
+  @Test
+  void advancing_one_family_leaves_the_other_familys_row_untouched() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    ImportRunId runId = bothFamiliesOf(organoId);
+
+    importRunRepository.advance(runId, organoId, ContractFamily.LICITACIONS, 42, 7);
+
+    Table coverage = coverageTable();
+    assertThat(coverage).hasNumberOfRows(2);
+    assertThat(coverage).row(0).value("family").isEqualTo("CONTRATOS_MENORES");
+    assertThat(coverage).row(0).value("state").isEqualTo("PENDING");
+    assertThat(coverage).row(0).value("added").isEqualTo(0);
+    assertThat(coverage).row(0).value("refreshed").isEqualTo(0);
+    assertThat(coverage).row(1).value("family").isEqualTo("LICITACIONS");
+    assertThat(coverage).row(1).value("state").isEqualTo("IN_PROGRESS");
+    assertThat(coverage).row(1).value("added").isEqualTo(42);
+    assertThat(coverage).row(1).value("refreshed").isEqualTo(7);
+  }
+
+  @Test
+  void settling_one_family_leaves_the_other_familys_row_untouched() throws Exception {
+    OrganoId organoId = insertOrgano("consorcio-x");
+    ImportRunId runId = bothFamiliesOf(organoId);
+
+    importRunRepository.finishOrgano(
+        runId,
+        organoId,
+        ContractFamily.LICITACIONS,
+        ImportRunOrganoState.FAILED,
+        "the record would not parse");
+
+    Table coverage = coverageTable();
+    assertThat(coverage).hasNumberOfRows(2);
+    assertThat(coverage).row(0).value("family").isEqualTo("CONTRATOS_MENORES");
+    assertThat(coverage).row(0).value("state").isEqualTo("PENDING");
+    assertThat(coverage).row(0).value("failure_reason").isNull();
+    assertThat(coverage).row(1).value("family").isEqualTo("LICITACIONS");
+    assertThat(coverage).row(1).value("state").isEqualTo("FAILED");
+    assertThat(coverage).row(1).value("failure_reason").isEqualTo("the record would not parse");
+  }
+
   @Test
   void second_claim_of_the_same_importer_while_run_advances_is_refused() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId));
+    importRunRepository.claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId));
 
     Optional<ImportRunId> refused =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId));
+        importRunRepository.claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId));
 
     assertThat(refused).isEmpty();
   }
@@ -179,7 +276,7 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   @Test
   void claim_of_the_other_importer_while_run_advances_is_refused() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId));
+    importRunRepository.claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId));
 
     assertThat(importRunRepository.claim(Importer.ORGANOS, List.of())).isEmpty();
   }
@@ -188,9 +285,9 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   void refused_claim_inserts_nothing() throws Exception {
     OrganoId held = insertOrgano("consorcio-x");
     OrganoId other = insertOrgano("axencia-y");
-    importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(held));
+    importRunRepository.claim(Importer.CONTRATOS_MENORES, contratosMenores(held));
 
-    importRunRepository.claim(Importer.ORGANOS, List.of(other));
+    importRunRepository.claim(Importer.ORGANOS, contratosMenores(other));
 
     assertThat(runTable()).hasNumberOfRows(1);
     assertThat(coverageTable()).hasNumberOfRows(1);
@@ -200,10 +297,12 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   void run_advanced_within_the_bound_still_holds_the_guard() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId runId =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId))
+            .orElseThrow();
 
     now.set(CLAIMED_AT.plus(BOUND).minusSeconds(60));
-    importRunRepository.advance(runId, organoId, 100, 0);
+    importRunRepository.advance(runId, organoId, ContractFamily.CONTRATOS_MENORES, 100, 0);
     now.set(CLAIMED_AT.plus(BOUND).plusSeconds(60));
 
     assertThat(importRunRepository.claim(Importer.ORGANOS, List.of())).isEmpty();
@@ -214,7 +313,7 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   @Test
   void run_that_has_not_advanced_within_the_bound_releases_the_guard() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
-    importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId));
+    importRunRepository.claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId));
 
     now.set(CLAIMED_AT.plus(BOUND).plusSeconds(1));
 
@@ -225,7 +324,9 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   void stale_runs_row_and_its_coverage_are_left_exactly_as_they_stood() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     final ImportRunId stale =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId))
+            .orElseThrow();
 
     now.set(CLAIMED_AT.plus(BOUND).plusSeconds(1));
     importRunRepository.claim(Importer.ORGANOS, List.of());
@@ -257,7 +358,9 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   void every_read_of_stale_run_reports_it_abandoned() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId stale =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId))
+            .orElseThrow();
 
     now.set(CLAIMED_AT.plus(BOUND).plusSeconds(1));
 
@@ -271,21 +374,21 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     OrganoId untouched = insertOrgano("axencia-y");
     ImportRunId runId =
         importRunRepository
-            .claim(Importer.CONTRATOS_MENORES, List.of(advanced, untouched))
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(advanced, untouched))
             .orElseThrow();
 
-    importRunRepository.advance(runId, advanced, 100, 4);
-    importRunRepository.advance(runId, advanced, 60, 6);
+    importRunRepository.advance(runId, advanced, ContractFamily.CONTRATOS_MENORES, 100, 4);
+    importRunRepository.advance(runId, advanced, ContractFamily.CONTRATOS_MENORES, 60, 6);
 
     ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
     SoftAssertions.assertSoftly(softly -> {
       softly.assertThat(report.added()).isEqualTo(160);
       softly.assertThat(report.refreshed()).isEqualTo(10);
       softly.assertThat(coverageFor(report, advanced))
-          .isEqualTo(new ImportRunOrganoCoverage(
+          .isEqualTo(contratosMenoresCoverage(
               advanced, ImportRunOrganoState.IN_PROGRESS, 160, 10, null));
       softly.assertThat(coverageFor(report, untouched))
-          .isEqualTo(new ImportRunOrganoCoverage(
+          .isEqualTo(contratosMenoresCoverage(
               untouched, ImportRunOrganoState.PENDING, 0, 0, null));
     });
   }
@@ -297,16 +400,18 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     OrganoId covered = insertOrgano("consorcio-x");
     OrganoId uncovered = insertOrgano("axencia-y");
     ImportRunId runId =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(covered)).orElseThrow();
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(covered))
+            .orElseThrow();
 
-    importRunRepository.advance(runId, uncovered, 100, 4);
+    importRunRepository.advance(runId, uncovered, ContractFamily.CONTRATOS_MENORES, 100, 4);
 
     ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
     SoftAssertions.assertSoftly(softly -> {
       softly.assertThat(report.added()).isZero();
       softly.assertThat(report.refreshed()).isZero();
       softly.assertThat(report.coveredOrganos())
-          .containsExactly(new ImportRunOrganoCoverage(
+          .containsExactly(contratosMenoresCoverage(
               covered, ImportRunOrganoState.PENDING, 0, 0, null));
     });
   }
@@ -317,17 +422,22 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   void advance_after_the_organo_has_been_settled_leaves_it_settled() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId runId =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId))
+            .orElseThrow();
     importRunRepository.finishOrgano(
-        runId, organoId, ImportRunOrganoState.FAILED, "the source stopped answering");
+        runId,
+        organoId,
+        ContractFamily.CONTRATOS_MENORES,
+        ImportRunOrganoState.FAILED, "the source stopped answering");
 
-    importRunRepository.advance(runId, organoId, 100, 4);
+    importRunRepository.advance(runId, organoId, ContractFamily.CONTRATOS_MENORES, 100, 4);
 
     ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
     SoftAssertions.assertSoftly(softly -> {
       softly.assertThat(report.added()).isZero();
       softly.assertThat(coverageFor(report, organoId))
-          .isEqualTo(new ImportRunOrganoCoverage(
+          .isEqualTo(contratosMenoresCoverage(
               organoId, ImportRunOrganoState.FAILED, 0, 0, "the source stopped answering"));
     });
   }
@@ -338,20 +448,24 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     OrganoId stopped = insertOrgano("axencia-y");
     ImportRunId runId =
         importRunRepository
-            .claim(Importer.CONTRATOS_MENORES, List.of(failed, stopped))
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(failed, stopped))
             .orElseThrow();
 
     importRunRepository.finishOrgano(
-        runId, failed, ImportRunOrganoState.FAILED, "the source stopped answering");
-    importRunRepository.finishOrgano(runId, stopped, ImportRunOrganoState.STOPPED, null);
+        runId,
+        failed,
+        ContractFamily.CONTRATOS_MENORES,
+        ImportRunOrganoState.FAILED, "the source stopped answering");
+    importRunRepository.finishOrgano(
+        runId, stopped, ContractFamily.CONTRATOS_MENORES, ImportRunOrganoState.STOPPED, null);
 
     ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
     SoftAssertions.assertSoftly(softly -> {
       softly.assertThat(coverageFor(report, failed))
-          .isEqualTo(new ImportRunOrganoCoverage(
+          .isEqualTo(contratosMenoresCoverage(
               failed, ImportRunOrganoState.FAILED, 0, 0, "the source stopped answering"));
       softly.assertThat(coverageFor(report, stopped))
-          .isEqualTo(new ImportRunOrganoCoverage(
+          .isEqualTo(contratosMenoresCoverage(
               stopped, ImportRunOrganoState.STOPPED, 0, 0, null));
     });
   }
@@ -363,14 +477,19 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   void organo_settled_as_skipped_before_the_refresh_existed_still_reads_back() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId runId =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId))
+            .orElseThrow();
 
     importRunRepository.finishOrgano(
-        runId, organoId, ImportRunOrganoState.SKIPPED, "its history was already loaded");
+        runId,
+        organoId,
+        ContractFamily.CONTRATOS_MENORES,
+        ImportRunOrganoState.SKIPPED, "its history was already loaded");
 
     ImportRunReport report = importRunRepository.findRun(runId).orElseThrow();
     assertThat(coverageFor(report, organoId))
-        .isEqualTo(new ImportRunOrganoCoverage(
+        .isEqualTo(contratosMenoresCoverage(
             organoId, ImportRunOrganoState.SKIPPED, 0, 0, "its history was already loaded"));
   }
 
@@ -379,23 +498,29 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     OrganoId covered = insertOrgano("consorcio-x");
     OrganoId uncovered = insertOrgano("axencia-y");
     ImportRunId runId =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(covered)).orElseThrow();
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(covered))
+            .orElseThrow();
 
-    importRunRepository.finishOrgano(runId, uncovered, ImportRunOrganoState.FAILED, "nowhere");
+    importRunRepository.finishOrgano(
+        runId, uncovered, ContractFamily.CONTRATOS_MENORES, ImportRunOrganoState.FAILED, "nowhere");
 
     assertThat(coverageTable()).hasNumberOfRows(1);
     assertThat(importRunRepository.findRun(runId).orElseThrow().coveredOrganos())
         .containsExactly(
-            new ImportRunOrganoCoverage(covered, ImportRunOrganoState.PENDING, 0, 0, null));
+            contratosMenoresCoverage(covered, ImportRunOrganoState.PENDING, 0, 0, null));
   }
 
   @Test
   void completing_run_records_its_verdict_its_finish_time_and_its_counts() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId runId =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
-    importRunRepository.advance(runId, organoId, 100, 4);
-    importRunRepository.finishOrgano(runId, organoId, ImportRunOrganoState.SUCCEEDED, null);
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId))
+            .orElseThrow();
+    importRunRepository.advance(runId, organoId, ContractFamily.CONTRATOS_MENORES, 100, 4);
+    importRunRepository.finishOrgano(
+        runId, organoId, ContractFamily.CONTRATOS_MENORES, ImportRunOrganoState.SUCCEEDED, null);
 
     Instant finishedAt = CLAIMED_AT.plusSeconds(600);
     now.set(finishedAt);
@@ -437,7 +562,9 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   void completing_run_as_abandoned_is_refused_and_writes_nothing() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId runId =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId))
+            .orElseThrow();
 
     assertThatIllegalArgumentException()
         .isThrownBy(() -> importRunRepository.complete(runId, ImportRunState.ABANDONED, 0, 0));
@@ -455,9 +582,11 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   void completing_run_that_advanced_adds_to_what_the_advance_counted() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId runId =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
-    importRunRepository.advance(runId, organoId, 100, 4);
-    importRunRepository.advance(runId, organoId, 30, 1);
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId))
+            .orElseThrow();
+    importRunRepository.advance(runId, organoId, ContractFamily.CONTRATOS_MENORES, 100, 4);
+    importRunRepository.advance(runId, organoId, ContractFamily.CONTRATOS_MENORES, 30, 1);
 
     importRunRepository.complete(runId, ImportRunState.SUCCEEDED, 0, 0);
 
@@ -476,9 +605,12 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
       throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId runId =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
-    importRunRepository.advance(runId, organoId, 100, 4);
-    importRunRepository.finishOrgano(runId, organoId, ImportRunOrganoState.SUCCEEDED, null);
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId))
+            .orElseThrow();
+    importRunRepository.advance(runId, organoId, ContractFamily.CONTRATOS_MENORES, 100, 4);
+    importRunRepository.finishOrgano(
+        runId, organoId, ContractFamily.CONTRATOS_MENORES, ImportRunOrganoState.SUCCEEDED, null);
     importRunRepository.complete(runId, ImportRunState.SUCCEEDED, 0, 0);
 
     importRunRepository.complete(runId, ImportRunState.FAILED, 7, 0);
@@ -506,7 +638,9 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   void completed_run_holds_the_guard_no_longer_whatever_its_verdict() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
     ImportRunId succeeded =
-        importRunRepository.claim(Importer.CONTRATOS_MENORES, List.of(organoId)).orElseThrow();
+        importRunRepository
+            .claim(Importer.CONTRATOS_MENORES, contratosMenores(organoId))
+            .orElseThrow();
     importRunRepository.complete(succeeded, ImportRunState.SUCCEEDED, 0, 0);
 
     ImportRunId failed = importRunRepository.claim(Importer.ORGANOS, List.of()).orElseThrow();
@@ -524,11 +658,47 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(importRunRepository.findRun(new ImportRunId(UUID.randomUUID()))).isEmpty();
   }
 
+  /** One run covering one Órgano for both families, in the order a mark asks for them. */
+  private ImportRunId bothFamiliesOf(OrganoId organoId) {
+    return importRunRepository
+        .claim(
+            Importer.AMBAS_FAMILIAS,
+            List.of(
+                new CoveredOrgano(organoId, ContractFamily.CONTRATOS_MENORES),
+                new CoveredOrgano(organoId, ContractFamily.LICITACIONS)))
+        .orElseThrow();
+  }
+
+  /** The shipped family's coverage, which is what all but the two-family tests above claim. */
+  private static List<CoveredOrgano> contratosMenores(OrganoId... organoIds) {
+    return Arrays.stream(organoIds)
+        .map(organoId -> new CoveredOrgano(organoId, ContractFamily.CONTRATOS_MENORES))
+        .toList();
+  }
+
+  private static ImportRunOrganoCoverage contratosMenoresCoverage(
+      OrganoId organoId,
+      ImportRunOrganoState state,
+      int added,
+      int refreshed,
+      @Nullable String failureReason) {
+    return new ImportRunOrganoCoverage(
+        organoId, ContractFamily.CONTRATOS_MENORES, state, added, refreshed, failureReason);
+  }
+
   private static ImportRunOrganoCoverage coverageFor(ImportRunReport report, OrganoId organoId) {
+    return coverageFor(report, organoId, ContractFamily.CONTRATOS_MENORES);
+  }
+
+  private static ImportRunOrganoCoverage coverageFor(
+      ImportRunReport report, OrganoId organoId, ContractFamily family) {
     return report.coveredOrganos().stream()
-        .filter(coverage -> coverage.organoId().equals(organoId))
+        .filter(coverage -> coverage.organoId().equals(organoId) && coverage.family() == family)
         .findFirst()
-        .orElseThrow(() -> new AssertionError("Órgano %s is not covered".formatted(organoId)));
+        .orElseThrow(
+            () ->
+                new AssertionError(
+                    "the %s of Órgano %s is not covered".formatted(family, organoId)));
   }
 
   private Table runTable() {
@@ -541,7 +711,8 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   private Table coverageTable() {
     return assertDb()
         .table("import_run_organo")
-        .columnsToOrder(new Table.Order[] {Table.Order.asc("organo_id")})
+        .columnsToOrder(
+            new Table.Order[] {Table.Order.asc("organo_id"), Table.Order.asc("family")})
         .build();
   }
 

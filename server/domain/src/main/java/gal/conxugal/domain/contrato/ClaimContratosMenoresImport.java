@@ -1,5 +1,7 @@
 package gal.conxugal.domain.contrato;
 
+import gal.conxugal.domain.importrun.ContractFamily;
+import gal.conxugal.domain.importrun.CoveredOrgano;
 import gal.conxugal.domain.importrun.ImportAlreadyRunningException;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
@@ -81,9 +83,14 @@ public class ClaimContratosMenoresImport {
     return claimCovering(List.of(organoId));
   }
 
+  /** One family, so one coverage row per Órgano — a contratos menores trigger asks for no more. */
   private ImportRunId claimCovering(List<OrganoId> covered) {
     return importRuns
-        .claim(Importer.CONTRATOS_MENORES, covered)
+        .claim(
+            Importer.CONTRATOS_MENORES,
+            covered.stream()
+                .map(organoId -> new CoveredOrgano(organoId, ContractFamily.CONTRATOS_MENORES))
+                .toList())
         .orElseThrow(ImportAlreadyRunningException::new);
   }
 

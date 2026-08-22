@@ -37,7 +37,11 @@ class ReadImportRunTest {
             Instant.parse("2026-08-13T09:14:02Z"), Instant.parse("2026-08-15T21:40:55Z"), 1204, 96,
             List.of(
                 new ImportRunOrganoCoverage(
-                    new OrganoId(UUID.randomUUID()), ImportRunOrganoState.SUCCEEDED, 1204, 96,
+                    new OrganoId(UUID.randomUUID()),
+                    ContractFamily.CONTRATOS_MENORES,
+                    ImportRunOrganoState.SUCCEEDED,
+                    1204,
+                    96,
                     null)));
     when(importRunRepository.findRun(RUN)).thenReturn(Optional.of(report));
 

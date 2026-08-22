@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import gal.conxugal.domain.importrun.ContractFamily;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
 import gal.conxugal.domain.importrun.ImportRunRepository;
@@ -117,6 +118,7 @@ class ImportCoveredOrganoTest {
         .finishOrgano(
             eq(RUN_ID),
             eq(ORGANO_ID),
+            eq(ContractFamily.CONTRATOS_MENORES),
             eq(ImportRunOrganoState.FAILED),
             argThat(Objects::nonNull));
   }
@@ -131,7 +133,13 @@ class ImportCoveredOrganoTest {
     Optional<ImportRunOrganoState> settled = importCoveredOrgano().run(RUN_ID, ORGANO_ID);
 
     assertThat(settled).contains(ImportRunOrganoState.SUCCEEDED);
-    verify(importRuns).finishOrgano(RUN_ID, ORGANO_ID, ImportRunOrganoState.SUCCEEDED, null);
+    verify(importRuns)
+        .finishOrgano(
+            RUN_ID,
+            ORGANO_ID,
+            ContractFamily.CONTRATOS_MENORES,
+            ImportRunOrganoState.SUCCEEDED,
+            null);
   }
 
   // The history floor is an ending of the walk's own, not a fault and not an interruption: what it
@@ -159,6 +167,7 @@ class ImportCoveredOrganoTest {
         .finishOrgano(
             eq(RUN_ID),
             eq(ORGANO_ID),
+            eq(ContractFamily.CONTRATOS_MENORES),
             eq(ImportRunOrganoState.SUCCEEDED),
             argThat(Objects::nonNull));
   }
@@ -175,6 +184,7 @@ class ImportCoveredOrganoTest {
         .finishOrgano(
             eq(RUN_ID),
             eq(ORGANO_ID),
+            eq(ContractFamily.CONTRATOS_MENORES),
             eq(ImportRunOrganoState.STOPPED),
             argThat(Objects::nonNull));
   }
@@ -224,7 +234,13 @@ class ImportCoveredOrganoTest {
     Optional<ImportRunOrganoState> settled = importCoveredOrgano().run(RUN_ID, ORGANO_ID);
 
     assertThat(settled).contains(ImportRunOrganoState.SUCCEEDED);
-    verify(importRuns).finishOrgano(RUN_ID, ORGANO_ID, ImportRunOrganoState.SUCCEEDED, null);
+    verify(importRuns)
+        .finishOrgano(
+            RUN_ID,
+            ORGANO_ID,
+            ContractFamily.CONTRATOS_MENORES,
+            ImportRunOrganoState.SUCCEEDED,
+            null);
   }
 
   @Test
@@ -239,6 +255,7 @@ class ImportCoveredOrganoTest {
         .finishOrgano(
             eq(RUN_ID),
             eq(ORGANO_ID),
+            eq(ContractFamily.CONTRATOS_MENORES),
             eq(ImportRunOrganoState.STOPPED),
             argThat(Objects::nonNull));
   }
@@ -271,7 +288,11 @@ class ImportCoveredOrganoTest {
     assertThat(settled).contains(ImportRunOrganoState.FAILED);
     verify(importRuns)
         .finishOrgano(
-            RUN_ID, ORGANO_ID, ImportRunOrganoState.FAILED, "the import state is unreachable");
+            RUN_ID,
+            ORGANO_ID,
+            ContractFamily.CONTRATOS_MENORES,
+            ImportRunOrganoState.FAILED,
+            "the import state is unreachable");
   }
 
   // ------------------------------------ the eligibility check both walks are handed
@@ -349,7 +370,11 @@ class ImportCoveredOrganoTest {
     assertThat(settled).contains(ImportRunOrganoState.FAILED);
     verify(importRuns)
         .finishOrgano(
-            RUN_ID, ORGANO_ID, ImportRunOrganoState.FAILED, "the source is unreachable");
+            RUN_ID,
+            ORGANO_ID,
+            ContractFamily.CONTRATOS_MENORES,
+            ImportRunOrganoState.FAILED,
+            "the source is unreachable");
   }
 
   // The message belongs to whatever threw, and it is stored on the row and served to an
@@ -368,6 +393,7 @@ class ImportCoveredOrganoTest {
         .finishOrgano(
             eq(RUN_ID),
             eq(ORGANO_ID),
+            eq(ContractFamily.CONTRATOS_MENORES),
             eq(ImportRunOrganoState.FAILED),
             argThat(reason -> reason != null && reason.length() < 1_000));
   }
@@ -393,7 +419,12 @@ class ImportCoveredOrganoTest {
     walkAnswers(organoId -> ContratosMenoresImportSummary.complete(1, 0));
     doThrow(new IllegalStateException("the run record is unreachable"))
         .when(importRuns)
-        .finishOrgano(RUN_ID, ORGANO_ID, ImportRunOrganoState.SUCCEEDED, null);
+        .finishOrgano(
+            RUN_ID,
+            ORGANO_ID,
+            ContractFamily.CONTRATOS_MENORES,
+            ImportRunOrganoState.SUCCEEDED,
+            null);
 
     Optional<ImportRunOrganoState> settled = importCoveredOrgano().run(RUN_ID, ORGANO_ID);
 
@@ -439,11 +470,16 @@ class ImportCoveredOrganoTest {
   private void recordStopReasonsInto(List<String> reasons) {
     doAnswer(
             invocation -> {
-              reasons.add(invocation.getArgument(3));
+              reasons.add(invocation.getArgument(4));
               return null;
             })
         .when(importRuns)
-        .finishOrgano(eq(RUN_ID), any(), eq(ImportRunOrganoState.STOPPED), any());
+        .finishOrgano(
+            eq(RUN_ID),
+            any(),
+            eq(ContractFamily.CONTRATOS_MENORES),
+            eq(ImportRunOrganoState.STOPPED),
+            any());
   }
 
   private static OrganoDeContratacion marked() {

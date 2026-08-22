@@ -2,6 +2,7 @@ package gal.conxugal.application.rest.admin.importruns;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import gal.conxugal.domain.importrun.ContractFamily;
 import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
 import gal.conxugal.domain.organo.OrganoId;
@@ -73,6 +74,7 @@ class ImportRunOrganoResponseTest {
 
   private static ImportRunOrganoCoverage coverageWith(
       ImportRunOrganoState state, String failureReason) {
-    return new ImportRunOrganoCoverage(SERGAS, state, 1204, 96, failureReason);
+    return new ImportRunOrganoCoverage(
+        SERGAS, ContractFamily.CONTRATOS_MENORES, state, 1204, 96, failureReason);
   }
 }

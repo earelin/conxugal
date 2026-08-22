@@ -2,6 +2,8 @@ package gal.conxugal.infrastructure.jdbc.importrun;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import gal.conxugal.domain.importrun.ContractFamily;
+import gal.conxugal.domain.importrun.CoveredOrgano;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.Importer;
@@ -102,7 +104,8 @@ class ImportRunClaimConcurrencyIntegrationTest implements TestPropertyProvider {
         final List<Future<Optional<ImportRunId>>> claims =
             List.of(
                 executor.submit(() -> importRunRepository.claim(
-                    Importer.CONTRATOS_MENORES, List.of(organoId))),
+                    Importer.CONTRATOS_MENORES,
+                    List.of(new CoveredOrgano(organoId, ContractFamily.CONTRATOS_MENORES)))),
                 executor.submit(() -> importRunRepository.claim(Importer.ORGANOS, List.of())));
 
         awaitBothBlockedOnTheGuard();

@@ -33,20 +33,31 @@ public interface ImportRunRepository {
    * so a run that dies partway can still name the list it was going to cover. A claim covering
    * none is a run that covers none, which is the catalogue import's shape.
    *
+   * <p><strong>The coverage is (Órgano, family) pairs</strong>, so a trigger asking for both
+   * families of one Órgano is still one claim. Claiming the second family separately would mean
+   * asking for a guard the first claim is already holding.
    */
-  Optional<ImportRunId> claim(Importer importer, Collection<OrganoId> coveredOrganos);
+  Optional<ImportRunId> claim(Importer importer, Collection<CoveredOrgano> coveredOrganos);
 
   /**
-   * Records a batch's progress against one covered Órgano, moving it to in progress, and proves
-   * the run is still alive. A run that stops advancing stops holding the guard, so this is what a
-   * long import owes the rest of the system after every batch it commits.
+   * Records a batch's progress against one covered Órgano's family, moving that row to in
+   * progress, and proves the run is still alive. A run that stops advancing stops holding the
+   * guard, so this is what a long import owes the rest of the system after every batch it commits.
+   *
+   * <p>The family is part of the address rather than a detail: a run can hold two rows for one
+   * Órgano, and naming only the Órgano would move whichever of them the database returned first.
    */
-  void advance(ImportRunId runId, OrganoId organoId, int added, int refreshed);
+  void advance(
+      ImportRunId runId, OrganoId organoId, ContractFamily family, int added, int refreshed);
 
-  /** Settles one covered Órgano, with the reason a failed one failed and nothing otherwise. */
+  /**
+   * Settles one covered Órgano's family, with the reason a failed one failed and nothing
+   * otherwise. The family addresses the row for the same reason {@link #advance} takes it.
+   */
   void finishOrgano(
       ImportRunId runId,
       OrganoId organoId,
+      ContractFamily family,
       ImportRunOrganoState state,
       @Nullable String failureReason);
 

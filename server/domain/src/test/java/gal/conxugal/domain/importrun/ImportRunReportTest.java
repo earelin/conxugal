@@ -43,6 +43,11 @@ class ImportRunReportTest {
 
   private static ImportRunOrganoCoverage coverage() {
     return new ImportRunOrganoCoverage(
-        new OrganoId(UUID.randomUUID()), ImportRunOrganoState.PENDING, 0, 0, null);
+        new OrganoId(UUID.randomUUID()),
+        ContractFamily.CONTRATOS_MENORES,
+        ImportRunOrganoState.PENDING,
+        0,
+        0,
+        null);
   }
 }

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
+import gal.conxugal.domain.importrun.ContractFamily;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
@@ -26,6 +27,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 // The read that makes a trigger answerable: the triggers answer before the import starts, so this
@@ -57,8 +59,8 @@ class ImportRunControllerIntegrationTest extends AuthenticationTestSupport {
                 null,
                 12,
                 3,
-                new ImportRunOrganoCoverage(SERGAS, ImportRunOrganoState.IN_PROGRESS, 12, 3, null),
-                new ImportRunOrganoCoverage(CHUAC, ImportRunOrganoState.PENDING, 0, 0, null)));
+                contratosMenores(SERGAS, ImportRunOrganoState.IN_PROGRESS, 12, 3, null),
+                contratosMenores(CHUAC, ImportRunOrganoState.PENDING, 0, 0, null)));
 
     assertThat(response.jsonPath().getString("state")).isEqualTo("IN_PROGRESS");
     assertThat(response.jsonPath().getString("finishedAt")).isNull();
@@ -79,8 +81,8 @@ class ImportRunControllerIntegrationTest extends AuthenticationTestSupport {
                 FINISHED_AT,
                 1204,
                 96,
-                new ImportRunOrganoCoverage(SERGAS, ImportRunOrganoState.SUCCEEDED, 1204, 96, null),
-                new ImportRunOrganoCoverage(
+                contratosMenores(SERGAS, ImportRunOrganoState.SUCCEEDED, 1204, 96, null),
+                contratosMenores(
                     CHUAC, ImportRunOrganoState.FAILED, 0, 0, "The source became unreachable")));
 
     assertThat(response.jsonPath().getString("state")).isEqualTo("PARTIALLY_SUCCEEDED");
@@ -107,8 +109,7 @@ class ImportRunControllerIntegrationTest extends AuthenticationTestSupport {
                 null,
                 840,
                 17,
-                new ImportRunOrganoCoverage(SERGAS, ImportRunOrganoState.IN_PROGRESS, 840, 17,
-                    null)));
+                contratosMenores(SERGAS, ImportRunOrganoState.IN_PROGRESS, 840, 17, null)));
 
     assertThat(response.jsonPath().getString("state")).isEqualTo("ABANDONED");
     assertThat(response.jsonPath().getInt("added")).isEqualTo(840);
@@ -128,12 +129,44 @@ class ImportRunControllerIntegrationTest extends AuthenticationTestSupport {
                 FINISHED_AT,
                 0,
                 0,
-                new ImportRunOrganoCoverage(
+                contratosMenores(
                     SERGAS, ImportRunOrganoState.SKIPPED, 0, 0, "its history was already loaded")));
 
     assertThat(response.jsonPath().getString("coveredOrganos[0].state")).isEqualTo("SKIPPED");
     assertThat(response.jsonPath().getString("coveredOrganos[0].failureReason"))
         .isEqualTo("its history was already loaded");
+  }
+
+  // #38: the outcome has to say what each Órgano's import did, and an Órgano covered for both
+  // families does two things. Without the family on the row the two are indistinguishable.
+  @Test
+  void run_covering_both_families_names_the_family_on_every_covered_organo(
+      RequestSpecification spec) {
+    Response response =
+        readAsAdmin(
+            spec,
+            report(
+                Importer.AMBAS_FAMILIAS,
+                ImportRunState.PARTIALLY_SUCCEEDED,
+                FINISHED_AT,
+                1204,
+                96,
+                contratosMenores(SERGAS, ImportRunOrganoState.SUCCEEDED, 1204, 96, null),
+                new ImportRunOrganoCoverage(
+                    SERGAS,
+                    ContractFamily.LICITACIONS,
+                    ImportRunOrganoState.FAILED,
+                    0,
+                    0,
+                    "The record would not parse")));
+
+    assertThat(response.jsonPath().getString("importer")).isEqualTo("AMBAS_FAMILIAS");
+    assertThat(response.jsonPath().getList("coveredOrganos.organoId"))
+        .containsExactly(SERGAS.value().toString(), SERGAS.value().toString());
+    assertThat(response.jsonPath().getList("coveredOrganos.family"))
+        .containsExactly("CONTRATOS_MENORES", "LICITACIONS");
+    assertThat(response.jsonPath().getList("coveredOrganos.state"))
+        .containsExactly("SUCCEEDED", "FAILED");
   }
 
   // The wrappers stop at this boundary, so the id a trigger returned is the one this read
@@ -148,7 +181,7 @@ class ImportRunControllerIntegrationTest extends AuthenticationTestSupport {
                 FINISHED_AT,
                 5,
                 0,
-                new ImportRunOrganoCoverage(SERGAS, ImportRunOrganoState.SUCCEEDED, 5, 0, null)));
+                contratosMenores(SERGAS, ImportRunOrganoState.SUCCEEDED, 5, 0, null)));
 
     assertThat(response.jsonPath().getString("id")).isEqualTo(RUN.value().toString());
     assertThat(response.jsonPath().getString("coveredOrganos[0].organoId"))
@@ -209,8 +242,19 @@ class ImportRunControllerIntegrationTest extends AuthenticationTestSupport {
 
   private static ImportRunReport report(ImportRunState state, Instant finishedAt, int added,
       int refreshed, ImportRunOrganoCoverage... coveredOrganos) {
-    return new ImportRunReport(RUN, Importer.CONTRATOS_MENORES, state, STARTED_AT, finishedAt,
+    return report(Importer.CONTRATOS_MENORES, state, finishedAt, added, refreshed, coveredOrganos);
+  }
+
+  private static ImportRunReport report(Importer importer, ImportRunState state,
+      Instant finishedAt, int added, int refreshed, ImportRunOrganoCoverage... coveredOrganos) {
+    return new ImportRunReport(RUN, importer, state, STARTED_AT, finishedAt,
         added, refreshed, List.of(coveredOrganos));
+  }
+
+  private static ImportRunOrganoCoverage contratosMenores(OrganoId organoId,
+      ImportRunOrganoState state, int added, int refreshed, @Nullable String failureReason) {
+    return new ImportRunOrganoCoverage(organoId, ContractFamily.CONTRATOS_MENORES, state, added,
+        refreshed, failureReason);
   }
 
   private static String readOf(ImportRunId runId) {
