@@ -21,11 +21,21 @@ Operadores are the stored projection of
 
 - **A migration** (next free `V` across `db/migration` **and** `db/migration-local`, taken at merge
   time) creating:
-  - **`licitacion_participation`** — `id`, `licitacion_id NOT NULL`, a nullable `lote_id`, a
-    nullable `operador_economico_id` FK, a **`won`** marker, a **`consortium`** marker, a nullable
-    **`consortium_name`**, and the withdrawal marker;
+  - **`licitacion_participation`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`,
+    `licitacion_id NOT NULL`, a nullable `lote_id`, a nullable `operador_economico_id` FK, a
+    **`won`** marker, a **`consortium`** marker, a nullable **`consortium_name`**, and the
+    withdrawal marker;
   - **`licitacion_ute_membership`** — `participation_id` and `operador_economico_id`, plus the
-    withdrawal marker, unique on `(participation_id, operador_economico_id)`.
+    withdrawal marker, **primary key `(participation_id, operador_economico_id)`**.
+
+  **The membership takes no surrogate `id`, and the participation does.** The participation's
+  natural key carries two nullable components, so it can only be a unique constraint and the
+  primary key has to be a surrogate — which is the `ParticipationId` a membership references. The
+  membership's own key is two non-null foreign keys, so the pair *is* its identity and a surrogate
+  beside it would be a second key naming the same row.
+  [TASK-0004](TASK-0004-award-points-and-competition-value-types.md)'s `UteMembership` is therefore
+  a value filed under its participation rather than an entity of its own, and compares by its
+  components.
 - **Natural keys**, on the same reasoning as TASK-0005's: a participation upserts on
   `(licitacion_id, lote_id, operador_economico_id, consortium_name)` declared **`NULLS NOT
   DISTINCT`** — two of those four components are null for the 33-of-35 unidentified-consortium case,

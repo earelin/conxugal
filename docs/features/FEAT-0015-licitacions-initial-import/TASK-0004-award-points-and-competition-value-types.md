@@ -2,7 +2,7 @@
 feat: FEAT-0015
 domain: backend
 adrs: [0008, 0019]
-status: todo
+status: done
 depends_on: [TASK-0003]
 ---
 
@@ -30,6 +30,28 @@ the tables and not in the types.
   every child that another row references: `LoteId` and `ParticipationId` at minimum, each a record
   wrapping a database-assigned `UUID` with its converter, on the `LicitacionId` shape
   [TASK-0003](TASK-0003-licitacion-domain-model.md) establishes.
+
+  **The implementation took six rather than two, and the "at minimum" is why.** `Award`,
+  `Formalisation`, `CpvClassification` and `NutClassification` are referenced by nothing, but each
+  is a `@MappedEntity` and so needs an `@Id` of some kind — and the natural key each one upserts on
+  (TASK-0005's table) carries a **nullable** `lote_id`, which PostgreSQL forbids in a primary key.
+  TASK-0005 already declares those keys `UNIQUE … NULLS NOT DISTINCT`, which is a unique constraint
+  and not a primary key, so each of the four takes a surrogate identity beside it: `AwardId`,
+  `FormalisationId`, `CpvClassificationId`, `NutClassificationId`. Typed rather than a bare `UUID`
+  because TASK-0003 typed all four vocabularies for the same reason, and a mixed idiom inside one
+  package is the confusion ADR-0019 exists to prevent.
+
+  **It also buys the equality a restatement needs.** An entity keyed on an identity compares by it,
+  so an award whose amount is corrected or whose awardee moves to a different operador is still the
+  same award — which is precisely what
+  [TASK-0014](TASK-0014-reconciling-a-restated-procedure.md) must be able to conclude. Keyed on its
+  contents instead, the corrected row would compare unequal to the row it corrects.
+
+  **`UteMembership` is the one child that takes none**, and that is not an omission: TASK-0006
+  gives it no `id` and a key of `(participation_id, operador_economico_id)`, both non-null, so the
+  pair *is* its identity. `EntityIdentityArchTest` then requires it **not** to override
+  `equals`/`hashCode` — it is a value filed under its owner, on `NomeAlternativo`'s shape, and the
+  record's own equality is the correct one.
 - **`Lote`** — its `LicitacionId`, its **identifier as text**, optionally a description and an
   estimated value, and a withdrawal marker.
 
@@ -61,6 +83,13 @@ the tables and not in the types.
   ```text
   PUBLISHED_BY_FORMALISATION > PUBLISHED_BY_BIDDER > NAME_DERIVED > UNRESOLVED
   ```
+
+  Built as `AwardeeResolutionPath`, an enum declared **weakest first** so the order is the enum's
+  natural one and `supersedes` is `compareTo(…) > 0` — the `NomeRank.outranks` shape, so no caller
+  has to read the comparison in the right direction. It is **never null**: `UNRESOLVED` is the
+  value an award nothing resolved carries, so the absence of a link is stated rather than inferred
+  from a null beside a null operador. It is named apart from the award's `resolution`, which is the
+  published `Resolución` cell and a different thing entirely.
 
   The **awarded amount is the resolution table's `Importe` and nothing else.** The listing's
   `importe` is the base budget, and a model that let one stand in for the other would fill every
@@ -96,6 +125,13 @@ the tables and not in the types.
   zero-padding varies *within* a table rather than between them (the award table produced both `1`
   and `05`), and the award table's procedure-wide cell is `_`, not empty as the source contract
   once recorded.
+
+  Built as `LoteKey.normalise(String)` answering an `Optional<String>`, where **empty is the
+  procedure-as-a-whole value** — the shape that maps straight onto the nullable `lote_id`. It
+  normalises **for comparison and never for storage**: a lote published as `05` is stored as `05`,
+  which is what TASK-0005's criterion asks for, and this is what lets a row spelling it `5` find
+  that lote all the same. A cell of nothing but zeros keeps one, so `000` is the lote `0` rather
+  than the procedure as a whole — a published lote must never reduce to the absence of one.
 
 **Out of scope:** every table and repository, every parse, and the awardee resolution itself.
 

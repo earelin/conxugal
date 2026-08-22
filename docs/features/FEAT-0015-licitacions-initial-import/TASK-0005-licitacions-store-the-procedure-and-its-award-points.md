@@ -54,16 +54,25 @@ behind TASK-0003's port.
     before, inside the transaction that stores the procedure. A seeded catalogue would turn an
     unseen code into a foreign-key violation and a rejected procedure, which is the harm R33's
     store-as-published exists to prevent.
-  - **`licitacion_lote`** — its `licitacion_id`, its identifier as **`TEXT`** (measured: `OU0028`,
-    `LU4001` and `CO0642` are all real lote identifiers), the two optional extras and the
-    withdrawal marker;
-  - **`licitacion_cpv`** and **`licitacion_nut`** — `licitacion_id`, the code, the diffusion date, a
-    **nullable** `lote_id` and the withdrawal marker;
-  - **`licitacion_award`** — `licitacion_id`, a nullable `lote_id`, the resolution, its date, the
-    amount, the execution period, the published awardee name, a nullable `operador_economico_id`
-    FK, the resolution path and the withdrawal marker;
-  - **`licitacion_formalisation`** — `licitacion_id`, a nullable `lote_id`, the date, contratista
-    name, published fiscal identifier (nullable), nationality, amount and the withdrawal marker.
+  - **`licitacion_lote`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, its `licitacion_id`, its
+    identifier as **`TEXT`** in a `lote_identifier` column (measured: `OU0028`, `LU4001` and
+    `CO0642` are all real lote identifiers), the two optional extras and the withdrawal marker;
+  - **`licitacion_cpv`** and **`licitacion_nut`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`,
+    `licitacion_id`, the code, the diffusion date, a **nullable** `lote_id` and the withdrawal
+    marker;
+  - **`licitacion_award`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, `licitacion_id`, a nullable
+    `lote_id`, the resolution, its date, the amount, the execution period, the published awardee
+    name, a nullable `operador_economico_id` FK, the resolution path and the withdrawal marker;
+  - **`licitacion_formalisation`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, `licitacion_id`, a
+    nullable `lote_id`, the date, contratista name, published fiscal identifier (nullable),
+    nationality, amount and the withdrawal marker.
+
+  **Every one of the five carries a surrogate `id` beside its natural key, and the nullable
+  `lote_id` is why.** Four of the natural keys below contain it, and PostgreSQL forbids a null in a
+  primary key — so those keys are `UNIQUE … NULLS NOT DISTINCT` constraints and the primary key is
+  the surrogate. [TASK-0004](TASK-0004-award-points-and-competition-value-types.md) mints a typed
+  identifier for each, so the domain records carry `LoteId`, `CpvClassificationId`,
+  `NutClassificationId`, `AwardId` and `FormalisationId` respectively.
 - **Every child carries `licitacion_id NOT NULL`, and a null `lote_id` means *the procedure as a
   whole* rather than *unattached*.** An earlier draft gave three of these tables only a nullable
   `lote_id`, which left the lotless procedure — **85 of 100 measured, the ordinary case** — with
