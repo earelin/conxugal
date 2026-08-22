@@ -1,6 +1,5 @@
 package gal.conxugal.domain.licitacion;
 
-import gal.conxugal.commons.text.Whitespace;
 import gal.conxugal.domain.operador.OperadorId;
 import io.micronaut.data.annotation.GeneratedValue;
 import io.micronaut.data.annotation.Id;
@@ -57,7 +56,7 @@ public record Participation(
 
   public Participation {
     Objects.requireNonNull(licitacionId, "licitacionId must not be null");
-    consortiumName = nullIfBlank(consortiumName);
+    consortiumName = PublishedText.orNullWhenBlank(consortiumName);
     if (consortiumName != null && (!consortium || operadorEconomicoId != null)) {
       throw new IllegalArgumentException(
           "consortiumName is only for a consortium the catalogue could not hold, so it requires "
@@ -100,9 +99,5 @@ public record Participation(
   @Override
   public int hashCode() {
     return id == null ? System.identityHashCode(this) : id.hashCode();
-  }
-
-  private static @Nullable String nullIfBlank(@Nullable String value) {
-    return value == null || Whitespace.isBlank(value) ? null : value;
   }
 }

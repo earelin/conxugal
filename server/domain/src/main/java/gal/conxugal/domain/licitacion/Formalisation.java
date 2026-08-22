@@ -1,6 +1,5 @@
 package gal.conxugal.domain.licitacion;
 
-import gal.conxugal.commons.text.Whitespace;
 import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.operador.FiscalIdentifier;
 import io.micronaut.data.annotation.GeneratedValue;
@@ -50,8 +49,8 @@ public record Formalisation(
 
   public Formalisation {
     Objects.requireNonNull(licitacionId, "licitacionId must not be null");
-    contratistaName = nullIfBlank(contratistaName);
-    nationality = nullIfBlank(nationality);
+    contratistaName = PublishedText.orNullWhenBlank(contratistaName);
+    nationality = PublishedText.orNullWhenBlank(nationality);
   }
 
   /**
@@ -99,9 +98,5 @@ public record Formalisation(
   @Override
   public int hashCode() {
     return id == null ? System.identityHashCode(this) : id.hashCode();
-  }
-
-  private static @Nullable String nullIfBlank(@Nullable String value) {
-    return value == null || Whitespace.isBlank(value) ? null : value;
   }
 }

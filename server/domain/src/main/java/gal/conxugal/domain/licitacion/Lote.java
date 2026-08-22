@@ -1,6 +1,5 @@
 package gal.conxugal.domain.licitacion;
 
-import gal.conxugal.commons.text.Whitespace;
 import gal.conxugal.domain.money.Money;
 import io.micronaut.data.annotation.GeneratedValue;
 import io.micronaut.data.annotation.Id;
@@ -47,7 +46,7 @@ public record Lote(
   public Lote {
     Objects.requireNonNull(licitacionId, "licitacionId must not be null");
     identifier = PublishedKey.canonical(identifier, "identifier");
-    description = nullIfBlank(description);
+    description = PublishedText.orNullWhenBlank(description);
   }
 
   /**
@@ -83,9 +82,5 @@ public record Lote(
   @Override
   public int hashCode() {
     return id == null ? System.identityHashCode(this) : id.hashCode();
-  }
-
-  private static @Nullable String nullIfBlank(@Nullable String value) {
-    return value == null || Whitespace.isBlank(value) ? null : value;
   }
 }

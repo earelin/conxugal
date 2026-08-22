@@ -1,6 +1,5 @@
 package gal.conxugal.domain.licitacion;
 
-import gal.conxugal.commons.text.Whitespace;
 import gal.conxugal.domain.money.Money;
 import gal.conxugal.domain.operador.OperadorId;
 import io.micronaut.data.annotation.GeneratedValue;
@@ -66,9 +65,9 @@ public record Award(
   public Award {
     Objects.requireNonNull(licitacionId, "licitacionId must not be null");
     Objects.requireNonNull(awardeeResolutionPath, "awardeeResolutionPath must not be null");
-    resolution = nullIfBlank(resolution);
-    executionPeriod = nullIfBlank(executionPeriod);
-    awardeeName = nullIfBlank(awardeeName);
+    resolution = PublishedText.orNullWhenBlank(resolution);
+    executionPeriod = PublishedText.orNullWhenBlank(executionPeriod);
+    awardeeName = PublishedText.orNullWhenBlank(awardeeName);
   }
 
   /**
@@ -121,9 +120,5 @@ public record Award(
   @Override
   public int hashCode() {
     return id == null ? System.identityHashCode(this) : id.hashCode();
-  }
-
-  private static @Nullable String nullIfBlank(@Nullable String value) {
-    return value == null || Whitespace.isBlank(value) ? null : value;
   }
 }
