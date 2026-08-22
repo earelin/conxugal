@@ -2,6 +2,7 @@ package gal.conxugal.domain.licitacion;
 
 import gal.conxugal.commons.text.Whitespace;
 import java.util.Optional;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -29,8 +30,11 @@ import org.jspecify.annotations.Nullable;
  */
 public final class LoteKey {
 
-  private static final String PROCEDURE_WIDE_UNDERSCORE = "_";
-  private static final String PROCEDURE_WIDE_DASH = "-";
+  /**
+   * The cells that name the procedure as a whole rather than a lote. Two of them, because the
+   * award, formalisation and NUT tables write one and the bidder table writes the other.
+   */
+  private static final Set<String> PROCEDURE_WIDE_MARKERS = Set.of("_", "-");
 
   private LoteKey() {}
 
@@ -49,12 +53,14 @@ public final class LoteKey {
       return Optional.empty();
     }
     String stripped = Whitespace.strip(publishedCell);
-    if (stripped.isEmpty()
-        || PROCEDURE_WIDE_UNDERSCORE.equals(stripped)
-        || PROCEDURE_WIDE_DASH.equals(stripped)) {
+    if (namesTheProcedureAsWhole(stripped)) {
       return Optional.empty();
     }
     return Optional.of(withoutLeadingZeros(stripped));
+  }
+
+  private static boolean namesTheProcedureAsWhole(String stripped) {
+    return stripped.isEmpty() || PROCEDURE_WIDE_MARKERS.contains(stripped);
   }
 
   private static String withoutLeadingZeros(String value) {
