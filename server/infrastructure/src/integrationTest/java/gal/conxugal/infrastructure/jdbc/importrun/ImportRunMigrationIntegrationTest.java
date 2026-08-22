@@ -196,18 +196,8 @@ class ImportRunMigrationIntegrationTest implements TestPropertyProvider {
   }
 
   private List<String> familiesCovered(UUID runId) throws SQLException {
-    List<String> families = new ArrayList<>();
-    String sql = "SELECT family FROM import_run_organo WHERE run_id = ? ORDER BY family";
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setObject(1, runId);
-      try (ResultSet resultSet = statement.executeQuery()) {
-        while (resultSet.next()) {
-          families.add(resultSet.getString("family"));
-        }
-      }
-    }
-    return families;
+    return queryStrings(
+        "SELECT family FROM import_run_organo WHERE run_id = ? ORDER BY family", runId, "family");
   }
 
   private List<Integer> runCounts(UUID runId) throws SQLException {
@@ -231,12 +221,12 @@ class ImportRunMigrationIntegrationTest implements TestPropertyProvider {
     }
   }
 
-  private List<String> queryStrings(String sql, String parameter, String column)
+  private List<String> queryStrings(String sql, Object parameter, String column)
       throws SQLException {
     List<String> values = new ArrayList<>();
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setString(1, parameter);
+      statement.setObject(1, parameter);
       try (ResultSet resultSet = statement.executeQuery()) {
         while (resultSet.next()) {
           values.add(resultSet.getString(column));
