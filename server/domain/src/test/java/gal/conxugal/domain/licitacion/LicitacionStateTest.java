@@ -66,6 +66,38 @@ class LicitacionStateTest {
   }
 
   @Test
+  void is_the_same_state_as_itself_whether_stored_or_not() {
+    LicitacionState identified =
+        new LicitacionState(new LicitacionStateId(UUID.randomUUID()), 8, "Formalizado");
+    LicitacionState sameIdentified = identified;
+    LicitacionState unstored = new LicitacionState(8, "Formalizado");
+    LicitacionState sameUnstored = unstored;
+
+    // Through a second reference rather than a literal self-comparison. The unstored half is the
+    // one that matters: identity-only equality without the short-circuit would answer false.
+    assertThat(identified).isEqualTo(sameIdentified);
+    assertThat(unstored).isEqualTo(sameUnstored);
+  }
+
+  @Test
+  void is_not_equal_to_null_or_to_anything_that_is_not_state() {
+    LicitacionState identified =
+        new LicitacionState(new LicitacionStateId(UUID.randomUUID()), 8, "Formalizado");
+
+    assertThat(identified)
+        .isNotEqualTo(null)
+        .isNotEqualTo(new LicitacionContractType("Obras"));
+  }
+
+  @Test
+  void hashes_consistently_while_it_carries_no_identity() {
+    LicitacionState unstored = new LicitacionState(8, "Formalizado");
+    int firstReading = unstored.hashCode();
+
+    assertThat(unstored.hashCode()).isEqualTo(firstReading);
+  }
+
+  @Test
   void treats_two_readings_of_one_stored_state_as_the_same_state() {
     LicitacionStateId id = new LicitacionStateId(UUID.randomUUID());
 

@@ -288,6 +288,30 @@ class LicitacionTest {
   }
 
   @Test
+  void is_the_same_procedure_as_itself_whether_stored_or_not() {
+    // Reflexivity, asserted through a second reference rather than as a literal self-comparison.
+    // It is the one branch of equals no other test reaches, and the unstored half is the half
+    // that matters: an identity-only comparison without it would answer false for a procedure
+    // the database has not identified, so a collection could not find one it holds.
+    Licitacion identified = stored(new LicitacionId(UUID.randomUUID()), FORMALIZADO);
+    Licitacion sameIdentified = identified;
+    Licitacion unstored = published("Actuacións de mellora");
+    Licitacion sameUnstored = unstored;
+
+    assertThat(identified).isEqualTo(sameIdentified);
+    assertThat(unstored).isEqualTo(sameUnstored);
+  }
+
+  @Test
+  void is_not_equal_to_null_or_to_anything_that_is_not_licitacion() {
+    Licitacion identified = stored(new LicitacionId(UUID.randomUUID()), FORMALIZADO);
+
+    assertThat(identified)
+        .isNotEqualTo(null)
+        .isNotEqualTo(FORMALIZADO);
+  }
+
+  @Test
   void treats_two_readings_of_one_stored_procedure_as_the_same_procedure() {
     LicitacionId id = new LicitacionId(UUID.randomUUID());
 

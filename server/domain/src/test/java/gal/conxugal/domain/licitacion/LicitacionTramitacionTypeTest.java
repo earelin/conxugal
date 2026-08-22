@@ -58,6 +58,52 @@ class LicitacionTramitacionTypeTest {
   }
 
   @Test
+  void is_the_same_type_as_itself_whether_stored_or_not() {
+    LicitacionTramitacionType identified =
+        new LicitacionTramitacionType(
+            new LicitacionTramitacionTypeId(UUID.randomUUID()), "Ordinaria");
+    LicitacionTramitacionType sameIdentified = identified;
+    LicitacionTramitacionType unstored = new LicitacionTramitacionType("Ordinaria");
+    LicitacionTramitacionType sameUnstored = unstored;
+
+    // Through a second reference rather than a literal self-comparison. The unstored half is the
+    // one that matters: identity-only equality without the short-circuit would answer false.
+    assertThat(identified).isEqualTo(sameIdentified);
+    assertThat(unstored).isEqualTo(sameUnstored);
+  }
+
+  @Test
+  void is_not_equal_to_null_or_to_another_vocabulary_holding_the_same_name() {
+    LicitacionTramitacionType identified =
+        new LicitacionTramitacionType(
+            new LicitacionTramitacionTypeId(UUID.randomUUID()), "Ordinaria");
+
+    assertThat(identified)
+        .isNotEqualTo(null)
+        .isNotEqualTo(new LicitacionContractType("Ordinaria"));
+  }
+
+  @Test
+  void hashes_consistently_while_it_carries_no_identity() {
+    LicitacionTramitacionType unstored = new LicitacionTramitacionType("Ordinaria");
+    int firstReading = unstored.hashCode();
+
+    assertThat(unstored.hashCode()).isEqualTo(firstReading);
+  }
+
+  @Test
+  void separates_types_carrying_different_identities() {
+    LicitacionTramitacionType first =
+        new LicitacionTramitacionType(
+            new LicitacionTramitacionTypeId(UUID.randomUUID()), "Ordinaria");
+    LicitacionTramitacionType second =
+        new LicitacionTramitacionType(
+            new LicitacionTramitacionTypeId(UUID.randomUUID()), "Ordinaria");
+
+    assertThat(first).isNotEqualTo(second);
+  }
+
+  @Test
   void treats_two_readings_of_one_stored_type_as_the_same_type() {
     LicitacionTramitacionTypeId id = new LicitacionTramitacionTypeId(UUID.randomUUID());
 
