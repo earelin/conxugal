@@ -34,6 +34,12 @@ class LicitacionTramitacionTypeTest {
   }
 
   @Test
+  void keeps_the_name_exactly_as_the_adapter_handed_it_over() {
+    assertThat(new LicitacionTramitacionType("  Ordinaria  ").name())
+        .isEqualTo("  Ordinaria  ");
+  }
+
+  @Test
   void keeps_two_published_spellings_apart_rather_than_folding_their_case() {
     assertThat(new LicitacionTramitacionType("Ordinaria").name())
         .isNotEqualTo(new LicitacionTramitacionType("ordinaria").name());

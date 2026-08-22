@@ -34,6 +34,12 @@ class LicitacionProcedureTypeTest {
   }
 
   @Test
+  void keeps_the_name_exactly_as_the_adapter_handed_it_over() {
+    assertThat(new LicitacionProcedureType("  Abertos  ").name())
+        .isEqualTo("  Abertos  ");
+  }
+
+  @Test
   void keeps_two_published_spellings_apart_rather_than_folding_their_case() {
     assertThat(new LicitacionProcedureType("Abertos").name())
         .isNotEqualTo(new LicitacionProcedureType("abertos").name());

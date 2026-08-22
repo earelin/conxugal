@@ -18,10 +18,14 @@ import org.jspecify.annotations.Nullable;
  * there is nothing else to match on. Were a numeric identifier ever measured, it would become a
  * component beside the name and the match would move to it.
  *
- * <p><strong>Nothing normalises the name</strong>, so two published spellings are two entries.
- * Values are stored as published, trimmed of surrounding whitespace and nothing else, which means
- * no case folding and no collapsing of internal spacing — a vocabulary that folded them would be
- * asserting an equivalence the source never published.
+ * <p><strong>Nothing here normalises the name.</strong> It arrives already trimmed at the adapter
+ * and this record stores what it is handed — no case folding, no collapsing of internal spacing,
+ * no trimming of its own — so two published spellings are two entries, and a vocabulary that
+ * folded them would be asserting an equivalence the source never published.
+ *
+ * <p>That the trim happens elsewhere matters more here than for ordinary published text, because
+ * the name is the natural key: an untrimmed value reaching this far would key an entry of its own
+ * beside the trimmed one.
  *
  * <p>The name is required and cannot be blank: an entry keyed on the empty string is not a fact
  * about anything. A procedure whose record published no contract type refers to none at all,

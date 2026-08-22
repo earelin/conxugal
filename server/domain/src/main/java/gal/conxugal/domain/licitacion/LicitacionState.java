@@ -31,7 +31,7 @@ public record LicitacionState(
     @Id @GeneratedValue @Nullable LicitacionStateId id, int code, @Nullable String label) {
 
   public LicitacionState {
-    label = label == null || Whitespace.isBlank(label) ? null : label;
+    label = nullIfBlank(label);
   }
 
   /** A state as it is first read from the source: the database assigns its id on insert. */
@@ -60,5 +60,9 @@ public record LicitacionState(
   @Override
   public int hashCode() {
     return id == null ? System.identityHashCode(this) : id.hashCode();
+  }
+
+  private static @Nullable String nullIfBlank(@Nullable String value) {
+    return value == null || Whitespace.isBlank(value) ? null : value;
   }
 }

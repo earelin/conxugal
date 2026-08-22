@@ -78,24 +78,10 @@ class LicitacionTest {
   }
 
   @Test
-  void keeps_two_states_sharing_one_label_apart_by_their_code() {
-    // 101 and 102 are both published as Histórico. The label is carried beside the code, never
-    // instead of it, so the two do not collapse into one state.
-    Licitacion historic = withState(new LicitacionState(101, "Histórico"));
-    Licitacion alsoHistoric = withState(new LicitacionState(102, "Histórico"));
-
-    assertThat(historic.state().code())
-        .isNotEqualTo(alsoHistoric.state().code());
-    assertThat(historic.state().label())
-        .isEqualTo(alsoHistoric.state().label());
-  }
-
-  @Test
   void stores_an_unseen_state_code_without_special_casing_it() {
     Licitacion licitacion = withState(new LicitacionState(7, null));
 
     assertThat(licitacion.state().code()).isEqualTo(7);
-    assertThat(licitacion.publicationId()).isEqualTo(PUBLICATION_ID);
   }
 
   @Test
@@ -255,6 +241,10 @@ class LicitacionTest {
     // R8 promises exactly one place for the award, the classification and the formalisation. A
     // component reintroducing any of them here would be the second copy, and two would be one too
     // many to keep in step.
+    //
+    // It pins the vocabularies too: no `stateCode`, no `stateLabel`, no type name. A procedure
+    // holding the label instead of the reference could not tell 101 from 102, both of which are
+    // published as Histórico.
     assertThat(Arrays.stream(Licitacion.class.getRecordComponents()).map(RecordComponent::getName))
         .containsExactly(
             "id",

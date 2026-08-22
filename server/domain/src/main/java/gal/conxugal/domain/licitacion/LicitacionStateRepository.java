@@ -1,7 +1,5 @@
 package gal.conxugal.domain.licitacion;
 
-import java.util.Optional;
-
 /**
  * Port for the published state vocabulary. Implemented by the {@code infrastructure} module.
  *
@@ -26,9 +24,10 @@ public interface LicitacionStateRepository {
    * <p>Matching on the code and not on the label is the whole point: 101 and 102 are both
    * published as <em>Histórico</em>, so a store keyed on the label would hold one row where the
    * source publishes two states.
+   *
+   * <p>The only method here, and the absence of a finder beside it is deliberate: the upsert
+   * answers the stored state, so nothing storing a procedure needs to look one up first, and a
+   * read nobody makes is a read nobody has specified.
    */
   LicitacionState upsert(LicitacionState state);
-
-  /** The stored state published under this code, or nothing. */
-  Optional<LicitacionState> findByCode(int code);
 }

@@ -25,6 +25,13 @@ public interface LicitacionRepository {
    *
    * <p>Matching on a natural key while reporting which branch the row took is beyond a derived
    * query, so the {@code infrastructure} implementation writes this as an explicit statement.
+   *
+   * <p><strong>The procedure's state and any type it names must already be stored</strong>, each
+   * carrying the identity its own upsert answered with. Nothing in the domain enforces the
+   * ordering — a {@link Licitacion} constructs perfectly well around a vocabulary value the
+   * database has never seen — so an implementation must refuse an unstored one rather than write
+   * a null into a {@code NOT NULL} foreign key, on the precedent {@code retainName} sets for an
+   * unstored operador.
    */
   UpsertOutcome upsert(Licitacion licitacion);
 
@@ -32,6 +39,17 @@ public interface LicitacionRepository {
    * The stored procedure published under this identifier, or nothing. This is how a reconciliation
    * reaches what it is about to restate — by the key the source publishes, since a restatement
    * arrives knowing nothing of the identity the system assigned.
+   *
+   * <p><strong>An implementation must fetch-join all four vocabulary references</strong> —
+   * {@code state}, {@code contractType}, {@code procedureType} and {@code tramitacionType}. There
+   * is no implicit to-one fetch: unjoined, the mapper tries to build each reference as an
+   * id-only stub, cannot (none of the four has a constructor it can use for that), and hands the
+   * aggregate a null state, which its own constructor refuses. That is every stored row, not an
+   * unlucky one.
+   *
+   * <p>The join must be a <strong>left</strong> one. An inner join would drop the ordinary
+   * procedure whose record published no contract type — most of them — from a read that asked
+   * for it by its identifier.
    */
   Optional<Licitacion> findByPublicationId(long publicationId);
 }

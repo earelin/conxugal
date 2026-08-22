@@ -95,10 +95,17 @@ the `ContratoMenor` / `ContratoMenorId` precedent.
   which is recoverable after the write), plus `findByPublicationId`. No SQL and no Micronaut Data
   annotations on the interface itself.
 - **One port per vocabulary** — `LicitacionStateRepository` matching on `code`, and one each for
-  the three types matching on `name`. Each has an `upsert` and a finder, and none has a delete. The
-  upsert is what makes an unseen value cost nothing: it runs inside the transaction that stores the
-  procedure, so a state code or a type name the source has never published before simply creates
-  its row rather than failing a foreign key.
+  the three types matching on `name`. **Each has an `upsert` and nothing else**: no finder, because
+  the upsert already answers the stored value carrying the identity the procedure refers to, so
+  nothing needs to look one up first; and no delete, because a value no procedure references any
+  more is still one the source published. The upsert is what makes an unseen value cost nothing —
+  it runs inside the transaction that stores the procedure, so a state code or a type name the
+  source has never published before simply creates its row rather than failing a foreign key.
+- **The vocabularies must be stored before the procedure that names them**, and the ports' shape is
+  what makes that natural rather than enforced: an upsert answers the value with its identity, and
+  `LicitacionRepository.upsert` is documented to refuse a procedure whose state or type has none.
+  Nothing in the domain checks it, because a `Licitacion` built around a freshly parsed vocabulary
+  value is a perfectly good aggregate — it is the write that cannot take one.
 
 **Out of scope:** every child of the procedure, every table (the four vocabularies' included —
 their migrations are TASK-0005's), and every parse. The listing's
@@ -117,18 +124,30 @@ taking the listing's number for an award is the mistake
 - `publicationId` is a plain `long` on the aggregate, distinct from its identity, and two
   `Licitacion` values with the same `publicationId` are the same procedure to the repository's
   `upsert`. (SPEC-0008 #17)
-- Two `Licitacion` values differing only in state **code** are different — 101 and 102 do not
-  collapse — and the label is carried beside the code, never instead of it. (SPEC-0008 #44)
-- **Two states sharing one label are two states.** 101 and 102 both construct as *Histórico*, the
-  second is not rejected for repeating the first's label, and nothing in the model treats the label
-  as a key. (SPEC-0008 #44)
+- **Two states sharing one label are two states, and the store keys them separately.** 101 and 102
+  both construct as *Histórico*, the second is not rejected for repeating the first's label, and
+  nothing in the model treats the label as a key.
+
+  Stated about the state rather than about two `Licitacion` values, because that is where it is
+  true. A procedure carries no state label of its own — it reaches both halves through the one
+  reference, which the component-list criterion below pins — and two procedures sharing an identity
+  are one procedure however their states differ, which is what identity equality is for.
+  (SPEC-0008 #44)
 - An unseen state code (say `7`) constructs and stores without special-casing: nothing validates the
   code against a known set. (SPEC-0008 #44)
 - **A procedure whose record published none of the three types constructs**, referring to none of
   them — the ordinary case, since a type is optional where the state is not. (SPEC-0008 #7
   per-field half)
-- A type vocabulary entry keeps its published name exactly as published, two spellings staying two
-  entries, and refuses a blank name. (SPEC-0008 #44)
+- A type vocabulary entry keeps its published name exactly as the adapter handed it over — the trim
+  happens there, not here, so two spellings stay two entries — and refuses a blank name.
+  (SPEC-0008 #44)
+- **A `Licitacion` holds no component of its own for either half of the state, for any type name,
+  or for anything R8 puts on a child.** Pinned against the record's component list, as
+  `ContratoMenorTest` pins its own: a procedure holding the label instead of the reference could
+  not tell 101 from 102. (SPEC-0008 #44)
 - The base budget and estimated value are `Money`, and a procedure publishing neither constructs
   with both absent.
-- Unit-tested with no database and no HTTP.
+- Unit-tested with no database and no HTTP. The `upsert` half of the `publicationId` criterion is
+  **not** among them: matching two readings of one publication needs a store, so it is
+  TASK-0005's `UNIQUE (publication_id)` and its integration test that prove it. What is proven here
+  is the aggregate's half — the natural key is a plain `long`, distinct from the identity.

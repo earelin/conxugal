@@ -34,6 +34,14 @@ class LicitacionContractTypeTest {
   }
 
   @Test
+  void keeps_the_name_exactly_as_the_adapter_handed_it_over() {
+    // The trim happens at the adapter, not here — which matters because the name is the natural
+    // key, so an untrimmed value reaching this far would key an entry beside the trimmed one.
+    assertThat(new LicitacionContractType("  Obras  ").name())
+        .isEqualTo("  Obras  ");
+  }
+
+  @Test
   void keeps_two_published_spellings_apart_rather_than_folding_their_case() {
     // Folding them would assert an equivalence the source never published, which is what storing
     // values as published forbids.

@@ -1,13 +1,11 @@
 package gal.conxugal.domain.licitacion;
 
-import java.util.Optional;
-
 /**
  * Port for the published tramitación-type vocabulary. Implemented by the {@code infrastructure}
  * module.
  *
- * @see LicitacionContractTypeRepository for why each type vocabulary has a port of its own, and
- *     why none of them is seeded, validated against or deletable
+ * @see LicitacionContractTypeRepository for why each type vocabulary has a port of its own, why
+ *     none of them is seeded, validated against or deletable, and why none carries a finder
  */
 public interface LicitacionTramitacionTypeRepository {
 
@@ -16,7 +14,4 @@ public interface LicitacionTramitacionTypeRepository {
    * this vocabulary — and answering the stored type, whose identity a procedure then refers to.
    */
   LicitacionTramitacionType upsert(LicitacionTramitacionType type);
-
-  /** The stored type published under this name, or nothing. */
-  Optional<LicitacionTramitacionType> findByName(String name);
 }

@@ -1,7 +1,5 @@
 package gal.conxugal.domain.licitacion;
 
-import java.util.Optional;
-
 /**
  * Port for the published contract-type vocabulary. Implemented by the {@code infrastructure}
  * module.
@@ -22,9 +20,10 @@ public interface LicitacionContractTypeRepository {
    * source's identifier for this vocabulary, since the record publishes no code for it — and
    * answering the stored type, whose identity a procedure then refers to. Re-storing one the
    * source has published before changes nothing.
+   *
+   * <p>The only method here, and the absence of a finder beside it is deliberate: the upsert
+   * answers the stored type, so nothing storing a procedure needs to look one up first, and a
+   * read nobody makes is a read nobody has specified.
    */
   LicitacionContractType upsert(LicitacionContractType type);
-
-  /** The stored type published under this name, or nothing. */
-  Optional<LicitacionContractType> findByName(String name);
 }
