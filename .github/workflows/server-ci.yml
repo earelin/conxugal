@@ -30,6 +30,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # A normal run is under ten minutes. The cap is for the stalls, and matters most on trunk,
+    # where the concurrency group is deliberately uncancellable and a hung run would hold it
+    # for GitHub's 6h default.
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: server
@@ -52,8 +56,27 @@ jobs:
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
-      # Handles dependency/build caching and Gradle Wrapper checksum validation.
+      # Handles dependency/build caching and Gradle Wrapper checksum validation. Its own
+      # caching is left exactly as it was: it writes only from trunk, which is what keeps one
+      # copy of a ~500 MB dependency bundle rather than one per branch.
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      # The one thing setup-gradle cannot do: task outputs written from a pull request. Its own
+      # copy of build-cache-1 is written only from trunk, so a task branch — which pushes eight
+      # or nine times before it merges — re-executed all 58 tasks on every push. This entry
+      # overlays that one, so a push starts from the branch's own previous run and falls back
+      # to trunk's. Per job because the task sets differ, and per run+attempt because an entry
+      # cannot be updated in place and run_id alone repeats on a re-run.
+      #
+      # It must stay after setup-gradle. Restoring into ~/.gradle/caches first would create the
+      # directory, and setup-gradle disables its own caching outright when it finds a
+      # pre-existing Gradle User Home — silently, with only a job-summary line to show for it.
+      - name: Cache the Gradle task outputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: gradle-tasks-v1-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: gradle-tasks-v1-${{ github.job }}-
 
       # One invocation rather than two: integrationTest is deliberately kept out
       # of `check`, so this adds it without running anything twice, and saves a
@@ -63,6 +86,9 @@ jobs:
 
   acceptance:
     runs-on: ubuntu-latest
+    # Same reasoning as `build` above, and this job additionally waits on an image pull and a
+    # browser download — the two stalls that motivated the cap on ui-acceptance.yml.
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: server
@@ -85,11 +111,39 @@ jobs:
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
-      # Handles dependency/build caching and Gradle Wrapper checksum validation.
+      # Handles dependency/build caching and Gradle Wrapper checksum validation. Its own
+      # caching is left exactly as it was: it writes only from trunk, which is what keeps one
+      # copy of a ~500 MB dependency bundle rather than one per branch.
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
+      # The one thing setup-gradle cannot do: task outputs written from a pull request. Its own
+      # copy of build-cache-1 is written only from trunk, so a task branch — which pushes eight
+      # or nine times before it merges — re-executed all 58 tasks on every push. This entry
+      # overlays that one, so a push starts from the branch's own previous run and falls back
+      # to trunk's. Per job because the task sets differ, and per run+attempt because an entry
+      # cannot be updated in place and run_id alone repeats on a re-run.
+      #
+      # It must stay after setup-gradle. Restoring into ~/.gradle/caches first would create the
+      # directory, and setup-gradle disables its own caching outright when it finds a
+      # pre-existing Gradle User Home — silently, with only a job-summary line to show for it.
+      - name: Cache the Gradle task outputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: gradle-tasks-v1-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: gradle-tasks-v1-${{ github.job }}-
+
+      # The service images are pulled while the application image builds: nothing about them
+      # depends on it, and `up --wait` below would otherwise pay for them serially.
       - name: Build application docker image
-        run: ./gradlew :application:dockerBuild
+        run: |
+          docker compose pull --quiet postgres contratosdegalicia &
+          pull=$!
+          ./gradlew :application:dockerBuild
+          # Best-effort: `up --wait` below pulls whatever is still missing, which is what
+          # happened before this ran ahead of it. A blip here should not fail the job one
+          # step early over an image the next step would have fetched anyway.
+          wait "$pull" || echo "::warning::pre-pull failed; leaving the images to up --wait"
 
       - name: Start docker compose (app profile)
         run: docker compose --profile app up -d --wait
@@ -102,19 +156,25 @@ jobs:
 
       # Keyed on the pinned Playwright version rather than a hash of the whole
       # catalogue: the version pins the browser build, so an unrelated dependency
-      # bump does not strand another copy in the cache. Same key shape as
-      # ui-acceptance.yml, so the two share one entry once their versions match.
+      # bump does not strand another copy in the cache.
       - name: Resolve the Playwright version
         id: playwright
         run: |
           version=$(sed -n 's/^playwright = "\(.*\)"$/\1/p' gradle/libs.versions.toml)
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      # Same key shape and generation prefix as ui-acceptance.yml, but not the same entry: the
+      # Java binding is capped at 1.62.0 on Maven Central while the UI is on 1.62.1, and the key
+      # carries the full version. Both resolve to chromium-1234 today, so restore-keys is what
+      # makes that pay — either side's entry satisfies the other's install step, which is left
+      # unconditional below and so verifies rather than re-downloads. It also abandons a
+      # truncated entry saved by a run cancelled mid-download, which the bare key could not.
       - name: Cache the Playwright browser
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          key: playwright-v1-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          restore-keys: playwright-v1-${{ runner.os }}-
 
       # Left unconditional so a partially populated cache self-heals; on a hit
       # this only verifies the download.

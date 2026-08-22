@@ -12,12 +12,22 @@ on:
       - "ui/**"
       - ".github/workflows/ui-ci.yml"
 
+# Matches ui-acceptance.yml and server-ci.yml: a superseded pull request push is cancelled
+# rather than run to completion, while pushes to trunk are left uncancellable.
+concurrency:
+  group: ui-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # A normal run is about two minutes. The cap is the counterpart of the concurrency group
+    # above: pushes to trunk are not cancellable, so without it a stuck run holds the group for
+    # GitHub's 6h default.
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: ui
