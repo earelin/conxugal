@@ -105,11 +105,11 @@ ON CONFLICT (id) DO UPDATE SET
   added = EXCLUDED.added,
   refreshed = EXCLUDED.refreshed;
 
-INSERT INTO import_run_organo (run_id, organo_id, state, added, refreshed, failure_reason)
+INSERT INTO import_run_organo (run_id, organo_id, family, state, added, refreshed, failure_reason)
 VALUES
-  ('eeeeeeee-eeee-7eee-8eee-eeeeeeeeeeee', 'aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa', 'SUCCEEDED', 1204, 96, NULL),
-  ('eeeeeeee-eeee-7eee-8eee-eeeeeeeeeeee', 'bbbbbbbb-bbbb-7bbb-8bbb-bbbbbbbbbbbb', 'FAILED', 0, 0, 'O produtor de datos non respondeu (proba)')
-ON CONFLICT (run_id, organo_id) DO UPDATE SET
+  ('eeeeeeee-eeee-7eee-8eee-eeeeeeeeeeee', 'aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa', 'CONTRATOS_MENORES', 'SUCCEEDED', 1204, 96, NULL),
+  ('eeeeeeee-eeee-7eee-8eee-eeeeeeeeeeee', 'bbbbbbbb-bbbb-7bbb-8bbb-bbbbbbbbbbbb', 'CONTRATOS_MENORES', 'FAILED', 0, 0, 'O produtor de datos non respondeu (proba)')
+ON CONFLICT (run_id, organo_id, family) DO UPDATE SET
   state = EXCLUDED.state,
   added = EXCLUDED.added,
   refreshed = EXCLUDED.refreshed,

@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import gal.conxugal.domain.importrun.ContractFamily;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
@@ -71,6 +72,25 @@ class ExecuteContratosMenoresImportTest {
     executeContratosMenoresImport().execute(RUN_ID);
 
     assertThat(imported).containsExactly(FIRST, SECOND, THIRD);
+  }
+
+  // A run asked for both families holds two rows per Órgano, and this walks one of them. Taking
+  // every row would walk each Órgano twice and settle the licitacións row on this walk's outcome.
+  @Test
+  void walks_only_the_contratos_menores_rows_when_the_run_covers_both_families() {
+    when(importRuns.holdsGuard(RUN_ID)).thenReturn(true);
+    runIsRecordedWithCoverage(
+        List.of(
+            pending(FIRST, ContractFamily.CONTRATOS_MENORES),
+            pending(FIRST, ContractFamily.LICITACIONS),
+            pending(SECOND, ContractFamily.CONTRATOS_MENORES),
+            pending(SECOND, ContractFamily.LICITACIONS)));
+    catalogueHolds(FIRST, SECOND);
+    eachOrganoSettles(organoId -> ImportRunOrganoState.SUCCEEDED);
+
+    executeContratosMenoresImport().execute(RUN_ID);
+
+    assertThat(imported).containsExactly(FIRST, SECOND);
   }
 
   @Test
@@ -349,13 +369,11 @@ class ExecuteContratosMenoresImportTest {
 
   /** The coverage alone, for the tests that say themselves what the guard answers. */
   private void runIsRecordedCovering(OrganoId... organoIds) {
-    List<ImportRunOrganoCoverage> coverage =
-        Arrays.stream(organoIds)
-            .map(
-                organoId ->
-                    new ImportRunOrganoCoverage(
-                        organoId, ImportRunOrganoState.PENDING, 0, 0, null))
-            .toList();
+    runIsRecordedWithCoverage(
+        Arrays.stream(organoIds).map(ExecuteContratosMenoresImportTest::pending).toList());
+  }
+
+  private void runIsRecordedWithCoverage(List<ImportRunOrganoCoverage> coverage) {
     when(importRuns.findRun(RUN_ID))
         .thenReturn(
             Optional.of(
@@ -368,6 +386,15 @@ class ExecuteContratosMenoresImportTest {
                     0,
                     0,
                     coverage)));
+  }
+
+  private static ImportRunOrganoCoverage pending(OrganoId organoId) {
+    return pending(organoId, ContractFamily.CONTRATOS_MENORES);
+  }
+
+  private static ImportRunOrganoCoverage pending(OrganoId organoId, ContractFamily family) {
+    return new ImportRunOrganoCoverage(
+        organoId, family, ImportRunOrganoState.PENDING, 0, 0, null);
   }
 
   /**

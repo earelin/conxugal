@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.domain.contrato.ReadContratosMenoresWindow.BatchRecorder;
+import gal.conxugal.domain.importrun.ContractFamily;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.money.Money;
@@ -143,7 +144,7 @@ class ReadContratosMenoresWindowTest {
 
     assertThat(read).isEqualTo(new WindowRead(100, 0, 0, StopReason.GUARD_LOST));
     assertThat(recordedBatches).isEmpty();
-    verify(importRuns, never()).advance(any(), any(), anyInt(), anyInt());
+    verify(importRuns, never()).advance(any(), any(), any(), anyInt(), anyInt());
   }
 
   @Test
@@ -183,7 +184,7 @@ class ReadContratosMenoresWindowTest {
 
     assertThat(read).isEqualTo(new WindowRead(100, 0, 0, StopReason.UNMARKED));
     assertThat(recordedBatches).hasSize(1);
-    verify(importRuns).advance(RUN_ID, ORGANO_ID, 100, 0);
+    verify(importRuns).advance(RUN_ID, ORGANO_ID, ContractFamily.CONTRATOS_MENORES, 100, 0);
   }
 
   // Order, not merely occurrence: the caller's hook runs first and the run is advanced after it,
@@ -196,7 +197,7 @@ class ReadContratosMenoresWindowTest {
     List<String> bookkeeping = new ArrayList<>();
     doAnswer(invocation -> bookkeeping.add("run advanced"))
         .when(importRuns)
-        .advance(any(), any(), anyInt(), anyInt());
+        .advance(any(), any(), any(), anyInt(), anyInt());
 
     read(() -> true, (counts, windowStart, windowEnd, lastPage) -> bookkeeping.add("batch"));
 
@@ -255,7 +256,7 @@ class ReadContratosMenoresWindowTest {
     sourcePublishes(1, entries(1));
     doThrow(new IllegalStateException("the run record is unreachable"))
         .when(importRuns)
-        .advance(any(), any(), anyInt(), anyInt());
+        .advance(any(), any(), any(), anyInt(), anyInt());
 
     WindowRead read = read();
 

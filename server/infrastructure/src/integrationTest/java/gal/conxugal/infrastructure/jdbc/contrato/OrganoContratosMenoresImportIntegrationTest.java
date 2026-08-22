@@ -17,6 +17,8 @@ import gal.conxugal.domain.contrato.ContratoMenorSourcePage;
 import gal.conxugal.domain.contrato.ContratoMenorSourceUnavailableException;
 import gal.conxugal.domain.contrato.ContratosMenoresImportSummary;
 import gal.conxugal.domain.contrato.ImportOrganoContratosMenores;
+import gal.conxugal.domain.importrun.ContractFamily;
+import gal.conxugal.domain.importrun.CoveredOrgano;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.ImportRunState;
@@ -319,7 +321,9 @@ class OrganoContratosMenoresImportIntegrationTest implements TestPropertyProvide
 
   private ImportRunId claim(OrganoId organoId) {
     return importRuns
-        .claim(Importer.CONTRATOS_MENORES, List.of(organoId))
+        .claim(
+            Importer.CONTRATOS_MENORES,
+            List.of(new CoveredOrgano(organoId, ContractFamily.CONTRATOS_MENORES)))
         .orElseThrow(() -> new IllegalStateException("the import guard was already held"));
   }
 

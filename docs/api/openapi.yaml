@@ -2265,14 +2265,16 @@ components:
     ImportRunOrgano:
       type: object
       description: >-
-        One Órgano a run covers, and how it fared. `STOPPED` is not a failure: an Órgano is
-        stopped when its mark was withdrawn, keeping everything already stored. `SKIPPED` is not
-        one either, and nothing produces it any more — it is carried only by runs recorded before
-        the incremental refresh existed, when an Órgano whose history was already complete was
-        passed over instead of being refreshed.
-      required: [organoId, state, added, refreshed, failureReason]
+        One Órgano a run covers, for one contract family, and how it fared. A run asked for both
+        families of an Órgano carries two of these, each with its own state and counts. `STOPPED`
+        is not a failure: an Órgano is stopped when its mark was withdrawn, keeping everything
+        already stored. `SKIPPED` is not one either, and nothing produces it any more — it is
+        carried only by runs recorded before the incremental refresh existed, when an Órgano whose
+        history was already complete was passed over instead of being refreshed.
+      required: [organoId, family, state, added, refreshed, failureReason]
       example:
         organoId: "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa"
+        family: "CONTRATOS_MENORES"
         state: "SUCCEEDED"
         added: 1204
         refreshed: 96
@@ -2283,6 +2285,15 @@ components:
           format: uuid
           example: "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa"
           description: The covered Órgano's identity.
+        family:
+          type: string
+          enum: [CONTRATOS_MENORES, LICITACIONS]
+          example: "CONTRATOS_MENORES"
+          description: >-
+            Which family of contracts this row is about. An Órgano's two families are loaded
+            separately and fare separately, so a run covering both holds one row of each and
+            neither family's progress can be read as the other's. Runs recorded before a second
+            family existed read as `CONTRATOS_MENORES`.
         state:
           type: string
           enum: [PENDING, IN_PROGRESS, SUCCEEDED, FAILED, STOPPED, SKIPPED]
@@ -2296,14 +2307,17 @@ components:
           minimum: 0
           maximum: 2147483647
           example: 1204
-          description: Contratos menores new to the store, read for this Órgano by this run.
+          description: >-
+            Contracts of this family new to the store, read for this Órgano by this run.
         refreshed:
           type: integer
           format: int32
           minimum: 0
           maximum: 2147483647
           example: 96
-          description: Contratos menores already stored, re-read by this run and updated in place.
+          description: >-
+            Contracts of this family already stored, re-read for this Órgano by this run and
+            updated in place.
         failureReason:
           type: [string, "null"]
           pattern: "^.{1,500}$"
@@ -2331,11 +2345,13 @@ components:
         refreshed: 96
         coveredOrganos:
           - organoId: "aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa"
+            family: "CONTRATOS_MENORES"
             state: "SUCCEEDED"
             added: 1204
             refreshed: 96
             failureReason: null
           - organoId: "bbbbbbbb-bbbb-7bbb-8bbb-bbbbbbbbbbbb"
+            family: "CONTRATOS_MENORES"
             state: "FAILED"
             added: 0
             refreshed: 0
@@ -2348,11 +2364,14 @@ components:
           description: The run's identity, as the trigger that claimed it returned it.
         importer:
           type: string
-          enum: [ORGANOS, CONTRATOS_MENORES]
+          enum: [ORGANOS, CONTRATOS_MENORES, LICITACIONS, AMBAS_FAMILIAS]
           example: "CONTRATOS_MENORES"
           description: >-
             Which import produced this run. Recorded so an outcome can say what ran; the guard
-            does not tell them apart, since one live run of either refuses a trigger of either.
+            does not tell them apart, since one live run of any of them refuses a trigger of any
+            other. This is **what was triggered**, not a summary of what the run covered:
+            `AMBAS_FAMILIAS` is a trigger that asked for both contract families, and which
+            families a run actually holds rows for is read off `coveredOrganos`.
         state:
           type: string
           enum: [IN_PROGRESS, SUCCEEDED, PARTIALLY_SUCCEEDED, FAILED, ABANDONED]
@@ -2381,20 +2400,25 @@ components:
           minimum: 0
           maximum: 2147483647
           example: 1204
-          description: Contratos menores new to the store across every Órgano this run covered.
+          description: >-
+            Contracts new to the store across every Órgano this run covered, and across both
+            families where it covered both. The per-family figure is on `coveredOrganos`; this is
+            the run's own total, and it is the only count a run covering no Órganos has.
         refreshed:
           type: integer
           format: int32
           minimum: 0
           maximum: 2147483647
           example: 96
-          description: Contratos menores this run re-read and updated in place, across every Órgano.
+          description: >-
+            Contracts this run re-read and updated in place, across every Órgano it covered and
+            across both families where it covered both.
         coveredOrganos:
           type: array
           maxItems: 10000
           description: >-
-            Every Órgano the run set out to cover, each with its own state and counts. Empty for
-            the catalogue import, which covers no Órganos.
+            Every Órgano the run set out to cover, one entry per family, each with its own state
+            and counts. Empty for the catalogue import, which covers no Órganos.
           items:
             $ref: "#/components/schemas/ImportRunOrgano"
 

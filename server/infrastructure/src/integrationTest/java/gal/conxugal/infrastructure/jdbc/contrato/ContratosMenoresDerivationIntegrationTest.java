@@ -14,6 +14,8 @@ import gal.conxugal.domain.contrato.ContratoMenorSourceEntry;
 import gal.conxugal.domain.contrato.ContratoMenorSourcePage;
 import gal.conxugal.domain.contrato.ImportOrganoContratosMenores;
 import gal.conxugal.domain.contrato.StoreContratosMenoresBatch;
+import gal.conxugal.domain.importrun.ContractFamily;
+import gal.conxugal.domain.importrun.CoveredOrgano;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.ImportRunState;
@@ -368,7 +370,9 @@ class ContratosMenoresDerivationIntegrationTest implements TestPropertyProvider 
   private void walk(OrganoId organoId) {
     ImportRunId runId =
         importRuns
-            .claim(Importer.CONTRATOS_MENORES, List.of(organoId))
+            .claim(
+            Importer.CONTRATOS_MENORES,
+            List.of(new CoveredOrgano(organoId, ContractFamily.CONTRATOS_MENORES)))
             .orElseThrow(() -> new IllegalStateException("the import guard was already held"));
     importContratosMenores.run(runId, organo(organoId), () -> true);
     importRuns.complete(runId, ImportRunState.SUCCEEDED, 0, 0);

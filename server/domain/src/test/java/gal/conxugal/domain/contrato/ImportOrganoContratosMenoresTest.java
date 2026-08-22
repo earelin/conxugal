@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import gal.conxugal.domain.importrun.ContractFamily;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.money.Money;
@@ -286,8 +287,8 @@ class ImportOrganoContratosMenoresTest {
 
     walk().run(RUN_ID, organo(), () -> true);
 
-    verify(importRuns).advance(RUN_ID, ORGANO_ID, 100, 0);
-    verify(importRuns).advance(RUN_ID, ORGANO_ID, 50, 0);
+    verify(importRuns).advance(RUN_ID, ORGANO_ID, ContractFamily.CONTRATOS_MENORES, 100, 0);
+    verify(importRuns).advance(RUN_ID, ORGANO_ID, ContractFamily.CONTRATOS_MENORES, 50, 0);
   }
 
   // Asserted in order, because order is the whole claim: verifying the two calls separately passes
@@ -333,7 +334,7 @@ class ImportOrganoContratosMenoresTest {
     sourcePublishes(1, Map.of(FIRST_WINDOW_START, entries(1)));
     doThrow(new IllegalStateException("the run record is unreachable"))
         .when(importRuns)
-        .advance(any(), any(), anyInt(), anyInt());
+        .advance(any(), any(), any(), anyInt(), anyInt());
 
     ContratosMenoresImportSummary summary = walk().run(RUN_ID, organo(), () -> true);
 
@@ -361,7 +362,7 @@ class ImportOrganoContratosMenoresTest {
     // The advance shares the hook's try, so it is skipped too: the run loses that batch's counts
     // along with its cursor. Sacrificing both is what keeps the contracts, and it is the ordering
     // the sibling test pins from the other side.
-    verify(importRuns, never()).advance(any(), any(), anyInt(), anyInt());
+    verify(importRuns, never()).advance(any(), any(), any(), anyInt(), anyInt());
   }
 
   @Test
@@ -413,7 +414,7 @@ class ImportOrganoContratosMenoresTest {
     assertThat(requestedSlices).containsExactly(new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 0));
     // The batch's contracts stand; the cursor stays where the batch before it left it, so the
     // window is re-read whole on resumption rather than half-skipped.
-    verify(importRuns, never()).advance(any(), any(), anyInt(), anyInt());
+    verify(importRuns, never()).advance(any(), any(), any(), anyInt(), anyInt());
     verify(importStates, never()).updateCursorDate(any(), any());
     verify(importStates, never()).updateState(any(), any());
   }
@@ -432,7 +433,7 @@ class ImportOrganoContratosMenoresTest {
     assertThat(summary)
         .isEqualTo(ContratosMenoresImportSummary.stopped(100, 0, StopReason.GUARD_LOST));
     assertThat(requestedSlices).containsExactly(new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 0));
-    verify(importRuns).advance(RUN_ID, ORGANO_ID, 100, 0);
+    verify(importRuns).advance(RUN_ID, ORGANO_ID, ContractFamily.CONTRATOS_MENORES, 100, 0);
     verify(importStates, never()).updateState(any(), any());
   }
 
@@ -464,7 +465,7 @@ class ImportOrganoContratosMenoresTest {
     assertThat(summary)
         .isEqualTo(ContratosMenoresImportSummary.stopped(100, 0, StopReason.UNMARKED));
     assertThat(requestedSlices).containsExactly(new Slice(FIRST_WINDOW_START, T_ZERO_DAY, 0));
-    verify(importRuns).advance(RUN_ID, ORGANO_ID, 100, 0);
+    verify(importRuns).advance(RUN_ID, ORGANO_ID, ContractFamily.CONTRATOS_MENORES, 100, 0);
   }
 
   // The withdrawal lands on the batch that exhausts the window, which is the batch after which the

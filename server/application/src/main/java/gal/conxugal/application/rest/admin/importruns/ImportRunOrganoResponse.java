@@ -9,14 +9,21 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
- * One Órgano a run covers, and how it fared. The reason says what the state cannot: which of the
- * covered Órganos failed and on what, why a skipped one was passed over, and which withdrawal
- * stopped a stopped one.
+ * One Órgano a run covers, for one family, and how it fared. A run asked for both families of an
+ * Órgano answers two of these, which is what lets a reader say what each family's import did.
+ *
+ * <p>The reason says what the state cannot: which of the covered Órganos failed and on what, why a
+ * skipped one was passed over, and which withdrawal stopped a stopped one.
  */
 @Serdeable
 @JsonInclude(JsonInclude.Include.ALWAYS)
 public record ImportRunOrganoResponse(
-    UUID organoId, String state, int added, int refreshed, @Nullable String failureReason) {
+    UUID organoId,
+    String family,
+    String state,
+    int added,
+    int refreshed,
+    @Nullable String failureReason) {
 
   /** The longest reason this answers with, matching the bound the contract declares. */
   private static final int LONGEST_REASON = 500;
@@ -26,6 +33,7 @@ public record ImportRunOrganoResponse(
   static ImportRunOrganoResponse of(ImportRunOrganoCoverage coverage) {
     return new ImportRunOrganoResponse(
         coverage.organoId().value(),
+        coverage.family().name(),
         coverage.state().name(),
         coverage.added(),
         coverage.refreshed(),

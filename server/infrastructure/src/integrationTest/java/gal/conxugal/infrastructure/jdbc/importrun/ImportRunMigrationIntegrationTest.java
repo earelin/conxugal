@@ -29,7 +29,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Verifies V15's schema directly rather than through the adapter, because most of the claims are
+ * Verifies the run schema directly rather than through the adapter, because most of the claims are
  * about what the two tables deliberately do <em>not</em> carry. A repository call cannot show the
  * absence of a column, and the absent ones here are load-bearing: no trigger and no scope, because
  * nothing this feature meets reads them, and no partial unique index, because the guard is a lock
@@ -75,10 +75,10 @@ class ImportRunMigrationIntegrationTest implements TestPropertyProvider {
   }
 
   @Test
-  void the_coverage_row_holds_one_organos_own_state_counts_and_reason() throws Exception {
+  void the_coverage_row_holds_one_familys_own_state_counts_and_reason() throws Exception {
     assertThat(columnNamesOf("import_run_organo"))
         .containsExactlyInAnyOrder(
-            "run_id", "organo_id", "state", "added", "refreshed", "failure_reason");
+            "run_id", "organo_id", "family", "state", "added", "refreshed", "failure_reason");
   }
 
   // The guarantee a partial unique index would have given is asserted in the claim instead, so
@@ -99,8 +99,22 @@ class ImportRunMigrationIntegrationTest implements TestPropertyProvider {
     assertThat(foreignKeyTargetsOf("import_run")).isEmpty();
   }
 
+  // R27's requirement in the schema: marking an Órgano imports both families within one run, so
+  // the key admits it once per family rather than once outright.
   @Test
-  void second_coverage_row_for_the_same_organo_within_one_run_is_refused() throws Exception {
+  void both_families_of_the_same_organo_are_covered_within_one_run() throws Exception {
+    UUID runId = insertRun("AMBAS_FAMILIAS");
+    UUID organoId = insertOrgano("consorcio-x");
+
+    insertCoverage(runId, organoId, "CONTRATOS_MENORES");
+    insertCoverage(runId, organoId, "LICITACIONS");
+
+    assertThat(familiesCovered(runId)).containsExactly("CONTRATOS_MENORES", "LICITACIONS");
+  }
+
+  @Test
+  void second_coverage_row_for_the_same_organo_and_family_within_one_run_is_refused()
+      throws Exception {
     UUID runId = insertRun("CONTRATOS_MENORES");
     UUID organoId = insertOrgano("consorcio-x");
     insertCoverage(runId, organoId);
@@ -181,6 +195,11 @@ class ImportRunMigrationIntegrationTest implements TestPropertyProvider {
         "target_table");
   }
 
+  private List<String> familiesCovered(UUID runId) throws SQLException {
+    return queryStrings(
+        "SELECT family FROM import_run_organo WHERE run_id = ? ORDER BY family", runId, "family");
+  }
+
   private List<Integer> runCounts(UUID runId) throws SQLException {
     return counts("SELECT added, refreshed FROM import_run WHERE id = ?", runId);
   }
@@ -202,12 +221,12 @@ class ImportRunMigrationIntegrationTest implements TestPropertyProvider {
     }
   }
 
-  private List<String> queryStrings(String sql, String parameter, String column)
+  private List<String> queryStrings(String sql, Object parameter, String column)
       throws SQLException {
     List<String> values = new ArrayList<>();
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setString(1, parameter);
+      statement.setObject(1, parameter);
       try (ResultSet resultSet = statement.executeQuery()) {
         while (resultSet.next()) {
           values.add(resultSet.getString(column));
@@ -246,9 +265,14 @@ class ImportRunMigrationIntegrationTest implements TestPropertyProvider {
   }
 
   private void insertCoverage(UUID runId, UUID organoId) throws SQLException {
+    insertCoverage(runId, organoId, "CONTRATOS_MENORES");
+  }
+
+  private void insertCoverage(UUID runId, UUID organoId, String family) throws SQLException {
     executeUpdate(
-        "INSERT INTO import_run_organo (run_id, organo_id, state) VALUES (?, ?, 'PENDING')",
-        runId, organoId);
+        "INSERT INTO import_run_organo (run_id, organo_id, family, state)"
+            + " VALUES (?, ?, ?, 'PENDING')",
+        runId, organoId, family);
   }
 
   private UUID insertOrgano(String sourceKey) throws SQLException {

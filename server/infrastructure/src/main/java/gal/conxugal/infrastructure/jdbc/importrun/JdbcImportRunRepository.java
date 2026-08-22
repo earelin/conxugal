@@ -1,5 +1,7 @@
 package gal.conxugal.infrastructure.jdbc.importrun;
 
+import gal.conxugal.domain.importrun.ContractFamily;
+import gal.conxugal.domain.importrun.CoveredOrgano;
 import gal.conxugal.domain.importrun.ImportRun;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
@@ -63,9 +65,9 @@ import org.slf4j.LoggerFactory;
  * insertion path would step past the lock with no error to show for it.
  *
  * <p>The coverage rows are written and read by hand rather than mapped, because advancing one adds
- * to its counts rather than replacing them, and no derived method expresses an increment. They
- * travel as one array through {@code unnest}, so the statement is a constant whatever the number
- * of covered Órganos rather than a string assembled around a placeholder count.
+ * to its counts rather than replacing them, and no derived method expresses an increment. Their
+ * Órganos and families travel as two parallel arrays through {@code unnest}, so the statement is a
+ * constant whatever the coverage's size rather than a string assembled around a placeholder count.
  *
  * <p>A write that matches no row is logged and let go rather than thrown. The record is evidence
  * about an import, not a participant in it, and failing the import because its bookkeeping missed
@@ -98,10 +100,13 @@ public abstract class JdbcImportRunRepository
        LIMIT 1
       """;
 
+  // The two arrays are unnested side by side, so one (Órgano, family) pair per row and the
+  // statement stays a constant whatever the coverage's size.
   private static final String ENUMERATE_COVERAGE =
       """
-      INSERT INTO import_run_organo (run_id, organo_id, state)
-      SELECT ?::uuid, covered.organo_id, ?::text FROM unnest(?::uuid[]) AS covered(organo_id)
+      INSERT INTO import_run_organo (run_id, organo_id, family, state)
+      SELECT ?::uuid, covered.organo_id, covered.family, ?::text
+        FROM unnest(?::uuid[], ?::text[]) AS covered(organo_id, family)
       """;
 
   private static final String ADVANCE_RUN =
@@ -118,7 +123,7 @@ public abstract class JdbcImportRunRepository
       """
       UPDATE import_run_organo
          SET state = ?, added = added + ?, refreshed = refreshed + ?
-       WHERE run_id = ? AND organo_id = ? AND state = ANY(?::text[])
+       WHERE run_id = ? AND organo_id = ? AND family = ? AND state = ANY(?::text[])
       """;
 
   /** The states an Órgano can still be advanced out of; every other one is its last. */
@@ -129,7 +134,7 @@ public abstract class JdbcImportRunRepository
       """
       UPDATE import_run_organo
          SET state = ?, failure_reason = ?
-       WHERE run_id = ? AND organo_id = ?
+       WHERE run_id = ? AND organo_id = ? AND family = ?
       """;
 
   // last_advanced_at moves with the verdict so it is never left older than finished_at. It has no
@@ -146,10 +151,10 @@ public abstract class JdbcImportRunRepository
 
   private static final String COVERAGE_OF_RUN =
       """
-      SELECT organo_id, state, added, refreshed, failure_reason
+      SELECT organo_id, family, state, added, refreshed, failure_reason
         FROM import_run_organo
        WHERE run_id = ?
-       ORDER BY organo_id
+       ORDER BY organo_id, family
       """;
 
   private final JdbcOperations jdbcOperations;
@@ -167,12 +172,12 @@ public abstract class JdbcImportRunRepository
   @Transactional(
       propagation = TransactionDefinition.Propagation.REQUIRES_NEW,
       isolation = TransactionDefinition.Isolation.READ_COMMITTED)
-  public Optional<ImportRunId> claim(Importer importer, Collection<OrganoId> coveredOrganos) {
+  public Optional<ImportRunId> claim(Importer importer, Collection<CoveredOrgano> coveredOrganos) {
     Objects.requireNonNull(importer, "importer must not be null");
     Objects.requireNonNull(coveredOrganos, "coveredOrganos must not be null");
-    // A Set, because naming an Órgano twice is a caller's slip rather than a run that covers it
+    // A Set, because naming a pair twice is a caller's slip rather than a run that covers it
     // twice, and the composite key would answer it by rolling the whole claim back.
-    Set<OrganoId> covered = new LinkedHashSet<>(coveredOrganos);
+    Set<CoveredOrgano> covered = new LinkedHashSet<>(coveredOrganos);
     takeTheGuard();
     Instant now = clock.instant();
     if (theGuardIsHeld(now)) {
@@ -192,20 +197,22 @@ public abstract class JdbcImportRunRepository
    */
   @Override
   @Transactional(propagation = TransactionDefinition.Propagation.REQUIRES_NEW)
-  public void advance(ImportRunId runId, OrganoId organoId, int added, int refreshed) {
+  public void advance(
+      ImportRunId runId, OrganoId organoId, ContractFamily family, int added, int refreshed) {
     int organosAdvanced = executeUpdate(ADVANCE_ORGANO, statement -> {
       statement.setString(1, ImportRunOrganoState.IN_PROGRESS.name());
       statement.setInt(2, added);
       statement.setInt(3, refreshed);
       statement.setObject(4, runId.value());
       statement.setObject(5, organoId.value());
-      statement.setArray(6, namesOf(statement.getConnection(), UNSETTLED));
+      statement.setString(6, family.name());
+      statement.setArray(7, namesOf(statement.getConnection(), UNSETTLED));
     });
     if (organosAdvanced == 0) {
       LOG.warn(
-          "Run {} advanced against Órgano {}, which it does not cover or has already settled;"
-              + " the batch is not counted",
-          runId, organoId);
+          "Run {} advanced against the {} of Órgano {}, which it does not cover or has already"
+              + " settled; the batch is not counted",
+          runId, family, organoId);
       return;
     }
     Instant now = clock.instant();
@@ -222,6 +229,7 @@ public abstract class JdbcImportRunRepository
   public void finishOrgano(
       ImportRunId runId,
       OrganoId organoId,
+      ContractFamily family,
       ImportRunOrganoState state,
       @Nullable String failureReason) {
     int settled = executeUpdate(FINISH_ORGANO, statement -> {
@@ -229,9 +237,11 @@ public abstract class JdbcImportRunRepository
       statement.setString(2, failureReason);
       statement.setObject(3, runId.value());
       statement.setObject(4, organoId.value());
+      statement.setString(5, family.name());
     });
     if (settled == 0) {
-      LOG.warn("Run {} settled Órgano {}, which it does not cover", runId, organoId);
+      LOG.warn(
+          "Run {} settled the {} of Órgano {}, which it does not cover", runId, family, organoId);
     }
   }
 
@@ -314,16 +324,25 @@ public abstract class JdbcImportRunRepository
             == ImportRunState.IN_PROGRESS;
   }
 
-  private void enumerateCoverage(ImportRunId runId, Set<OrganoId> covered) {
+  /**
+   * The one place a coverage row is written, called only by {@link #claim}. The re-keying that let
+   * one run cover an Órgano twice is exactly what makes a second insertion path tempting — a
+   * family added later, against a run already claimed — and that path would put a row under a
+   * guard the claim is no longer inside.
+   */
+  private void enumerateCoverage(ImportRunId runId, Set<CoveredOrgano> covered) {
     if (covered.isEmpty()) {
       return;
     }
     executeUpdate(ENUMERATE_COVERAGE, statement -> {
       Connection connection = statement.getConnection();
-      UUID[] organoIds = covered.stream().map(OrganoId::value).toArray(UUID[]::new);
+      UUID[] organoIds =
+          covered.stream().map(row -> row.organoId().value()).toArray(UUID[]::new);
+      String[] families = covered.stream().map(row -> row.family().name()).toArray(String[]::new);
       statement.setObject(1, runId.value());
       statement.setString(2, ImportRunOrganoState.PENDING.name());
       statement.setArray(3, connection.createArrayOf("uuid", organoIds));
+      statement.setArray(4, connection.createArrayOf("text", families));
     });
   }
 
@@ -357,6 +376,7 @@ public abstract class JdbcImportRunRepository
   private static ImportRunOrganoCoverage coverageAt(ResultSet rows) throws SQLException {
     return new ImportRunOrganoCoverage(
         new OrganoId(rows.getObject("organo_id", UUID.class)),
+        ContractFamily.valueOf(rows.getString("family")),
         ImportRunOrganoState.valueOf(rows.getString("state")),
         rows.getInt("added"),
         rows.getInt("refreshed"),

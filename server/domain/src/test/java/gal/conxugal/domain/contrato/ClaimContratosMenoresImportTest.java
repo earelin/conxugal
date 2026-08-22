@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import gal.conxugal.domain.importrun.ContractFamily;
+import gal.conxugal.domain.importrun.CoveredOrgano;
 import gal.conxugal.domain.importrun.ImportAlreadyRunningException;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
@@ -37,12 +39,14 @@ class ClaimContratosMenoresImportTest {
   private ImportRunRepository importRuns;
 
   @Test
-  void claims_one_run_covering_every_active_and_marked_organo() {
+  void claims_one_run_covering_every_active_and_marked_organo_for_contratos_menores_alone() {
     when(organos.findAllByActiveTrueAndImportableTrue())
         .thenReturn(List.of(marked(FIRST), marked(SECOND)));
     // Stubbed on the exact coverage: strict stubbing refuses any other list, so this is what
-    // proves the run was claimed over these two and no others.
-    when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of(FIRST, SECOND)))
+    // proves the run was claimed over these two Órganos, for this family only, and no others.
+    when(importRuns.claim(
+            Importer.CONTRATOS_MENORES,
+            List.of(contratosMenoresOf(FIRST), contratosMenoresOf(SECOND))))
         .thenReturn(Optional.of(RUN_ID));
 
     assertThat(claimContratosMenoresImport().claimAll()).isEqualTo(RUN_ID);
@@ -61,7 +65,8 @@ class ClaimContratosMenoresImportTest {
   @Test
   void refuses_the_sweep_when_another_import_holds_the_guard() {
     when(organos.findAllByActiveTrueAndImportableTrue()).thenReturn(List.of(marked(FIRST)));
-    when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of(FIRST))).thenReturn(Optional.empty());
+    when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of(contratosMenoresOf(FIRST))))
+        .thenReturn(Optional.empty());
     ClaimContratosMenoresImport claim = claimContratosMenoresImport();
 
     assertThatExceptionOfType(ImportAlreadyRunningException.class).isThrownBy(claim::claimAll);
@@ -70,7 +75,7 @@ class ClaimContratosMenoresImportTest {
   @Test
   void claims_one_run_covering_only_the_named_organo() {
     when(organos.findById(SECOND)).thenReturn(Optional.of(marked(SECOND)));
-    when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of(SECOND)))
+    when(importRuns.claim(Importer.CONTRATOS_MENORES, List.of(contratosMenoresOf(SECOND))))
         .thenReturn(Optional.of(RUN_ID));
 
     assertThat(claimContratosMenoresImport().claimOrgano(SECOND)).isEqualTo(RUN_ID);
@@ -110,6 +115,10 @@ class ClaimContratosMenoresImportTest {
         .isThrownBy(() -> claim.claimOrgano(FIRST));
 
     verifyNoInteractions(importRuns);
+  }
+
+  private static CoveredOrgano contratosMenoresOf(OrganoId organoId) {
+    return new CoveredOrgano(organoId, ContractFamily.CONTRATOS_MENORES);
   }
 
   private ClaimContratosMenoresImport claimContratosMenoresImport() {
