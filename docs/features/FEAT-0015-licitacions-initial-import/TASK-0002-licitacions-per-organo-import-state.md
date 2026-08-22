@@ -50,6 +50,12 @@ and that is easiest to guarantee when there is no shared row to get wrong.
     ask the source for one row. Storing them with the identifier is one small table's worth of
     duplication; the alternative is a retried procedure that cannot be stored at all.
 
+    **The two state columns hold the published values, not a foreign key**, even though
+    [TASK-0003](TASK-0003-licitacion-domain-model.md) keys the state in a table of its own. A ledger
+    entry records what the listing said; the row it will need may not exist yet, and pointing at one
+    would make the ledger depend on a write it does not perform. The retry upserts the state from
+    these two values, exactly as the listing path does.
+
     It is a **set of identifiers to try once more**, not a retry queue: no attempt count, no
     backoff, no next-attempt time. That machinery answers a problem nobody has measured.
 - `LicitacionImportStatus` — `NEVER_STARTED`, `INCOMPLETE`, `COMPLETE` — with `NEVER_STARTED` never
@@ -97,4 +103,6 @@ separately stored and separately written.
   [TASK-0023](TASK-0023-the-outstanding-record-ledger-in-the-walk.md) applies. (SPEC-0008 #41)
 - A migration integration test pins each new table's exact column set with
   `containsExactlyInAnyOrder`, on the precedent of
-  `ContratosMenoresImportStateMigrationIntegrationTest`. `publication_id` is `BIGINT`.
+  `ContratosMenoresImportStateMigrationIntegrationTest`. `publication_id` is **`TEXT`**, matching
+  `licitacion.publication_id`: the ledger holds identifiers to retry, and one it could not
+  represent would be one the walk could never come back to.

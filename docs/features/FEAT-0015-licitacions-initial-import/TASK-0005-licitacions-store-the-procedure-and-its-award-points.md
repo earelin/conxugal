@@ -23,11 +23,37 @@ behind TASK-0003's port.
 
 - **A migration** (next free `V` across `db/migration` **and** `db/migration-local`, taken at merge
   time) creating:
-  - **`licitacion`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, `publication_id BIGINT NOT NULL
-    UNIQUE` as the natural key, an FK to `organo_contratacion`, a nullable `publication_date`, the
-    state **code and label** as separate columns, the rest of R7's fields, and the withdrawal
-    marker. Exactly `contrato_menor`'s shape, whose `source_id BIGINT NOT NULL UNIQUE` beside a
-    surrogate `id` is the precedent.
+  - **`licitacion`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, `publication_id TEXT NOT NULL
+    UNIQUE` as the natural key, an FK to `organo_contratacion`, a nullable `publication_date`, a
+    `state_id` FK, three nullable type FKs, the rest of R7's fields, and the withdrawal marker.
+    `contrato_menor`'s shape — a published unique key beside a surrogate `id` — with the key's
+    type widened.
+
+    **`TEXT`, not `BIGINT`, though every identifier measured is an integer.** How the source mints
+    them is the source's business, and one that changed shape would otherwise cost a column type,
+    a migration and a re-import of every procedure rather than a parse at the adapter. The column
+    is matched on and never ordered, summed or incremented, so text costs nothing here; the
+    listing endpoint does the ordering the walk resumes by. `contrato_menor.source_id` stays
+    `BIGINT` — widening a shipped column of millions is not this task's change to make.
+  - **The four vocabulary tables TASK-0003's entities map**, each `id UUID PRIMARY KEY DEFAULT
+    uuidv7()` beside its published natural key:
+
+    | Table | Natural key | Other columns |
+    | --- | --- | --- |
+    | `licitacion_state` | `code INT NOT NULL UNIQUE` | `label TEXT` — **deliberately not unique** |
+    | `licitacion_contract_type` | `name TEXT NOT NULL UNIQUE` | — |
+    | `licitacion_procedure_type` | `name TEXT NOT NULL UNIQUE` | — |
+    | `licitacion_tramitacion_type` | `name TEXT NOT NULL UNIQUE` | — |
+
+    **The state's label carries no constraint, and that is the point.** Codes 101 and 102 are both
+    published as *Histórico*, so a `UNIQUE` there would reject the second real state the source
+    publishes.
+
+    **None of the four is seeded.** The state set is not closed — code 7 was never observed and
+    higher ones may exist — so the upsert creates a row for a value the source has not published
+    before, inside the transaction that stores the procedure. A seeded catalogue would turn an
+    unseen code into a foreign-key violation and a rejected procedure, which is the harm R33's
+    store-as-published exists to prevent.
   - **`licitacion_lote`** — its `licitacion_id`, its identifier as **`TEXT`** (measured: `OU0028`,
     `LU4001` and `CO0642` are all real lote identifiers), the two optional extras and the
     withdrawal marker;
@@ -56,7 +82,10 @@ behind TASK-0003's port.
   `NULLS NOT DISTINCT` is load-bearing: PostgreSQL treats NULLs as distinct by default, so without
   it the procedure-wide row of a lotless procedure would insert afresh on every re-import — which is
   every procedure, on every run.
-- **The withdrawal marker is on every one of the five tables**, defaulting to *not withdrawn*.
+- **No vocabulary table carries a withdrawal marker.** The four are not parts of a procedure the
+  source restates; they are the values it publishes, and a state or a type no procedure references
+  any more is still one the source published. R13's withdrawal has nothing to say about them.
+- **The withdrawal marker is on every one of the five child tables**, defaulting to *not withdrawn*.
   TASK-0014 needs it on the lote and the classifications too — SPEC-0008 #16 names the lote
   explicitly — and an earlier draft put it only on three. On `licitacion` itself it is created
   empty, on `V13`'s stated reasoning that adding a column later to a table of millions is a
@@ -73,7 +102,42 @@ behind TASK-0003's port.
   above… its `publication_date` column is what neither of them needed from it"* — replacing it with
   partial indexes on a generated `publication_year`. The browsing feature measures R32 over its own
   queries and adds what those measurements ask for.
-- **JDBC repositories** implementing TASK-0003's port and the award-point ports.
+- **JDBC repositories** implementing TASK-0003's ports and the award-point ports — including one
+  per vocabulary, each upserting on its published key (`code` for the state, `name` for a type) and
+  answering the stored value with its identity.
+- **`findByPublicationId` must fetch-join all four vocabulary references**, and the joins must be
+  **left**:
+
+  ```java
+  @Override
+  @Join(value = "state", type = Join.Type.LEFT_FETCH)
+  @Join(value = "contractType", type = Join.Type.LEFT_FETCH)
+  @Join(value = "procedureType", type = Join.Type.LEFT_FETCH)
+  @Join(value = "tramitacionType", type = Join.Type.LEFT_FETCH)
+  public abstract Optional<Licitacion> findByPublicationId(long publicationId);
+  ```
+
+  **This is not a tuning choice, it is what makes the read work at all.** Micronaut Data has no
+  implicit to-one fetch: unjoined, the mapper tries to build each reference as an id-only stub,
+  which it can only do for an entity whose constructor takes nothing or takes the identity alone.
+  None of the four qualifies, so all four come back null, and `Licitacion`'s constructor refuses
+  the null state — on every stored row, not an unlucky one. The three nullable types would have
+  failed *silently* instead, arriving null with their columns populated.
+
+  `ContratoMenor` is not a precedent to lean on here: nothing reads it back through its port, so
+  its `@Relation` has never been exercised on a read path. `ContratoMenorTestRepository` and
+  `OrganoRepository` are, and both declare `LEFT_FETCH`.
+
+  **Left** rather than the default inner join, because three of the four references are nullable:
+  an inner join would drop any procedure whose record published no contract type from a read that
+  asked for it by its identifier. How often that happens is not measured — `Tipo de contrato` is
+  recorded in [`design/source-contract.md`](design/source-contract.md) as published, with no
+  figure for how often it is absent — and the join does not need it to be common to be wrong.
+- **The write refuses a procedure whose state or any named type carries no identity.** Storing the
+  vocabularies first is the caller's job and the port documents it, but a null there would reach
+  the database as a null in a `NOT NULL` foreign key, whose error names the column rather than the
+  mistake. `JdbcOperadorRepository.retainName` throws for the same class of error and is the shape
+  to copy.
 - FKs are plain, with no `ON DELETE CASCADE`: no import deletes a procedure, so a cascade would
   stand in for a path nothing has.
 
@@ -102,6 +166,25 @@ browse-shaped query.
   the R8 invariant, which the parse enforces rather than the schema.* (SPEC-0008 #9)
 - A formalisation stores with no fiscal identifier — the cell whose trailing token was not
   identifier-shaped. (SPEC-0008 #46)
-- The withdrawal marker exists on all five tables and defaults to *not withdrawn* on insert, so
-  nothing an import stores is born invisible. (SPEC-0008 #16)
+- The withdrawal marker exists on **all five child tables** — and on `licitacion` itself, created
+  empty — and defaults to *not withdrawn* on insert, so nothing an import stores is born invisible.
+  No vocabulary table has one. (SPEC-0008 #16)
+- **`findByPublicationId` reads a stored procedure back with all four vocabulary references
+  populated**, and reads back a procedure that published none of the three types with its state
+  populated and those three null. This is what proves the fetch joins: without them the first case
+  throws and the second silently loses data, and without the joins being *left* the second case
+  returns no row at all. (SPEC-0008 #7 per-field half)
+- **Codes 101 and 102 both store, both labelled *Histórico***, and reading either back gives the
+  code it was stored under. The label carries no unique constraint, and this is the test that
+  would fail if one were added. (SPEC-0008 #44)
+- **A state code the table has never held — say `7` — stores inside the transaction that stores the
+  procedure**, creating its row rather than failing the foreign key. Same for a contract type name
+  nobody has published before. This is R33's open set, and a seeded catalogue would fail it.
+  (SPEC-0008 #44)
+- **Re-storing a procedure naming a vocabulary value that already exists leaves one row** in each of
+  the four tables, matched on the published key — `code` for the state, `name` for a type — so a
+  run over thousands of procedures does not grow the vocabularies. (SPEC-0008 #17)
+- **The write refuses a procedure whose state or type carries no identity**, rather than writing a
+  null into a `NOT NULL` foreign key — the diagnosis belongs where the mistake is, as
+  `retainName` already does for an unstored operador.
 - Integration-tested against PostgreSQL (Testcontainers).

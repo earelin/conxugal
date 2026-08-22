@@ -60,6 +60,14 @@ carries a `Money`.
   internal whitespace runs and normalises newlines, so a value with a double space or a line break
   comes back altered and every ASCII fixture still passes — which is why #44's *"byte-for-byte as
   published"* needs its own criterion here rather than being assumed.
+
+  **The parse still owes the trim, but no longer carries the whole weight of it.**
+  [TASK-0003](TASK-0003-licitacion-domain-model.md)'s vocabulary records and its `PublicationId`
+  are natural keys, and each strips surrounding whitespace on the way in — on
+  `FiscalIdentifier`'s reasoning, that a rule holding only when its caller has already stripped is
+  one that silently mismatches the day a caller has not. So a padded value from this parse reduces
+  to the row already stored rather than keying a second one beside it. That is a backstop, not a
+  licence: the trim is specified here because #44 is about what this port answers with.
 - **The parse is narrow on purpose.** Documents, mesas de contratación, appeals and the event
   history are the bulk of the 138 KB and are excluded by SPEC-0008's Scope.
 - A record whose labels cannot be found, or whose response is not a record at all, raises rather
