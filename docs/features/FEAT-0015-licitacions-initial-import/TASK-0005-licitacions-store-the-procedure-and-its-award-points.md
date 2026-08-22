@@ -23,11 +23,18 @@ behind TASK-0003's port.
 
 - **A migration** (next free `V` across `db/migration` **and** `db/migration-local`, taken at merge
   time) creating:
-  - **`licitacion`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, `publication_id BIGINT NOT NULL
+  - **`licitacion`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, `publication_id TEXT NOT NULL
     UNIQUE` as the natural key, an FK to `organo_contratacion`, a nullable `publication_date`, a
     `state_id` FK, three nullable type FKs, the rest of R7's fields, and the withdrawal marker.
-    Exactly `contrato_menor`'s shape, whose `source_id BIGINT NOT NULL UNIQUE` beside a surrogate
-    `id` is the precedent.
+    `contrato_menor`'s shape — a published unique key beside a surrogate `id` — with the key's
+    type widened.
+
+    **`TEXT`, not `BIGINT`, though every identifier measured is an integer.** How the source mints
+    them is the source's business, and one that changed shape would otherwise cost a column type,
+    a migration and a re-import of every procedure rather than a parse at the adapter. The column
+    is matched on and never ordered, summed or incremented, so text costs nothing here; the
+    listing endpoint does the ordering the walk resumes by. `contrato_menor.source_id` stays
+    `BIGINT` — widening a shipped column of millions is not this task's change to make.
   - **The four vocabulary tables TASK-0003's entities map**, each `id UUID PRIMARY KEY DEFAULT
     uuidv7()` beside its published natural key:
 

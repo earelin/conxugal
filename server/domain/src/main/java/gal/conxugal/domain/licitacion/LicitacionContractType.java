@@ -21,7 +21,7 @@ import org.jspecify.annotations.Nullable;
  * them would be asserting an equivalence the source never published.
  *
  * <p>It does <em>refuse</em> a blank or untrimmed name, which ordinary published text would be
- * free to carry: see {@link VocabularyName} for the rule the three type vocabularies share and
+ * free to carry: see {@link PublishedKey} for the rule the three type vocabularies share and
  * why a name that fails it is refused rather than repaired.
  *
  * <p>A procedure whose record published no contract type refers to none at all, which is where
@@ -32,7 +32,7 @@ public record LicitacionContractType(
     @Id @GeneratedValue @Nullable LicitacionContractTypeId id, String name) {
 
   public LicitacionContractType {
-    VocabularyName.validate(name);
+    PublishedKey.validate(name, "name");
   }
 
   /** A type as it is first read from the source: the database assigns its id on insert. */

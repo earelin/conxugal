@@ -1,6 +1,7 @@
 package gal.conxugal.domain.licitacion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import gal.conxugal.domain.money.Money;
@@ -17,7 +18,7 @@ import org.junit.jupiter.api.Test;
 
 class LicitacionTest {
 
-  private static final long PUBLICATION_ID = 822054L;
+  private static final String PUBLICATION_ID = "822054";
   private static final OrganoId ORGANO_ID =
       new OrganoId(UUID.fromString("0198c0de-0000-7000-8000-00000000002a"));
   private static final LocalDate PUBLISHED_ON = LocalDate.of(2024, 3, 8);
@@ -76,6 +77,34 @@ class LicitacionTest {
     assertThat(licitacion.contractType().name()).isEqualTo("Obras");
     assertThat(licitacion.procedureType().name()).isEqualTo("Abertos");
     assertThat(licitacion.tramitacionType().name()).isEqualTo("Ordinaria");
+  }
+
+  @Test
+  void keeps_the_publication_identifier_the_source_did_not_mint_as_number() {
+    // Every identifier observed is an integer, and none of that is this aggregate's business: it
+    // holds what was published, so a source that changed the shape of its identifiers would cost
+    // a parse at the adapter rather than a column type and a re-import.
+    Licitacion licitacion = publishedUnder("LIC-2026/0042", PUBLISHED_ON, "2024/001", "Obras");
+
+    assertThat(licitacion.publicationId()).isEqualTo("LIC-2026/0042");
+  }
+
+  @Test
+  void requires_the_publication_identifier() {
+    assertThatNullPointerException()
+        .isThrownBy(() -> publishedUnder(null, PUBLISHED_ON, "2024/001", "Obras"));
+  }
+
+  @Test
+  void refuses_the_blank_publication_identifier_that_would_collapse_every_procedure() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> publishedUnder(" \t", PUBLISHED_ON, "2024/001", "Obras"));
+  }
+
+  @Test
+  void refuses_an_untrimmed_publication_identifier_that_would_import_the_procedure_twice() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> publishedUnder("  822054  ", PUBLISHED_ON, "2024/001", "Obras"));
   }
 
   @Test
@@ -338,8 +367,16 @@ class LicitacionTest {
    */
   private static Licitacion published(
       @Nullable LocalDate publicationDate, @Nullable String expediente, @Nullable String obxecto) {
+    return publishedUnder(PUBLICATION_ID, publicationDate, expediente, obxecto);
+  }
+
+  private static Licitacion publishedUnder(
+      @Nullable String publicationId,
+      @Nullable LocalDate publicationDate,
+      @Nullable String expediente,
+      @Nullable String obxecto) {
     return new Licitacion(
-        PUBLICATION_ID,
+        publicationId,
         ORGANO_ID,
         publicationDate,
         MODIFIED_ON,

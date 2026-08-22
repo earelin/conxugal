@@ -24,6 +24,19 @@ import org.jspecify.annotations.Nullable;
  * It is also shared with contratos menores in one identifier space, so it names a publication
  * rather than a licitación.
  *
+ * <p><strong>It is held as text, though every one observed is an integer.</strong> How the source
+ * mints its identifiers is the source's business and nothing published says the shape is fixed, so
+ * the aggregate stores what was published rather than a reading of it: an identifier that stopped
+ * being numeric would then cost a parse at the adapter rather than a column type, a migration and
+ * a re-import. It is a key to match on and never a number to compute with — nothing sorts, sums or
+ * increments it — so the only property text gives up is one nothing here uses.
+ *
+ * <p>Two consequences are worth naming rather than discovering. The walk's resumption still orders
+ * by the identifier <em>at the source</em>, which orders it as the source pleases; and
+ * {@code SPEC-0006} R4's cross-family tie-break on "the higher contract identifier" compares a
+ * licitación's against a contrato menor's {@code long}, which is a comparison this type no longer
+ * makes for free. The task that first feeds an operador name from a licitación owns that.
+ *
  * <p>Only three things are required: the source identifier, the convening Órgano, and the state.
  * Every other value is nullable, and null means <em>the source published nothing there</em> — a
  * required field anywhere else would reject a real procedure over a blank the source left. A
@@ -61,7 +74,7 @@ import org.jspecify.annotations.Nullable;
 @MappedEntity("licitacion")
 public record Licitacion(
     @Id @GeneratedValue @Nullable LicitacionId id,
-    long publicationId,
+    String publicationId,
     OrganoId organoId,
     @Nullable LocalDate publicationDate,
     @Nullable LocalDate lastModified,
@@ -80,6 +93,7 @@ public record Licitacion(
     boolean withdrawn) {
 
   public Licitacion {
+    PublishedKey.validate(publicationId, "publicationId");
     Objects.requireNonNull(organoId, "organoId must not be null");
     Objects.requireNonNull(state, "state must not be null");
     expediente = nullIfBlank(expediente);
@@ -91,7 +105,7 @@ public record Licitacion(
    * nothing an import does withdraws it.
    */
   public Licitacion(
-      long publicationId,
+      String publicationId,
       OrganoId organoId,
       @Nullable LocalDate publicationDate,
       @Nullable LocalDate lastModified,

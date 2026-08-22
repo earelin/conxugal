@@ -103,4 +103,6 @@ separately stored and separately written.
   [TASK-0023](TASK-0023-the-outstanding-record-ledger-in-the-walk.md) applies. (SPEC-0008 #41)
 - A migration integration test pins each new table's exact column set with
   `containsExactlyInAnyOrder`, on the precedent of
-  `ContratosMenoresImportStateMigrationIntegrationTest`. `publication_id` is `BIGINT`.
+  `ContratosMenoresImportStateMigrationIntegrationTest`. `publication_id` is **`TEXT`**, matching
+  `licitacion.publication_id`: the ledger holds identifiers to retry, and one it could not
+  represent would be one the walk could never come back to.

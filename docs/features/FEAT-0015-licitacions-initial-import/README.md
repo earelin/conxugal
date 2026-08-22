@@ -894,6 +894,17 @@ unchanged, and the tuple stays total for both families. The alternative, a per-f
 discriminator, was rejected: the two families share one publication id space (measured), so there
 is nothing for a discriminator to disambiguate except the lote itself.
 
+**And the identifier component itself now needs an answer.** Task 3 holds a licitación's
+publication identifier as **text**, so that a source which stopped minting numeric identifiers
+costs a parse rather than a migration and a re-import; `NomeRank.sourceId` is a `long`, which a
+text identifier no longer fits. The naive fix is worse than the problem — compared as text, `"9"`
+outranks `"10"`, silently corrupting the tie-break for the shipped contratos menores family whose
+ranks are already populated. Task 21 owns both widenings, since they land on the same
+`@Embeddable` and the same migration, and it owes a comparison that is numeric where both
+identifiers are numeric and total where one is not. Nothing in this feature feeds an operador name
+from a licitación before task 12, which depends on task 21, so no code meets the gap in the
+meantime.
+
 ### Consortia: detected by structure, recorded either way
 
 **The parser takes the consortium branch before it resolves any identifier**, on the nested `<ul>`
@@ -979,7 +990,9 @@ one branch off it, at the same depth as 18.
    record arrives with no listing entry. *Depends on 3*, for the `LicitacionId` it is keyed by.
    *(SPEC-0008 #5 — the mode this state selects; the run that acts on it is task 16's)*
 3. **`Licitacion` domain model + repository port** — a `LicitacionId` wrapping a database-assigned
-   UUID under ADR-0019, the source's publication identifier beside it as the natural key, the
+   UUID under ADR-0019, the source's publication identifier beside it as the natural key — held as
+   **text**, so a source that stopped minting numeric identifiers costs a parse at the adapter
+   rather than a column type and a re-import — the
    Órgano, both dates, expediente, object, the lote count, and the two economic figures as `Money`,
    plus the port. The **state** (code and label) and the **three types** are referenced entities
    with tables, identifier types and ports of their own, each upserting on what the source

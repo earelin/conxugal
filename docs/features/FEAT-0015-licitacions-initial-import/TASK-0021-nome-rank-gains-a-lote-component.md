@@ -25,6 +25,21 @@ task for that reason.
 Under [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md),
 `NomeRank` is an `@Embeddable` that maps its own columns, so widening it is a schema change.
 
+**A second widening lands in the same place, and the two are cheaper taken together.**
+[TASK-0003](TASK-0003-licitacion-domain-model.md) holds a licitación's `publicationId` as **text**,
+not `long`, so that a source which stopped minting numeric identifiers costs a parse rather than a
+migration. `NomeRank.sourceId` is a `long`, so a licitación's identifier no longer fits it, and the
+naive fix is worse than the problem: comparing identifiers **as text** makes `"9"` outrank `"10"`
+and would silently corrupt the tie-break for the shipped contratos menores family, whose ranks are
+already populated.
+
+Whatever this task does to `sourceId`, it therefore owes an answer to *"which of these two
+identifiers is higher"* that is **numeric where both are numeric** and total where one is not —
+or an explicit decision that R4's tie-break is per-family after all, which would need SPEC-0006
+amended rather than worked around. It is recorded here because
+[TASK-0012](TASK-0012-resolve-the-awardee.md) is the first task that will feed an operador name
+from a licitación, and it depends on this one.
+
 ## Scope
 
 - **A migration** (next free `V` across `db/migration` **and** `db/migration-local`, taken at merge

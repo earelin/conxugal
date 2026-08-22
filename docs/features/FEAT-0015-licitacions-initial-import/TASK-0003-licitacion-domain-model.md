@@ -30,11 +30,25 @@ the `ContratoMenor` / `ContratoMenorId` precedent.
   `ContratoMenorId`'s own Javadoc says *"It is not the source's identifier: that is the contract's
   `sourceId`."* ADR-0023 gives the independent reason — keying on a published value puts it *"in
   every foreign key"* — which here would be six child tables.
-- **`publicationId`, a `long`, is the natural key** a re-import matches on, unique in the table,
-  exactly as `ContratoMenor.sourceId` is. Per
-  [`design/source-contract.md`](design/source-contract.md) it is shared with contratos menores in
-  **one id space**, which is what keeps SPEC-0006 R4's higher-identifier tie-break total across both
-  families.
+- **`publicationId` is the natural key** a re-import matches on, unique in the table, as
+  `ContratoMenor.sourceId` is. Per [`design/source-contract.md`](design/source-contract.md) it is
+  shared with contratos menores in **one id space**.
+- **It is held as `String`, not `long`, though every identifier measured is an integer.** How the
+  source mints its identifiers is the source's business and nothing published says the shape is
+  fixed; the aggregate stores what was published rather than a reading of it. An identifier that
+  stopped being numeric then costs a parse at the adapter instead of a column type, a migration and
+  a re-import of every procedure. Nothing sorts, sums or increments it — it is matched on and
+  nothing else — so text gives up no property this model uses.
+
+  **Two consequences, named here rather than met later.** The walk's resumption orders by the
+  identifier *at the source*, which is unaffected: the listing endpoint does the ordering.
+  SPEC-0006 R4's tie-break on *"the higher contract identifier"* is affected — it compares a
+  licitación's identifier against a contrato menor's `long`, and `NomeRank` holds a `long`. That
+  comparison is no longer free, and lexicographic order is not numeric order (`"9"` sorts above
+  `"10"`). Nothing in this feature feeds an operador name from a licitación yet;
+  [TASK-0012](TASK-0012-resolve-the-awardee.md) is the first that will, and
+  [TASK-0021](TASK-0021-nome-rank-gains-a-lote-component.md) is already reworking `NomeRank`, so
+  the resolution belongs there and is recorded in both.
 - **`Licitacion`**, carrying what R7 requires:
 
   | Field | Source | Note |
@@ -121,7 +135,7 @@ taking the listing's number for an award is the mistake
 - `LicitacionId` wraps a `UUID` and is `@Nullable` on the aggregate: a `Licitacion` constructs with
   **no** id and is expected to receive one on insert, exactly as `ContratoMenor` does. Nothing
   assigns one in the domain. ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md))
-- `publicationId` is a plain `long` on the aggregate, distinct from its identity, and two
+- `publicationId` is a plain `String` on the aggregate, distinct from its identity, and two
   `Licitacion` values with the same `publicationId` are the same procedure to the repository's
   `upsert`. (SPEC-0008 #17)
 - **Two states sharing one label are two states, and the store keys them separately.** 101 and 102
@@ -141,6 +155,10 @@ taking the listing's number for an award is the mistake
 - A type vocabulary entry keeps its published name unnormalised — no case folding, no collapsing of
   internal spacing, so two published spellings stay two entries — and **refuses a blank or an
   untrimmed one**, both of which would key an entry that should not exist. (SPEC-0008 #44)
+- **A procedure whose publication identifier is not a number constructs and round-trips it**, and a
+  blank or untrimmed one is refused on the same rule the vocabulary names follow — a blank would
+  collapse every procedure carrying one onto a single row, an untrimmed one would import the same
+  procedure twice. (SPEC-0008 #17, #44)
 - **A `Licitacion` holds no component of its own for either half of the state, for any type name,
   or for anything R8 puts on a child.** Pinned against the record's component list, as
   `ContratoMenorTest` pins its own: a procedure holding the label instead of the reference could
@@ -150,4 +168,4 @@ taking the listing's number for an award is the mistake
 - Unit-tested with no database and no HTTP. The `upsert` half of the `publicationId` criterion is
   **not** among them: matching two readings of one publication needs a store, so it is
   TASK-0005's `UNIQUE (publication_id)` and its integration test that prove it. What is proven here
-  is the aggregate's half — the natural key is a plain `long`, distinct from the identity.
+  is the aggregate's half — the natural key is a plain `String`, distinct from the identity.
