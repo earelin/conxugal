@@ -41,15 +41,11 @@ public interface LicitacionRepository {
    * arrives knowing nothing of the identity the system assigned.
    *
    * <p><strong>An implementation must fetch-join all four vocabulary references</strong> —
-   * {@code state}, {@code contractType}, {@code procedureType} and {@code tramitacionType}. There
-   * is no implicit to-one fetch: unjoined, the mapper tries to build each reference as an
-   * id-only stub, cannot (none of the four has a constructor it can use for that), and hands the
-   * aggregate a null state, which its own constructor refuses. That is every stored row, not an
-   * unlucky one.
-   *
-   * <p>The join must be a <strong>left</strong> one. An inner join would drop the ordinary
-   * procedure whose record published no contract type — most of them — from a read that asked
-   * for it by its identifier.
+   * {@code state}, {@code contractType}, {@code procedureType} and {@code tramitacionType} — and
+   * the joins must be <strong>left</strong>, since three of the four are nullable. Neither is a
+   * tuning choice: without the fetch this read cannot return a valid aggregate at all, and an
+   * inner join would drop any procedure whose record published no contract type. The reasoning
+   * belongs with the annotations that carry it out, so it lives on the adapter.
    */
   Optional<Licitacion> findByPublicationId(long publicationId);
 }

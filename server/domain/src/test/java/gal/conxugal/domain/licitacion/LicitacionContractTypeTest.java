@@ -34,11 +34,11 @@ class LicitacionContractTypeTest {
   }
 
   @Test
-  void keeps_the_name_exactly_as_the_adapter_handed_it_over() {
-    // The trim happens at the adapter, not here — which matters because the name is the natural
-    // key, so an untrimmed value reaching this far would key an entry beside the trimmed one.
-    assertThat(new LicitacionContractType("  Obras  ").name())
-        .isEqualTo("  Obras  ");
+  void refuses_an_untrimmed_name_rather_than_keying_an_entry_beside_the_trimmed_one() {
+    // The name is the natural key, so padding the adapter failed to strip would store a second
+    // vocabulary row for one published type, each with its own procedures hanging off it.
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> new LicitacionContractType("  Obras  "));
   }
 
   @Test

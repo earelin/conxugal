@@ -102,11 +102,12 @@ behind TASK-0003's port.
   **left**:
 
   ```java
+  @Override
   @Join(value = "state", type = Join.Type.LEFT_FETCH)
   @Join(value = "contractType", type = Join.Type.LEFT_FETCH)
   @Join(value = "procedureType", type = Join.Type.LEFT_FETCH)
   @Join(value = "tramitacionType", type = Join.Type.LEFT_FETCH)
-  Optional<Licitacion> findByPublicationId(long publicationId);
+  public abstract Optional<Licitacion> findByPublicationId(long publicationId);
   ```
 
   **This is not a tuning choice, it is what makes the read work at all.** Micronaut Data has no
@@ -120,8 +121,11 @@ behind TASK-0003's port.
   its `@Relation` has never been exercised on a read path. `ContratoMenorTestRepository` and
   `OrganoRepository` are, and both declare `LEFT_FETCH`.
 
-  **Left** rather than the default inner join, because the ordinary procedure publishes no contract
-  type — an inner join would drop it from a read that asked for it by its identifier.
+  **Left** rather than the default inner join, because three of the four references are nullable:
+  an inner join would drop any procedure whose record published no contract type from a read that
+  asked for it by its identifier. How often that happens is not measured — `Tipo de contrato` is
+  recorded in [`design/source-contract.md`](design/source-contract.md) as published, with no
+  figure for how often it is absent — and the join does not need it to be common to be wrong.
 - **The write refuses a procedure whose state or any named type carries no identity.** Storing the
   vocabularies first is the caller's job and the port documents it, but a null there would reach
   the database as a null in a `NOT NULL` foreign key, whose error names the column rather than the

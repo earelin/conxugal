@@ -18,18 +18,21 @@ import org.jspecify.annotations.Nullable;
  * there is nothing else to match on. Were a numeric identifier ever measured, it would become a
  * component beside the name and the match would move to it.
  *
- * <p><strong>Nothing here normalises the name.</strong> It arrives already trimmed at the adapter
- * and this record stores what it is handed — no case folding, no collapsing of internal spacing,
- * no trimming of its own — so two published spellings are two entries, and a vocabulary that
- * folded them would be asserting an equivalence the source never published.
+ * <p><strong>Nothing here normalises the name</strong> — no case folding, no collapsing of
+ * internal spacing — so two published spellings are two entries, and a vocabulary that folded
+ * them would be asserting an equivalence the source never published.
  *
- * <p>That the trim happens elsewhere matters more here than for ordinary published text, because
- * the name is the natural key: an untrimmed value reaching this far would key an entry of its own
- * beside the trimmed one.
+ * <p>It does <em>refuse</em> two names, and the difference from ordinary published text is that
+ * this one is the natural key. A <strong>blank</strong> name would key an entry that is not a
+ * fact about anything, and an <strong>untrimmed</strong> one would key an entry of its own beside
+ * the trimmed spelling of the same type — two vocabulary rows for one published value, each with
+ * its own procedures hanging off it. Both are adapter mistakes rather than things the source
+ * publishes: the padding is an artefact of the record's HTML and the parse is contracted to strip
+ * it. Refusing here is what stops a silently duplicated key, and it is checked rather than
+ * repaired so the mistake surfaces where it was made.
  *
- * <p>The name is required and cannot be blank: an entry keyed on the empty string is not a fact
- * about anything. A procedure whose record published no contract type refers to none at all,
- * which is where that absence belongs.
+ * <p>A procedure whose record published no contract type refers to none at all, which is where
+ * that absence belongs — never a blank entry standing in for it.
  */
 @MappedEntity("licitacion_contract_type")
 public record LicitacionContractType(
@@ -39,6 +42,10 @@ public record LicitacionContractType(
     Objects.requireNonNull(name, "name must not be null");
     if (Whitespace.isBlank(name)) {
       throw new IllegalArgumentException("name must not be blank");
+    }
+    if (!name.equals(Whitespace.strip(name))) {
+      throw new IllegalArgumentException(
+          "name must arrive trimmed, and this one did not: '%s'".formatted(name));
     }
   }
 

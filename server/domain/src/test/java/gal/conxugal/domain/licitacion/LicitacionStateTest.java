@@ -2,6 +2,7 @@ package gal.conxugal.domain.licitacion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -24,25 +25,20 @@ class LicitacionStateTest {
   }
 
   @Test
-  void keeps_two_states_sharing_one_label_apart_by_their_code() {
+  void keeps_two_states_sharing_one_label_apart() {
     // 101 and 102 are both published as Histórico, so the label is not a key: a store unique on
     // it would reject a real state and a filter keyed on it would merge two the source
-    // distinguishes.
-    LicitacionState historic = new LicitacionState(101, "Histórico");
-    LicitacionState alsoHistoric = new LicitacionState(102, "Histórico");
+    // distinguishes. Constructing the second is not refused for repeating the first's label, and
+    // the two do not collapse where values are held by equality.
+    LicitacionState historic =
+        new LicitacionState(new LicitacionStateId(UUID.randomUUID()), 101, "Histórico");
+    LicitacionState alsoHistoric =
+        new LicitacionState(new LicitacionStateId(UUID.randomUUID()), 102, "Histórico");
 
-    assertThat(historic.code())
-        .isNotEqualTo(alsoHistoric.code());
     assertThat(historic.label())
         .isEqualTo(alsoHistoric.label());
-  }
-
-  @Test
-  void stores_the_repeated_label_on_both_rather_than_rejecting_the_second() {
-    LicitacionState alsoHistoric = new LicitacionState(102, "Histórico");
-
-    assertThat(alsoHistoric.label())
-        .isEqualTo("Histórico");
+    assertThat(Set.of(historic, alsoHistoric))
+        .hasSize(2);
   }
 
   @Test

@@ -78,13 +78,6 @@ class LicitacionTest {
   }
 
   @Test
-  void stores_an_unseen_state_code_without_special_casing_it() {
-    Licitacion licitacion = withState(new LicitacionState(7, null));
-
-    assertThat(licitacion.state().code()).isEqualTo(7);
-  }
-
-  @Test
   void requires_the_convening_organo() {
     assertThatNullPointerException()
         .isThrownBy(
@@ -201,6 +194,36 @@ class LicitacionTest {
     assertThat(published(obxecto).obxecto())
         .isEqualTo(obxecto)
         .hasSize(obxecto.length());
+  }
+
+  @Test
+  void keeps_the_object_exactly_as_the_adapter_handed_it_over() {
+    // The trim is the adapter's and this aggregate does none of its own — which only `nullIfBlank`
+    // in the compact constructor comes near, so a "tidy-up" that turned it into a strip would
+    // otherwise pass every test here.
+    assertThat(published("  Actuacións de mellora  ").obxecto())
+        .isEqualTo("  Actuacións de mellora  ");
+  }
+
+  @Test
+  void keeps_the_expediente_exactly_as_the_adapter_handed_it_over() {
+    Licitacion licitacion =
+        new Licitacion(
+            PUBLICATION_ID,
+            ORGANO_ID,
+            PUBLISHED_ON,
+            MODIFIED_ON,
+            FORMALIZADO,
+            "  2024/001  ",
+            "Obras",
+            OBRAS,
+            ABERTOS,
+            ORDINARIA,
+            2,
+            BASE_BUDGET,
+            ESTIMATED_VALUE);
+
+    assertThat(licitacion.expediente()).isEqualTo("  2024/001  ");
   }
 
   @Test
@@ -330,23 +353,6 @@ class LicitacionTest {
         FORMALIZADO,
         "2024/001",
         obxecto,
-        OBRAS,
-        ABERTOS,
-        ORDINARIA,
-        2,
-        BASE_BUDGET,
-        ESTIMATED_VALUE);
-  }
-
-  private static Licitacion withState(LicitacionState state) {
-    return new Licitacion(
-        PUBLICATION_ID,
-        ORGANO_ID,
-        PUBLISHED_ON,
-        MODIFIED_ON,
-        state,
-        "2024/001",
-        "Actuacións de mellora",
         OBRAS,
         ABERTOS,
         ORDINARIA,

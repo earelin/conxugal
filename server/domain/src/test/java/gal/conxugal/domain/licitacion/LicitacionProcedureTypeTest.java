@@ -34,9 +34,9 @@ class LicitacionProcedureTypeTest {
   }
 
   @Test
-  void keeps_the_name_exactly_as_the_adapter_handed_it_over() {
-    assertThat(new LicitacionProcedureType("  Abertos  ").name())
-        .isEqualTo("  Abertos  ");
+  void refuses_an_untrimmed_name_rather_than_keying_an_entry_beside_the_trimmed_one() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> new LicitacionProcedureType("  Abertos  "));
   }
 
   @Test

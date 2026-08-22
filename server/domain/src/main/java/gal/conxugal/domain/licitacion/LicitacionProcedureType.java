@@ -14,12 +14,11 @@ import org.jspecify.annotations.Nullable;
  *
  * <p><strong>The published name is the source's identifier here</strong>, and the natural key a
  * re-import matches on: this vocabulary is published as a bare label, with no code on the record
- * and no type field in the listing. Nothing here normalises it — the name arrives already trimmed
- * at the adapter and this record stores what it is handed — so two published spellings are two
+ * and no type field in the listing. Nothing here normalises it, so two published spellings are two
  * entries.
  *
- * <p>The name is required and cannot be blank; a procedure whose record published no procedure
- * type refers to none at all.
+ * <p>The name is required, and a blank or untrimmed one is refused: both would key an entry that
+ * should not exist. A procedure whose record published no procedure type refers to none at all.
  *
  * @see LicitacionContractType for the reasoning in full — the three type vocabularies share it
  */
@@ -31,6 +30,10 @@ public record LicitacionProcedureType(
     Objects.requireNonNull(name, "name must not be null");
     if (Whitespace.isBlank(name)) {
       throw new IllegalArgumentException("name must not be blank");
+    }
+    if (!name.equals(Whitespace.strip(name))) {
+      throw new IllegalArgumentException(
+          "name must arrive trimmed, and this one did not: '%s'".formatted(name));
     }
   }
 

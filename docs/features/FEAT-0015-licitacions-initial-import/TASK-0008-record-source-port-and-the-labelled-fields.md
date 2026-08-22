@@ -60,6 +60,12 @@ carries a `Money`.
   internal whitespace runs and normalises newlines, so a value with a double space or a line break
   comes back altered and every ASCII fixture still passes — which is why #44's *"byte-for-byte as
   published"* needs its own criterion here rather than being assumed.
+
+  **The three type values must be trimmed before they reach the domain, and this is now enforced
+  rather than trusted.** [TASK-0003](TASK-0003-licitacion-domain-model.md)'s vocabulary records
+  refuse an untrimmed name, because the name is their natural key and a padded one would key a
+  second row for a type the source published once. An untrimmed value handed over here therefore
+  fails loudly at construction rather than silently duplicating a vocabulary entry.
 - **The parse is narrow on purpose.** Documents, mesas de contratación, appeals and the event
   history are the bulk of the 138 KB and are excluded by SPEC-0008's Scope.
 - A record whose labels cannot be found, or whose response is not a record at all, raises rather
