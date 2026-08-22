@@ -337,8 +337,8 @@ public abstract class JdbcImportRunRepository
     executeUpdate(ENUMERATE_COVERAGE, statement -> {
       Connection connection = statement.getConnection();
       UUID[] organoIds =
-          covered.stream().map(one -> one.organoId().value()).toArray(UUID[]::new);
-      String[] families = covered.stream().map(one -> one.family().name()).toArray(String[]::new);
+          covered.stream().map(row -> row.organoId().value()).toArray(UUID[]::new);
+      String[] families = covered.stream().map(row -> row.family().name()).toArray(String[]::new);
       statement.setObject(1, runId.value());
       statement.setString(2, ImportRunOrganoState.PENDING.name());
       statement.setArray(3, connection.createArrayOf("uuid", organoIds));
