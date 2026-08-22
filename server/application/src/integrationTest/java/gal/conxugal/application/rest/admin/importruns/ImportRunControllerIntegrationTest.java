@@ -152,13 +152,8 @@ class ImportRunControllerIntegrationTest extends AuthenticationTestSupport {
                 1204,
                 96,
                 contratosMenores(SERGAS, ImportRunOrganoState.SUCCEEDED, 1204, 96, null),
-                new ImportRunOrganoCoverage(
-                    SERGAS,
-                    ContractFamily.LICITACIONS,
-                    ImportRunOrganoState.FAILED,
-                    0,
-                    0,
-                    "The record would not parse")));
+                licitacions(
+                    SERGAS, ImportRunOrganoState.FAILED, 0, 0, "The record would not parse")));
 
     assertThat(response.jsonPath().getString("importer")).isEqualTo("AMBAS_FAMILIAS");
     assertThat(response.jsonPath().getList("coveredOrganos.organoId"))
@@ -253,8 +248,18 @@ class ImportRunControllerIntegrationTest extends AuthenticationTestSupport {
 
   private static ImportRunOrganoCoverage contratosMenores(OrganoId organoId,
       ImportRunOrganoState state, int added, int refreshed, @Nullable String failureReason) {
-    return new ImportRunOrganoCoverage(organoId, ContractFamily.CONTRATOS_MENORES, state, added,
-        refreshed, failureReason);
+    return coverage(
+        organoId, ContractFamily.CONTRATOS_MENORES, state, added, refreshed, failureReason);
+  }
+
+  private static ImportRunOrganoCoverage licitacions(OrganoId organoId,
+      ImportRunOrganoState state, int added, int refreshed, @Nullable String failureReason) {
+    return coverage(organoId, ContractFamily.LICITACIONS, state, added, refreshed, failureReason);
+  }
+
+  private static ImportRunOrganoCoverage coverage(OrganoId organoId, ContractFamily family,
+      ImportRunOrganoState state, int added, int refreshed, @Nullable String failureReason) {
+    return new ImportRunOrganoCoverage(organoId, family, state, added, refreshed, failureReason);
   }
 
   private static String readOf(ImportRunId runId) {
