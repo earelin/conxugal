@@ -103,6 +103,18 @@ class FormalisationTest {
   }
 
   @Test
+  void leaves_the_padding_on_its_text_because_free_text_is_stored_as_published() {
+    // The fiscal identifier beside them canonicalises; the names do not, and only a padded
+    // non-blank value tells the two rules apart.
+    Formalisation padded =
+        new Formalisation(
+            LICITACION_ID, null, SIGNED_ON, " EQUINSE, S.A. ", EQUINSE, " España ", AMOUNT);
+
+    assertThat(padded.contratistaName()).isEqualTo(" EQUINSE, S.A. ");
+    assertThat(padded.nationality()).isEqualTo(" España ");
+  }
+
+  @Test
   void requires_the_procedure_it_belongs_to() {
     assertThatNullPointerException()
         .isThrownBy(

@@ -99,6 +99,14 @@ class LoteTest {
   }
 
   @Test
+  void leaves_the_padding_on_the_description_because_free_text_is_stored_as_published() {
+    // The identifier strips because it is the natural key; ordinary published text does not, and
+    // the two rules are only distinguishable on a value that is padded but not blank.
+    assertThat(new Lote(LICITACION_ID, "1", "  Obra civil  ", null).description())
+        .isEqualTo("  Obra civil  ");
+  }
+
+  @Test
   void requires_the_procedure_it_belongs_to() {
     assertThatNullPointerException()
         .isThrownBy(() -> new Lote(null, "1", null, null));

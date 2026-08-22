@@ -128,6 +128,16 @@ class ParticipationTest {
   }
 
   @Test
+  void leaves_the_padding_on_the_consortium_name_because_it_is_stored_as_published() {
+    // The blank-to-null rule reaches only a value that is entirely blank; a padded name is a
+    // published name and keeps its padding.
+    assertThat(
+            new Participation(LICITACION_ID, null, null, false, true, "  UTE PRACE  ")
+                .consortiumName())
+        .isEqualTo("  UTE PRACE  ");
+  }
+
+  @Test
   void requires_the_procedure_it_belongs_to() {
     assertThatNullPointerException()
         .isThrownBy(() -> new Participation(null, null, OPERADOR_ID, false, false, null));

@@ -125,6 +125,20 @@ class AwardTest {
   }
 
   @Test
+  void leaves_the_padding_on_its_text_because_free_text_is_stored_as_published() {
+    // Nothing on this record is a natural key, so nothing strips. Only a padded non-blank value
+    // tells that rule apart from the blank-to-null one beside it.
+    Award padded =
+        new Award(
+            LICITACION_ID, null, " Adxudicado ", RESOLVED_ON, AMOUNT, " 12 meses ",
+            " ESQUEIRO, SL ", null, UNRESOLVED);
+
+    assertThat(padded.resolution()).isEqualTo(" Adxudicado ");
+    assertThat(padded.executionPeriod()).isEqualTo(" 12 meses ");
+    assertThat(padded.awardeeName()).isEqualTo(" ESQUEIRO, SL ");
+  }
+
+  @Test
   void requires_the_procedure_it_belongs_to() {
     assertThatNullPointerException()
         .isThrownBy(
