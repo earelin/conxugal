@@ -57,7 +57,7 @@ public record Participation(
   public Participation {
     Objects.requireNonNull(licitacionId, "licitacionId must not be null");
     consortiumName = PublishedText.orNullWhenBlank(consortiumName);
-    if (consortiumName != null && (!consortium || operadorEconomicoId != null)) {
+    if (consortiumName != null && catalogueCouldHoldThisParty(operadorEconomicoId, consortium)) {
       throw new IllegalArgumentException(
           "consortiumName is only for a consortium the catalogue could not hold, so it requires "
               + "consortium and no operadorEconomicoId");
@@ -99,5 +99,15 @@ public record Participation(
   @Override
   public int hashCode() {
     return id == null ? System.identityHashCode(this) : id.hashCode();
+  }
+
+  /**
+   * Whether an operador could carry this party's name — which it can when the party resolved to
+   * one, and when it was a single firm rather than a consortium at all. The published name is the
+   * one exception to naming nothing, so it belongs only where this answers false.
+   */
+  private static boolean catalogueCouldHoldThisParty(
+      @Nullable OperadorId operadorEconomicoId, boolean consortium) {
+    return operadorEconomicoId != null || !consortium;
   }
 }
