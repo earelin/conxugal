@@ -18,24 +18,16 @@ import org.jspecify.annotations.Nullable;
  * {@code publicationId} is the source's own identifier, which is what matches this procedure
  * across imports and what makes a re-import an update in place rather than a duplicate.
  *
- * <p>The two are deliberately different things. The publication identifier is a published value,
- * and keying rows on it would put it in every foreign key a procedure's children carry; the
- * identity the system assigns costs one column and keeps the published value out of six of them.
- * It is also shared with contratos menores in one identifier space, so it names a publication
- * rather than a licitación.
+ * <p>The two are deliberately different things, and each has a type of its own so the compiler
+ * says so. The publication identifier is a published value, and keying rows on it would put it in
+ * every foreign key a procedure's children carry; the identity the system assigns costs one column
+ * and keeps the published value out of six of them. See {@link PublicationId} for what it wraps
+ * and why.
  *
- * <p><strong>It is held as text, though every one observed is an integer.</strong> How the source
- * mints its identifiers is the source's business and nothing published says the shape is fixed, so
- * the aggregate stores what was published rather than a reading of it: an identifier that stopped
- * being numeric would then cost a parse at the adapter rather than a column type, a migration and
- * a re-import. It is a key to match on and never a number to compute with — nothing sorts, sums or
- * increments it — so the only property text gives up is one nothing here uses.
- *
- * <p>Two consequences are worth naming rather than discovering. The walk's resumption still orders
- * by the identifier <em>at the source</em>, which orders it as the source pleases; and
- * {@code SPEC-0006} R4's cross-family tie-break on "the higher contract identifier" compares a
- * licitación's against a contrato menor's {@code long}, which is a comparison this type no longer
- * makes for free. The task that first feeds an operador name from a licitación owns that.
+ * <p>One consequence is worth naming rather than discovering: {@code SPEC-0006} R4's cross-family
+ * tie-break on "the higher contract identifier" compares a licitación's against a contrato menor's
+ * {@code long}, which is a comparison these two types no longer make for free. The task that first
+ * feeds an operador name from a licitación owns that.
  *
  * <p>Only three things are required: the source identifier, the convening Órgano, and the state.
  * Every other value is nullable, and null means <em>the source published nothing there</em> — a
@@ -74,7 +66,7 @@ import org.jspecify.annotations.Nullable;
 @MappedEntity("licitacion")
 public record Licitacion(
     @Id @GeneratedValue @Nullable LicitacionId id,
-    String publicationId,
+    PublicationId publicationId,
     OrganoId organoId,
     @Nullable LocalDate publicationDate,
     @Nullable LocalDate lastModified,
@@ -93,7 +85,7 @@ public record Licitacion(
     boolean withdrawn) {
 
   public Licitacion {
-    PublishedKey.validate(publicationId, "publicationId");
+    Objects.requireNonNull(publicationId, "publicationId must not be null");
     Objects.requireNonNull(organoId, "organoId must not be null");
     Objects.requireNonNull(state, "state must not be null");
     expediente = nullIfBlank(expediente);
@@ -105,7 +97,7 @@ public record Licitacion(
    * nothing an import does withdraws it.
    */
   public Licitacion(
-      String publicationId,
+      PublicationId publicationId,
       OrganoId organoId,
       @Nullable LocalDate publicationDate,
       @Nullable LocalDate lastModified,

@@ -30,15 +30,23 @@ the `ContratoMenor` / `ContratoMenorId` precedent.
   `ContratoMenorId`'s own Javadoc says *"It is not the source's identifier: that is the contract's
   `sourceId`."* ADR-0023 gives the independent reason — keying on a published value puts it *"in
   every foreign key"* — which here would be six child tables.
-- **`publicationId` is the natural key** a re-import matches on, unique in the table, as
-  `ContratoMenor.sourceId` is. Per [`design/source-contract.md`](design/source-contract.md) it is
-  shared with contratos menores in **one id space**.
-- **It is held as `String`, not `long`, though every identifier measured is an integer.** How the
-  source mints its identifiers is the source's business and nothing published says the shape is
-  fixed; the aggregate stores what was published rather than a reading of it. An identifier that
-  stopped being numeric then costs a parse at the adapter instead of a column type, a migration and
-  a re-import of every procedure. Nothing sorts, sums or increments it — it is matched on and
-  nothing else — so text gives up no property this model uses.
+- **`PublicationId` is the natural key** a re-import matches on, unique in the table, where
+  `ContratoMenor.sourceId` is a bare `long`. Per
+  [`design/source-contract.md`](design/source-contract.md) it is shared with contratos menores in
+  **one id space**, so it names a publication rather than a licitación.
+
+  **A type of its own, wrapping text**, on the `FiscalIdentifier` shape — a `@TypeDef` over a
+  record holding one `String`, with a `toString` that prints the bare value. Two reasons, and the
+  first is the stronger: a `LicitacionId` and a `PublicationId` identify the same procedure and
+  mean opposite things, one assigned by this system and one by the source, and an earlier draft of
+  this task got exactly that confusion wrong. A bare `String` beside a `LicitacionId` invites it
+  back; two types make the mix-up a compile error.
+- **It wraps text, not a `long`, though every identifier measured is an integer.** How the source
+  mints its identifiers is the source's business and nothing published says the shape is fixed; the
+  type holds what was published rather than a reading of it. An identifier that stopped being
+  numeric then costs a parse at the adapter instead of a column type, a migration and a re-import
+  of every procedure. Nothing sorts, sums or increments it — it is matched on and nothing else — so
+  text gives up no property this model uses.
 
   **Two consequences, named here rather than met later.** The walk's resumption orders by the
   identifier *at the source*, which is unaffected: the listing endpoint does the ordering.
@@ -49,11 +57,16 @@ the `ContratoMenor` / `ContratoMenorId` precedent.
   [TASK-0012](TASK-0012-resolve-the-awardee.md) is the first that will, and
   [TASK-0021](TASK-0021-nome-rank-gains-a-lote-component.md) is already reworking `NomeRank`, so
   the resolution belongs there and is recorded in both.
+- **Its converter carries one interface, not two.** The dual `AttributeConverter` +
+  `TypeConverter` shape exists because a database-*generated* id is read back through the core
+  conversion service; a publication identifier is supplied by the source and never generated, so
+  the attribute half covers every path it travels — `MoneyConverter`'s reasoning, and its
+  precedent for what a projection would later need.
 - **`Licitacion`**, carrying what R7 requires:
 
   | Field | Source | Note |
   | --- | --- | --- |
-  | publication identifier | listing `id` | the natural key |
+  | publication identifier | listing `id` | the natural key, a `PublicationId` wrapping text |
   | Órgano | the walk | FK |
   | publication date | **listing** `publicado` | **nullable** — an uninterpretable date stores null rather than rejecting the row |
   | last-modified date | **listing** `modificado` | what R11's incremental mode will order on |
@@ -137,9 +150,9 @@ taking the listing's number for an award is the mistake
 - `LicitacionId` wraps a `UUID` and is `@Nullable` on the aggregate: a `Licitacion` constructs with
   **no** id and is expected to receive one on insert, exactly as `ContratoMenor` does. Nothing
   assigns one in the domain. ([ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md))
-- `publicationId` is a plain `String` on the aggregate, distinct from its identity, and two
-  `Licitacion` values with the same `publicationId` are the same procedure to the repository's
-  `upsert`. (SPEC-0008 #17)
+- `publicationId` is a `PublicationId` on the aggregate — its own type, distinct from the identity
+  and impossible to pass where a `LicitacionId` is expected — and two `Licitacion` values carrying
+  the same one are the same procedure to the repository's `upsert`. (SPEC-0008 #17)
 - **Two states sharing one label are two states, and the store keys them separately.** 101 and 102
   both construct as *Histórico*, the second is not rejected for repeating the first's label, and
   nothing in the model treats the label as a key.
@@ -170,4 +183,4 @@ taking the listing's number for an award is the mistake
 - Unit-tested with no database and no HTTP. The `upsert` half of the `publicationId` criterion is
   **not** among them: matching two readings of one publication needs a store, so it is
   TASK-0005's `UNIQUE (publication_id)` and its integration test that prove it. What is proven here
-  is the aggregate's half — the natural key is a plain `String`, distinct from the identity.
+  is the aggregate's half — the natural key is a `PublicationId`, distinct from the identity.

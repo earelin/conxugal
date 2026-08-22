@@ -990,8 +990,9 @@ one branch off it, at the same depth as 18.
    record arrives with no listing entry. *Depends on 3*, for the `LicitacionId` it is keyed by.
    *(SPEC-0008 #5 — the mode this state selects; the run that acts on it is task 16's)*
 3. **`Licitacion` domain model + repository port** — a `LicitacionId` wrapping a database-assigned
-   UUID under ADR-0019, the source's publication identifier beside it as the natural key — held as
-   **text**, so a source that stopped minting numeric identifiers costs a parse at the adapter
+   UUID under ADR-0019, the source's publication identifier beside it as the natural key — a
+   **`PublicationId` wrapping text**, its own type so it cannot be confused with the identity, and
+   text so that a source which stopped minting numeric identifiers costs a parse at the adapter
    rather than a column type and a re-import — the
    Órgano, both dates, expediente, object, the lote count, and the two economic figures as `Money`,
    plus the port. The **state** (code and label) and the **three types** are referenced entities

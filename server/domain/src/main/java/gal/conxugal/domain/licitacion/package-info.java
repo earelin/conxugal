@@ -1,6 +1,9 @@
 /**
  * Licitacións: the {@link gal.conxugal.domain.licitacion.Licitacion} aggregate a stored tender
- * procedure is, its {@link gal.conxugal.domain.licitacion.LicitacionId} identity, and the
+ * procedure is, its {@link gal.conxugal.domain.licitacion.LicitacionId} identity, the
+ * {@link gal.conxugal.domain.licitacion.PublicationId} the source published it under — a type of
+ * its own so the two cannot be confused, since they identify one procedure and mean opposite
+ * things — and the
  * {@link gal.conxugal.domain.licitacion.LicitacionRepository} port that stores them — matching on
  * the source's publication identifier and answering an
  * {@link gal.conxugal.domain.licitacion.UpsertOutcome} that says which branch the write took.

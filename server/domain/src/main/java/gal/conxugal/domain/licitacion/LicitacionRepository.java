@@ -47,5 +47,5 @@ public interface LicitacionRepository {
    * inner join would drop any procedure whose record published no contract type. The reasoning
    * belongs with the annotations that carry it out, so it lives on the adapter.
    */
-  Optional<Licitacion> findByPublicationId(String publicationId);
+  Optional<Licitacion> findByPublicationId(PublicationId publicationId);
 }
