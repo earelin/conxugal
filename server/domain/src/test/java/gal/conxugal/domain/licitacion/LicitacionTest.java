@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class LicitacionTest {
@@ -141,21 +142,7 @@ class LicitacionTest {
 
   @Test
   void keeps_an_uninterpretable_publication_date_null_without_refusing_the_procedure() {
-    Licitacion licitacion =
-        new Licitacion(
-            PUBLICATION_ID,
-            ORGANO_ID,
-            null,
-            MODIFIED_ON,
-            FORMALIZADO,
-            "2024/001",
-            "Obras",
-            OBRAS,
-            ABERTOS,
-            ORDINARIA,
-            2,
-            BASE_BUDGET,
-            ESTIMATED_VALUE);
+    Licitacion licitacion = published(null, "2024/001", "Obras");
 
     assertThat(licitacion.publicationDate()).isNull();
     assertThat(licitacion.obxecto()).isEqualTo("Obras");
@@ -207,21 +194,7 @@ class LicitacionTest {
 
   @Test
   void keeps_the_expediente_exactly_as_the_adapter_handed_it_over() {
-    Licitacion licitacion =
-        new Licitacion(
-            PUBLICATION_ID,
-            ORGANO_ID,
-            PUBLISHED_ON,
-            MODIFIED_ON,
-            FORMALIZADO,
-            "  2024/001  ",
-            "Obras",
-            OBRAS,
-            ABERTOS,
-            ORDINARIA,
-            2,
-            BASE_BUDGET,
-            ESTIMATED_VALUE);
+    Licitacion licitacion = published(PUBLISHED_ON, "  2024/001  ", "Obras");
 
     assertThat(licitacion.expediente()).isEqualTo("  2024/001  ");
   }
@@ -234,21 +207,7 @@ class LicitacionTest {
 
   @Test
   void holds_an_expediente_that_published_only_whitespace_as_null() {
-    Licitacion licitacion =
-        new Licitacion(
-            PUBLICATION_ID,
-            ORGANO_ID,
-            PUBLISHED_ON,
-            MODIFIED_ON,
-            FORMALIZADO,
-            " \t",
-            "Obras",
-            OBRAS,
-            ABERTOS,
-            ORDINARIA,
-            2,
-            BASE_BUDGET,
-            ESTIMATED_VALUE);
+    Licitacion licitacion = published(PUBLISHED_ON, " \t", "Obras");
 
     assertThat(licitacion.expediente()).isNull();
   }
@@ -368,14 +327,24 @@ class LicitacionTest {
     assertThat(identified).isNotEqualTo(published("Actuacións de mellora"));
   }
 
-  private static Licitacion published(String obxecto) {
+  private static Licitacion published(@Nullable String obxecto) {
+    return published(PUBLISHED_ON, "2024/001", obxecto);
+  }
+
+  /**
+   * A fully published procedure varying only the three values the tests above need to vary. The
+   * one place they name the aggregate's components, so a test reads as the thing it is about
+   * rather than as thirteen arguments.
+   */
+  private static Licitacion published(
+      @Nullable LocalDate publicationDate, @Nullable String expediente, @Nullable String obxecto) {
     return new Licitacion(
         PUBLICATION_ID,
         ORGANO_ID,
-        PUBLISHED_ON,
+        publicationDate,
         MODIFIED_ON,
         FORMALIZADO,
-        "2024/001",
+        expediente,
         obxecto,
         OBRAS,
         ABERTOS,
