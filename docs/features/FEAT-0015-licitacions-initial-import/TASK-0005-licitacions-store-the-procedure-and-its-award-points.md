@@ -24,10 +24,29 @@ behind TASK-0003's port.
 - **A migration** (next free `V` across `db/migration` **and** `db/migration-local`, taken at merge
   time) creating:
   - **`licitacion`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, `publication_id BIGINT NOT NULL
-    UNIQUE` as the natural key, an FK to `organo_contratacion`, a nullable `publication_date`, the
-    state **code and label** as separate columns, the rest of R7's fields, and the withdrawal
-    marker. Exactly `contrato_menor`'s shape, whose `source_id BIGINT NOT NULL UNIQUE` beside a
-    surrogate `id` is the precedent.
+    UNIQUE` as the natural key, an FK to `organo_contratacion`, a nullable `publication_date`, a
+    `state_id` FK, three nullable type FKs, the rest of R7's fields, and the withdrawal marker.
+    Exactly `contrato_menor`'s shape, whose `source_id BIGINT NOT NULL UNIQUE` beside a surrogate
+    `id` is the precedent.
+  - **The four vocabulary tables TASK-0003's entities map**, each `id UUID PRIMARY KEY DEFAULT
+    uuidv7()` beside its published natural key:
+
+    | Table | Natural key | Other columns |
+    | --- | --- | --- |
+    | `licitacion_state` | `code INT NOT NULL UNIQUE` | `label TEXT` — **deliberately not unique** |
+    | `licitacion_contract_type` | `name TEXT NOT NULL UNIQUE` | — |
+    | `licitacion_procedure_type` | `name TEXT NOT NULL UNIQUE` | — |
+    | `licitacion_tramitacion_type` | `name TEXT NOT NULL UNIQUE` | — |
+
+    **The state's label carries no constraint, and that is the point.** Codes 101 and 102 are both
+    published as *Histórico*, so a `UNIQUE` there would reject the second real state the source
+    publishes.
+
+    **None of the four is seeded.** The state set is not closed — code 7 was never observed and
+    higher ones may exist — so the upsert creates a row for a value the source has not published
+    before, inside the transaction that stores the procedure. A seeded catalogue would turn an
+    unseen code into a foreign-key violation and a rejected procedure, which is the harm R33's
+    store-as-published exists to prevent.
   - **`licitacion_lote`** — its `licitacion_id`, its identifier as **`TEXT`** (measured: `OU0028`,
     `LU4001` and `CO0642` are all real lote identifiers), the two optional extras and the
     withdrawal marker;
@@ -56,7 +75,10 @@ behind TASK-0003's port.
   `NULLS NOT DISTINCT` is load-bearing: PostgreSQL treats NULLs as distinct by default, so without
   it the procedure-wide row of a lotless procedure would insert afresh on every re-import — which is
   every procedure, on every run.
-- **The withdrawal marker is on every one of the five tables**, defaulting to *not withdrawn*.
+- **No vocabulary table carries a withdrawal marker.** The four are not parts of a procedure the
+  source restates; they are the values it publishes, and a state or a type no procedure references
+  any more is still one the source published. R13's withdrawal has nothing to say about them.
+- **The withdrawal marker is on every one of the five child tables**, defaulting to *not withdrawn*.
   TASK-0014 needs it on the lote and the classifications too — SPEC-0008 #16 names the lote
   explicitly — and an earlier draft put it only on three. On `licitacion` itself it is created
   empty, on `V13`'s stated reasoning that adding a column later to a table of millions is a

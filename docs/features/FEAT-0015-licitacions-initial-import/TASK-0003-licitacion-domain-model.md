@@ -1,12 +1,12 @@
 ---
 feat: FEAT-0015
 domain: backend
-adrs: [0008, 0019]
-status: todo
+adrs: [0008, 0019, 0023]
+status: done
 depends_on: []
 ---
 
-# The `Licitacion` aggregate and its repository port
+# The `Licitacion` aggregate, its published vocabularies, and their ports
 
 The procedure itself: what R7 requires held as published, with the port the store implements. No
 tables yet ([TASK-0005](TASK-0005-licitacions-store-the-procedure-and-its-award-points.md)), no
@@ -43,13 +43,12 @@ the `ContratoMenor` / `ContratoMenorId` precedent.
   | Órgano | the walk | FK |
   | publication date | **listing** `publicado` | **nullable** — an uninterpretable date stores null rather than rejecting the row |
   | last-modified date | **listing** `modificado` | what R11's incremental mode will order on |
-  | state **code** | **listing** `estado` | what the row is unique on |
-  | state **label** | **listing** `estadoDesc` | stored beside it, never instead of it |
+  | state | **listing** `estado` + `estadoDesc` | **a reference** to `LicitacionState`, required |
   | expediente | record `Expediente` | free text |
   | object | record `Obxecto` | free text, no length cap |
-  | contract type | record `Tipo de contrato` | as published |
-  | procedure type | record `Tipo de procedemento` | as published |
-  | tramitación type | record `Tipo de tramitación` | as published |
+  | contract type | record `Tipo de contrato` | **a reference** to `LicitacionContractType`, nullable |
+  | procedure type | record `Tipo de procedemento` | **a reference** to `LicitacionProcedureType`, nullable |
+  | tramitación type | record `Tipo de tramitación` | **a reference** to `LicitacionTramitacionType`, nullable |
   | number of lotes | record `Nº lotes` | the source's own figure |
   | base budget | record `Orzamento base de licitación` | `Money` |
   | estimated value | record `Valor estimado` | `Money` |
@@ -61,19 +60,48 @@ the `ContratoMenor` / `ContratoMenorId` precedent.
   listing entry and the parsed record, and
   [TASK-0002](TASK-0002-licitacions-per-organo-import-state.md)'s outstanding ledger carries these
   four values, because a retried record arrives with no listing entry beside it.
+- **Four published vocabularies, each its own entity with its own table**, rather than columns on
+  the procedure: the state and the three types. A value the source publishes on a thousand
+  procedures is then held once, and the procedure refers to it.
+
+  | Entity | Table | Natural key | Notes |
+  | --- | --- | --- | --- |
+  | `LicitacionState` | `licitacion_state` | `code` | plus a `label` the source repeats |
+  | `LicitacionContractType` | `licitacion_contract_type` | `name` | required, non-blank |
+  | `LicitacionProcedureType` | `licitacion_procedure_type` | `name` | required, non-blank |
+  | `LicitacionTramitacionType` | `licitacion_tramitacion_type` | `name` | required, non-blank |
+
+  Each keeps a **surrogate `UUID`** beside its published key, with an identifier type of its own
+  under [ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md) — the three type
+  vocabularies are structurally identical, so only the compiler stops a procedure type reaching
+  the contract-type reference.
 - **The state is a code *and* a label, and both are stored.** Codes 101 and 102 both read
   *Histórico*, so the label is not a key: a store unique on it would reject a real row and a filter
-  keyed on it would merge two states the source distinguishes. Code 7 was never observed and the
-  set is **not closed** — an unknown code is stored as published under R33, so the code is not an
-  enum.
+  keyed on it would merge two states the source distinguishes. **`licitacion_state` therefore
+  carries no constraint on its label**, and two rows holding one is the ordinary case. Code 7 was
+  never observed and the set is **not closed** — an unknown code is stored as published under R33,
+  so the code is not an enum and nothing seeds the table.
+- **The state carries the source's own identifier; the three types have none to carry.** `estado`
+  *is* the source's identifier for a state, held as `code` because that is what the source's JSON
+  calls it. The three types are published as a bare label — no id in the record's `<dd>`, no type
+  field anywhere in the listing endpoint — so their published `name` is what the import matches on.
+  No `sourceId` column is added for a value the source is not known to publish; if one is ever
+  measured, that is a column and a parse change made then.
 - Both economic figures are **`Money`**, the existing value type, not `BigDecimal`.
 - The withdrawal marker R13 needs is on the record, declared here so the aggregate is whole; its
   column is TASK-0005's and the reconciliation that writes it is TASK-0014's.
-- **`LicitacionRepository`** — the port. `upsert` matching on `publicationId`,
-  `findByPublicationId`, and the reads the reconciliation needs. No SQL and no Micronaut Data
+- **`LicitacionRepository`** — the port. `upsert` matching on `publicationId` and answering an
+  `UpsertOutcome` (the identity the children attach to, and whether the row was added, neither of
+  which is recoverable after the write), plus `findByPublicationId`. No SQL and no Micronaut Data
   annotations on the interface itself.
+- **One port per vocabulary** — `LicitacionStateRepository` matching on `code`, and one each for
+  the three types matching on `name`. Each has an `upsert` and a finder, and none has a delete. The
+  upsert is what makes an unseen value cost nothing: it runs inside the transaction that stores the
+  procedure, so a state code or a type name the source has never published before simply creates
+  its row rather than failing a foreign key.
 
-**Out of scope:** every child of the procedure, every table, and every parse. The listing's
+**Out of scope:** every child of the procedure, every table (the four vocabularies' included —
+their migrations are TASK-0005's), and every parse. The listing's
 `importe` is **not** a field here — it is the base budget, which the record publishes properly, and
 taking the listing's number for an award is the mistake
 [`design/source-contract.md`](design/source-contract.md) warns about at length.
@@ -91,8 +119,16 @@ taking the listing's number for an award is the mistake
   `upsert`. (SPEC-0008 #17)
 - Two `Licitacion` values differing only in state **code** are different — 101 and 102 do not
   collapse — and the label is carried beside the code, never instead of it. (SPEC-0008 #44)
+- **Two states sharing one label are two states.** 101 and 102 both construct as *Histórico*, the
+  second is not rejected for repeating the first's label, and nothing in the model treats the label
+  as a key. (SPEC-0008 #44)
 - An unseen state code (say `7`) constructs and stores without special-casing: nothing validates the
   code against a known set. (SPEC-0008 #44)
+- **A procedure whose record published none of the three types constructs**, referring to none of
+  them — the ordinary case, since a type is optional where the state is not. (SPEC-0008 #7
+  per-field half)
+- A type vocabulary entry keeps its published name exactly as published, two spellings staying two
+  entries, and refuses a blank name. (SPEC-0008 #44)
 - The base budget and estimated value are `Money`, and a procedure publishing neither constructs
   with both absent.
 - Unit-tested with no database and no HTTP.

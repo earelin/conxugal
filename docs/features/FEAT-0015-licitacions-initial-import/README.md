@@ -263,6 +263,16 @@ left recording the superseded rule.
   label both**, since two codes share one label), contract/procedure/tramitación types, number of
   lotes, base budget and estimated value — with a `LicitacionRepository` port.
 
+  **The state and the three types are referenced entities, not columns on the procedure.** Each is
+  a published vocabulary with a table and a port of its own, keyed on what the source publishes —
+  the state's `code`, a type's `name` — so a value published on a thousand procedures is held once.
+  Each keeps a surrogate `UUID` beside that key with an identifier type of its own under ADR-0019,
+  because the three type vocabularies are structurally identical and only the compiler stops one
+  reaching another's reference. `licitacion_state` carries **no constraint on its label**: 101 and
+  102 are both *Histórico*, and a unique one would reject a real state. None of the four is seeded
+  or validated against — an unseen value creates its row, which is what R33's store-as-published
+  requires of an open set.
+
   **Its identity follows [ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md)
   unchanged**: a `LicitacionId` wrapping a database-assigned `UUID`, with the source's publication
   identifier held beside it as the **natural key** a re-import matches on. That is exactly
@@ -970,9 +980,11 @@ one branch off it, at the same depth as 18.
    *(SPEC-0008 #5 — the mode this state selects; the run that acts on it is task 16's)*
 3. **`Licitacion` domain model + repository port** — a `LicitacionId` wrapping a database-assigned
    UUID under ADR-0019, the source's publication identifier beside it as the natural key, the
-   Órgano, both dates, expediente, object, **state code and label**, the three types, the lote
-   count, and the two economic figures as `Money`, plus the port. *(SPEC-0008 #7 per-field half,
-   #44)*
+   Órgano, both dates, expediente, object, the lote count, and the two economic figures as `Money`,
+   plus the port. The **state** (code and label) and the **three types** are referenced entities
+   with tables, identifier types and ports of their own, each upserting on what the source
+   publishes so an unseen value costs a row rather than a rejected procedure. *(SPEC-0008 #7
+   per-field half, #44)*
 4. **Award points and competition value types** — lote (its identifier **text**, not a number),
    CPV/NUT classification with its **nullable lote reference**, award (carrying **how its operador
    was resolved**, per amendment 3), formalisation, participation (carrying the **consortium marker
@@ -980,6 +992,7 @@ one branch off it, at the same depth as 18.
    withdrawal marker, plus the **shared lote normaliser**. Under R8's one-place rule with no second
    copy at procedure level. *(SPEC-0008 #9 as amended, #10 storage half)*
 5. **Licitacións store: the procedure and its award points** — migrations creating `licitacion`,
+   the four vocabulary tables its state and types are keyed in,
    `licitacion_lote`, the two classification tables, `licitacion_award` and
    `licitacion_formalisation` (unique publication identifier, FK to the Órgano, a `licitacion_id` on
    **every** child so a lotless procedure can attach its rows, the natural key each child upserts
