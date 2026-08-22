@@ -67,8 +67,41 @@ jobs:
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
-      # Handles dependency/build caching and Gradle Wrapper checksum validation.
+      # Wrapper checksum validation, the Gradle distribution, and the transient parts of
+      # Gradle User Home. The two caches that matter are carved out and handled by the steps
+      # below: they want opposite policies, and this action has a single switch for both.
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          gradle-home-cache-excludes: |
+            caches/modules-2
+            caches/build-cache-1
+          # Nothing this action still owns is pruned before saving, so no run can shrink
+          # what the next one restores.
+          cache-cleanup: never
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # One dependency cache for the whole repository, restored by every job on every branch.
+      # Keyed on the declarations rather than on a hash of the resolved directory, so the three
+      # server jobs land on one entry instead of the nine they wrote between them; restore-keys
+      # means a catalogue bump starts from the previous set and downloads only what moved.
+      - name: Restore the dependency cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/caches/modules-2
+          key: gradle-deps-v1-${{ hashFiles('server/gradle/libs.versions.toml', 'server/gradle.properties', 'server/**/*.gradle.kts') }}
+          restore-keys: gradle-deps-v1-
+
+      # The task outputs, and the cache a pull request actually needs written: a task branch
+      # here pushes eight or nine times before it merges, and every push re-executed all 58
+      # tasks because this lived in a bundle only trunk could write. Per job because the task
+      # sets differ, and unique per run because an entry cannot be updated in place —
+      # restore-keys is what carries the previous run's outputs forward.
+      - name: Cache the Gradle task outputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: gradle-tasks-v1-${{ github.job }}-${{ github.run_id }}
+          restore-keys: gradle-tasks-v1-${{ github.job }}-
 
       # Drawn here rather than inside the script so it is recorded in the log and the job
       # summary before anything can fail, and so a replay dispatch can hand back the same one.
@@ -84,8 +117,14 @@ jobs:
           fi
           echo "seed=$seed" >> "$GITHUB_OUTPUT"
 
+      # The service images are pulled while the application image builds: nothing about them
+      # depends on it, and `up --wait` below would otherwise pay for them serially.
       - name: Build application docker image
-        run: ./gradlew :application:dockerBuild
+        run: |
+          docker compose pull --quiet postgres contratosdegalicia &
+          pull=$!
+          ./gradlew :application:dockerBuild
+          wait "$pull"
 
       - name: Start docker compose (app profile)
         run: docker compose --profile app up -d --wait

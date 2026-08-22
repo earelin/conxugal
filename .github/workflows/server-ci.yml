@@ -30,6 +30,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # A normal run is under ten minutes. The cap is for the stalls, and matters most on trunk,
+    # where the concurrency group is deliberately uncancellable and a hung run would hold it
+    # for GitHub's 6h default.
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: server
@@ -52,8 +56,42 @@ jobs:
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
-      # Handles dependency/build caching and Gradle Wrapper checksum validation.
+      # Wrapper checksum validation, the Gradle distribution, and the transient parts of
+      # Gradle User Home. The two caches that matter are carved out and handled by the steps
+      # below: they want opposite policies, and this action has a single switch for both.
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          gradle-home-cache-excludes: |
+            caches/modules-2
+            caches/build-cache-1
+          # Nothing this action still owns is pruned before saving, so no run can shrink
+          # what the next one restores.
+          cache-cleanup: never
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # One dependency cache for the whole repository, restored by every job on every branch.
+      # Keyed on the declarations rather than on a hash of the resolved directory, so the three
+      # server jobs land on one entry instead of the nine they wrote between them; restore-keys
+      # means a catalogue bump starts from the previous set and downloads only what moved.
+      - name: Restore the dependency cache
+        id: dependency-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/caches/modules-2
+          key: gradle-deps-v1-${{ hashFiles('server/gradle/libs.versions.toml', 'server/gradle.properties', 'server/**/*.gradle.kts') }}
+          restore-keys: gradle-deps-v1-
+
+      # The task outputs, and the cache a pull request actually needs written: a task branch
+      # here pushes eight or nine times before it merges, and every push re-executed all 58
+      # tasks because this lived in a bundle only trunk could write. Per job because the task
+      # sets differ, and unique per run because an entry cannot be updated in place —
+      # restore-keys is what carries the previous run's outputs forward.
+      - name: Cache the Gradle task outputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: gradle-tasks-v1-${{ github.job }}-${{ github.run_id }}
+          restore-keys: gradle-tasks-v1-${{ github.job }}-
 
       # One invocation rather than two: integrationTest is deliberately kept out
       # of `check`, so this adds it without running anything twice, and saves a
@@ -61,8 +99,25 @@ jobs:
       - name: Build, unit and integration tests
         run: ./gradlew build integrationTest
 
+      # Written from one job on one branch, and only there. `build` resolves a superset of what
+      # acceptance and fuzz need, so a single entry serves all three. A pull request cannot
+      # write an entry trunk would read — entries are immutable and scoped to the ref that
+      # wrote them — and letting every branch save its own would be a ~500 MB copy each. Saved
+      # even when the build went red, so a failed run still contributes what it downloaded, and
+      # only when the exact key missed, since an unchanged catalogue resolves to what is
+      # already there.
+      - name: Save the dependency cache
+        if: always() && github.ref == 'refs/heads/trunk' && steps.dependency-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/caches/modules-2
+          key: gradle-deps-v1-${{ hashFiles('server/gradle/libs.versions.toml', 'server/gradle.properties', 'server/**/*.gradle.kts') }}
+
   acceptance:
     runs-on: ubuntu-latest
+    # Same reasoning as `build` above, and this job additionally waits on an image pull and a
+    # browser download — the two stalls that motivated the cap on ui-acceptance.yml.
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: server
@@ -85,11 +140,50 @@ jobs:
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
-      # Handles dependency/build caching and Gradle Wrapper checksum validation.
+      # Wrapper checksum validation, the Gradle distribution, and the transient parts of
+      # Gradle User Home. The two caches that matter are carved out and handled by the steps
+      # below: they want opposite policies, and this action has a single switch for both.
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          gradle-home-cache-excludes: |
+            caches/modules-2
+            caches/build-cache-1
+          # Nothing this action still owns is pruned before saving, so no run can shrink
+          # what the next one restores.
+          cache-cleanup: never
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
+      # One dependency cache for the whole repository, restored by every job on every branch.
+      # Keyed on the declarations rather than on a hash of the resolved directory, so the three
+      # server jobs land on one entry instead of the nine they wrote between them; restore-keys
+      # means a catalogue bump starts from the previous set and downloads only what moved.
+      - name: Restore the dependency cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/caches/modules-2
+          key: gradle-deps-v1-${{ hashFiles('server/gradle/libs.versions.toml', 'server/gradle.properties', 'server/**/*.gradle.kts') }}
+          restore-keys: gradle-deps-v1-
+
+      # The task outputs, and the cache a pull request actually needs written: a task branch
+      # here pushes eight or nine times before it merges, and every push re-executed all 58
+      # tasks because this lived in a bundle only trunk could write. Per job because the task
+      # sets differ, and unique per run because an entry cannot be updated in place —
+      # restore-keys is what carries the previous run's outputs forward.
+      - name: Cache the Gradle task outputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: gradle-tasks-v1-${{ github.job }}-${{ github.run_id }}
+          restore-keys: gradle-tasks-v1-${{ github.job }}-
+
+      # The service images are pulled while the application image builds: nothing about them
+      # depends on it, and `up --wait` below would otherwise pay for them serially.
       - name: Build application docker image
-        run: ./gradlew :application:dockerBuild
+        run: |
+          docker compose pull --quiet postgres contratosdegalicia &
+          pull=$!
+          ./gradlew :application:dockerBuild
+          wait "$pull"
 
       - name: Start docker compose (app profile)
         run: docker compose --profile app up -d --wait
@@ -102,19 +196,25 @@ jobs:
 
       # Keyed on the pinned Playwright version rather than a hash of the whole
       # catalogue: the version pins the browser build, so an unrelated dependency
-      # bump does not strand another copy in the cache. Same key shape as
-      # ui-acceptance.yml, so the two share one entry once their versions match.
+      # bump does not strand another copy in the cache.
       - name: Resolve the Playwright version
         id: playwright
         run: |
           version=$(sed -n 's/^playwright = "\(.*\)"$/\1/p' gradle/libs.versions.toml)
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      # Same key shape and generation prefix as ui-acceptance.yml, but not the same entry: the
+      # Java binding is capped at 1.62.0 on Maven Central while the UI is on 1.62.1, and the key
+      # carries the full version. Both resolve to chromium-1234 today, so restore-keys is what
+      # makes that pay — either side's entry satisfies the other's install step, which is left
+      # unconditional below and so verifies rather than re-downloads. It also abandons a
+      # truncated entry saved by a run cancelled mid-download, which the bare key could not.
       - name: Cache the Playwright browser
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          key: playwright-v1-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          restore-keys: playwright-v1-${{ runner.os }}-
 
       # Left unconditional so a partially populated cache self-heals; on a hit
       # this only verifies the download.

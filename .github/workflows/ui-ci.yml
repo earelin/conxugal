@@ -12,6 +12,12 @@ on:
       - "ui/**"
       - ".github/workflows/ui-ci.yml"
 
+# Matches ui-acceptance.yml and server-ci.yml: a superseded pull request push is cancelled
+# rather than run to completion, while pushes to trunk are left uncancellable.
+concurrency:
+  group: ui-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
