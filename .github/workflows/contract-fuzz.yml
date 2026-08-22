@@ -67,8 +67,27 @@ jobs:
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
-      # Handles dependency/build caching and Gradle Wrapper checksum validation.
+      # Handles dependency/build caching and Gradle Wrapper checksum validation. Its own
+      # caching is left exactly as it was: it writes only from trunk, which is what keeps one
+      # copy of a ~500 MB dependency bundle rather than one per branch.
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      # The one thing setup-gradle cannot do: task outputs written from a pull request. Its own
+      # copy of build-cache-1 is written only from trunk, so a task branch — which pushes eight
+      # or nine times before it merges — re-executed all 58 tasks on every push. This entry
+      # overlays that one, so a push starts from the branch's own previous run and falls back
+      # to trunk's. Per job because the task sets differ, and per run+attempt because an entry
+      # cannot be updated in place and run_id alone repeats on a re-run.
+      #
+      # It must stay after setup-gradle. Restoring into ~/.gradle/caches first would create the
+      # directory, and setup-gradle disables its own caching outright when it finds a
+      # pre-existing Gradle User Home — silently, with only a job-summary line to show for it.
+      - name: Cache the Gradle task outputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: gradle-tasks-v1-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: gradle-tasks-v1-${{ github.job }}-
 
       # Drawn here rather than inside the script so it is recorded in the log and the job
       # summary before anything can fail, and so a replay dispatch can hand back the same one.
@@ -84,8 +103,17 @@ jobs:
           fi
           echo "seed=$seed" >> "$GITHUB_OUTPUT"
 
+      # The service images are pulled while the application image builds: nothing about them
+      # depends on it, and `up --wait` below would otherwise pay for them serially.
       - name: Build application docker image
-        run: ./gradlew :application:dockerBuild
+        run: |
+          docker compose pull --quiet postgres contratosdegalicia &
+          pull=$!
+          ./gradlew :application:dockerBuild
+          # Best-effort: `up --wait` below pulls whatever is still missing, which is what
+          # happened before this ran ahead of it. A blip here should not fail the job one
+          # step early over an image the next step would have fetched anyway.
+          wait "$pull" || echo "::warning::pre-pull failed; leaving the images to up --wait"
 
       - name: Start docker compose (app profile)
         run: docker compose --profile app up -d --wait
