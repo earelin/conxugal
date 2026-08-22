@@ -30,7 +30,15 @@ import org.jspecify.annotations.Nullable;
  * its own.</strong> Every other party is a reference to an operador, and a name belongs on the
  * operador an identifier resolves to. An unidentified consortium has no such operador, so the
  * alternative to holding its published name here is losing it. It is exactly one component on
- * exactly one record, and it is null wherever the catalogue could have held the party.
+ * exactly one record, and it is null wherever the catalogue could have held the party — which is
+ * refused here rather than left to the column constraint, so the diagnosis names the mistake
+ * instead of naming a column, and a parse defect does not cost the whole procedure.
+ *
+ * <p><strong>The refusal is one-directional, and deliberately so.</strong> A name requires a
+ * consortium with no operador; a consortium with <em>no</em> name is accepted, because nothing
+ * measured guarantees every consortium's cell carries one and refusing that row would lose a real
+ * bid. It also leaves room for a consortium that gains an operador once a formalisation identifies
+ * it, which clears the name in the same write.
  *
  * <p>{@code won} carries the award back to the bid that won it, so an operador that won one lote
  * of a procedure and lost another holds a row for each. {@code withdrawn} is the marker R13's
@@ -50,6 +58,11 @@ public record Participation(
   public Participation {
     Objects.requireNonNull(licitacionId, "licitacionId must not be null");
     consortiumName = nullIfBlank(consortiumName);
+    if (consortiumName != null && (!consortium || operadorEconomicoId != null)) {
+      throw new IllegalArgumentException(
+          "consortiumName is only for a consortium the catalogue could not hold, so it requires "
+              + "consortium and no operadorEconomicoId");
+    }
   }
 
   /**

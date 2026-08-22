@@ -20,11 +20,22 @@ class LoteTest {
 
   @Test
   void carries_every_column_its_table_holds_and_nothing_besides() {
-    // Under ADR-0008 the record is the mapping, so a column with no component here is a column
-    // the store cannot write. Pinned so a later change has to be deliberate.
+    // The record is the mapping, so a column with no component here is a column the store cannot
+    // write. Pinned so a later change has to be deliberate.
     assertThat(Arrays.stream(Lote.class.getRecordComponents()).map(RecordComponent::getName))
         .containsExactly(
             "id", "licitacionId", "identifier", "description", "estimatedValue", "withdrawn");
+  }
+
+  @Test
+  void holds_the_identifier_as_text_so_an_integer_one_is_not_expressible() {
+    // Pinning the name alone would let the component become an Integer and stay green, which is
+    // the change that would reject OU0028 and every procedure carrying it.
+    assertThat(
+            Arrays.stream(Lote.class.getRecordComponents())
+                .filter(component -> "identifier".equals(component.getName()))
+                .map(component -> component.getType().getName()))
+        .containsExactly(String.class.getName());
   }
 
   @Test

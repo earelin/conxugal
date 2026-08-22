@@ -49,9 +49,17 @@ the tables and not in the types.
 
   **`UteMembership` is the one child that takes none**, and that is not an omission: TASK-0006
   gives it no `id` and a key of `(participation_id, operador_economico_id)`, both non-null, so the
-  pair *is* its identity. `EntityIdentityArchTest` then requires it **not** to override
+  pair is what the table keys on. `EntityIdentityArchTest` then requires it **not** to override
   `equals`/`hashCode` — it is a value filed under its owner, on `NomeAlternativo`'s shape, and the
-  record's own equality is the correct one.
+  record's own equality is the one it gets.
+
+  **One consequence is named rather than left to be discovered**: that equality is the *triple*, so
+  two readings of one row either side of a withdrawal compare unequal, and a caller collecting
+  memberships into a set while a reconciliation flips markers holds one row twice. `NomeAlternativo`
+  answers the same problem by comparing on its natural key alone, which is not open here — every
+  component this table keys on is another aggregate's identifier, and that is precisely the case
+  the arch rule refuses an override for. Nothing this feature builds notices; a caller that needs
+  the pair alone changes the rule rather than the record.
 - **`Lote`** — its `LicitacionId`, its **identifier as text**, optionally a description and an
   estimated value, and a withdrawal marker.
 
@@ -107,6 +115,13 @@ the tables and not in the types.
   type. R18 holds that this family stores no name of its own because a name belongs on the operador
   an identifier resolves to; an unidentified consortium has no such operador, so the alternative to
   storing its published name is losing it. This is **amendment 1**.
+
+  **The record refuses the name where the catalogue could have held the party**, mirroring the
+  `CHECK` [TASK-0006](TASK-0006-licitacions-store-the-competition-tables.md) puts on the column. The
+  constraint stays in the migration — it is the guarantee — but a parse defect then fails where the
+  mistake is rather than at the insert, where under this feature's rules it would send the whole
+  procedure to the outstanding ledger. The refusal is one-directional exactly as the `CHECK` is, so
+  a consortium the source published no name for is accepted.
 - **`UteMembership`** — a `ParticipationId`, one member operador and a withdrawal marker. **Hung off
   the participation**, never off a UTE operador, so one shape serves an identified and an
   unidentified consortium alike, and a membership's visibility can follow its participation's.

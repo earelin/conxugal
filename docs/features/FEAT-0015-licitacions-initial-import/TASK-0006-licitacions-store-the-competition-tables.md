@@ -35,7 +35,24 @@ Operadores are the stored projection of
   beside it would be a second key naming the same row.
   [TASK-0004](TASK-0004-award-points-and-competition-value-types.md)'s `UteMembership` is therefore
   a value filed under its participation rather than an entity of its own, and compares by its
-  components.
+  components — **all three of them, the withdrawal marker included**. Two readings of one row
+  either side of a withdrawal are therefore not interchangeable, which is a trap for any caller
+  that collects memberships into a set. Narrowing that equality is not open to the record: every
+  component the table keys on is another aggregate's identifier, which is exactly what the
+  entity-identity architecture rule refuses an override for. A caller that needs the pair alone
+  changes the rule rather than the record.
+- **The membership's write is hand-written SQL, not a derived `save`.** `NomeAlternativo` is the
+  shipped precedent for a composite key, and it proves only the *read* path — its writes are
+  hand-written in `JdbcOperadorRepository` for exactly this reason. Micronaut Data models a
+  composite identity first-class, but the `ON CONFLICT` this table's idempotence criterion needs is
+  not something a derived method expresses.
+- **The participation's `CHECK` is mirrored in the domain record**, which refuses a
+  `consortiumName` alongside an operador reference or without the consortium marker. The constraint
+  stays in the migration — it is the guarantee — but a parse defect then fails where the mistake
+  is rather than at the insert, where under this feature's own rules it would send the whole
+  procedure to the outstanding ledger. `JdbcOperadorRepository.retainName` is the precedent
+  TASK-0005 already cites for that class of error. The record's refusal is one-directional too, so
+  the consortium carrying no name is accepted by both.
 - **Natural keys**, on the same reasoning as TASK-0005's: a participation upserts on
   `(licitacion_id, lote_id, operador_economico_id, consortium_name)` declared **`NULLS NOT
   DISTINCT`** — two of those four components are null for the 33-of-35 unidentified-consortium case,
@@ -67,7 +84,8 @@ Operadores are the stored projection of
   SPEC-0006 #39 tests for. Keeping the two in step is
   [TASK-0014](TASK-0014-reconciling-a-restated-procedure.md)'s; this task provides the column and
   the query that respects it.
-- **Indexes: the natural key, the unique membership key, and the foreign keys. Nothing else.** An
+- **Indexes: the participation's natural key, the membership's primary key, and the foreign keys.
+  Nothing else.** An
   earlier draft added `(licitacion_id, lote_id)` "for the `Part.` cross-check and R21's page"; the
   cross-check never reads the database — TASK-0010 performs it at parse time, with no database at
   all — and R21's page is the browsing feature's read.
@@ -89,7 +107,7 @@ from a participation to its memberships (TASK-0014), and every read endpoint.
 - A `licitacion_ute_membership` stores against a participation whose operador reference is **null**,
   which is the 33-of-35 case and the one amendment 1 exists for. (SPEC-0008 #21 as amended)
 - Two members of one consortium store two membership rows; **upserting the same member twice leaves
-  one**, absorbed by the unique key rather than raising. (SPEC-0008 #17)
+  one**, absorbed by the primary key rather than raising. (SPEC-0008 #17)
 - A membership row carrying the withdrawal marker is excluded from a query for an operador's
   **visible** memberships. *The propagation that sets it is TASK-0014's; this is the storage half.*
   ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #39)

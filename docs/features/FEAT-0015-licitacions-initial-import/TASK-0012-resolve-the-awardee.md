@@ -38,6 +38,17 @@ are different populations and are not summed against each other.)*
   is bounded: it **never creates an operador**, links only where **exactly one** catalogued operador
   matches, and the award records the link as `NAME_DERIVED` so it stays distinguishable and
   reversible. Measured ambiguity is 1 name in 268, and that one is a source typo.
+- **Decide whether the operador reference and the resolution path are a biconditional, and if so
+  enforce it here.** [TASK-0004](TASK-0004-award-points-and-competition-value-types.md) leaves
+  `Award` able to express both incoherent states — a null operador alongside
+  `PUBLISHED_BY_FORMALISATION`, and an operador alongside `UNRESOLVED` — and nothing in the schema
+  catches either. That is deliberate rather than an oversight: the path exists so that *"the
+  absence of a link is stated rather than inferred from a null"*, which argues the two should never
+  disagree, but **this** task is the one that knows whether a route can succeed and still leave no
+  operador — a formalisation publishing an identifier that resolves to nobody the catalogue holds
+  is the case to check. If the biconditional holds, it belongs in `Award`'s compact constructor,
+  where every other invariant in that package already lives. If it does not, say which state is
+  legitimate and why, so nobody adds the guard later and breaks this task.
 
   The match is against an operador's **principal name and its retained alternatives**, since R15's
   retained set is what makes a firm findable under a name it no longer displays — but the uniqueness

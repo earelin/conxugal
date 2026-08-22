@@ -51,10 +51,10 @@ class UteMembershipTest {
             "UTE PRACE-TABOADA RAMOS",
             false);
 
-    UteMembership membership = new UteMembership(unidentifiedUte.id(), PRACE);
+    UteMembership membership = new UteMembership(PARTICIPATION_ID, PRACE);
 
     assertThat(unidentifiedUte.operadorEconomicoId()).isNull();
-    assertThat(membership.participationId()).isEqualTo(PARTICIPATION_ID);
+    assertThat(membership.participationId()).isEqualTo(unidentifiedUte.id());
     assertThat(membership.operadorId()).isEqualTo(PRACE);
   }
 
@@ -92,6 +92,18 @@ class UteMembershipTest {
                     new UteMembership(PARTICIPATION_ID, PRACE),
                     new UteMembership(PARTICIPATION_ID, PRACE))))
         .hasSize(1);
+  }
+
+  @Test
+  void separates_two_readings_of_one_row_that_differ_only_in_the_withdrawal_marker() {
+    // Pinned rather than endorsed: the pair is what the table keys on, but the record compares by
+    // all three components, so these two denote one stored row and are not interchangeable. A
+    // caller collecting memberships into a set while a reconciliation flips markers holds it
+    // twice. Narrowing the equality is not open to this record — every component the table keys on
+    // is another aggregate's identifier, which is what the architecture rule refuses an override
+    // for — so a caller needing the pair alone changes that rule instead.
+    assertThat(new UteMembership(PARTICIPATION_ID, PRACE, false))
+        .isNotEqualTo(new UteMembership(PARTICIPATION_ID, PRACE, true));
   }
 
   @Test

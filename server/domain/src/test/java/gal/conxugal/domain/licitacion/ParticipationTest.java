@@ -1,6 +1,7 @@
 package gal.conxugal.domain.licitacion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import gal.conxugal.domain.operador.OperadorId;
@@ -130,6 +131,35 @@ class ParticipationTest {
   void requires_the_procedure_it_belongs_to() {
     assertThatNullPointerException()
         .isThrownBy(() -> new Participation(null, null, OPERADOR_ID, false, false, null));
+  }
+
+  @Test
+  void refuses_the_published_name_beside_an_operador_the_catalogue_holds() {
+    // The name is the exception for a party no operador can carry, so one carrying both would be
+    // a second name for a party that already has one. Refused where the mistake is, rather than
+    // at the insert, where it would cost the whole procedure.
+    assertThatIllegalArgumentException()
+        .isThrownBy(
+            () ->
+                new Participation(
+                    LICITACION_ID, null, OPERADOR_ID, true, true, "UTE PRACE-TABOADA RAMOS"));
+  }
+
+  @Test
+  void refuses_the_published_name_on_the_bid_that_was_not_consortium() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(
+            () -> new Participation(LICITACION_ID, null, null, false, false, "MISTURAS-INGESAN"));
+  }
+
+  @Test
+  void accepts_the_consortium_that_published_no_name_at_all() {
+    // The refusal is one-directional: nothing measured guarantees a consortium's cell carries a
+    // name, and refusing that row would lose a real bid.
+    Participation nameless = new Participation(LICITACION_ID, LOTE_ID, null, false, true, null);
+
+    assertThat(nameless.consortium()).isTrue();
+    assertThat(nameless.consortiumName()).isNull();
   }
 
   @Test

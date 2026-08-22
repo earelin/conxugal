@@ -26,8 +26,18 @@ import java.util.Objects;
  * two in step is the reconciliation's job; the marker is here so it has somewhere to write.
  *
  * <p>This is a value filed under its participation rather than an entity of its own: the pair it
- * carries <em>is</em> its identity, which is what makes a member stored once however many times
- * the source lists it, so it compares by its components as the record does by default.
+ * carries is what the table is keyed on, which is what makes a member stored once however many
+ * times the source lists it. It holds no identity of its own, so it compares by its components as
+ * the record does by default.
+ *
+ * <p><strong>That equality is the triple and not the pair</strong>, and the difference is worth
+ * naming: two instances carrying one pair and different withdrawal markers are the same stored row
+ * and compare unequal all the same. Nothing this task builds notices, because nothing constructs
+ * both readings — but a caller that collects memberships into a set while a reconciliation flips
+ * markers would hold one row twice, and reaching for the pair alone is not open to this record:
+ * every component the table keys on is another aggregate's identifier, so an equality override
+ * here is what the architecture rule forbids. If a caller ever needs the pair alone, that is a
+ * change to the rule rather than to this record.
  */
 @MappedEntity("licitacion_ute_membership")
 public record UteMembership(

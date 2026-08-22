@@ -11,6 +11,9 @@ import org.junit.jupiter.api.Test;
 
 class AwardeeResolutionPathTest {
 
+  private static final List<AwardeeResolutionPath> WEAKEST_FIRST =
+      List.of(UNRESOLVED, NAME_DERIVED, PUBLISHED_BY_BIDDER, PUBLISHED_BY_FORMALISATION);
+
   @Test
   void orders_the_four_paths_weakest_first_so_the_greater_one_supersedes() {
     // The order is the type's own, not a convention a caller applies: sorting them answers which
@@ -20,17 +23,22 @@ class AwardeeResolutionPathTest {
                 .stream()
                 .sorted()
                 .toList())
-        .containsExactly(UNRESOLVED, NAME_DERIVED, PUBLISHED_BY_BIDDER, PUBLISHED_BY_FORMALISATION);
+        .containsExactlyElementsOf(WEAKEST_FIRST);
   }
 
   @Test
   void answers_which_supersedes_for_every_ordered_pair_of_the_four() {
-    AwardeeResolutionPath[] weakestFirst = AwardeeResolutionPath.values();
+    // Against the order written down rather than against values(). Taken from values(), this would
+    // compare declaration order with itself and pass whatever order the constants were declared
+    // in — which is the one thing it exists to check.
+    List<AwardeeResolutionPath> weakestFirst = WEAKEST_FIRST;
 
-    for (int stronger = 0; stronger < weakestFirst.length; stronger++) {
+    assertThat(AwardeeResolutionPath.values())
+        .containsExactlyElementsOf(weakestFirst);
+    for (int stronger = 0; stronger < weakestFirst.size(); stronger++) {
       for (int weaker = 0; weaker < stronger; weaker++) {
-        assertThat(weakestFirst[stronger].supersedes(weakestFirst[weaker])).isTrue();
-        assertThat(weakestFirst[weaker].supersedes(weakestFirst[stronger])).isFalse();
+        assertThat(weakestFirst.get(stronger).supersedes(weakestFirst.get(weaker))).isTrue();
+        assertThat(weakestFirst.get(weaker).supersedes(weakestFirst.get(stronger))).isFalse();
       }
     }
   }
