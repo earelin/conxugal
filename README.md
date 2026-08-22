@@ -1,5 +1,13 @@
 # conxugal
 
+[![Actions Lint](https://github.com/earelin/conxugal/actions/workflows/actions-lint.yml/badge.svg)](https://github.com/earelin/conxugal/actions/workflows/actions-lint.yml)
+[![Contract fuzz](https://github.com/earelin/conxugal/actions/workflows/contract-fuzz.yml/badge.svg)](https://github.com/earelin/conxugal/actions/workflows/contract-fuzz.yml)
+[![Docs Lint](https://github.com/earelin/conxugal/actions/workflows/docs-lint.yml/badge.svg)](https://github.com/earelin/conxugal/actions/workflows/docs-lint.yml)
+[![OpenAPI Lint](https://github.com/earelin/conxugal/actions/workflows/openapi-lint.yml/badge.svg)](https://github.com/earelin/conxugal/actions/workflows/openapi-lint.yml)
+[![Server CI](https://github.com/earelin/conxugal/actions/workflows/server-ci.yml/badge.svg)](https://github.com/earelin/conxugal/actions/workflows/server-ci.yml)
+[![UI Acceptance Tests](https://github.com/earelin/conxugal/actions/workflows/ui-acceptance.yml/badge.svg)](https://github.com/earelin/conxugal/actions/workflows/ui-acceptance.yml)
+[![UI CI](https://github.com/earelin/conxugal/actions/workflows/ui-ci.yml/badge.svg)](https://github.com/earelin/conxugal/actions/workflows/ui-ci.yml)
+
 <!-- markdownlint-disable MD033 -->
 <img src="ui/public/logo.svg" alt="Logo de conxugal" width="50" height="50" align="left">
 
