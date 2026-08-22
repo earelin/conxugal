@@ -1,10 +1,8 @@
 package gal.conxugal.domain.licitacion;
 
-import gal.conxugal.commons.text.Whitespace;
 import io.micronaut.data.annotation.GeneratedValue;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
-import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -39,14 +37,7 @@ public record LicitacionContractType(
     @Id @GeneratedValue @Nullable LicitacionContractTypeId id, String name) {
 
   public LicitacionContractType {
-    Objects.requireNonNull(name, "name must not be null");
-    if (Whitespace.isBlank(name)) {
-      throw new IllegalArgumentException("name must not be blank");
-    }
-    if (!name.equals(Whitespace.strip(name))) {
-      throw new IllegalArgumentException(
-          "name must arrive trimmed, and this one did not: '%s'".formatted(name));
-    }
+    VocabularyName.validate(name);
   }
 
   /** A type as it is first read from the source: the database assigns its id on insert. */
