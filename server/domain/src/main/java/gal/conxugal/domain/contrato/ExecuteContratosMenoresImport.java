@@ -4,6 +4,7 @@ import gal.conxugal.domain.importrun.ContractFamily;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunOrganoCoverage;
 import gal.conxugal.domain.importrun.ImportRunOrganoState;
+import gal.conxugal.domain.importrun.ImportRunReport;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.domain.organo.ContratosMenoresImportMode;
@@ -149,20 +150,11 @@ public class ExecuteContratosMenoresImport {
    * The Órganos to walk, read from the run rather than looked up again. The list was fixed when the
    * run was claimed, and a sweep taking days would otherwise silently change shape underneath
    * itself every time an administrator marked something.
-   *
-   * <p><strong>Its own family only.</strong> A run can cover an Órgano once per family, and this
-   * walks contratos menores — taking every row would walk an Órgano twice for a run that also
-   * covers its licitacións, and settle the other family's row on this one's outcome.
    */
   private List<OrganoId> coveredOrganosOf(ImportRunId runId) {
     return importRuns
         .findRun(runId)
-        .map(
-            report ->
-                report.coveredOrganos().stream()
-                    .filter(covered -> covered.family() == ContractFamily.CONTRATOS_MENORES)
-                    .map(ImportRunOrganoCoverage::organoId)
-                    .toList())
+        .map(ExecuteContratosMenoresImport::contratosMenoresCoverageOf)
         .orElseGet(
             () -> {
               LOG.warn(
@@ -171,6 +163,18 @@ public class ExecuteContratosMenoresImport {
                   runId);
               return List.of();
             });
+  }
+
+  /**
+   * <strong>Its own family only.</strong> A run can cover an Órgano once per family, and this walks
+   * contratos menores — taking every row would walk an Órgano twice for a run that also covers its
+   * licitacións, and settle the other family's row on this one's outcome.
+   */
+  private static List<OrganoId> contratosMenoresCoverageOf(ImportRunReport report) {
+    return report.coveredOrganos().stream()
+        .filter(covered -> covered.family() == ContractFamily.CONTRATOS_MENORES)
+        .map(ImportRunOrganoCoverage::organoId)
+        .toList();
   }
 
   /**
