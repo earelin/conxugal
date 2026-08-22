@@ -15,8 +15,8 @@ import org.jspecify.annotations.Nullable;
  * and no type field in the listing. Nothing here normalises it, so two published spellings are two
  * entries.
  *
- * <p>The name is required, and a blank or untrimmed one is refused: both would key an entry that
- * should not exist. A procedure whose record published no tramitación type refers to none at all.
+ * <p>The name is required, and a blank or untrimmed one is refused — see {@link VocabularyName}.
+ * A procedure whose record published no tramitación type refers to none at all.
  *
  * @see LicitacionContractType for the reasoning in full — the three type vocabularies share it
  */

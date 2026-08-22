@@ -20,14 +20,9 @@ import org.jspecify.annotations.Nullable;
  * internal spacing — so two published spellings are two entries, and a vocabulary that folded
  * them would be asserting an equivalence the source never published.
  *
- * <p>It does <em>refuse</em> two names, and the difference from ordinary published text is that
- * this one is the natural key. A <strong>blank</strong> name would key an entry that is not a
- * fact about anything, and an <strong>untrimmed</strong> one would key an entry of its own beside
- * the trimmed spelling of the same type — two vocabulary rows for one published value, each with
- * its own procedures hanging off it. Both are adapter mistakes rather than things the source
- * publishes: the padding is an artefact of the record's HTML and the parse is contracted to strip
- * it. Refusing here is what stops a silently duplicated key, and it is checked rather than
- * repaired so the mistake surfaces where it was made.
+ * <p>It does <em>refuse</em> a blank or untrimmed name, which ordinary published text would be
+ * free to carry: see {@link VocabularyName} for the rule the three type vocabularies share and
+ * why a name that fails it is refused rather than repaired.
  *
  * <p>A procedure whose record published no contract type refers to none at all, which is where
  * that absence belongs — never a blank entry standing in for it.
