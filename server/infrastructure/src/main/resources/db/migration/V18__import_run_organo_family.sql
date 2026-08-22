@@ -1,3 +1,9 @@
+-- Nullable, then backfilled, then constrained — rather than one ADD COLUMN ... NOT NULL DEFAULT
+-- 'CONTRATOS_MENORES', which would be a shorter metadata-only step and is deliberately not taken:
+-- a default would silently accept an insert that named no family, which is exactly the second
+-- insertion path the claim is the only place allowed to take. The three-step form leaves an
+-- instance running pre-V18 code unable to enumerate coverage against the migrated schema, which
+-- costs nothing because the application is stopped and started rather than rolled.
 ALTER TABLE import_run_organo ADD COLUMN family TEXT;
 
 -- Total and unambiguous: every run recorded before this migration is a contratos menores run or a

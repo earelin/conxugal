@@ -11,12 +11,11 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import gal.conxugal.domain.importrun.ImportRun;
-import gal.conxugal.domain.importrun.ImportRunOrganoState;
 import gal.conxugal.domain.importrun.ImportRunState;
 import gal.conxugal.infrastructure.jdbc.importrun.JdbcImportRunRepository;
 
 /**
- * The three guarantees the import guard rests on that no type or constraint can give it.
+ * The guarantees the import guard rests on that no type or constraint can give it.
  *
  * <p>Main sources only — the rules describe how the production code may be written, and a test
  * naming either is exercising them rather than working around them.
@@ -99,11 +98,18 @@ class ImportRunArchTest {
           .byCodeUnitsThat(theClaimOrTheFrameworksOwnPlumbing());
 
   /**
-   * A coverage row is written in exactly one place too, and no rule above sees it: it is raw SQL in
-   * a private method rather than a Micronaut Data insert. Re-keying the coverage to admit a second
-   * family per Órgano is precisely the change that makes a second insertion path tempting — adding
-   * a family to a run already claimed — and such a path would write its row outside the transaction
-   * that holds the guard.
+   * A coverage row is enumerated in exactly one place too, for the same reason and with the same
+   * consequence: re-keying the coverage to admit a second family per Órgano is what makes a second
+   * insertion path tempting — a family added to a run already claimed — and such a path would write
+   * its row outside the transaction that holds the guard.
+   *
+   * <p><strong>This rule is weaker than the three above, and the difference is worth
+   * stating.</strong> {@code enumerateCoverage} is private, so the compiler already limits its
+   * callers to the adapter; what this adds is only that no <em>second</em> method of the adapter
+   * calls it, and it holds the line if the method is ever widened the way {@code insert} was. It
+   * cannot see a second method writing an {@code INSERT} of its own, because the coverage write is
+   * raw SQL rather than an annotated Micronaut Data method and no ArchUnit predicate reaches inside
+   * a string. That half is {@code ImportRunCoverageInsertionPathTest}'s, over the statement itself.
    */
   @ArchTest
   static final ArchRule ONLY_THE_CLAIM_ENUMERATES_COVERAGE =
@@ -115,18 +121,6 @@ class ImportRunArchTest {
           .should()
           .onlyBeCalled()
           .byCodeUnitsThat(theClaimOrTheFrameworksOwnPlumbing());
-
-  /**
-   * And the rule above cannot be reached around by a second method beside the enumeration, because
-   * any path that starts a coverage row has to name the state one starts at.
-   */
-  @ArchTest
-  static final ArchRule ONLY_THE_CLAIMS_ADAPTER_STARTS_A_COVERAGE_ROW =
-      noClasses()
-          .that()
-          .doNotBelongToAnyOf(ImportRunOrganoState.class, JdbcImportRunRepository.class)
-          .should()
-          .getField(ImportRunOrganoState.class, "PENDING");
 
   private static DescribedPredicate<JavaCodeUnit> theClaimOrTheFrameworksOwnPlumbing() {
     return new DescribedPredicate<>("the claim, or the framework's own generated plumbing") {

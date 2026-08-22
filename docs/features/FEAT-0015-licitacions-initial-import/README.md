@@ -495,6 +495,26 @@ fixed here rather than left to the task:
   already requires of a mixed run;
 - **the trigger is refused as a whole** when the guard is held, never half-claimed.
 
+**The executors settle the run, and only one of them may.** Task 1 leaves
+`ExecuteContratosMenoresImport` reading the run's coverage **filtered to its own family** — it must,
+or a two-family run would walk each Órgano twice and settle the licitacións row on the contratos
+menores outcome. But its verdict and its `complete` call are still the **whole run's**: `complete`
+writes a terminal state and `finished_at`, which releases the system-wide guard. Left as it is, the
+contratos menores half of a two-family run would finish, record a verdict and drop the guard while
+every `LICITACIONS` row was still `PENDING` — and a licitacións-only run walked by that executor
+would find nothing to do and record **succeeded**, because a run covering no Órganos settling as a
+success is FEAT-0009's deliberate rule and the filter makes *nothing to walk* indistinguishable
+from it.
+
+Nothing is reachable today: only `ClaimContratosMenoresImport` and `ImportOrganos` claim, and
+neither ever covers two families. It is recorded here because **the task that adds
+`StartMarkedOrganoImport` and `ExecuteLicitacionsImport` is the one that makes it reachable**, and
+it is that task's to settle — the plain answer being that a per-family executor advances and
+settles only its own coverage rows, and the *run* is completed once, by whoever runs last, on the
+aggregate rule above. Adding an early return for empty coverage instead would be wrong: it would
+break a contratos menores sweep over an empty catalogue, which must still record a run that covered
+nothing and succeeded.
+
 ### The walk: ordered by `id` ascending, resumed by offset
 
 The listing returns an Órgano's whole history in 100-row pages and `recordsTotal` is the Órgano's

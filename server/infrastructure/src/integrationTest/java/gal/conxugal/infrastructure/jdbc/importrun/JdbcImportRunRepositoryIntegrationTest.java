@@ -175,13 +175,18 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
   void claim_covering_one_organo_for_both_families_records_one_row_per_family() throws Exception {
     OrganoId organoId = insertOrgano("consorcio-x");
 
-    ImportRunId runId = bothFamiliesOf(organoId);
+    bothFamiliesOf(organoId);
 
-    assertThat(importRunRepository.findRun(runId).orElseThrow().coveredOrganos())
-        .extracting(ImportRunOrganoCoverage::organoId, ImportRunOrganoCoverage::family)
-        .containsExactlyInAnyOrder(
-            tuple(organoId, ContractFamily.CONTRATOS_MENORES),
-            tuple(organoId, ContractFamily.LICITACIONS));
+    // Asserted against the table rather than through findRun, which filters by run: a binding that
+    // also wrote a row against some other run would read back correctly here and still be wrong.
+    Table coverage = coverageTable();
+    assertThat(coverage).hasNumberOfRows(2);
+    assertThat(coverage).row(0).value("organo_id").isEqualTo(organoId.value());
+    assertThat(coverage).row(0).value("family").isEqualTo("CONTRATOS_MENORES");
+    assertThat(coverage).row(0).value("state").isEqualTo("PENDING");
+    assertThat(coverage).row(1).value("organo_id").isEqualTo(organoId.value());
+    assertThat(coverage).row(1).value("family").isEqualTo("LICITACIONS");
+    assertThat(coverage).row(1).value("state").isEqualTo("PENDING");
   }
 
   // The two rows fare separately, which is the whole point of the re-key: one family failing has
@@ -287,7 +292,11 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
     OrganoId other = insertOrgano("axencia-y");
     importRunRepository.claim(Importer.CONTRATOS_MENORES, contratosMenores(held));
 
-    importRunRepository.claim(Importer.ORGANOS, contratosMenores(other));
+    // Coverage on the refused claim is the point — it is what proves the enumeration was skipped
+    // too, not only the run row. A licitacións trigger rather than the catalogue import, which
+    // covers no Órgano at all and so could not make that claim.
+    importRunRepository.claim(
+        Importer.LICITACIONS, List.of(new CoveredOrgano(other, ContractFamily.LICITACIONS)));
 
     assertThat(runTable()).hasNumberOfRows(1);
     assertThat(coverageTable()).hasNumberOfRows(1);

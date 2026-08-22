@@ -29,6 +29,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * every run recorded before this migration is a contratos menores run or a catalogue run, and a
  * catalogue run covers no Órganos — which is why the migration writes one value rather than
  * deriving one per row.
+ *
+ * <p><strong>Deliberately one test, and it carries no cleanup for that reason.</strong> A second
+ * one here would find the schema already at the latest version, so its own {@code migrateTo("17")}
+ * would be a no-op and its backfill assertion would pass while testing nothing — and truncating
+ * between tests would not help, because what the first test leaves behind is the schema rather
+ * than the rows. A second case belongs in a class with a container of its own.
  */
 @Testcontainers(disabledWithoutDocker = true)
 class ImportRunOrganoFamilyBackfillIntegrationTest {
