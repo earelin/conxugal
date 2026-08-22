@@ -83,15 +83,17 @@ public class ClaimContratosMenoresImport {
     return claimCovering(List.of(organoId));
   }
 
-  /** One family, so one coverage row per Órgano — a contratos menores trigger asks for no more. */
   private ImportRunId claimCovering(List<OrganoId> covered) {
     return importRuns
-        .claim(
-            Importer.CONTRATOS_MENORES,
-            covered.stream()
-                .map(organoId -> new CoveredOrgano(organoId, ContractFamily.CONTRATOS_MENORES))
-                .toList())
+        .claim(Importer.CONTRATOS_MENORES, contratosMenoresOf(covered))
         .orElseThrow(ImportAlreadyRunningException::new);
+  }
+
+  /** One family, so one coverage row per Órgano — a contratos menores trigger asks for no more. */
+  private static List<CoveredOrgano> contratosMenoresOf(List<OrganoId> covered) {
+    return covered.stream()
+        .map(organoId -> new CoveredOrgano(organoId, ContractFamily.CONTRATOS_MENORES))
+        .toList();
   }
 
   private static OrganoId identityOf(OrganoDeContratacion organo) {
