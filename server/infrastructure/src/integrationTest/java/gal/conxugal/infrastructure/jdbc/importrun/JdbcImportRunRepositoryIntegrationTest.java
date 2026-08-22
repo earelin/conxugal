@@ -212,13 +212,8 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
           .isEqualTo(contratosMenoresCoverage(
               organoId, ImportRunOrganoState.SUCCEEDED, 100, 4, null));
       softly.assertThat(coverageFor(report, organoId, ContractFamily.LICITACIONS))
-          .isEqualTo(new ImportRunOrganoCoverage(
-              organoId,
-              ContractFamily.LICITACIONS,
-              ImportRunOrganoState.FAILED,
-              0,
-              0,
-              "the record would not parse"));
+          .isEqualTo(licitacionsCoverage(
+              organoId, ImportRunOrganoState.FAILED, 0, 0, "the record would not parse"));
     });
   }
 
@@ -691,8 +686,27 @@ class JdbcImportRunRepositoryIntegrationTest implements TestPropertyProvider {
       int added,
       int refreshed,
       @Nullable String failureReason) {
-    return new ImportRunOrganoCoverage(
+    return coverage(
         organoId, ContractFamily.CONTRATOS_MENORES, state, added, refreshed, failureReason);
+  }
+
+  private static ImportRunOrganoCoverage licitacionsCoverage(
+      OrganoId organoId,
+      ImportRunOrganoState state,
+      int added,
+      int refreshed,
+      @Nullable String failureReason) {
+    return coverage(organoId, ContractFamily.LICITACIONS, state, added, refreshed, failureReason);
+  }
+
+  private static ImportRunOrganoCoverage coverage(
+      OrganoId organoId,
+      ContractFamily family,
+      ImportRunOrganoState state,
+      int added,
+      int refreshed,
+      @Nullable String failureReason) {
+    return new ImportRunOrganoCoverage(organoId, family, state, added, refreshed, failureReason);
   }
 
   private static ImportRunOrganoCoverage coverageFor(ImportRunReport report, OrganoId organoId) {
