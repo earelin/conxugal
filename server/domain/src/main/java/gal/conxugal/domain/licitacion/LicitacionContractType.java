@@ -16,13 +16,16 @@ import org.jspecify.annotations.Nullable;
  * there is nothing else to match on. Were a numeric identifier ever measured, it would become a
  * component beside the name and the match would move to it.
  *
- * <p><strong>Nothing here normalises the name</strong> — no case folding, no collapsing of
- * internal spacing — so two published spellings are two entries, and a vocabulary that folded
- * them would be asserting an equivalence the source never published.
+ * <p><strong>The name is held stripped of surrounding whitespace, and reduced no further</strong>
+ * — no case folding, no collapsing of internal spacing — so two published spellings are two
+ * entries, and a vocabulary that folded them would be asserting an equivalence the source never
+ * published. Stripping is what ordinary published text on the aggregate does not get, and it is
+ * because this one is the natural key: a padded name the adapter forgot to strip matches the entry
+ * already stored instead of keying a second one beside it. See {@link PublishedKey} for the rule
+ * the three type vocabularies and the publication identifier share.
  *
- * <p>It does <em>refuse</em> a blank or untrimmed name, which ordinary published text would be
- * free to carry: see {@link PublishedKey} for the rule the three type vocabularies share and
- * why a name that fails it is refused rather than repaired.
+ * <p>A name that is empty once stripped is refused: an entry keyed on nothing is not a fact about
+ * anything.
  *
  * <p>A procedure whose record published no contract type refers to none at all, which is where
  * that absence belongs — never a blank entry standing in for it.
@@ -32,7 +35,7 @@ public record LicitacionContractType(
     @Id @GeneratedValue @Nullable LicitacionContractTypeId id, String name) {
 
   public LicitacionContractType {
-    PublishedKey.validate(name, "name");
+    name = PublishedKey.canonical(name, "name");
   }
 
   /** A type as it is first read from the source: the database assigns its id on insert. */

@@ -34,9 +34,9 @@ class LicitacionTramitacionTypeTest {
   }
 
   @Test
-  void refuses_an_untrimmed_name_rather_than_keying_an_entry_beside_the_trimmed_one() {
-    assertThatIllegalArgumentException()
-        .isThrownBy(() -> new LicitacionTramitacionType("  Ordinaria  "));
+  void strips_an_untrimmed_name_rather_than_keying_an_entry_beside_the_trimmed_one() {
+    assertThat(new LicitacionTramitacionType("  Ordinaria  ").name())
+        .isEqualTo("Ordinaria");
   }
 
   @Test

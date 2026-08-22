@@ -15,17 +15,26 @@ class PublicationIdTest {
   }
 
   @Test
-  void refuses_the_blank_identifier_that_would_collapse_every_procedure_onto_one_row() {
+  void refuses_the_identifier_that_is_empty_once_stripped() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> new PublicationId(" \t"));
   }
 
   @Test
-  void refuses_an_untrimmed_identifier_that_would_import_the_procedure_twice() {
-    // The natural key, so padding the adapter failed to strip would key a second row for one
-    // published procedure rather than matching the one already stored.
-    assertThatIllegalArgumentException()
-        .isThrownBy(() -> new PublicationId("  822054  "));
+  void strips_an_untrimmed_identifier_rather_than_importing_the_procedure_twice() {
+    // The natural key, so padding the adapter failed to strip must match the row already stored
+    // rather than key a second one beside it — and refusing it would cost a real procedure, which
+    // R33 calls the larger harm.
+    assertThat(new PublicationId("  822054  "))
+        .isEqualTo(new PublicationId("822054"));
+  }
+
+  @Test
+  void keeps_internal_spacing_and_letter_case_that_stripping_does_not_touch() {
+    // Nothing says this source's identifiers are case-insensitive, unlike a fiscal identifier's,
+    // so folding on a guess would merge two publications the source distinguishes.
+    assertThat(new PublicationId("lic-2026/0042"))
+        .isNotEqualTo(new PublicationId("LIC-2026/0042"));
   }
 
   @Test

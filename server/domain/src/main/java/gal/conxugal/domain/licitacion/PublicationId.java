@@ -21,15 +21,25 @@ import io.micronaut.data.model.DataType;
  * family it belongs to. The type lives here because this is the only family that holds one as a
  * value; a contrato menor still carries its own as a bare {@code long}.
  *
- * <p>A blank or untrimmed value is refused rather than repaired — see {@link PublishedKey} for
- * the rule this shares with the type vocabularies, which are keyed on published text too.
- * {@code toString} is the bare identifier because messages interpolate it directly.
+ * <p><strong>The canonical form is what this type is.</strong> Every way of building one strips
+ * surrounding whitespace, so an identifier read back from the store and rebuilt is the same
+ * identifier, and a caller that has not stripped its input cannot produce one that fails to match
+ * the row already stored. It refuses a value that is empty once stripped: there is no such
+ * publication. See {@link PublishedKey} for the rule this shares with the type vocabularies, which
+ * are keyed on published text too.
+ *
+ * <p><strong>Nothing else is reduced.</strong> Internal spacing, punctuation and letter case all
+ * make a different identifier and therefore a different publication. A fiscal identifier folds its
+ * case because that reduction is measured; nothing says this one is case-insensitive, and folding
+ * on a guess would merge two publications the source distinguishes.
+ *
+ * <p>{@code toString} is the bare identifier because messages interpolate it directly.
  */
 @TypeDef(type = DataType.STRING, converter = PublicationIdConverter.class)
 public record PublicationId(String value) {
 
   public PublicationId {
-    PublishedKey.validate(value, "publicationId");
+    value = PublishedKey.canonical(value, "publicationId");
   }
 
   @Override

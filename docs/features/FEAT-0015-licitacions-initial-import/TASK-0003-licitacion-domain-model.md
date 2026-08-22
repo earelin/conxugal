@@ -167,13 +167,14 @@ taking the listing's number for an award is the mistake
 - **A procedure whose record published none of the three types constructs**, referring to none of
   them — the ordinary case, since a type is optional where the state is not. (SPEC-0008 #7
   per-field half)
-- A type vocabulary entry keeps its published name unnormalised — no case folding, no collapsing of
-  internal spacing, so two published spellings stay two entries — and **refuses a blank or an
-  untrimmed one**, both of which would key an entry that should not exist. (SPEC-0008 #44)
-- **A procedure whose publication identifier is not a number constructs and round-trips it**, and a
-  blank or untrimmed one is refused on the same rule the vocabulary names follow — a blank would
-  collapse every procedure carrying one onto a single row, an untrimmed one would import the same
-  procedure twice. (SPEC-0008 #17, #44)
+- A type vocabulary entry holds its published name **stripped of surrounding whitespace and
+  reduced no further** — no case folding, no collapsing of internal spacing, so two published
+  spellings stay two entries — and refuses one that is **empty once stripped**, which would key an
+  entry that is not a fact about anything. A padded name reduces to the entry already stored
+  rather than keying a second one beside it. (SPEC-0008 #44)
+- **A procedure whose publication identifier is not a number constructs and round-trips it**, a
+  padded one reduces to the identifier already stored, and one empty once stripped is refused —
+  it would collapse every procedure carrying it onto a single row. (SPEC-0008 #17, #44)
 - **A `Licitacion` holds no component of its own for either half of the state, for any type name,
   or for anything R8 puts on a child.** Pinned against the record's component list, as
   `ContratoMenorTest` pins its own: a procedure holding the label instead of the reference could

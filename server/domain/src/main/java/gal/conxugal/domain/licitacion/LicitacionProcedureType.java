@@ -15,8 +15,9 @@ import org.jspecify.annotations.Nullable;
  * and no type field in the listing. Nothing here normalises it, so two published spellings are two
  * entries.
  *
- * <p>The name is required, and a blank or untrimmed one is refused — see {@link PublishedKey}.
- * A procedure whose record published no procedure type refers to none at all.
+ * <p>The name is held stripped of surrounding whitespace and reduced no further, and one empty
+ * once stripped is refused — see {@link PublishedKey}. A procedure whose record published no
+ * procedure type refers to none at all.
  *
  * @see LicitacionContractType for the reasoning in full — the three type vocabularies share it
  */
@@ -25,7 +26,7 @@ public record LicitacionProcedureType(
     @Id @GeneratedValue @Nullable LicitacionProcedureTypeId id, String name) {
 
   public LicitacionProcedureType {
-    PublishedKey.validate(name, "name");
+    name = PublishedKey.canonical(name, "name");
   }
 
   /** A type as it is first read from the source: the database assigns its id on insert. */

@@ -34,11 +34,11 @@ class LicitacionContractTypeTest {
   }
 
   @Test
-  void refuses_an_untrimmed_name_rather_than_keying_an_entry_beside_the_trimmed_one() {
-    // The name is the natural key, so padding the adapter failed to strip would store a second
-    // vocabulary row for one published type, each with its own procedures hanging off it.
-    assertThatIllegalArgumentException()
-        .isThrownBy(() -> new LicitacionContractType("  Obras  "));
+  void strips_an_untrimmed_name_rather_than_keying_an_entry_beside_the_trimmed_one() {
+    // The name is the natural key, so padding the adapter failed to strip must reduce to the entry
+    // already stored rather than key a second one with its own procedures hanging off it.
+    assertThat(new LicitacionContractType("  Obras  ").name())
+        .isEqualTo("Obras");
   }
 
   @Test
