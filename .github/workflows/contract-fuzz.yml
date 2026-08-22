@@ -67,35 +67,21 @@ jobs:
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
-      # Wrapper checksum validation, the Gradle distribution, and the transient parts of
-      # Gradle User Home. The two caches that matter are carved out and handled by the steps
-      # below: they want opposite policies, and this action has a single switch for both.
+      # Handles dependency/build caching and Gradle Wrapper checksum validation. Its own
+      # caching stays as it is — writing only from trunk, which is what keeps one copy of a
+      # ~500 MB dependency bundle rather than one per branch. cache-encryption-key is what
+      # persists the configuration cache between runs; until the secret exists the action
+      # reads it as undefined and simply does not store that part.
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
-          gradle-home-cache-excludes: |
-            caches/modules-2
-            caches/build-cache-1
-          # Nothing this action still owns is pruned before saving, so no run can shrink
-          # what the next one restores.
-          cache-cleanup: never
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      # One dependency cache for the whole repository, restored by every job on every branch.
-      # Keyed on the declarations rather than on a hash of the resolved directory, so the three
-      # server jobs land on one entry instead of the nine they wrote between them; restore-keys
-      # means a catalogue bump starts from the previous set and downloads only what moved.
-      - name: Restore the dependency cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.gradle/caches/modules-2
-          key: gradle-deps-v1-${{ hashFiles('server/gradle/libs.versions.toml', 'server/gradle.properties', 'server/**/*.gradle.kts') }}
-          restore-keys: gradle-deps-v1-
-
-      # The task outputs, and the cache a pull request actually needs written: a task branch
-      # here pushes eight or nine times before it merges, and every push re-executed all 58
-      # tasks because this lived in a bundle only trunk could write. Per job because the task
-      # sets differ, and unique per run because an entry cannot be updated in place —
-      # restore-keys is what carries the previous run's outputs forward.
+      # The one thing setup-gradle cannot do: task outputs written from a pull request. Its own
+      # copy of build-cache-1 is written only from trunk, so a task branch — which pushes eight
+      # or nine times before it merges — re-executed all 58 tasks on every push. This entry
+      # overlays that one, restored after it and saved before it, so a push starts from the
+      # branch's own previous run and falls back to trunk's. Per job because the task sets
+      # differ, and unique per run because an entry cannot be updated in place.
       - name: Cache the Gradle task outputs
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
