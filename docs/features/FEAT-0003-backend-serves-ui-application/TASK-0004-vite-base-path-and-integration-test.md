@@ -8,8 +8,7 @@ depends_on: [TASK-0003]
 # Vite base path and end-to-end integration test
 
 Governed by [ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md). Closes the
-"asset base path" edge case `docs/features/FEAT-0001-ui-application-scaffolding.md`
-deferred here.
+"asset base path" edge case the UI scaffolding deferred here.
 
 ## Scope
 - Confirm (or set) Vite's `base` in `ui/vite.config.ts` for root-path serving (`/`), to

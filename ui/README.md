@@ -9,7 +9,7 @@ that the Micronaut server serves as a single deployable artifact.
 Governing decisions: [ADR-0003](../docs/architecture/0003-react-router-ui-served-by-backend.md)
 (React Router served by the backend), [ADR-0004](../docs/architecture/0004-ui-stack-vite-mantine.md)
 (Vite + Mantine) and [ADR-0015](../docs/architecture/0015-frontend-feature-based-shared-core-modularization.md)
-(feature slices with a shared core). Design: [FEAT-0001](../docs/features/FEAT-0001-ui-application-scaffolding.md).
+(feature slices with a shared core). Requirements: [SPEC-0001](../docs/specs/SPEC-0001-web-ui.md).
 
 ## Requirements
 
@@ -117,3 +117,8 @@ wiremock/mappings/        # the stubbed API's default state
 - Routing uses the History API (not hash). Deep-linking in production requires the
   server to serve `index.html` as the SPA fallback for non-API paths — owned by the
   server module (see ADR-0003). The Vite dev server already does this in development.
+- `main.tsx` renders `<ColorSchemeScript defaultColorScheme="auto">` ahead of the
+  provider so the resolved colour scheme applies before first paint, rather than the
+  app flashing the light palette on every load.
+
+<!-- distilled-from: FEAT-0001 @ 3f17cc0 -->
