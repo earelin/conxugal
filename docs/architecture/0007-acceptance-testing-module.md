@@ -28,7 +28,7 @@ modules are internally wired. This is a new kind of test (black-box, whole-appli
 and needs its own home so it isn't confused with the per-module unit tests or the
 in-process Micronaut client tests already living in `application`.
 
-[FEAT-0003](../features/FEAT-0003-backend-serves-ui-application/README.md) adds a second
+[FEAT-0003](../specs/SPEC-0001-web-ui.md) adds a second
 kind of black-box scenario an HTTP client can't cover: the same instance also serves the
 built SPA (ADR-0003/ADR-0004), and the thing worth proving there — a served page's asset
 references actually resolve, and the SPA hydrates and client-side-routes correctly — can

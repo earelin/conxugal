@@ -153,6 +153,31 @@ Dependency versions are centralized in `gradle/libs.versions.toml`; most
 platform BOM (`micronautVersion` in `gradle.properties`) resolves them at build time —
 bump that one property rather than pinning individual library versions.
 
+## The UI build is part of the server build
+
+`./gradlew build`, `run` and `:application:dockerBuild` from `server/` all build the UI
+first: `npmCi` → `npmBuild` → `copyUiDist` in `application/build.gradle.kts` run the
+`ui/` module's own `npm ci` and `npm run build`, then copy `ui/dist` onto the runtime
+classpath under `public/`, where `micronaut.router.static-resources` picks it up. **The
+server build therefore needs Node**, not just a JVM — the version is pinned in
+`ui/package.json`'s `volta.node`, which CI's `setup-node` reads — and a UI source change
+reaches the next server build with no manual `npm run build`.
+
+Two things here are load-bearing and easy to undo:
+
+- **The dist is registered as a `resources` source dir**
+  (`resources.srcDir(files(…).builtBy(copyUiDist))`), not as `output.dir`. `jar` reads
+  the whole SourceSet output either way, so `output.dir` looks correct locally — but the
+  Micronaut Gradle plugin's Docker `buildLayers` task reads only
+  `output.resourcesDir`, and the SPA silently never reaches the image. Nothing in
+  `build` catches it; `acceptance`'s `AuthenticatedSpaRoutingTest`, which CI runs
+  against the built image, is what does.
+- **Vite's `base` and the static-resource mapping must agree.** `ui/vite.config.ts` sets
+  `base: '/'` to match `micronaut.router.static-resources.ui.mapping` (`/**`); serving
+  the app under a sub-path means changing both. The only thing coupling them is
+  `AuthenticatedSpaRoutingTest#root_serves_the_spa_shell_with_its_built_assets`, which
+  fetches every `<script>`/`<link>` the rendered page actually references.
+
 ## HTTP routing conventions
 
 The `application` module is the single origin for both the REST API and the built UI
@@ -209,3 +234,4 @@ only once a session exists. Their styling hand-copies the Mantine palette from
 changing either.
 
 <!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->
+<!-- distilled-from: FEAT-0003 @ 73cf32f -->
