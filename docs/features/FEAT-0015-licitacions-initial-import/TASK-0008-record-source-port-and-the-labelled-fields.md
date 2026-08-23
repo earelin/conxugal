@@ -96,7 +96,9 @@ record — the ledger is TASK-0002's and writing to it is
   (SPEC-0008 #44)
 - A `404`, a `500`, a connection fault and a body that is not a record each raise
   `LicitacionRecordUnavailableException`. (SPEC-0008 #41)
-- The client binds `id = "contratosdegalicia"`, so the record walk draws on the same rate budget as
-  the listing and the catalogue import.
+- The client binds `id = "contratosdegalicia"`, so it is configured as the same source as the
+  listing and catalogue clients, and the record walk draws on the same rate budget as both. *The
+  budget is shared because the resilience advice injects unqualified policy singletons, not because
+  of the id — a different id would buy separate transport settings and go on sharing this budget.*
 - Integration-tested against a **WireMock** source serving a real captured record as ISO-8859-1
   bytes, on the `ContratosDeGaliciaContratoMenorSourceAdapterIntegrationTest` precedent.

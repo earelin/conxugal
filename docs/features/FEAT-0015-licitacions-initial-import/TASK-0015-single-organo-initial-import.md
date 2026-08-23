@@ -33,6 +33,17 @@ courteous rate. Nothing here makes that cheaper; what it does is make it **waste
   concurrent publication**: a procedure published mid-walk takes a higher identifier and appends at
   the end, so pages already read do not shift beneath the walk. Ordered by publication or
   modification date, a single edit reshuffles the history and offset paging silently skips rows.
+- **A listing failure is not always transient, and the walk must not retry it for ever.**
+  [TASK-0007](TASK-0007-listing-source-port-and-json-adapter.md)'s
+  `LicitacionListingUnavailableException` covers two different things: the source being
+  unreachable, which a later run fixes, and the source publishing a row the adapter cannot
+  represent — one carrying no `id` or no `estado` — which no later run fixes. Because the walk
+  pages by offset, the second kind makes that page and every page after it unreachable, so a walk
+  that treats every listing failure as retryable stalls the Órgano for ever while reporting an
+  availability problem. Neither kind reaches the circuit breaker, which sits inside the adapter's
+  own parse. Measured, no such row exists — a state code was published on every one of ~2 000 rows
+  across five Órganos — so the walk should **bound its attempts and report the Órgano as failed**
+  rather than the port growing a second exception type nothing yet distinguishes.
 - **On first start the walk inserts the state row at `INCOMPLETE`**, before its first page. Without
   it a run interrupted before completion leaves no row at all, which reads as `NEVER_STARTED` and
   restarts the Órgano from offset 0 — silently failing the resumption this task promises. **On
