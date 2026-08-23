@@ -155,4 +155,15 @@
     <Class name="gal.conxugal.infrastructure.jdbc.contrato.ContratoMenorVisibleBrowseSchemaIntegrationTest"/>
     <Bug pattern="SQL_INJECTION_JDBC"/>
   </Match>
+
+  <!-- A one-value enum is the point here, not an oversight. The listing source takes its order as
+       a parameter because the source really does order by any of its published columns and the
+       incremental import will want a second value — but nothing asks for that one yet, and
+       declaring it now would ship a value no caller and no test exercises. The type is what makes
+       "there is no page without an explicit order" expressible, which a boolean or a constant
+       would not. Named to the one class so a genuinely stunted enum elsewhere still reports. -->
+  <Match>
+    <Class name="gal.conxugal.domain.licitacion.LicitacionListingOrder"/>
+    <Bug pattern="ENMI_ONE_ENUM_VALUE"/>
+  </Match>
 </FindBugsFilter>
