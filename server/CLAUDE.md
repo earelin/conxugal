@@ -180,85 +180,32 @@ The `application` module is the single origin for both the REST API and the buil
 
 ## Authentication and authorization
 
-Session-based, per `docs/architecture/0005-session-based-authentication.md`: a login
-establishes server-held session state identified by a `SESSION` cookie, and logout
-invalidates it. `POST /login` and `/logout` are Micronaut Security's own endpoints,
-configured and not written here; only `GET /login` and `GET /forbidden` are hand-written
-(`http/auth/LoginController`, `ForbiddenController`). `GET /login` **redirects an
-already-authenticated visitor to `/`** rather than showing the form again. Everything else
-below is wired in `application/src/main/resources/application.yml` under
-`micronaut.security` and `micronaut.session`, and pinned by
-`application/src/integrationTest`.
+Session-based per `docs/architecture/0005-session-based-authentication.md`, wired entirely
+in `application.yml` (`micronaut.security`, `micronaut.session`) — read it for the cookie,
+CSRF and redirect settings, whose trade-offs are commented there. `POST /login` and
+`/logout` are Micronaut Security's own; only `GET /login` and `GET /forbidden` are ours
+(`http/auth/`), and `GET /login` sends an already-authenticated visitor to `/`. Idle window
+is **30 minutes**; sessions are in-memory, so a second replica needs a shared store first.
+`application/src/integrationTest/.../http/auth/` pins all of it.
 
-- **Idle window: 30 minutes** (`micronaut.session.max-inactive-interval: 30m`) — the
-  concrete value SPEC-0002 R10 leaves to the implementation. `IdleSessionTimeoutTest`
-  pins the behaviour by overriding the property to `1s`, so the guarantee is tested
-  without waiting out the real window; the window itself is only ever the config value.
-- **Session store is in-memory.** Nothing shares it between instances, so more than one
-  replica needs a shared store first — the horizontal-scaling caveat ADR-0005 records.
-- **Rejection is content-negotiated, not custom.** `micronaut.security.redirect.enabled`
-  plus Micronaut's stock rejection handler answer a browser navigation (`Accept:
-  text/html`) with a `303` to `/login`, and anything else — an XHR asking for JSON — with
-  a bare `401`. There is no `RejectionHandler` implementation in this codebase, and
-  writing one would silently change both halves; `AcceptHeaderRejectionTest` holds them
-  together. The same split is why `acceptance`'s anonymous client deliberately sends
-  `Accept: application/json`.
-- **Authorization is declared twice.** The `intercept-url-map` in `application.yml`
-  (`/api/admin/**` → `ADMIN`, `/api/**` and `/**` → authenticated, and exactly three
-  anonymous patterns — `/login`, `/health` and `/assets/static-pages/**`, the last being
-  what lets the server-rendered pages below load their stylesheet before a session
-  exists) and a `@Secured` annotation on almost every controller. Both
-  must agree and **nothing enforces that they do** — `:architecture:test` checks module
-  boundaries and the `/api/` prefix, not security coverage. A new controller needs the
+Four things here are easy to break by accident:
+
+- **Failure is indistinct across three branches.** An unknown email still pays for a
+  password comparison (`PasswordEncoder.matchAgainstDummyHash`), and a disabled account is
+  rejected *after* its password check. Moving the `enabled` check earlier in
+  `domain/auth/Authenticate` looks like a harmless reorder and breaks the rule.
+- **Authorization is declared twice** — the `intercept-url-map` and a `@Secured` on almost
+  every controller — and **nothing enforces that they agree**. A new controller needs the
   annotation even when the URL map appears to cover it.
-- **The session cookie is `SameSite=Lax` and not Base64-encoded**, both stated rather than
-  defaulted; the comments in `application.yml` explain what each closes. CSRF covers the
-  server-rendered form flow only and is withdrawn from `/api/**` — same file, same
-  reasoning.
+- **Rejection is content-negotiated, not custom**: a browser navigation gets `303` to
+  `/login`, an XHR gets `401`. There is no `RejectionHandler` here and writing one would
+  silently change both halves (`AcceptHeaderRejectionTest`).
+- **The last-login stamp is best-effort** — if the write fails the login still succeeds.
 
-### The authenticate contract
-
-`domain/auth/Authenticate` is the whole rule; `UserAuthenticationProvider` only adapts it
-to Micronaut Security, mapping every rejection to one `CREDENTIALS_DO_NOT_MATCH`.
-
-- **Failure is indistinct across three branches, not two.** An unknown email still pays for
-  a password comparison (`PasswordEncoder.matchAgainstDummyHash`), and a **disabled account
-  is rejected only after its password has been checked** — so unknown-vs-wrong-vs-disabled
-  is separable neither by message nor by timing. Moving the `enabled` check earlier would
-  look like a harmless reorder and would break the rule.
-- **The last-login stamp is best-effort.** A successful authentication writes
-  `lastLoginAt` through the repository port, but the write is wrapped: if it fails, the
-  login still succeeds and returns the user unstamped. A failed authentication writes
-  nothing, on any branch.
-- The instant comes from the `domain/time/Clock` port, so the stamping is unit-testable
-  against a fixed clock.
-
-### Server-rendered pages
-
-Three Thymeleaf views in `application/src/main/resources/views/` render outside the SPA, so
-a login, a denial or a crash never depends on the React bundle booting: `login.html`
-(the form, and the single generic failure message), `forbidden.html`, and
-`server-error.html`. The SPA bundle is served only once a session exists — `/**` requires
-authentication — which is what makes `SpaHistoryFallback` safe to hand `index.html` to any
-unmatched non-asset `GET`.
-
-The latter two are separate files sharing a `status-card` markup and class vocabulary, not
-a Thymeleaf fragment, so a new error page is a copy change rather than a new layout. **No
-`404` renders them**: an unmatched `/api/**` path answers `application/problem+json`
-(`SpaHistoryFallback`) and anything else answers a bare `404`. Galician copy lives in the
-templates themselves.
-
-Their styling is `application/src/main/resources/static-pages/static-pages.css`, which
-**hand-copies** the Mantine palette out of `ui/src/app/theme.ts` as CSS custom properties —
-the two modules cannot share a build, so nothing keeps them in sync. Change the theme and
-change this file too. For the same reason `views/fragments/brand.html` inlines the logo's
-SVG paths instead of referencing `/logo.svg`, which is the rule everywhere in `ui/`: these
-templates cannot reach `ui/public/`.
-
-`CsrfProtectedPage` renders the first two and attaches the CSRF cookie, **reusing a
-still-valid token** rather than minting one per render: a fresh token on every render
-breaks double-submit when the browser is redirected to `/login` and then loads it.
-`server-error.html` is rendered directly by `http/error/ServerErrorHandler` and carries no
-CSRF cookie.
+The three views in `resources/views/` (login, forbidden, server error) render outside the
+SPA so a denial or a crash never depends on the React bundle; the bundle itself is served
+only once a session exists. Their styling hand-copies the Mantine palette from
+`ui/src/app/theme.ts` and drifts silently — see the `frontend-design` skill before
+changing either.
 
 <!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->
