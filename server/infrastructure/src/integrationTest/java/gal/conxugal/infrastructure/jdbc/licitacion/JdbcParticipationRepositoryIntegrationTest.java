@@ -46,6 +46,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JdbcParticipationRepositoryIntegrationTest implements TestPropertyProvider {
 
+  private static final String BIDDER_FISCAL_ID = "A41111220";
+  private static final String BIDDER_NAME = "EQUINSE, S.A.";
+  private static final String OTHER_BIDDER_FISCAL_ID = "B15112222";
+  private static final String OTHER_BIDDER_NAME = "AQUAGEST, S.A.";
+  private static final String CONSORTIUM_NAME = "UTE Ponte do Porto";
+
   @Container
   static PostgreSQLContainer<?> postgres = PostgresContainer.create();
 
@@ -81,7 +87,7 @@ class JdbcParticipationRepositoryIntegrationTest implements TestPropertyProvider
   // party by reference and says nothing else about it.
   @Test
   void bid_stores_under_the_operador_it_resolved_to() throws Exception {
-    OperadorId operadorId = catalogue.operador("A41111220", "EQUINSE, S.A.");
+    OperadorId operadorId = catalogue.operador(BIDDER_FISCAL_ID, BIDDER_NAME);
 
     Participation stored =
         participationRepository.upsert(new Participation(licitacionId, null, operadorId, true));
@@ -108,7 +114,7 @@ class JdbcParticipationRepositoryIntegrationTest implements TestPropertyProvider
   // the case the earlier model needed two extra columns and a CHECK to express.
   @Test
   void bid_by_consortium_the_source_did_not_identify_stores_like_any_other() throws Exception {
-    OperadorId uteId = catalogue.unidentifiedUte("UTE Ponte do Porto");
+    OperadorId uteId = catalogue.unidentifiedUte(CONSORTIUM_NAME);
 
     participationRepository.upsert(new Participation(licitacionId, null, uteId, true));
 
@@ -123,9 +129,9 @@ class JdbcParticipationRepositoryIntegrationTest implements TestPropertyProvider
   // lote, which is where NULLS NOT DISTINCT earns its place for this table.
   @Test
   void storing_the_bids_of_lotless_procedure_twice_leaves_one_row_per_bidder() throws Exception {
-    OperadorId firmId = catalogue.operador("A41111220", "EQUINSE, S.A.");
-    OperadorId otherId = catalogue.operador("B15112222", "AQUAGEST, S.A.");
-    OperadorId uteId = catalogue.unidentifiedUte("UTE Ponte do Porto");
+    OperadorId firmId = catalogue.operador(BIDDER_FISCAL_ID, BIDDER_NAME);
+    OperadorId otherId = catalogue.operador(OTHER_BIDDER_FISCAL_ID, OTHER_BIDDER_NAME);
+    OperadorId uteId = catalogue.unidentifiedUte(CONSORTIUM_NAME);
 
     for (int run = 0; run < 2; run++) {
       participationRepository.upsert(new Participation(licitacionId, null, firmId, true));
@@ -141,7 +147,7 @@ class JdbcParticipationRepositoryIntegrationTest implements TestPropertyProvider
   // part of the key, which is what lets it win one and lose the other.
   @Test
   void one_operador_bidding_for_two_lotes_holds_one_row_in_each() throws Exception {
-    OperadorId firmId = catalogue.operador("A41111220", "EQUINSE, S.A.");
+    OperadorId firmId = catalogue.operador(BIDDER_FISCAL_ID, BIDDER_NAME);
     Lote first = loteRepository.upsert(new Lote(licitacionId, "1", null, null));
     Lote second = loteRepository.upsert(new Lote(licitacionId, "2", null, null));
 
@@ -165,7 +171,7 @@ class JdbcParticipationRepositoryIntegrationTest implements TestPropertyProvider
   // rows: won is outside the key, so the loser stops claiming the award rather than keeping it.
   @Test
   void re_storing_one_bid_refreshes_which_of_them_won_in_place() throws Exception {
-    OperadorId firmId = catalogue.operador("A41111220", "EQUINSE, S.A.");
+    OperadorId firmId = catalogue.operador(BIDDER_FISCAL_ID, BIDDER_NAME);
     Participation first =
         participationRepository.upsert(new Participation(licitacionId, null, firmId, true));
 
@@ -182,7 +188,7 @@ class JdbcParticipationRepositoryIntegrationTest implements TestPropertyProvider
   // conflict clause -- would leave it no way to withdraw anything, silently.
   @Test
   void withdrawing_one_bid_and_publishing_it_again_flips_the_marker_both_ways() throws Exception {
-    OperadorId firmId = catalogue.operador("A41111220", "EQUINSE, S.A.");
+    OperadorId firmId = catalogue.operador(BIDDER_FISCAL_ID, BIDDER_NAME);
 
     participationRepository.upsert(
         new Participation(null, licitacionId, null, firmId, false, true));

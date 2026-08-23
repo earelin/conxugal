@@ -44,6 +44,12 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
 
   private static final NomeRank RANK = new NomeRank(LocalDate.of(2026, 3, 14), 822054L);
 
+  private static final String MEMBER_FISCAL_ID = "A41111220";
+  private static final String MEMBER_NAME = "EQUINSE, S.A.";
+  private static final String OTHER_MEMBER_FISCAL_ID = "B15112222";
+  private static final String OTHER_MEMBER_NAME = "AQUAGEST, S.A.";
+  private static final String CONSORTIUM_NAME = "UTE Ponte do Porto";
+
   @Container
   static PostgreSQLContainer<?> postgres = PostgresContainer.create();
 
@@ -70,8 +76,8 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
   // now has a catalogue entry, so the relation reads both ways.
   @Test
   void member_stores_against_consortium_that_holds_no_fiscal_identifier() {
-    OperadorId uteId = unidentifiedUte("UTE Ponte do Porto");
-    OperadorId memberId = firm("A41111220", "EQUINSE, S.A.");
+    OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
+    OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
 
     membershipRepository.upsert(new UteMembership(uteId, memberId));
 
@@ -85,9 +91,9 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
 
   @Test
   void two_members_of_one_consortium_store_two_rows() {
-    OperadorId uteId = unidentifiedUte("UTE Ponte do Porto");
-    OperadorId firstId = firm("A41111220", "EQUINSE, S.A.");
-    OperadorId secondId = firm("B15112222", "AQUAGEST, S.A.");
+    OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
+    OperadorId firstId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
+    OperadorId secondId = firm(OTHER_MEMBER_FISCAL_ID, OTHER_MEMBER_NAME);
 
     membershipRepository.upsert(new UteMembership(uteId, firstId));
     membershipRepository.upsert(new UteMembership(uteId, secondId));
@@ -104,8 +110,8 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
   // pair is the identity, so a member the source lists twice is one member.
   @Test
   void upserting_one_member_twice_leaves_one_row() {
-    OperadorId uteId = unidentifiedUte("UTE Ponte do Porto");
-    OperadorId memberId = firm("A41111220", "EQUINSE, S.A.");
+    OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
+    OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
 
     membershipRepository.upsert(new UteMembership(uteId, memberId));
     membershipRepository.upsert(new UteMembership(uteId, memberId));
@@ -122,7 +128,7 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
             operadorRepository.insert(
                 OperadorEconomico.identifiedUte(
                     new FiscalIdentifier("U88779475"), "UTE Ponte", RANK)));
-    OperadorId memberId = firm("A41111220", "EQUINSE, S.A.");
+    OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
 
     membershipRepository.upsert(new UteMembership(uteId, memberId));
 
@@ -137,9 +143,9 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
   // catalogue entry to open, so *who was this made of* lived only on the licitación's page.
   @Test
   void the_relation_reads_from_both_ends() {
-    OperadorId uteId = unidentifiedUte("UTE Ponte do Porto");
-    OperadorId firstId = firm("A41111220", "EQUINSE, S.A.");
-    OperadorId secondId = firm("B15112222", "AQUAGEST, S.A.");
+    OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
+    OperadorId firstId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
+    OperadorId secondId = firm(OTHER_MEMBER_FISCAL_ID, OTHER_MEMBER_NAME);
     membershipRepository.upsert(new UteMembership(uteId, firstId));
     membershipRepository.upsert(new UteMembership(uteId, secondId));
 
@@ -154,9 +160,9 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
   // nothing still publishes must not stay reachable through it.
   @Test
   void withdrawn_membership_is_left_out_of_both_visible_reads() {
-    OperadorId withdrawnUte = unidentifiedUte("UTE Ponte do Porto");
+    OperadorId withdrawnUte = unidentifiedUte(CONSORTIUM_NAME);
     OperadorId visibleUte = unidentifiedUte("UTE Ría de Arousa");
-    OperadorId memberId = firm("A41111220", "EQUINSE, S.A.");
+    OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
     membershipRepository.upsert(new UteMembership(withdrawnUte, memberId, true));
     membershipRepository.upsert(new UteMembership(visibleUte, memberId));
 
@@ -168,9 +174,9 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
 
   @Test
   void operador_that_belongs_to_nothing_has_no_visible_memberships() {
-    OperadorId uteId = unidentifiedUte("UTE Ponte do Porto");
-    OperadorId memberId = firm("A41111220", "EQUINSE, S.A.");
-    OperadorId strangerId = firm("B15112222", "AQUAGEST, S.A.");
+    OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
+    OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
+    OperadorId strangerId = firm(OTHER_MEMBER_FISCAL_ID, OTHER_MEMBER_NAME);
     membershipRepository.upsert(new UteMembership(uteId, memberId));
 
     assertThat(membershipRepository.findByOperadorIdAndWithdrawnFalse(strangerId)).isEmpty();
@@ -180,8 +186,8 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
   // it again means -- and withdrawn is the only column outside the key for the conflict to refresh.
   @Test
   void re_storing_withdrawn_membership_as_published_makes_it_visible_again() {
-    OperadorId uteId = unidentifiedUte("UTE Ponte do Porto");
-    OperadorId memberId = firm("A41111220", "EQUINSE, S.A.");
+    OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
+    OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
     membershipRepository.upsert(new UteMembership(uteId, memberId, true));
 
     membershipRepository.upsert(new UteMembership(uteId, memberId));
