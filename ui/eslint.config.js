@@ -13,6 +13,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import youMightNotNeedAnEffect from 'eslint-plugin-react-you-might-not-need-an-effect';
 import sonarjs from 'eslint-plugin-sonarjs';
+import storybook from 'eslint-plugin-storybook';
 import testingLibrary from 'eslint-plugin-testing-library';
 import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
@@ -26,12 +27,20 @@ const testFiles = ['**/*.test.{ts,tsx}', '**/*Harness.tsx', 'src/test/**/*.{ts,t
 
 const typescriptResolver = {
   alwaysTryTypes: true,
-  project: ['tsconfig.app.json', 'tsconfig.node.json', 'tsconfig.acceptance.json'],
+  project: [
+    'tsconfig.app.json',
+    'tsconfig.node.json',
+    'tsconfig.acceptance.json',
+    'tsconfig.storybook.json',
+  ],
   noWarnOnMultipleProjects: true,
 };
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'coverage'] },
+  // `storybook-static` is build output like `dist`, and it has to be named here
+  // as well: ESLint reads no .gitignore, so without it a local `build-storybook`
+  // leaves 8 MB of bundled JS for the type-aware rules to chew through.
+  { ignores: ['dist', 'node_modules', 'coverage', 'storybook-static'] },
   js.configs.recommended,
   prettier,
   {
@@ -75,13 +84,16 @@ export default tseslint.config(
         { pattern: '**/*Harness.tsx', category: 'test' },
       ],
       // acceptance/ drives the built app over HTTP and imports nothing from src, so it
-      // sits outside the module graph these rules describe.
+      // sits outside the module graph these rules describe. .storybook/ is the other
+      // way round — it is a second composition root, so like main.tsx it reaches the
+      // theme and the query client, and the layers below have no business seeing it.
       'boundaries/ignore': [
         'src/vite-env.d.ts',
         'src/App.test.tsx',
         'vite.config.ts',
         'playwright.config.ts',
         'acceptance/**',
+        '.storybook/**',
       ],
       // `import/resolver` is eslint-plugin-boundaries' resolver (it reads the
       // eslint-plugin-import key); `import-x/resolver-next` is import-x's own.
@@ -247,8 +259,25 @@ export default tseslint.config(
     files: ['acceptance/**/*.{ts,tsx}'],
     extends: [playwright.configs['flat/recommended']],
   },
+  // Carries its own `files` globs (`**/*.stories.*` plus `.storybook/main.*`),
+  // so it is spread rather than scoped here.
+  ...storybook.configs['flat/recommended'],
   {
-    files: ['vite.config.ts', 'playwright.config.ts', 'acceptance/**/*.ts'],
+    files: ['**/*.stories.{ts,tsx}'],
+    rules: {
+      // A CSF file is a default-exported meta object beside named story
+      // objects, which is the exact shape this rule exists to reject. Nothing
+      // in Storybook is hot-reloaded by React Refresh's component boundary.
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: [
+      'vite.config.ts',
+      'playwright.config.ts',
+      'acceptance/**/*.ts',
+      '.storybook/**/*.{ts,tsx}',
+    ],
     languageOptions: {
       globals: globals.node,
     },

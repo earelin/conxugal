@@ -24,7 +24,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # A normal run is about two minutes. The cap is the counterpart of the concurrency group
+    # A normal run is about three minutes. The cap is the counterpart of the concurrency group
     # above: pushes to trunk are not cancellable, so without it a stuck run holds the group for
     # GitHub's 6h default.
     timeout-minutes: 15
@@ -46,3 +46,4 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build
+      - run: npm run build-storybook

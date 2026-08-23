@@ -21,5 +21,11 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Stories are workshop code, not application code: they are checked by
+  // tsconfig.storybook.json, which is where Storybook's own types belong. Those
+  // types pull in `@types/node`, which this program otherwise has no reason to
+  // carry — and a type only some programs see is how a declaration ends up
+  // meaning two different things in one repository.
+  "exclude": ["src/**/*.stories.{ts,tsx}"]
 }

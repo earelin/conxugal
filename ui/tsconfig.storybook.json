@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.storybook.tsbuildinfo",
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    // `vite/client` is what declares the `.css` side-effect imports; the app
+    // project picks it up from src/vite-env.d.ts, which is outside this one.
+    // Deliberately without `node`: everything here runs in the browser, and
+    // offering stories `process` and `Buffer` would let one type-check and then
+    // fail in the canvas.
+    "types": ["vite/client"]
+  },
+  // `.storybook` is spelled out rather than named as a directory: TypeScript's
+  // wildcard expansion skips dot-directories, so a bare name finds no inputs.
+  // The stories join it here rather than in tsconfig.app.json — see the note
+  // there on why Storybook's types stay out of the application program. Both
+  // extensions, matching the glob `.storybook/main.ts` collects them by: a
+  // `.stories.ts` checked by neither project is how this split springs a leak.
+  "include": [".storybook/**/*.ts", ".storybook/**/*.tsx", "src/**/*.stories.{ts,tsx}"]
+}
