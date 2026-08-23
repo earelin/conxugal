@@ -2,7 +2,7 @@
 feat: FEAT-0015
 domain: backend
 adrs: [0008, 0017, 0019]
-status: todo
+status: done
 depends_on: [TASK-0003]
 ---
 
@@ -18,7 +18,7 @@ Governed by [ADR-0017](../../architecture/0017-import-run-state-in-postgresql.md
 resumption state in PostgreSQL beside the Órgano rather than on the run, and by
 [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md) — the
 state record maps its own table, exactly as `ContratosMenoresImportState` does. It depends on
-[TASK-0003](TASK-0003-licitacion-domain-model.md) for the `LicitacionId` the ledger is keyed by,
+[TASK-0003](TASK-0003-licitacion-domain-model.md) for the `PublicationId` the ledger is keyed by,
 under [ADR-0019](../../architecture/0019-typed-aggregate-identifiers.md).
 
 **Why a second table rather than a family column on the first.** The two cursors are different
@@ -69,11 +69,24 @@ and that is easiest to guarantee when there is no shared row to get wrong.
   `findByOrganoId`, `updateCursorOffset`, `updateState`.
 - **`LicitacionOutstandingRecordRepository`**, the ledger's port:
   `record(OrganoId, LicitacionOutstandingRecord)`, `outstandingFor(OrganoId)`,
-  `clear(OrganoId, long publicationId)` and **`hasOutstanding(OrganoId)`**, which the completion
+  `clear(OrganoId, PublicationId)` and **`hasOutstanding(OrganoId)`**, which the completion
   test reads.
 - The state writes are declared `REQUIRES_NEW` in the JDBC repository for the reason the contratos
   menores ones are: progress must be visible before a batch's own transaction settles, and a
-  bookkeeping failure must never roll imported procedures back.
+  bookkeeping failure must never roll imported procedures back. Their propagation is also an
+  **ordering constraint on the walk**: `insert` joins the caller, so the row must have settled
+  before either write is called, or the update matches nothing and says nothing.
+- **The ledger's three propagations differ, and each is a decision.** `record` takes a transaction
+  of its own, because it describes the very failure that is about to roll the caller's back.
+  `clear` joins the caller, because an entry stops being outstanding exactly when the procedure it
+  named is stored, so the two must settle together. **`hasOutstanding` takes its own**, because the
+  completion it gates settles independently: an answer read from a caller's uncommitted clearing,
+  whose transaction then rolls back, would leave an Órgano `COMPLETE` beside a ledger that
+  `INCREMENTAL` — returned and implemented nowhere — can never come back to. `outstandingFor` gates
+  nothing and joins the caller. One constraint follows: **`record` must not name a key the caller's
+  own transaction has already cleared**, since it would wait on that uncommitted deletion while the
+  caller waits on it — a wait no deadlock detector resolves. Such a record is filed again on the
+  next run.
 
 **Out of scope:** any walk, any listing or record retrieval, the mode's `INCREMENTAL` branch, and
 **any change whatever to `contrato_menor_import_state`** — the two families' progress stays
