@@ -22,14 +22,16 @@ Run from `ui/`:
 - `npm run test:acceptance` — Playwright acceptance suite (`npx playwright install chromium` first)
 - `npm run test:acceptance -- acceptance/specs/admin-users.spec.ts` — run a single acceptance spec
 - `npm run storybook` — the component workshop (<http://localhost:6006>)
-- `npm run build-storybook` — build it to `storybook-static/` (what CI runs)
+- `npm run build-storybook` — build it to `storybook-static/`
 - `npm run lint` — ESLint
 - `npm run format` / `npm run format:check` — Prettier write/check
 
 ## Before committing
 
-Run `npm run lint`, `npm run build`, `npm run test` and `npm run build-storybook`
-from `ui/` and fix any failures before committing changes to this module.
+Run `npm run lint`, `npm run build` and `npm run test` from `ui/` and fix any
+failures before committing changes to this module. Add `npm run build-storybook`
+when the change touches a story or `.storybook/` — CI does not build the workshop,
+so a bundling failure there is caught locally or not at all.
 
 ## Architecture
 

@@ -74,9 +74,10 @@ Stories live beside their component as `<Component>.stories.tsx`. Route-level pa
 and the containers that fetch on mount (`MetricsPanel`, `ImportToolbar`,
 `ContratosMenoresList`) are deliberately not stored — see `CLAUDE.md`.
 
-Both gates run in CI: `npm run build` type-checks the stories (they are their own
-TypeScript project, `tsconfig.storybook.json`) and `npm run build-storybook` proves
-they still bundle. A story that rots fails the build rather than doing it quietly.
+`npm run build` type-checks the stories — they are their own TypeScript project,
+`tsconfig.storybook.json` — so CI catches a story that stops compiling. It does not
+build the workshop, so run `npm run build-storybook` yourself after changing a story
+or the Storybook config: bundling and import failures surface only there.
 
 ## Acceptance tests
 
