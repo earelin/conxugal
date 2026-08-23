@@ -85,6 +85,22 @@ so a bundling failure there is caught locally or not at all.
   server 404s those rather than serving the shell) is caught by the
   `errorElement` on its parent route; `RouteErrorPage` inspects the error so it
   only blames a redeployment when that is actually the cause.
+- **Session loss** (`src/shared/lib/queryClient.ts`): the server answers an
+  unauthenticated XHR with a `401` rather than an HTML redirect (ADR-0005), so a
+  gone session surfaces as an `HttpError` and this is where it is acted on. The handler is
+  wired into **both** the query and the mutation cache, and redirects to
+  `/login` **once** per client — several requests failing together, or a logout
+  racing a background refetch, must not each call `location.replace`.
+  `redirectToLogin(client)` exports that same guard for callers outside the
+  caches (`useLogout`'s own success path). `UserMenu` also inspects a `401` — only
+  to stay quiet, leaving the redirect to the shared handler. There is no separate
+  session flag to keep in sync: the cookie is the session, `useCurrentUser`'s cache
+  is the only session-derived state, and the full-page navigation to `/login`
+  discards it.
+- **`AdminRoute`** (`src/app/AdminRoute.tsx`) is a **role guard**, not only the
+  chunking concern described above — it gates the admin section on the role from
+  `/api/me`. Role-gated nav visibility is affordance only; the server is the
+  real gate and refuses independently.
 - **Entry** (`src/main.tsx`): wraps the tree in `MantineProvider` (theme from
   `src/app/theme.ts`) and `RouterProvider`. History-API routing (not hash) — in
   production the server must serve `index.html` as the SPA fallback for non-API
@@ -197,3 +213,4 @@ so a bundling failure there is caught locally or not at all.
   lodash's exact (looser) behaviour for projects migrating off it, which doesn't apply here.
 
 <!-- distilled-from: FEAT-0001 @ 3f17cc0 -->
+<!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->

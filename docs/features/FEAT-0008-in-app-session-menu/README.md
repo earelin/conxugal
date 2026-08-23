@@ -19,9 +19,10 @@ The **session mechanism is already decided and built**
 (**[ADR-0005](../../architecture/0005-session-based-authentication.md)**): a
 server-side session behind a cookie, ended by `POST /logout`, which redirects to the
 server-rendered `/login`. That endpoint, and the SPA's 401-on-session-loss redirect,
-were delivered by
-[FEAT-0002](../FEAT-0002-user-authentication/TASK-0005-logout-and-spa-401-handling.md)
-and are not revisited here. What is missing is purely the affordance: until now the
+were delivered for
+[SPEC-0002](../../specs/SPEC-0002-user-authentication.md) and are documented in
+[`server/CLAUDE.md`](../../../server/CLAUDE.md); they are not revisited here. What is
+missing is purely the affordance: until now the
 only logout control in the product was on the server-rendered forbidden page, so a
 user inside the app could only get out by waiting for the 30-minute idle timeout or
 discarding their cookie. This feature is therefore a UI slice, placed in the app shell
@@ -42,9 +43,9 @@ single origin established by
 
 **Out of scope (already delivered or owned elsewhere):**
 - `POST /logout` itself, session invalidation, and the 401-on-XHR contract — owned by
-  [FEAT-0002](../FEAT-0002-user-authentication/README.md), specifically
-  [TASK-0005](../FEAT-0002-user-authentication/TASK-0005-logout-and-spa-401-handling.md),
-  which stays `done`. No backend or configuration change belongs to this feature.
+  [SPEC-0002](../../specs/SPEC-0002-user-authentication.md) and documented in
+  [`server/CLAUDE.md`](../../../server/CLAUDE.md). No backend or configuration change
+  belongs to this feature.
 - Any account or profile screen. The dropdown holds exactly one item; adding "my
   account" would need a screen no spec asks for yet.
 - A general CSRF-token seam for the SPA. The whole SPA, including this logout, relies on
@@ -161,7 +162,7 @@ sequenceDiagram
 1. **[TASK-0001](TASK-0001-session-logout-action.md)** —
    The session logout action and its navigation, beside the existing session read —
    the "using that control" half of criterion #12. The endpoint behind it, and #7
-   itself, are already delivered by FEAT-0002. *(frontend)* *(SPEC-0002 #12)*
+   itself, are already delivered. *(frontend)* *(SPEC-0002 #12)*
 2. **[TASK-0002](TASK-0002-header-user-menu.md)** —
    The header user menu: dropdown trigger, identity header, logout item and Galician
    copy, against the mockups in [`design/`](design/README.md), which own the exact copy

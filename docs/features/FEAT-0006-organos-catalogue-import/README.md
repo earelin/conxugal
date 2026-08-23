@@ -68,8 +68,8 @@ contract-first in the [OpenAPI document](../../api/openapi.yaml)
   rather than here. The `USER`-facing tree of R9 is built later still, as the Órgano filter
   of the contratos list.
 - Importing **contracts/tenders** themselves (a different spec), and authentication /
-  the `USER`/`ADMIN` roles (delivered by
-  [FEAT-0002](../FEAT-0002-user-authentication/README.md)).
+  the `USER`/`ADMIN` roles (delivered for
+  [SPEC-0002](../../specs/SPEC-0002-user-authentication.md)).
 
 ## Design
 

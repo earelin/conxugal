@@ -15,8 +15,8 @@ SPA (**[ADR-0003](../../architecture/0003-react-router-ui-served-by-backend.md)*
 **[ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md)**), with the admin REST
 endpoints under the reserved `/api/` prefix
 (**[ADR-0006](../../architecture/0006-reserved-api-url-prefix.md)**). Access is gated by
-the `@Secured(ADMIN)` rules already delivered in
-[FEAT-0002](../FEAT-0002-user-authentication/README.md).
+the `@Secured(ADMIN)` rules already delivered for
+[SPEC-0002](../../specs/SPEC-0002-user-authentication.md).
 
 ## Scope
 - **Domain (auth):** extend `User` with an `enabled` state and a creation timestamp; add the account-management
@@ -95,9 +95,8 @@ flowchart LR
 
 ### Last login in the account list
 - The `User` already carries a `lastLoginAt` — the moment of its most recent successful
-  login, stamped by the authenticate use case and delivered by
-  [FEAT-0002](../FEAT-0002-user-authentication/README.md)
-  ([SPEC-0002](../../specs/SPEC-0002-user-authentication.md) R13). This feature only
+  login, stamped by the authenticate use case and delivered for
+  [SPEC-0002](../../specs/SPEC-0002-user-authentication.md) R13. This feature only
   **reads and surfaces** it in the user list; it adds no new domain state, column, or
   write path for the value.
 - The value is nullable: an account that has never logged in successfully has none. The

@@ -2,7 +2,7 @@
 feat: FEAT-0015
 domain: backend
 adrs: [0002, 0008]
-status: todo
+status: done
 depends_on: [TASK-0003, TASK-0004]
 ---
 
@@ -56,7 +56,9 @@ behind TASK-0003's port.
     store-as-published exists to prevent.
   - **`licitacion_lote`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, its `licitacion_id`, its
     identifier as **`TEXT`** in a `lote_identifier` column (measured: `OU0028`, `LU4001` and
-    `CO0642` are all real lote identifiers), the two optional extras and the withdrawal marker;
+    `CO0642` are all real lote identifiers), a **`lote_key TEXT NOT NULL`** carrying the same
+    identifier reduced by TASK-0004's `LoteKey` (see *The lote's key* below), the two optional
+    extras and the withdrawal marker;
   - **`cpv`** and **`nut`** — the two regulated European lists, each `id UUID PRIMARY KEY DEFAULT
     uuidv7()` beside `code TEXT NOT NULL UNIQUE` and a nullable `description` that is
     **deliberately not unique**, on the `licitacion_state` shape and for its reason: an import
@@ -114,7 +116,7 @@ behind TASK-0003's port.
 
   | Table | Natural key |
   | --- | --- |
-  | `licitacion_lote` | `(licitacion_id, lote_identifier)` |
+  | `licitacion_lote` | `(licitacion_id, lote_key)` |
   | `cpv` / `nut` | `code` |
   | `licitacion_cpv` / `licitacion_nut` | `(licitacion_id, lote_id, cpv_id)` / `(…, nut_id)`, `NULLS NOT DISTINCT` |
   | `licitacion_award` | `(licitacion_id, lote_id)`, `NULLS NOT DISTINCT` |
@@ -124,23 +126,43 @@ behind TASK-0003's port.
   it the procedure-wide row of a lotless procedure would insert afresh on every re-import — which is
   every procedure, on every run.
 
-  **The lote's key is the published spelling, and that is a decision this task owes an answer
-  to.** `lote_identifier` holds what the source printed — `05` stays `05`, which this task's own
-  criterion requires — while
+  **The lote's key is the reduced spelling, not the published one, and this is the decision the
+  task owed an answer to.** `lote_identifier` holds what the source printed — `05` stays `05`,
+  which this task's own criterion requires — while
   [TASK-0004](TASK-0004-award-points-and-competition-value-types.md)'s `LoteKey` holds that `05`
   and `5` are one lote. The two disagree, and the disagreement is reachable: a procedure whose
   award table spells one lote both ways, or a source that respells the padding between imports,
   would insert a second lote row where the normaliser says there is one — the artefact `LoteKey`
-  was measured over 240 procedures to eliminate, and it would pass this task's no-duplicate
-  criterion while the source could still break it.
+  was measured over 240 procedures to eliminate, and it would pass a no-duplicate criterion keyed
+  on the published spelling while the source could still break it.
 
-  It is **not demonstrated**: the measured padding varies between procedures rather than within
-  one, so this is a re-import hazard rather than a defect anyone has seen. Two ways to settle it,
-  and this task picks one before writing the migration — carry the normalised form as a
-  `lote_key` column and move the unique constraint to `(licitacion_id, lote_key)`, keeping
-  `lote_identifier` as the published spelling for display; or leave the key as it is and state that
-  the caller matches on the normalised form before upserting. Either way the criterion to add is
-  **one procedure whose award table names `01` and `1` leaves one lote**.
+  So `licitacion_lote` carries **both**: `lote_identifier` as published, for display, and
+  `lote_key` as the unique key. **The adapter writes `lote_key` from `LoteKey.normalise`**, rather
+  than the column deriving it in SQL, so the rule stays in one language: a `GENERATED ALWAYS AS`
+  expression would restate the same reduction where the two spellings of it could drift apart with
+  nothing to notice. `lote_key` is therefore the one column no record component maps —
+  [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md)
+  reads on the write path here, and every write in this task is a hand-written statement rather
+  than a derived `save`. The adapter must stay free of a derived `save`/`update` for that reason,
+  and says so.
+
+  **The upsert does not refresh `lote_identifier`: the first spelling stored is the one kept**, and
+  the upsert answers with it rather than with the one it was handed. Refreshing it would make what
+  a reader is shown depend on the order its caller wrote in — the lotes table and the award table
+  of one record spell the same lote differently, and neither is the more published — so a
+  last-write-wins column would flip a displayed identifier back and forth across re-imports for no
+  reason a reader could see. The decoration beside it *is* refreshed, on the ordinary rule that a
+  restatement's attributes are written over; the identifier is not one, being the published form of
+  what the row is keyed on. A genuine respelling at the source is then a rule for
+  [TASK-0014](TASK-0014-reconciling-a-restated-procedure.md) to state rather than a side effect of
+  statement order.
+
+  The upsert also **refuses** an identifier that reduces to nothing (`_`, `-`): those are how the
+  source spells *the procedure as a whole*, which hangs off the procedure with no lote row at all.
+
+  It was **not demonstrated**: the measured padding varies between procedures rather than within
+  one, so this is a re-import hazard rather than a defect anyone had seen. The criterion it adds is
+  **one procedure whose award table names `01` and `1` leaves one lote**, below.
 - **No vocabulary table carries a withdrawal marker.** The four are not parts of a procedure the
   source restates; they are the values it publishes, and a state or a type no procedure references
   any more is still one the source published. R13's withdrawal has nothing to say about them.
@@ -171,7 +193,15 @@ behind TASK-0003's port.
   them. This task owns both, in `domain` under ADR-0002, on the shape TASK-0003's four vocabulary
   ports set: an `upsert` and nothing else. A CPV upsert **must not** write the description — it
   matches on the code and leaves whatever wording is already stored alone, so an import cannot
-  blank a description something else supplied.
+  blank a description something else supplied, and it therefore answers the **stored** description
+  rather than the one it was handed.
+
+  **So do the five award-point ports**, for the same reason: TASK-0004 ships `Lote`,
+  `CpvClassification`, `NutClassification`, `Award` and `Formalisation` as entities with no
+  repository beside them, so `LoteRepository`, `CpvClassificationRepository`,
+  `NutClassificationRepository`, `AwardRepository` and `FormalisationRepository` are declared here
+  too — seven new ports in all, each an `upsert` answering the stored value with its identity, and
+  none with a delete.
 - **`findByPublicationId` must fetch-join all four vocabulary references**, and the joins must be
   **left**:
 
@@ -181,7 +211,7 @@ behind TASK-0003's port.
   @Join(value = "contractType", type = Join.Type.LEFT_FETCH)
   @Join(value = "procedureType", type = Join.Type.LEFT_FETCH)
   @Join(value = "tramitacionType", type = Join.Type.LEFT_FETCH)
-  public abstract Optional<Licitacion> findByPublicationId(long publicationId);
+  public abstract Optional<Licitacion> findByPublicationId(PublicationId publicationId);
   ```
 
   **This is not a tuning choice, it is what makes the read work at all.** Micronaut Data has no
@@ -227,6 +257,10 @@ browse-shaped query.
   classifying the procedure as a whole. This is procedure 822054 and the case a `NOT NULL` column
   would have lost. (SPEC-0008 #10 as amended)
 - A lote stores under the identifier `OU0028`, and under `05`. (SPEC-0008 #10, #44)
+- **One procedure whose award table names `01` and `1` leaves one lote**, held under the spelling it
+  was first stored with and answering the caller with that rather than with the incoming one. This
+  is what keying on `lote_key` rather than on `lote_identifier` buys, and the test that would fail
+  if the key moved back. (SPEC-0008 #10, #44)
 - An award stores with a null operador and with a null lote, independently. (SPEC-0008 #20)
 - A procedure with two lotes stores two awards, and neither is duplicated at procedure level: a
   query for procedure-level awards on that procedure returns none. *This is the regression test for
