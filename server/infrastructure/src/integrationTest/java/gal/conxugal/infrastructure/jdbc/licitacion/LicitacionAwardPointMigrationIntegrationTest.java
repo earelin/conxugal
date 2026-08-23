@@ -158,7 +158,8 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
 
     assertThatThrownBy(() -> schema.insertAward(licitacionId, null))
         .isInstanceOfSatisfying(
-            SQLException.class, exception -> assertViolates(exception, "licitacion_award_key"));
+            SQLException.class,
+            exception -> Refusals.violatesUniqueness(exception, "licitacion_award_key"));
   }
 
   @Test
@@ -168,7 +169,7 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
     assertThatThrownBy(() -> schema.insertFormalisation(licitacionId, null))
         .isInstanceOfSatisfying(
             SQLException.class,
-            exception -> assertViolates(exception, "licitacion_formalisation_key"));
+            exception -> Refusals.violatesUniqueness(exception, "licitacion_formalisation_key"));
   }
 
   @Test
@@ -178,7 +179,8 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
 
     assertThatThrownBy(() -> schema.insertCpvClassification(licitacionId, null, cpvId))
         .isInstanceOfSatisfying(
-            SQLException.class, exception -> assertViolates(exception, "licitacion_cpv_key"));
+            SQLException.class,
+            exception -> Refusals.violatesUniqueness(exception, "licitacion_cpv_key"));
   }
 
   // Two codes cited procedure-wide are two rows: the entry is part of the key, so the constraint
@@ -209,7 +211,8 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
 
     assertThatThrownBy(() -> schema.insertLote(licitacionId, "5", "5"))
         .isInstanceOfSatisfying(
-            SQLException.class, exception -> assertViolates(exception, "licitacion_lote_key"));
+            SQLException.class,
+            exception -> Refusals.violatesUniqueness(exception, "licitacion_lote_key"));
   }
 
   @Test
@@ -231,8 +234,7 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
     assertThatThrownBy(() -> schema.insertAwardWithoutResolutionPath(licitacionId))
         .isInstanceOfSatisfying(
             SQLException.class,
-            // SQLSTATE 23502 is not_null_violation.
-            exception -> assertThat(exception.getSQLState()).isEqualTo("23502"));
+            Refusals::violatesNotNull);
   }
 
   // Every child carries its procedure, which is what lets a lotless procedure attach its rows.
@@ -241,7 +243,7 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
     assertThatThrownBy(schema::insertAwardWithoutProcedure)
         .isInstanceOfSatisfying(
             SQLException.class,
-            exception -> assertThat(exception.getSQLState()).isEqualTo("23502"));
+            Refusals::violatesNotNull);
   }
 
   @Test
@@ -249,7 +251,7 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
     assertThatThrownBy(() -> schema.insertAward(licitacionId, UUID.randomUUID()))
         .isInstanceOfSatisfying(
             SQLException.class,
-            exception -> assertRefuses(exception, "licitacion_award_lote_id_fkey"));
+            exception -> Refusals.violatesForeignKey(exception, "licitacion_award_lote_id_fkey"));
   }
 
   @Test
@@ -258,7 +260,7 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
             () -> schema.insertCpvClassification(licitacionId, null, UUID.randomUUID()))
         .isInstanceOfSatisfying(
             SQLException.class,
-            exception -> assertRefuses(exception, "licitacion_cpv_cpv_id_fkey"));
+            exception -> Refusals.violatesForeignKey(exception, "licitacion_cpv_cpv_id_fkey"));
   }
 
   @Test
@@ -299,15 +301,5 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
         .table(name)
         .columnsToOrder(order)
         .build();
-  }
-
-  private static void assertViolates(SQLException exception, String constraint) {
-    assertThat(exception.getSQLState()).isEqualTo("23505");
-    assertThat(exception.getMessage()).contains(constraint);
-  }
-
-  private static void assertRefuses(SQLException exception, String constraint) {
-    assertThat(exception.getSQLState()).isEqualTo("23503");
-    assertThat(exception.getMessage()).contains(constraint);
   }
 }

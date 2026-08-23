@@ -147,7 +147,7 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
     assertThatThrownBy(() -> schema.insertLicitacion("822054", organoId, stateId))
         .isInstanceOfSatisfying(
             SQLException.class,
-            exception -> assertViolates(exception, "licitacion_publication_id_key"));
+            exception -> Refusals.violatesUniqueness(exception, "licitacion_publication_id_key"));
   }
 
   // The two families are addressed from one identifier space, so the same publication under
@@ -162,7 +162,7 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
     assertThatThrownBy(() -> schema.insertLicitacion("822054", second, stateId))
         .isInstanceOfSatisfying(
             SQLException.class,
-            exception -> assertThat(exception.getSQLState()).isEqualTo("23505"));
+            Refusals::violatesUniqueness);
   }
 
   // An identifier the source did not mint as a number stores unchanged: how it mints them is the
@@ -187,7 +187,7 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
     assertThatThrownBy(() -> schema.insertState(101, "Outra cousa"))
         .isInstanceOfSatisfying(
             SQLException.class,
-            exception -> assertViolates(exception, "licitacion_state_code_key"));
+            exception -> Refusals.violatesUniqueness(exception, "licitacion_state_code_key"));
   }
 
   // 101 and 102 are both published as Histórico. This is the test that would fail if the label
@@ -210,7 +210,8 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
     assertThatThrownBy(() -> schema.insertContractType("Servizos"))
         .isInstanceOfSatisfying(
             SQLException.class,
-            exception -> assertViolates(exception, "licitacion_contract_type_name_key"));
+            exception ->
+                Refusals.violatesUniqueness(exception, "licitacion_contract_type_name_key"));
   }
 
   // Structurally identical vocabularies, separately keyed: one name published for two different
@@ -230,7 +231,8 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
 
     assertThatThrownBy(() -> schema.insertCpv("45000000", "Outra redacción"))
         .isInstanceOfSatisfying(
-            SQLException.class, exception -> assertViolates(exception, "cpv_code_key"));
+            SQLException.class,
+            exception -> Refusals.violatesUniqueness(exception, "cpv_code_key"));
   }
 
   // The wording is translated, revised and shared across sibling entries, so a UNIQUE on it would
@@ -252,7 +254,8 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
 
     assertThatThrownBy(() -> schema.insertLicitacion("822054", UUID.randomUUID(), stateId))
         .isInstanceOfSatisfying(
-            SQLException.class, exception -> assertRefuses(exception, "licitacion_organo_id_fkey"));
+            SQLException.class,
+            exception -> Refusals.violatesForeignKey(exception, "licitacion_organo_id_fkey"));
   }
 
   @Test
@@ -261,7 +264,8 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
 
     assertThatThrownBy(() -> schema.insertLicitacion("822054", organoId, UUID.randomUUID()))
         .isInstanceOfSatisfying(
-            SQLException.class, exception -> assertRefuses(exception, "licitacion_state_id_fkey"));
+            SQLException.class,
+            exception -> Refusals.violatesForeignKey(exception, "licitacion_state_id_fkey"));
   }
 
   // The listing always publishes a state, so a procedure carrying none is a parse defect rather
@@ -273,8 +277,7 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
     assertThatThrownBy(() -> schema.insertLicitacionWithoutState("822054", organoId))
         .isInstanceOfSatisfying(
             SQLException.class,
-            // SQLSTATE 23502 is not_null_violation.
-            exception -> assertThat(exception.getSQLState()).isEqualTo("23502"));
+            Refusals::violatesNotNull);
   }
 
   // Plain, with no ON DELETE CASCADE: no import deletes a published value, so a cascade would
@@ -287,7 +290,8 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
 
     assertThatThrownBy(() -> schema.deleteState(stateId))
         .isInstanceOfSatisfying(
-            SQLException.class, exception -> assertRefuses(exception, "licitacion_state_id_fkey"));
+            SQLException.class,
+            exception -> Refusals.violatesForeignKey(exception, "licitacion_state_id_fkey"));
     assertThat(table("licitacion", "publication_id")).hasNumberOfRows(1);
   }
 
@@ -333,18 +337,5 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
     UUID organoId = schema.insertOrgano("consorcio-x");
     UUID stateId = schema.insertState(2, "Adxudicado");
     return schema.insertLicitacion(publicationId, organoId, stateId);
-  }
-
-  // SQLSTATE 23505 is unique_violation; pinning the constraint name too rules out a coincidental
-  // different constraint failing for the wrong reason.
-  private static void assertViolates(SQLException exception, String constraint) {
-    assertThat(exception.getSQLState()).isEqualTo("23505");
-    assertThat(exception.getMessage()).contains(constraint);
-  }
-
-  // SQLSTATE 23503 is foreign_key_violation — the write was refused rather than cascading.
-  private static void assertRefuses(SQLException exception, String constraint) {
-    assertThat(exception.getSQLState()).isEqualTo("23503");
-    assertThat(exception.getMessage()).contains(constraint);
   }
 }
