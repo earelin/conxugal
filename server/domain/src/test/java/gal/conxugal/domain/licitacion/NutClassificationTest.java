@@ -1,7 +1,6 @@
 package gal.conxugal.domain.licitacion;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import java.lang.reflect.RecordComponent;
@@ -18,6 +17,12 @@ class NutClassificationTest {
       new LicitacionId(UUID.fromString("0198c0de-0000-7000-8000-0000000000f1"));
   private static final LoteId LOTE_ID =
       new LoteId(UUID.fromString("0198c0de-0000-7000-8000-0000000000a1"));
+  private static final Nut GALICIA =
+      new Nut(
+          new NutId(UUID.fromString("0198c0de-0000-7000-8000-0000000000d1")), "ES11", null);
+  private static final Cpv CONSTRUCTION =
+      new Cpv(
+          new CpvId(UUID.fromString("0198c0de-0000-7000-8000-0000000000e1")), "45000000", null);
   private static final LocalDate DIFFUSED = LocalDate.of(2012, 6, 28);
 
   @Test
@@ -25,7 +30,7 @@ class NutClassificationTest {
     assertThat(
             Arrays.stream(NutClassification.class.getRecordComponents())
                 .map(RecordComponent::getName))
-        .containsExactly("id", "licitacionId", "loteId", "code", "diffusionDate", "withdrawn");
+        .containsExactly("id", "licitacionId", "loteId", "nut", "diffusionDate", "withdrawn");
   }
 
   @Test
@@ -38,7 +43,7 @@ class NutClassificationTest {
 
   @Test
   void constructs_against_lote_when_the_source_published_one() {
-    assertThat(new NutClassification(LICITACION_ID, LOTE_ID, "ES111", DIFFUSED).loteId())
+    assertThat(new NutClassification(LICITACION_ID, LOTE_ID, GALICIA, DIFFUSED).loteId())
         .isEqualTo(LOTE_ID);
   }
 
@@ -56,26 +61,26 @@ class NutClassificationTest {
 
   @Test
   void constructs_with_no_diffusion_date_because_one_that_could_not_be_read_is_absent() {
-    assertThat(new NutClassification(LICITACION_ID, null, "ES111", null).diffusionDate())
+    assertThat(new NutClassification(LICITACION_ID, null, GALICIA, null).diffusionDate())
         .isNull();
   }
 
   @Test
-  void strips_an_untrimmed_code_rather_than_keying_row_beside_the_trimmed_one() {
-    assertThat(new NutClassification(LICITACION_ID, null, " ES111 ", DIFFUSED).code())
-        .isEqualTo("ES111");
+  void refers_to_the_regulated_entry_rather_than_copying_its_code() {
+    assertThat(procedureWide().nut())
+        .isEqualTo(GALICIA);
   }
 
   @Test
   void requires_the_procedure_it_belongs_to() {
     assertThatNullPointerException()
-        .isThrownBy(() -> new NutClassification(null, null, "ES111", DIFFUSED));
+        .isThrownBy(() -> new NutClassification(null, null, GALICIA, DIFFUSED));
   }
 
   @Test
-  void refuses_row_keyed_on_blank_code() {
-    assertThatIllegalArgumentException()
-        .isThrownBy(() -> new NutClassification(LICITACION_ID, null, " \t", DIFFUSED));
+  void requires_the_entry_it_classifies_by() {
+    assertThatNullPointerException()
+        .isThrownBy(() -> new NutClassification(LICITACION_ID, null, null, DIFFUSED));
   }
 
   @Test
@@ -95,7 +100,7 @@ class NutClassificationTest {
 
     assertThat(identified)
         .isNotEqualTo(null)
-        .isNotEqualTo(new CpvClassification(LICITACION_ID, null, "ES111", DIFFUSED));
+        .isNotEqualTo(new CpvClassification(LICITACION_ID, null, CONSTRUCTION, DIFFUSED));
   }
 
   @Test
@@ -113,7 +118,7 @@ class NutClassificationTest {
 
     NutClassification visible = stored(id);
     NutClassification withdrawn =
-        new NutClassification(id, LICITACION_ID, null, "ES111", DIFFUSED, true);
+        new NutClassification(id, LICITACION_ID, null, GALICIA, DIFFUSED, true);
 
     assertThat(visible)
         .isEqualTo(withdrawn)
@@ -135,10 +140,10 @@ class NutClassificationTest {
   }
 
   private static NutClassification procedureWide() {
-    return new NutClassification(LICITACION_ID, null, "ES111", DIFFUSED);
+    return new NutClassification(LICITACION_ID, null, GALICIA, DIFFUSED);
   }
 
   private static NutClassification stored(NutClassificationId id) {
-    return new NutClassification(id, LICITACION_ID, null, "ES111", DIFFUSED, false);
+    return new NutClassification(id, LICITACION_ID, null, GALICIA, DIFFUSED, false);
   }
 }

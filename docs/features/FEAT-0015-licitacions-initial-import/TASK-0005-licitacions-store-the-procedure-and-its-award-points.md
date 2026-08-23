@@ -57,9 +57,19 @@ behind TASK-0003's port.
   - **`licitacion_lote`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, its `licitacion_id`, its
     identifier as **`TEXT`** in a `lote_identifier` column (measured: `OU0028`, `LU4001` and
     `CO0642` are all real lote identifiers), the two optional extras and the withdrawal marker;
+  - **`cpv`** and **`nut`** — the two regulated European lists, each `id UUID PRIMARY KEY DEFAULT
+    uuidv7()` beside `code TEXT NOT NULL UNIQUE` and a nullable `description` that is
+    **deliberately not unique**, on the `licitacion_state` shape and for its reason: an import
+    matches an entry on the code the list assigns, never on wording that is translated and revised
+    and shared across sibling entries. **Neither is seeded** — CPV is versioned, the 2008 revision
+    retired codes the 2003 one issued, and this system imports procedures published across both, so
+    an unseen code creates its row inside the transaction that stores the procedure rather than
+    failing a foreign key. Unprefixed, unlike the four `licitacion_*` vocabularies, because these
+    are external standards rather than this source's own vocabulary;
   - **`licitacion_cpv`** and **`licitacion_nut`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`,
-    `licitacion_id`, the code, the diffusion date, a **nullable** `lote_id` and the withdrawal
-    marker;
+    `licitacion_id`, a `cpv_id` / `nut_id` FK **NOT NULL**, the diffusion date, a **nullable**
+    `lote_id` and the withdrawal marker. The code itself is not a column here: a classification row
+    records that this procedure cites that entry, and the entry is the list's;
   - **`licitacion_award`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, `licitacion_id`, a nullable
     `lote_id`, the resolution, its date, the amount, the execution period, the published awardee
     name, a nullable `operador_economico_id` FK, the resolution path and the withdrawal marker;
@@ -83,6 +93,7 @@ behind TASK-0003's port.
   | --- | --- | --- |
   | `licitacion_lote` | its identifier | `lote_identifier` |
   | `licitacion_cpv` / `licitacion_nut` | the diffusion date | `diffusion_date` |
+  | `licitacion_cpv` / `licitacion_nut` | the entry it cites | `cpv_id` / `nut_id` |
   | `licitacion_award` | its date | `resolution_date` |
   | `licitacion_award` | the resolution path | `awardee_resolution_path` |
   | `licitacion_formalisation` | the date | `formalisation_date` |
@@ -104,7 +115,8 @@ behind TASK-0003's port.
   | Table | Natural key |
   | --- | --- |
   | `licitacion_lote` | `(licitacion_id, lote_identifier)` |
-  | `licitacion_cpv` / `licitacion_nut` | `(licitacion_id, lote_id, code)`, `NULLS NOT DISTINCT` |
+  | `cpv` / `nut` | `code` |
+  | `licitacion_cpv` / `licitacion_nut` | `(licitacion_id, lote_id, cpv_id)` / `(…, nut_id)`, `NULLS NOT DISTINCT` |
   | `licitacion_award` | `(licitacion_id, lote_id)`, `NULLS NOT DISTINCT` |
   | `licitacion_formalisation` | `(licitacion_id, lote_id)`, `NULLS NOT DISTINCT` |
 
@@ -150,8 +162,16 @@ behind TASK-0003's port.
   partial indexes on a generated `publication_year`. The browsing feature measures R32 over its own
   queries and adds what those measurements ask for.
 - **JDBC repositories** implementing TASK-0003's ports and the award-point ports — including one
-  per vocabulary, each upserting on its published key (`code` for the state, `name` for a type) and
-  answering the stored value with its identity.
+  per vocabulary, each upserting on its published key (`code` for the state, `name` for a type,
+  `code` for a CPV or NUTS entry) and answering the stored value with its identity.
+
+  **The two regulated lists need their ports declaring here.**
+  [TASK-0004](TASK-0004-award-points-and-competition-value-types.md) puts every repository out of
+  scope, so it ships `Cpv` and `Nut` as entities and no `CpvRepository` / `NutRepository` beside
+  them. This task owns both, in `domain` under ADR-0002, on the shape TASK-0003's four vocabulary
+  ports set: an `upsert` and nothing else. A CPV upsert **must not** write the description — it
+  matches on the code and leaves whatever wording is already stored alone, so an import cannot
+  blank a description something else supplied.
 - **`findByPublicationId` must fetch-join all four vocabulary references**, and the joins must be
   **left**:
 

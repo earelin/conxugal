@@ -26,7 +26,12 @@
  * point carries its {@link gal.conxugal.domain.licitacion.CpvClassification} and
  * {@link gal.conxugal.domain.licitacion.NutClassification} — two records because they map two
  * tables, and either may hang off the procedure even where lotes exist, because that is what the
- * source publishes — its {@link gal.conxugal.domain.licitacion.Award}, its
+ * source publishes. Each one <em>refers</em> to its entry rather than copying it:
+ * {@link gal.conxugal.domain.licitacion.Cpv} and {@link gal.conxugal.domain.licitacion.Nut} are
+ * regulated European lists rather than this source's own vocabulary, so an entry thousands of
+ * procedures cite is held once, matched on the code the list assigns and never on its wording, and
+ * unseeded because a regulated list is versioned rather than closed. Beside them sit its
+ * {@link gal.conxugal.domain.licitacion.Award}, its
  * {@link gal.conxugal.domain.licitacion.Formalisation}, and the
  * {@link gal.conxugal.domain.licitacion.Participation} of each published bidder. One place per
  * thing awarded, with no second copy at procedure level; the model makes both expressible and the

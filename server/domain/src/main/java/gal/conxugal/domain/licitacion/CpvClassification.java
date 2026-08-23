@@ -3,13 +3,20 @@ package gal.conxugal.domain.licitacion;
 import io.micronaut.data.annotation.GeneratedValue;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
+import io.micronaut.data.annotation.MappedProperty;
+import io.micronaut.data.annotation.Relation;
 import java.time.LocalDate;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A CPV code the source published for a procedure, with the date it was diffused on. {@code id} is
- * a system-assigned identity, {@code null} only until the database assigns it.
+ * A CPV entry the source published for a procedure, with the date it was diffused on. {@code id}
+ * is a system-assigned identity, {@code null} only until the database assigns it.
+ *
+ * <p><strong>The entry is a reference, not a column here.</strong> {@link Cpv} is the regulated
+ * list's, not this procedure's, so a code thousands of procedures cite is held once and referred
+ * to. What this row holds is the fact that <em>this</em> procedure cites <em>that</em> entry, on
+ * that date, for that award point — which is the only part of it that belongs to the procedure.
  *
  * <p><strong>The lote is nullable, and that is the departure worth stating.</strong> A null one
  * means <em>the procedure as a whole</em> rather than <em>unattached</em>, and it is what the
@@ -36,13 +43,13 @@ public record CpvClassification(
     @Id @GeneratedValue @Nullable CpvClassificationId id,
     LicitacionId licitacionId,
     @Nullable LoteId loteId,
-    String code,
+    @Relation(Relation.Kind.MANY_TO_ONE) @MappedProperty("cpv_id") Cpv cpv,
     @Nullable LocalDate diffusionDate,
     boolean withdrawn) {
 
   public CpvClassification {
     Objects.requireNonNull(licitacionId, "licitacionId must not be null");
-    code = PublishedKey.canonical(code, "code");
+    Objects.requireNonNull(cpv, "cpv must not be null");
   }
 
   /**
@@ -52,9 +59,9 @@ public record CpvClassification(
   public CpvClassification(
       LicitacionId licitacionId,
       @Nullable LoteId loteId,
-      String code,
+      Cpv cpv,
       @Nullable LocalDate diffusionDate) {
-    this(null, licitacionId, loteId, code, diffusionDate, false);
+    this(null, licitacionId, loteId, cpv, diffusionDate, false);
   }
 
   /**

@@ -69,9 +69,41 @@ the tables and not in the types.
   procedure. Both extras are optional because `Relación de lotes` was **empty** on procedure 822054
   while `Nº lotes` said `2` and the award table named both — a lote's *existence* comes from the
   award table; the lotes table supplies decoration.
+- **`Cpv` and `Nut`** — the two regulated European lists a classification cites, each an entity
+  with a table of its own on the `LicitacionState` shape: a system-assigned identity, the **code
+  the list assigns** as its natural key, and a **nullable description that carries no unique
+  constraint**.
+
+  **They are vocabularies, not columns, because the lists are regulated and shared.** A CPV code is
+  not this source's coinage and not a procedure's property — it is an external standard thousands
+  of procedures cite — so it is held once and referred to. That is what lets
+  [SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) R23 offer *only the codes a
+  year's selection actually contains* as a reference rather than a `DISTINCT` over a column
+  repeated once per procedure per code, and it is why a code must be an independent entity **to be
+  referenced by others**.
+
+  **An import matches an entry on its code and never on its description.** The code is what the
+  list identifies an entry by; the description is wording — translated, revised, and repeated
+  across sibling entries. A store unique on it would reject a real entry and matching on it would
+  merge entries the list distinguishes, so it carries no constraint, exactly as the state's label
+  carries none.
+
+  **Nothing seeds either table.** Regulated is not the same as closed: CPV is versioned, and the
+  2008 revision retired codes the 2003 one issued, while this system imports procedures published
+  across both. A seeded catalogue would turn a code retired before our copy was taken into a
+  foreign-key violation and a rejected procedure — the harm R33's store-as-published exists to
+  prevent. An unseen code costs a row.
+
+  **The description is nullable and nothing populates it yet.** The record's CPV and NUT tables
+  publish the code alone ([`design/source-contract.md`](design/source-contract.md)), so an import
+  stores the code and leaves the description null. It is declared now so the official wording has
+  somewhere to go without a later migration; null means nobody has supplied one, never that the
+  entry has none.
 - **`CpvClassification` and `NutClassification`** — two records, not one, because they map two
-  tables and one `@MappedEntity` record cannot map both. Each carries its `LicitacionId`, its code,
-  its diffusion date, a **nullable `LoteId`** and a withdrawal marker.
+  tables and one `@MappedEntity` record cannot map both. Each carries its `LicitacionId`, a
+  **required reference to its `Cpv` or `Nut` entry**, its diffusion date, a **nullable `LoteId`**
+  and a withdrawal marker. What the row holds is that *this* procedure cites *that* entry, on that
+  date, for that award point — which is the only part of the fact that belongs to the procedure.
 
   The nullable lote is **amendment 2**, and it is the departure worth stating: on 822054 — two
   lotes, two separate awards — **every** CPV and NUT row's lote cell was procedure-wide. A model
@@ -164,6 +196,14 @@ the problem.
 - A classification constructs **with and without** a lote, and a procedure that has lotes accepts a
   classification carrying none. ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md)
   #9 as amended, #10)
+- A classification **refers to** its `Cpv` or `Nut` entry and holds no code of its own, so two
+  procedures citing one code refer to one entry; a classification citing no entry is refused, where
+  a null would otherwise reach a `NOT NULL` foreign key whose error names the column rather than
+  the mistake. (SPEC-0008 #23 storage half, #44)
+- A `Cpv` constructs with a code the table has never held and with no description, two entries
+  sharing one description stay two entries, and one entry read either side of its wording being
+  supplied is the same entry. The same for `Nut`. Nothing seeds either, and nothing validates a
+  code against a known set — the lists are versioned, not closed. (SPEC-0008 #44)
 - A `Lote` constructs with the identifier `OU0028` and with `05`, and with no description and no
   estimated value. An integer identifier is not expressible. (SPEC-0008 #10, #44)
 - Every type that a table stores carries its back-reference and its withdrawal marker, so no column

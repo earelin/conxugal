@@ -1,7 +1,6 @@
 package gal.conxugal.domain.licitacion;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import java.lang.reflect.RecordComponent;
@@ -18,6 +17,12 @@ class CpvClassificationTest {
       new LicitacionId(UUID.fromString("0198c0de-0000-7000-8000-0000000000f1"));
   private static final LoteId LOTE_ID =
       new LoteId(UUID.fromString("0198c0de-0000-7000-8000-0000000000a1"));
+  private static final Cpv CONSTRUCTION =
+      new Cpv(
+          new CpvId(UUID.fromString("0198c0de-0000-7000-8000-0000000000e1")), "45000000", null);
+  private static final Nut GALICIA =
+      new Nut(new NutId(UUID.fromString("0198c0de-0000-7000-8000-0000000000d1")),
+          "ES11", null);
   private static final LocalDate DIFFUSED = LocalDate.of(2012, 6, 28);
 
   @Test
@@ -25,7 +30,7 @@ class CpvClassificationTest {
     assertThat(
             Arrays.stream(CpvClassification.class.getRecordComponents())
                 .map(RecordComponent::getName))
-        .containsExactly("id", "licitacionId", "loteId", "code", "diffusionDate", "withdrawn");
+        .containsExactly("id", "licitacionId", "loteId", "cpv", "diffusionDate", "withdrawn");
   }
 
   @Test
@@ -68,26 +73,31 @@ class CpvClassificationTest {
 
   @Test
   void constructs_with_no_diffusion_date_because_one_that_could_not_be_read_is_absent() {
-    assertThat(new CpvClassification(LICITACION_ID, null, "45000000", null).diffusionDate())
+    assertThat(new CpvClassification(LICITACION_ID, null, CONSTRUCTION, null).diffusionDate())
         .isNull();
   }
 
   @Test
-  void strips_an_untrimmed_code_rather_than_keying_row_beside_the_trimmed_one() {
-    assertThat(new CpvClassification(LICITACION_ID, null, " 45000000 ", DIFFUSED).code())
-        .isEqualTo("45000000");
+  void refers_to_the_regulated_entry_rather_than_copying_its_code() {
+    // The code belongs to the list, not to this procedure. What this row holds is that this
+    // procedure cites that entry — so two procedures citing one code refer to one entry.
+    assertThat(procedureWide().cpv())
+        .isEqualTo(CONSTRUCTION)
+        .isSameAs(perLote().cpv());
   }
 
   @Test
   void requires_the_procedure_it_belongs_to() {
     assertThatNullPointerException()
-        .isThrownBy(() -> new CpvClassification(null, null, "45000000", DIFFUSED));
+        .isThrownBy(() -> new CpvClassification(null, null, CONSTRUCTION, DIFFUSED));
   }
 
   @Test
-  void refuses_row_keyed_on_blank_code() {
-    assertThatIllegalArgumentException()
-        .isThrownBy(() -> new CpvClassification(LICITACION_ID, null, " \t", DIFFUSED));
+  void requires_the_entry_it_classifies_by() {
+    // A classification citing nothing is not a classification, and a null here would reach the
+    // database as a null in a NOT NULL foreign key, whose error names the column and not this.
+    assertThatNullPointerException()
+        .isThrownBy(() -> new CpvClassification(LICITACION_ID, null, null, DIFFUSED));
   }
 
   @Test
@@ -107,7 +117,7 @@ class CpvClassificationTest {
 
     assertThat(identified)
         .isNotEqualTo(null)
-        .isNotEqualTo(new NutClassification(LICITACION_ID, null, "45000000", DIFFUSED));
+        .isNotEqualTo(new NutClassification(LICITACION_ID, null, GALICIA, DIFFUSED));
   }
 
   @Test
@@ -125,7 +135,7 @@ class CpvClassificationTest {
 
     CpvClassification visible = stored(id);
     CpvClassification withdrawn =
-        new CpvClassification(id, LICITACION_ID, null, "45000000", DIFFUSED, true);
+        new CpvClassification(id, LICITACION_ID, null, CONSTRUCTION, DIFFUSED, true);
 
     assertThat(visible)
         .isEqualTo(withdrawn)
@@ -147,14 +157,14 @@ class CpvClassificationTest {
   }
 
   private static CpvClassification procedureWide() {
-    return new CpvClassification(LICITACION_ID, null, "45000000", DIFFUSED);
+    return new CpvClassification(LICITACION_ID, null, CONSTRUCTION, DIFFUSED);
   }
 
   private static CpvClassification perLote() {
-    return new CpvClassification(LICITACION_ID, LOTE_ID, "45000000", DIFFUSED);
+    return new CpvClassification(LICITACION_ID, LOTE_ID, CONSTRUCTION, DIFFUSED);
   }
 
   private static CpvClassification stored(CpvClassificationId id) {
-    return new CpvClassification(id, LICITACION_ID, null, "45000000", DIFFUSED, false);
+    return new CpvClassification(id, LICITACION_ID, null, CONSTRUCTION, DIFFUSED, false);
   }
 }

@@ -3,15 +3,18 @@ package gal.conxugal.domain.licitacion;
 import io.micronaut.data.annotation.GeneratedValue;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
+import io.micronaut.data.annotation.MappedProperty;
+import io.micronaut.data.annotation.Relation;
 import java.time.LocalDate;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A NUT code the source published for a procedure, with the date it was diffused on. Structurally
- * identical to {@link CpvClassification} and separate from it because the two map two tables and
- * one mapped entity cannot map both — see that record for the reasoning in full, including why the
- * lote reference is nullable and what a null one means.
+ * A NUTS entry the source published for a procedure, with the date it was diffused on.
+ * Structurally identical to {@link CpvClassification} and separate from it because the two map two
+ * tables and one mapped entity cannot map both — see that record for the reasoning in full,
+ * including why the lote reference is nullable, what a null one means, and why the entry itself is
+ * a reference to {@link Nut} rather than a code held here.
  *
  * <p>The measurement is this one's own: over 240 procedures the NUT table wrote the procedure-wide
  * marker {@code _} on 217 rows and a lote on the rest, so the procedure-wide row is the ordinary
@@ -22,13 +25,13 @@ public record NutClassification(
     @Id @GeneratedValue @Nullable NutClassificationId id,
     LicitacionId licitacionId,
     @Nullable LoteId loteId,
-    String code,
+    @Relation(Relation.Kind.MANY_TO_ONE) @MappedProperty("nut_id") Nut nut,
     @Nullable LocalDate diffusionDate,
     boolean withdrawn) {
 
   public NutClassification {
     Objects.requireNonNull(licitacionId, "licitacionId must not be null");
-    code = PublishedKey.canonical(code, "code");
+    Objects.requireNonNull(nut, "nut must not be null");
   }
 
   /**
@@ -38,9 +41,9 @@ public record NutClassification(
   public NutClassification(
       LicitacionId licitacionId,
       @Nullable LoteId loteId,
-      String code,
+      Nut nut,
       @Nullable LocalDate diffusionDate) {
-    this(null, licitacionId, loteId, code, diffusionDate, false);
+    this(null, licitacionId, loteId, nut, diffusionDate, false);
   }
 
   /**
