@@ -168,8 +168,9 @@ class JdbcLicitacionImportStateRepositoryIntegrationTest implements TestProperty
         .isEqualTo(16_800);
   }
 
-  // Both rows asserted, not just the one written to: an update that forgot its WHERE clause moves
-  // every Órgano's cursor and a read of the one under test would still pass.
+  // Both writes, and both rows: an update that forgot its WHERE clause moves every Órgano at once,
+  // and a suite exercising one write or reading one row would not see it. Ordered by the status,
+  // which the act itself makes distinct, so neither row's position rests on how uuidv7 sorted.
   @Test
   void advancing_one_organo_leaves_every_other_organo_untouched() throws SQLException {
     OrganoId sergas = schema.organo("sergas");
@@ -177,14 +178,25 @@ class JdbcLicitacionImportStateRepositoryIntegrationTest implements TestProperty
     importStates.insert(LicitacionImportState.started(sergas));
     importStates.insert(LicitacionImportState.started(augas));
 
-    final String untouched = schema.licitacionImportStateRowOf(augas.value());
-
     importStates.updateCursorOffset(sergas, 300);
+    importStates.updateState(sergas, LicitacionImportStatus.COMPLETE);
 
-    assertThat(importStateTable()).hasNumberOfRows(2);
-    assertThat(schema.licitacionImportStateRowOf(sergas.value()))
-        .isEqualTo("(%s,INCOMPLETE,300)".formatted(sergas.value()));
-    assertThat(schema.licitacionImportStateRowOf(augas.value())).isEqualTo(untouched);
+    assertThat(importStateByStatus())
+        .hasNumberOfRows(2)
+        .row(0)
+        .value("organo_id")
+        .isEqualTo(sergas.value())
+        .value("state")
+        .isEqualTo("COMPLETE")
+        .value("cursor_offset")
+        .isEqualTo(300)
+        .row(1)
+        .value("organo_id")
+        .isEqualTo(augas.value())
+        .value("state")
+        .isEqualTo("INCOMPLETE")
+        .value("cursor_offset")
+        .isNull();
   }
 
   // Two families, two tables, and the whole point of the second one: the other family's row is
@@ -222,5 +234,10 @@ class JdbcLicitacionImportStateRepositoryIntegrationTest implements TestProperty
 
   private Table importStateTable() {
     return Tables.orderedBy(unproxied, "licitacion_import_state", "organo_id");
+  }
+
+  /** Ordered by the status, for the one test whose two Órganos end at different ones. */
+  private Table importStateByStatus() {
+    return Tables.orderedBy(unproxied, "licitacion_import_state", "state");
   }
 }

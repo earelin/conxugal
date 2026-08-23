@@ -1,6 +1,7 @@
 package gal.conxugal.infrastructure.jdbc.licitacion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.db.api.Assertions.assertThat;
 
 import gal.conxugal.domain.licitacion.LicitacionOutstandingRecord;
@@ -61,6 +62,9 @@ class JdbcLicitacionOutstandingRecordRepositoryIntegrationTest implements TestPr
   LicitacionOutstandingRecordRepository ledger;
 
   @Inject
+  LedgerCaller caller;
+
+  @Inject
   DataSource dataSource;
 
   @Inject
@@ -102,16 +106,19 @@ class JdbcLicitacionOutstandingRecordRepositoryIntegrationTest implements TestPr
 
   // A date the listing published in a form nothing could interpret is absent, and stays absent.
   @Test
-  void publication_date_the_listing_never_published_reads_back_as_none() throws SQLException {
+  void dates_the_listing_never_published_read_back_as_none() throws SQLException {
     OrganoId organoId = schema.organo("sergas");
 
     ledger.record(
-        organoId,
-        new LicitacionOutstandingRecord(PUBLICATION, null, MODIFIED_ON, 8, "Formalizado"));
+        organoId, new LicitacionOutstandingRecord(PUBLICATION, null, null, 8, "Formalizado"));
 
     assertThat(ledger.outstandingFor(organoId))
         .singleElement()
-        .satisfies(entry -> assertThat(entry.publicationDate()).isNull());
+        .satisfies(
+            entry -> {
+              assertThat(entry.publicationDate()).isNull();
+              assertThat(entry.lastModified()).isNull();
+            });
   }
 
   // The walk meets the same failing record on every run, so the ledger must not accumulate.
@@ -250,6 +257,55 @@ class JdbcLicitacionOutstandingRecordRepositoryIntegrationTest implements TestPr
     assertThat(outstanding)
         .extracting(LicitacionOutstandingRecord::publicationId)
         .containsExactly(PUBLICATION);
+  }
+
+  // The reason filing an entry takes a transaction of its own: it describes a failure, and the
+  // transaction it is filed from is the one that failure is about to roll back.
+  @Test
+  void entry_filed_from_the_transaction_that_fails_outlives_it() throws SQLException {
+    OrganoId organoId = schema.organo("sergas");
+
+    assertThatThrownBy(
+            () ->
+                caller.recordThenFail(
+                    organoId,
+                    new LicitacionOutstandingRecord(
+                        PUBLICATION, PUBLISHED_ON, MODIFIED_ON, 8, "Formalizado")))
+        .isInstanceOf(IllegalStateException.class);
+
+    assertThat(ledgerTable()).hasNumberOfRows(1);
+  }
+
+  // And the reason dropping one does not: an entry stops being outstanding exactly when the
+  // procedure it named is stored, so a store that never settles must leave it to be retried.
+  @Test
+  void entry_dropped_by_the_transaction_that_fails_is_restored_with_it() throws SQLException {
+    OrganoId organoId = schema.organo("sergas");
+    ledger.record(
+        organoId,
+        new LicitacionOutstandingRecord(
+            PUBLICATION, PUBLISHED_ON, MODIFIED_ON, 8, "Formalizado"));
+
+    assertThatThrownBy(() -> caller.clearThenFail(organoId, PUBLICATION))
+        .isInstanceOf(IllegalStateException.class);
+
+    assertThat(ledgerTable()).hasNumberOfRows(1);
+  }
+
+  // The completion gate answers from what has settled, never from the caller's own clearing. An
+  // Órgano completed on an uncommitted answer, whose transaction then rolls back, would carry a
+  // ledger it can never return to — the incremental mode that would revisit it is unbuilt.
+  @Test
+  void the_completion_gate_ignores_clearing_the_caller_has_not_settled() throws SQLException {
+    OrganoId organoId = schema.organo("sergas");
+    ledger.record(
+        organoId,
+        new LicitacionOutstandingRecord(
+            PUBLICATION, PUBLISHED_ON, MODIFIED_ON, 8, "Formalizado"));
+
+    boolean outstanding = caller.clearThenAskWhetherAnythingIsOutstanding(organoId, PUBLICATION);
+
+    assertThat(outstanding).isTrue();
   }
 
   private Table ledgerTable() {

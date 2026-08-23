@@ -25,6 +25,12 @@ import org.jspecify.annotations.Nullable;
  * import's procedures and the cursor describing them are deliberately not one act: a cursor rolled
  * back by a data failure, or procedures rolled back by a failure to move the cursor, are both the
  * coupling the resumption design exists to avoid.
+ *
+ * <p>That propagation is also an ordering constraint on the caller, stated here rather than left to
+ * be discovered: <strong>the row must have settled before either write is called.</strong>
+ * {@link #insert} joins the caller, so a state created inside a batch's own transaction is
+ * invisible to a write that takes its own — the update matches no row, and neither returns anything
+ * that would say so. Create the state, let that transaction settle, and advance it afterwards.
  */
 public interface LicitacionImportStateRepository {
 
