@@ -89,11 +89,6 @@ final class SchemaFixture {
         "INSERT INTO licitacion_procedure_type (name) VALUES (?) RETURNING id", name);
   }
 
-  UUID insertTramitacionType(String name) throws SQLException {
-    return insertReturningId(
-        "INSERT INTO licitacion_tramitacion_type (name) VALUES (?) RETURNING id", name);
-  }
-
   UUID insertCpv(String code, String description) throws SQLException {
     return insertReturningId(
         "INSERT INTO cpv (code, description) VALUES (?, ?) RETURNING id", code, description);
