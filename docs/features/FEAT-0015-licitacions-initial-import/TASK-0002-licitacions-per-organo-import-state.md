@@ -2,7 +2,7 @@
 feat: FEAT-0015
 domain: backend
 adrs: [0008, 0017, 0019]
-status: todo
+status: done
 depends_on: [TASK-0003]
 ---
 
@@ -69,7 +69,7 @@ and that is easiest to guarantee when there is no shared row to get wrong.
   `findByOrganoId`, `updateCursorOffset`, `updateState`.
 - **`LicitacionOutstandingRecordRepository`**, the ledger's port:
   `record(OrganoId, LicitacionOutstandingRecord)`, `outstandingFor(OrganoId)`,
-  `clear(OrganoId, long publicationId)` and **`hasOutstanding(OrganoId)`**, which the completion
+  `clear(OrganoId, PublicationId)` and **`hasOutstanding(OrganoId)`**, which the completion
   test reads.
 - The state writes are declared `REQUIRES_NEW` in the JDBC repository for the reason the contratos
   menores ones are: progress must be visible before a batch's own transaction settles, and a
