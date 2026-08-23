@@ -47,7 +47,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import javax.sql.DataSource;
-import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -514,21 +513,11 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
 
   // The lote has no lote_id of its own, so it orders on the form everything else matches it by.
   private Table loteTable() {
-    return AssertDbConnectionFactory.of(dataSource)
-        .create()
-        .table("licitacion_lote")
-        .columnsToOrder(new Table.Order[] {Table.Order.asc("lote_key")})
-        .build();
+    return Tables.orderedBy(dataSource, "licitacion_lote", "lote_key");
   }
 
-  // Ordered on the procedure and the lote so row(n) is stable, rather than leaning on uuidv7
-  // insertion order.
+  // Every other child orders on the procedure and the lote, which is the whole of its key.
   private Table table(String name) {
-    return AssertDbConnectionFactory.of(dataSource)
-        .create()
-        .table(name)
-        .columnsToOrder(
-            new Table.Order[] {Table.Order.asc("licitacion_id"), Table.Order.asc("lote_id")})
-        .build();
+    return Tables.orderedBy(dataSource, name, "licitacion_id", "lote_id");
   }
 }

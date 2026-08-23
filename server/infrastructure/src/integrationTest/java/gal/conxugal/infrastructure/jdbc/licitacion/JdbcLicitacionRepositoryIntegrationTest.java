@@ -33,7 +33,6 @@ import java.util.Optional;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.assertj.core.api.SoftAssertions;
-import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -345,10 +344,6 @@ class JdbcLicitacionRepositoryIntegrationTest implements TestPropertyProvider {
   }
 
   private Table licitacionTable() {
-    return AssertDbConnectionFactory.of(dataSource)
-        .create()
-        .table("licitacion")
-        .columnsToOrder(new Table.Order[] {Table.Order.asc("publication_id")})
-        .build();
+    return Tables.orderedBy(dataSource, "licitacion", "publication_id");
   }
 }

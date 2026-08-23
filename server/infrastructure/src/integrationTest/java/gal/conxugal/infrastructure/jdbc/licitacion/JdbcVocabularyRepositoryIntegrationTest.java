@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import javax.sql.DataSource;
-import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -317,10 +316,6 @@ class JdbcVocabularyRepositoryIntegrationTest implements TestPropertyProvider {
   // Ordered on the published key so row(n) is stable, rather than leaning on uuidv7 insertion
   // order.
   private Table table(String name, String key) {
-    return AssertDbConnectionFactory.of(dataSource)
-        .create()
-        .table(name)
-        .columnsToOrder(new Table.Order[] {Table.Order.asc(key)})
-        .build();
+    return Tables.orderedBy(dataSource, name, key);
   }
 }

@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.sql.DataSource;
-import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -292,14 +291,8 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
   // Every child but the lote orders on the procedure and the lote; the lote has no lote_id of its
   // own, so it orders on the form everything else matches it by.
   private Table table(String name) {
-    Table.Order[] order =
-        "licitacion_lote".equals(name)
-            ? new Table.Order[] {Table.Order.asc("lote_key")}
-            : new Table.Order[] {Table.Order.asc("licitacion_id"), Table.Order.asc("lote_id")};
-    return AssertDbConnectionFactory.of(dataSource)
-        .create()
-        .table(name)
-        .columnsToOrder(order)
-        .build();
+    return "licitacion_lote".equals(name)
+        ? Tables.orderedBy(dataSource, name, "lote_key")
+        : Tables.orderedBy(dataSource, name, "licitacion_id", "lote_id");
   }
 }
