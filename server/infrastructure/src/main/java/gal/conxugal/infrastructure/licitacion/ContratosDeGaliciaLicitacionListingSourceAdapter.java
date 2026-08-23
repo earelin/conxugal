@@ -69,23 +69,9 @@ public class ContratosDeGaliciaLicitacionListingSourceAdapter implements Licitac
       String sourceKey, LicitacionListingOrder order, int offset, int pageSize) {
     TableOrder tableOrder = tableOrder(order);
     try {
-      HttpResponse<LicitacionsTable> response =
+      return readableTable(
           licitacionsClient.table(
-              sourceKey, offset, pageSize, DRAW, tableOrder.column(), tableOrder.direction());
-      // The one error status that arrives as a response rather than an exception: a declarative
-      // client reads 404 as an absent value, so judging it is the adapter's to do.
-      if (response.code() >= HttpStatus.BAD_REQUEST.getCode()) {
-        throw new LicitacionListingUnavailableException(
-            "Source responded with status %s".formatted(response.getStatus()));
-      }
-      LicitacionsTable table = response.body();
-      if (table == null) {
-        // Both the empty body and the undecodable one arrive here, and nothing distinguishes them
-        // by this point, so the message says so rather than send a reader looking for one of them.
-        throw new LicitacionListingUnavailableException(
-            "Source response carried no readable body: it was empty or could not be decoded");
-      }
-      return table;
+              sourceKey, offset, pageSize, DRAW, tableOrder.column(), tableOrder.direction()));
     } catch (HttpClientResponseException e) {
       throw new LicitacionListingUnavailableException(
           "Source responded with status %s".formatted(e.getStatus()), e);
@@ -93,6 +79,28 @@ public class ContratosDeGaliciaLicitacionListingSourceAdapter implements Licitac
       throw new LicitacionListingUnavailableException(
           "Source is unreachable: %s".formatted(e.getMessage()), e);
     }
+  }
+
+  /**
+   * The answer, once it is established that there is one. Everything a failed exchange throws is
+   * the exchange's own to report; what reaches here is a response the client accepted, which may
+   * still be unusable.
+   */
+  private static LicitacionsTable readableTable(HttpResponse<LicitacionsTable> response) {
+    // The one error status that arrives as a response rather than an exception: a declarative
+    // client reads 404 as an absent value, so judging it is the adapter's to do.
+    if (response.code() >= HttpStatus.BAD_REQUEST.getCode()) {
+      throw new LicitacionListingUnavailableException(
+          "Source responded with status %s".formatted(response.getStatus()));
+    }
+    LicitacionsTable table = response.body();
+    if (table == null) {
+      // Both the empty body and the undecodable one arrive here, and nothing distinguishes them
+      // by this point, so the message says so rather than send a reader looking for one of them.
+      throw new LicitacionListingUnavailableException(
+          "Source response carried no readable body: it was empty or could not be decoded");
+    }
+    return table;
   }
 
   /**
