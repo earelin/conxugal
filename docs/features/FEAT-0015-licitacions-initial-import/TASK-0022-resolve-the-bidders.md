@@ -24,11 +24,13 @@ Operadores are the stored projection of
   than a name without a link.
 - **A bidder whose identifier is unusable yields no operador** and is recorded as **no participant**
   (R16). The licitación stays stored, and the procedure's other bidders are unaffected.
-- **Consortium rows are routed past this entirely.**
+- **Consortium rows are routed past this entirely**, and still are under amendment 1.
   [TASK-0010](TASK-0010-record-parse-bidders-and-consortium-detection.md)'s structural
   classification has already separated them, so no placeholder identifier ever reaches SPEC-0006 R3
-  through this path. What is stored for a consortium is
-  [TASK-0013](TASK-0013-consortia-and-their-membership.md)'s.
+  through this path. A consortium **is** catalogued as an operador now — but by
+  [TASK-0013](TASK-0013-consortia-and-their-membership.md), because its identifier may come from
+  the **formalisation** rather than the bidder row, and this task sees only the bidder row. Routing
+  it here would decide *identified* on half the evidence.
 - **What rank a bid supplies, stated narrowly.** A bid **creates** an operador that no contract
   named before, catalogued under the name the bid published — R16 requires the participation to
   exist and R3 requires an identifier to resolve to something, so this much is forced. Beyond that
@@ -64,7 +66,9 @@ Operadores are the stored projection of
 - A **consortium** bidder row reaches this path not at all: nothing here is called with a
   consortium's NIF cell, and no operador holding `-` or a `TEMP-…` value is created by importing a
   fixture set containing them. *This is the observable form of the guarantee — the catalogue's
-  contents after the import, not a call that did not happen.* (SPEC-0006 #8)
+  contents after the import, not a call that did not happen. It survives amendment 1 unchanged:
+  TASK-0013 catalogues such a consortium holding **no** identifier, never one holding the
+  placeholder.* (SPEC-0006 #8)
 - Re-importing the same procedure leaves one participation per published bidder and does not flap
   any operador's name. (SPEC-0008 #17; SPEC-0006 #37)
 - Repository ports stubbed with **Mockito**; the catalogue-effect criteria integration-tested

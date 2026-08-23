@@ -61,10 +61,13 @@ catalogue is derived, so it is managed by managing the contracts it comes from.
   **A relationship the source itself publishes is not such an inference**, and the exclusion is
   worded to let one through: where a family publishes a **UTE** together with the fiscal
   identifiers of its member firms
-  ([SPEC-0008](SPEC-0008-import-browse-licitacions.md) R17), that membership is held here (R16).
-  What stays excluded is a link the system would have to **work out** — common ownership, shared
-  addresses, successor entities, groups — none of which any source states and all of which would
-  be new information about identifiable people.
+  ([SPEC-0008](SPEC-0008-import-browse-licitacions.md) R17), that membership is held here (R16),
+  and so is the fact that the party **is** a UTE, which the source publishes structurally rather
+  than leaving to be derived (R6). What stays excluded is a link the system would have to **work
+  out** — common ownership, shared addresses, successor entities, groups — none of which any
+  source states and all of which would be new information about identifiable people. **Deciding
+  that two identifier-less UTEs are one party is such a link**, which is why R3 declines to and
+  catalogues each bid's consortium separately.
 - **Out of scope — exporting an operador's history.** Left to the future export spec
   SPEC-0005 also defers to.
 - **Out of scope — erasing an operador.** No function removes an operador's data; R7 governs
@@ -117,7 +120,8 @@ because contratos menores cannot supply either: the source publishes neither for
 - **Participation** — the operadores that competed for a contract and were **not** awarded it,
   and the contract they competed for.
 - **UTE membership** — where a party is a *unión temporal de empresas*, the member firms it is
-  composed of, each by its own published fiscal identifier.
+  composed of, each by its own published fiscal identifier. The UTE is itself an operador, so
+  this relates one catalogue entry to another rather than hanging a list off a contract.
 
 R16 states what the catalogue does with them. A family supplying neither is a full member of
 this catalogue exactly as before, which is what keeps the two optional rather than a new
@@ -199,6 +203,27 @@ One decision has since been taken:
   non-distinguishing, purely to display it, would mean holding **two representations of one
   identifier** on every row — and a reader picking the wrong one would breach R13 in the display
   or R3 in the matching.
+
+  **One kind of party is identified without an identifier, and exactly one: a UTE the source
+  declines to identify** (R16). A *unión temporal de empresas* is a party the source **names,
+  structures and lists the members of** while publishing no fiscal identifier for it in the large
+  majority of cases. Such a UTE is catalogued, and what identifies it is **the bid it was
+  published on** — one catalogue entry per bid, holding no fiscal identifier at all.
+
+  **This never merges and never splits, because it never matches.** Two bids by what a reader
+  would call the same consortium are two entries, and the system does not claim otherwise: it has
+  no published fact that says they are one party, and inventing one is what R5 forbids. So the
+  rule above is untouched where it bites — an entry is never *found* by anything but a fiscal
+  identifier, so no identifier-less entry can absorb a contract belonging to another party, and
+  none is ever re-partitioned once written. A UTE the source **does** identify anywhere on its
+  procedure is an ordinary operador under the canonical rule above, one entry across every
+  procedure that names it.
+
+  **A placeholder is still not an identity.** An identifier-less entry exists because the source
+  published a party it declined to identify, never because it published `-` or a `TEMP-…` value:
+  those are read as *no identifier* (R5) and the entry's identity comes from the bid instead, so
+  two consortia the source stamped with the same placeholder remain two entries and are never
+  attached to each other.
 - **R4** — The same identifier is published under **varying names**, and an operador is shown
   under the **name** taken from its **most recently published** contract — ties broken by taking
   the **higher** contract identifier, so the choice is deterministic and not merely "some
@@ -240,6 +265,17 @@ One decision has since been taken:
   one-in-seven figure in the Summary is known at all. Deriving and storing that classification
   would be new information about identifiable people, so the system declines to, even though it
   could.
+
+  **Whether an operador is a UTE is recorded, and that is not a breach of this rule.** The
+  distinction this requirement refuses is one the system would have to **derive** — read off the
+  shape of an identifier and store as a conclusion about a person. Being a *unión temporal de
+  empresas* is the opposite case: the source publishes it, structurally, by listing the member
+  firms beneath the party
+  ([SPEC-0008](SPEC-0008-import-browse-licitacions.md) R17), and the catalogue records what was
+  published rather than what could be inferred. It is also a fact about a consortium of firms
+  rather than about an identifiable person, so the privacy reasoning above does not reach it.
+  A reader can therefore tell a joint venture from a single supplier, which R8's list and R9's
+  history both need, while no view distinguishes a natural person from a legal entity.
 - **R7** — An operador is **reachable exactly as long as it has at least one visible
   contract, one visible participation, or one visible UTE membership** (R16). When the last of
   them is withdrawn under its family's removal rule, the operador appears in no list, no lookup
@@ -320,9 +356,17 @@ One decision has since been taken:
   by feeding it fragments of fiscal identifiers, which R12 relies on. Relaxing identifier
   lookup to a prefix or substring match would quietly remove that protection.
 
+  **A UTE the source declines to identify (R3) is listed and found by name, and by nothing
+  else.** It holds no fiscal identifier, so identifier lookup cannot reach it — which is a
+  property of the party rather than a gap: there is no identifier a user could type. It is
+  listed like any other operador, marked as a UTE (R6), and reachable by following the awardee
+  or bidder from the contract that published it.
+
   The list is ordered by **display name (R4) ascending**, compared ignoring letter case and
-  accents as name lookup is, with the **fiscal identifier** breaking ties so the order is total
-  and two runs over the same data agree. The ordering is **fixed**: the list exists to find an
+  accents as name lookup is, with the **fiscal identifier** breaking ties and, where a party has
+  none, the system's own identity breaking them after that — so the order is total, two runs
+  over the same data agree, and two identifier-less UTEs published under one name still hold a
+  determinate order. The ordering is **fixed**: the list exists to find an
   operador, and R14 keeps per-operador figures off it, so there is nothing on it worth sorting
   by. An order has to be stated because R11's paging is over an ordered selection — without one,
   *last page* does not denote and exhaustive paging cannot be shown.
@@ -408,15 +452,17 @@ One decision has since been taken:
     Órgano. It carries **no amount** and enters **no total**, because nothing here was awarded
     and money never changed hands.
   - **What this operador won through a UTE** — the awards held by UTEs it was a member of,
-    each naming the UTE. Those awards are the **UTE's**; they appear here so a member's record is
-    not silently empty, and they are excluded from this operador's counts and totals so that one
-    euro is never counted twice across the catalogue.
+    each naming the UTE and offering a route to it. Those awards are the **UTE's**; they appear
+    here so a member's record is not silently empty, and they are excluded from this operador's
+    counts and totals so that one euro is never counted twice across the catalogue.
 
-    Where the UTE is catalogued (R16) those awards are counted in **its** own history and
-    totals. Where it is not, there is no such history for them to be counted in and they are
-    named on the contract instead — which changes nothing here: the exclusion from *this*
-    operador's arithmetic is what keeps the euro from being counted twice, and it holds either
-    way.
+    Every UTE is catalogued (R3, R16), so those awards are counted in **its** own history and
+    totals and in exactly one place. The exclusion from *this* operador's arithmetic is what
+    keeps the euro from being counted twice, and it is the whole of the rule.
+
+  **A UTE's own history is an ordinary one**, holding the awards it won and the bids it lost
+  like any operador, and stating **who its members were** (R16). It is the one page from which
+  the membership reads in that direction.
 
   **The rule is one sentence: every count and every total on this page counts awards made to
   the operador the page is about.** A section that is not awards to it is shown, labelled, and
@@ -431,35 +477,33 @@ One decision has since been taken:
     It is subject to R7's lifecycle and to its family's removal rule, so a participation
     withdrawn at the source stops being visible and is not erased;
   - a **UTE membership** relates a member operador to the UTE it was published as part of.
-    **Where the source publishes the UTE's own fiscal identifier**, the UTE is an operador in
-    its own right under R3, reachable under R8 like any other, and an award to it is an award to
-    that operador and to no member. **Where the source does not** — which
-    [SPEC-0008](SPEC-0008-import-browse-licitacions.md) R17 records as the ordinary case — the
-    membership relates the member to a **consortium held on the bid**, named as published there.
-    The catalogue holds no entry for it, because R3 makes the fiscal identifier the identity and
-    R5 forbids inventing one, and it holds the membership regardless: the member firms are
-    operadores either way, and what they were part of is a fact worth keeping.
+    **Both ends are operadores**, so the membership is a relation the catalogue holds about
+    itself rather than a fact attached to one contract: a UTE has many members, a firm belongs
+    to many UTEs, and each side reads from the other. An award to a UTE is an award to **that
+    operador and to no member** (R9).
 
-  A member is reachable from its UTE and, **where the UTE is catalogued**, a UTE from each of
-  its members, so *what has this firm been part of* is answerable from the member's end always
-  and from the UTE's end where there is one to open. An uncatalogued consortium names its
-  members on the contract that published it. **Membership is recorded as published and is not
-  maintained**: a UTE is constituted for a procedure, so what the catalogue holds is what its
-  contracts currently publish, and nothing else updates it.
+  **Every UTE is catalogued, whether or not the source identifies it.** Where the source
+  publishes the UTE's own fiscal identifier it is an ordinary operador under R3, one entry
+  across every procedure that names it; where it does not — which
+  [SPEC-0008](SPEC-0008-import-browse-licitacions.md) R17 records as the ordinary case — it is
+  the identifier-less entry R3 admits, one per bid. **That difference is invisible to this
+  requirement**: either way the UTE has a page, states its members, holds its own awards and
+  totals, and appears in R8's list marked as a UTE (R6). It is what makes *who did this firm
+  team up with* and *who was this consortium made of* the same question asked from two ends.
+
+  A member is reachable from its UTE and a UTE from each of its members, in both directions and
+  in every case. **Membership is recorded as published and is not maintained**: a UTE is
+  constituted for a procedure, so what the catalogue holds is what its contracts currently
+  publish, and nothing else updates it. A membership is subject to R7's lifecycle and to its
+  family's removal rule exactly as a participation is, so one withdrawn at the source stops
+  being visible and is not erased.
 
   **A party whose fiscal identifier is unusable (R5) produces neither**, on the rule that already
   governs an awardee: no operador, so no participation to relate and no membership to hold. The
-  contract, and the other parties on it, are unaffected.
-
-  **A consortium the source declines to identify is not such a party.** It produces no operador,
-  for want of an identity — but it does produce a participation and it does hold memberships,
-  because the source names it, structures it and lists its members. The distinction the rule
-  above turns on is whether the catalogue can hold the party, not whether the fact is worth
-  holding: a party the source never published has nothing to record, while this one has a name,
-  a bid and a membership list. A family supplying such a consortium says so
-  ([SPEC-0008](SPEC-0008-import-browse-licitacions.md) R17), and the participation it produces
-  carries that published name — the one place a contract row's own name is permitted, since no
-  operador exists to carry it.
+  contract, and the other parties on it, are unaffected. That rule reaches a **member firm** —
+  all of which the source has been measured to identify — and it does **not** reach the UTE
+  itself, whose identity R3 takes from its bid rather than from an identifier it was never
+  published with.
 - **R10** — A user can **filter** an operador's history **by year** and **sort** it by
   **date** or by **amount**, ascending or descending. Both act **within one family section**,
   on that section alone: sections are independently reachable (R9), so scoping one leaves the
@@ -672,7 +716,10 @@ One decision has since been taken:
    to no operador and never to each other.
 10. **(R6)** An awardee published as a natural person with a personal fiscal identifier is
     catalogued and reachable exactly as a legal entity is; no view distinguishes the two, and
-    no stored attribute records which it is.
+    no stored attribute records which it is. **A UTE is the one kind that is recorded**, because
+    the source publishes it rather than the system deriving it: a UTE is distinguishable from a
+    single firm in the list and on its page, while a person is still distinguishable from an
+    entity nowhere.
 11. **(R7)** Withdrawing an operador's last remaining visible contract makes the operador
     unreachable: it is afterwards found through neither the operadores list nor lookup by name
     or identifier, and appears on no contract row.
@@ -694,8 +741,9 @@ One decision has since been taken:
     even where that fragment is itself some other operador's whole identifier, which is found
     and is the only thing found.
 17. **(R8)** The operadores list is ordered by operador name ascending, ignoring case and
-    accents, with the fiscal identifier breaking ties; two runs over the same data produce the
-    same order, and no control changes it.
+    accents, with the fiscal identifier breaking ties and the system's own identity breaking
+    them for parties that hold none; two runs over the same data produce the same order —
+    including over two identifier-less UTEs published under one name — and no control changes it.
 18. **(R9)** Opening an operador presents its contracts **split by family, one section per
     family**, with every contract awarded to it across **more than one** Órgano appearing in
     the section of its family; each row shows the awarding Órgano and that family's published
@@ -780,20 +828,20 @@ One decision has since been taken:
 39. **(R16, R7)** When the last of an operador's contracts, participations and UTE memberships is
     withdrawn under its family's removal rule, the operador becomes unreachable; restoring any one
     of the three makes it reachable again, and nothing about it was erased in between.
-40. **(R16)** A UTE **whose fiscal identifier the source publishes** is catalogued as an operador
-    under it, its members are catalogued under theirs, and each is reachable from the other. A
-    UTE **whose identifier the source does not publish** is catalogued as no operador, while its
-    members are still catalogued and the membership is still held: each member names the
-    consortium it was part of, and the consortium names its members on the contract that
-    published it. A party whose identifier is unusable (R5) and which is **not** such a
-    consortium produces no operador, no participation and no membership, leaving the contract and
-    its other parties unaffected.
+40. **(R3, R16)** A UTE is catalogued as an operador and its members are catalogued under their
+    own identifiers, each reachable from the other in both directions, **whether or not the
+    source publishes an identifier for the UTE**. One it identifies is catalogued under that
+    identifier and is the **same** operador on a second procedure that names it; one it does not
+    is catalogued without an identifier, is found by name and not by identifier lookup, and a
+    second bid by a consortium a reader would call the same one is a **second** operador — never
+    merged with the first and never split from it later. A **member firm** whose own identifier
+    is unusable (R5) produces no operador, no participation and no membership, leaving the
+    contract, the UTE and its other members unaffected.
 41. **(R9, R16)** An operador that lost a bid sees that contract in a **bid for and did not win**
     section carrying no amount; an operador whose UTE was awarded a contract sees it in a **won
-    through a UTE** section naming the UTE. Neither section changes any count or total on the
-    page, and the award appears in **no member's** total — in the UTE's own where the source
-    identified it and the catalogue therefore holds one, and in no total at all where it did not
-    (R16). The property tested is that no member's arithmetic includes it, which holds either way.
+    through a UTE** section naming the UTE and offering a route to it. Neither section changes any
+    count or total on the page, and the award appears in **no member's** total and in the UTE's
+    own — counted once, in exactly one place, whether or not the source identified the UTE.
 42. **(R9)** An operador holding only participations or only UTE memberships opens a history with
     those sections present and every family section omitted, stating no awarded total rather than
     a total of zero.

@@ -40,10 +40,19 @@ stored procedure, idempotently, and it is the last piece before the walk
   every feeding family's removal rule being non-destructive and reversible; a participation an
   ordinary import could erase, with no administrator act and no way back, would break that promise
   for the whole catalogue.
-- **A membership's visibility follows its participation's.** SPEC-0006 R7 counts "one visible UTE
-  membership" toward an operador's reachability, so a member firm whose only tie is a membership
-  under a withdrawn participation would stay reachable through an **invisible** fact — which is what
-  SPEC-0006 #39 tests for.
+- **A membership stops being visible when no visible bid of its UTE still publishes it.** SPEC-0006
+  R7 counts "one visible UTE membership" toward an operador's reachability, so a member firm whose
+  only tie is a membership nothing still publishes would stay reachable through an **invisible**
+  fact — which is what SPEC-0006 #39 tests for.
+
+  **The cheap reading — *follow the bid* — is right for 33 of 35 and wrong for the rest**, and the
+  difference is this task's to handle. An **unidentified** UTE is an operador *per bid*
+  ([TASK-0013](TASK-0013-consortia-and-their-membership.md)), so no other procedure can reach it
+  and withdrawing the bid withdraws every membership under it. An **identified** UTE is one
+  operador across every procedure that names it, so a membership procedure A no longer states may
+  still be stated by procedure B — and withdrawing it because A stopped would hide a fact B still
+  publishes. The rule is therefore stated over the UTE rather than over one bid, and reconciling an
+  identified UTE re-derives its membership from the procedures that remain visible.
 - **A licitación absent from a later import is retained unchanged** (R14). Absence is not evidence
   of withdrawal, and the explicit removal that *is* (R15) is a later feature's. Nothing here
   compares the store against the listing and withdraws the difference.
@@ -89,9 +98,12 @@ case sees one procedure at a time and knows nothing about the Órgano's history 
 - A lote, a classification, a bidder, an award and a **formalisation** each present in the first
   record and absent from the second are **retained and marked withdrawn**, not deleted — verified by
   reading the rows back. (SPEC-0008 #16)
-- A withdrawn participation's memberships are withdrawn with it, and a member firm whose only tie
-  was that membership is no longer reachable through it.
+- Withdrawing the bid of an **unidentified** UTE withdraws every membership under it, and a member
+  firm whose only tie was that membership is no longer reachable through it.
   ([SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) #39)
+- An **identified** UTE published by two procedures with different member lists keeps a membership
+  the second still states when the first stops stating it, and loses it only when neither does —
+  so a withdrawal at one procedure never hides a fact another still publishes. (SPEC-0006 #39, #40)
 - A procedure that moves from *adxudicado* with a `NAME_DERIVED` awardee to *formalizado*
   re-resolves to the identifier the formalisation publishes, marked
   `PUBLISHED_BY_FORMALISATION` — **even when that is a different operador**. (SPEC-0008 #46)

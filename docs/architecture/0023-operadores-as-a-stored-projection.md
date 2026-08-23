@@ -75,6 +75,13 @@ The catalogue is **stored state**: an `operador_economico` row per distinct fisc
 R3's equivalence, maintained by the import that stores the contracts it derives from, with each
 contract carrying a **foreign key to its operador**.
 
+> **Amended.** R3 has since been widened to admit one party the source declines to identify — a
+> UTE, catalogued per bid and holding no fiscal identifier — so the row cardinality is *per
+> distinct fiscal identifier, plus one row per bid by an unidentified UTE*. The identifier column
+> is nullable for that case alone. Everything else in this record stands, and the reasoning below
+> is unaffected: an identifier-less row is never *matched* on anything, so it can neither absorb
+> another party's contract nor be re-partitioned once written.
+
 **The identity is the identifier itself, held canonical.** The row carries **one** fiscal
 identifier column in R3's canonical form — trimmed of surrounding whitespace, upper-cased — under
 a unique constraint, so "two spellings are one operador" is true at the store level and not only
