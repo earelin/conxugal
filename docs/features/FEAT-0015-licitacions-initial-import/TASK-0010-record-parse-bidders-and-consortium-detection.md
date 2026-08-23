@@ -63,6 +63,11 @@ count the cross-check compares against.
   35 **on bidder rows** — the formalisation identifies some of the rest, which is TASK-0013's), and
   its **member entries** parsed out of the inner list. All **80** member entries measured carried an
   ordinary identifier.
+
+  **This is what the source published, not a decision about the catalogue.** Whether the consortium
+  becomes an operador holding that identifier or one keyed on its bid is TASK-0013's, and it needs
+  the formalisation as well as this row to decide — so nothing here resolves, mints or catalogues
+  anything.
 - **The `Part.` cross-check.** TASK-0009 exposes the award table's `Part.` per normalised lote. A
   parse producing a different bidder count **for a lote whose bidder table was published** has
   failed, and the procedure raises rather than yielding a short list: a silently short bidder list is
@@ -83,7 +88,7 @@ storage — it is a cross-check, not a stored count.
 
 ## Acceptance criteria
 
-- The fixture above yields **one** participation marked as a consortium, carrying the published name
+- The fixture above yields **one** bidder recognised as a consortium, carrying the published name
   `UTE PRACE-TABOADA RAMOS`, the lote `1`, and **two** member entries with their own identifiers.
   ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #21 as amended)
 - A consortium named `MISTURAS-INGESAN` — no `UTE` prefix — is detected identically, because the

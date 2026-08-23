@@ -94,7 +94,7 @@ its wording changed.
 
 | Amendment | Where | What it settles |
 | --- | --- | --- |
-| 1. The unidentified consortium | SPEC-0008 R16/R17/R18, #20/#21/#22/#24; SPEC-0006 R16, R9, #40 | a UTE is recorded whether or not the source identifies it |
+| 1. The unidentified consortium | SPEC-0008 R16/R17/R18/R21, #20/#21/#22/#24; SPEC-0006 R3/R6/R8/R9/R16, #10/#17/#40/#41 | a UTE is an operador whether or not the source identifies it |
 | 2. Classification not per lote | SPEC-0008 R8, #9/#10 | a CPV may hang off the procedure even where lotes exist |
 | 3. The awardee resolved by name | SPEC-0008 R8/R18/R33, #46; SPEC-0006 R3 | the identifier is published by the formalisation, and derived for the minority without one |
 | 4. Placeholders are unusable | SPEC-0006 R5, #8/#9 | a dash or `TEMP-…` is not an identity, defensively |
@@ -125,49 +125,49 @@ test would miss 7 of 35 and the `U`-prefix test would miss 33 of 35. This is not
 sense SPEC-0006 R6 forbids: the markup **is** the publication, which is precisely what R17's own
 "membership is published, not inferred" asks for.
 
-**So a UTE is recorded whether or not it is identified**, and the amendment says how:
+**So a UTE is an operador whether or not the source identifies it**, and the amendment says how:
 
 - **a UTE with a published fiscal identifier** is an operador under SPEC-0006 R3, exactly as R17
-  says today — the 6% case, unchanged;
-- **a UTE without one** is recorded on the **participation** it made: its published name, its
-  membership, and the fact that the bidder was a consortium. It is *not* catalogued as an operador,
-  because SPEC-0006 R3 has no identity to catalogue it under and R5 rightly forbids inventing one;
+  says today — the 6% case, unchanged, and the **same** operador on every procedure naming it;
+- **a UTE without one is an operador too**, catalogued under **the bid it made**: SPEC-0006 R3
+  admits a second identity for exactly this party, and it holds no fiscal identifier. What the
+  source's reticence costs is *continuity* — two bids by a similarly-named consortium are two
+  entries — not the catalogue entry itself. Nothing is invented, so R5 is untouched: an entry that
+  is never *matched* on anything can neither absorb another party's contract nor be
+  re-partitioned later;
 - **each member firm is an operador either way.** All **80** member entries measured carried an
   ordinary identifier, so the firms that make up an unidentified consortium are perfectly
   catalogueable, and the membership is stored in both cases;
-- **the award still belongs to the UTE alone.** Where the UTE is an operador the award is held by
-  it; where it is not, the award names the consortium and holds **no operador**, so it enters no
-  member's totals. Either way no euro is counted twice, which is the property R17 exists to
-  protect.
+- **membership relates two operadores** — a UTE has many members, a firm belongs to many UTEs —
+  so it reads in both directions in every case, and there is no branch where *who was this
+  consortium made of* has no page to answer it;
+- **the award belongs to the UTE alone**, held by its own operador and entering no member's
+  totals. The euro is counted once, in exactly one place, under both branches.
 
-**This is also the one exception to R18's no-per-row-name rule, and it needs stating.** R18 holds
-that this family stores no name of its own, because a name belongs on the operador an identifier
-resolves to. An unidentified UTE has no such operador, so the alternative to storing its published
-name on the participation is losing it — and a licitación page would then show a bidder that is
-nobody, which is worse than the rule R18 is protecting against. The exception is exactly one field
-on exactly one row type.
+**This removes R18's per-row-name exception rather than creating one.** R18 holds that this family
+stores no name of its own, because a name belongs on the operador an identifier resolves to. An
+unidentified UTE now *has* such an operador, so its published name is held where every other
+party's is, and the family stores **no per-row name at all**.
 
-**This also amends four things the earlier draft did not name.** Each, as written, forbids what
+**This also amends the things the earlier draft did not name.** Each, as written, forbids what
 the model requires:
 
 - **SPEC-0008 R16 and #20** say a party whose identifier is unusable "is recorded as **no
-  participant and no awardee**" — precisely what an unidentified consortium now *is* recorded as.
-  R16 gains the consortium as its stated exception;
-- **SPEC-0008 #21** requires the UTE stored "as an operador under its own fiscal identifier" and
-  "opening the UTE names its members". It becomes: catalogued where identified, recorded on the
-  participation otherwise, with the *open the UTE* half holding only for the identified case;
-- **SPEC-0008 #22** ("the UTE's awarded total includes it") is unsatisfiable for an uncatalogued
-  consortium, which has no total to include it in. It needs the same split — and deferring it to
-  SPEC-0006's features does **not** repair it, so the deferral below carries the note;
-- **SPEC-0008 #24** ends "this family holding **no per-row name of its own**", which the
-  participation's consortium name makes false. It narrows to *no per-row name for any party the
-  catalogue can hold*, which is every party except an unidentified consortium — the same exception
-  R18 takes, stated in the criterion that tests it;
-- **SPEC-0006 R16 and #40** are the sibling half. R16 relates a member "to **the UTE operador**…
-  identified by its own published fiscal identifier", and says a party with an unusable identifier
-  yields "no participation to relate and no membership to hold"; #40 restates it normatively. Both
-  must admit a membership whose consortium is not an operador, and **SPEC-0006 R9's *won through a
-  UTE* section** needs a note for the same reason.
+  participant and no awardee**". R16 gains the consortium as its stated exception — it is
+  catalogued, holding no identifier, rather than removed;
+- **SPEC-0008 #21** requires the UTE stored "as an operador under its own fiscal identifier". It
+  becomes: an operador in both branches, holding that identifier where the source published one
+  and none where it did not, with *opening the UTE names its members* holding in both;
+- **SPEC-0008 #22** ("the UTE's awarded total includes it") becomes satisfiable in both branches,
+  because there is always a UTE operador for the award to be counted in;
+- **SPEC-0008 #24** ends "this family holding **no per-row name of its own**", which is now true
+  without qualification;
+- **SPEC-0008 R21** described three ways a party is named, one of them "named but no route". It
+  becomes two: catalogued and reachable, or not shown at all;
+- **SPEC-0006 R3** gains the second identity, and **R6**, **R8**, **R9**, **R16**, **#10**,
+  **#17**, **#40** and **#41** follow it through the catalogue's surfaces. **R6** in particular
+  had to admit a stored *kind* — being a UTE — which is published structurally rather than
+  derived, and so is not the classification that rule refuses.
 
 **Why this is not a SPEC-0006 R5 blocker.** `-` and `TEMP-…` appear **only** on consortium rows:
 0 of 578 single-firm rows carried either. Because the structural branch is taken *before* any
@@ -293,12 +293,14 @@ left recording the superseded rule.
   resolution date, stated execution period), its bidder list and its formalisation. One place per
   thing awarded, and no second copy at procedure level.
 - **Domain (competition):** a **participation** per published bidder, marking which was awarded, and
-  a **UTE membership** between a consortium and each member firm, hung off the participation so one
-  shape serves an identified and an unidentified consortium alike. A single-firm bidder and a member
-  firm resolve to operadores under
-  [SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) R3 and hold **no name of their own**
-  (R18); an unidentified consortium carries its **published name** on the participation, which is
-  R18's one exception (amendment 1). Each is a value type *and* a table, owned by named tasks below.
+  a **UTE membership** relating a consortium's operador to each member firm's — an N-M relation
+  inside the catalogue rather than a list hung off a bid, so one shape serves an identified and an
+  unidentified consortium alike and reads in both directions. **Every** party — a single-firm
+  bidder, a member firm and a consortium — resolves to an operador under
+  [SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) R3 and holds **no name of its own**
+  on the row (R18); a consortium the source declines to identify is the operador R3 keys on its
+  bid, and its published name lives on that operador (amendment 1). Each is a value type *and* a
+  table, owned by named tasks below.
 - **Domain (source ports):** a `LicitacionListingSource` answering one **(Órgano, offset, order)**
   page, and a `LicitacionRecordSource` answering one **procedure** whole. Two ports because they are
   two mechanisms — one JSON, one HTML — and a single port would hide from its caller that one call
@@ -725,11 +727,21 @@ path rather than an exception:
 - its **lotes, classifications, bidders, awards and UTE memberships** are reconciled to what the
   record now publishes — one the source no longer publishes is **retained and marked withdrawn**,
   appearing in no list, history or total;
-- **a membership's visibility follows its participation's.** Memberships are named explicitly
-  because they are easy to forget and expensive to forget: SPEC-0006 R7 counts "one visible UTE
-  membership" toward an operador's reachability, so a member firm whose only tie is a membership
-  under a withdrawn participation would stay reachable through an invisible fact — which is exactly
-  what SPEC-0006 #39 tests for;
+- **a membership stops being visible when no visible bid of its UTE still publishes it.**
+  Memberships are named explicitly because they are easy to forget and expensive to forget:
+  SPEC-0006 R7 counts "one visible UTE membership" toward an operador's reachability, so a member
+  firm whose only tie is a membership no procedure still publishes would stay reachable through an
+  invisible fact — which is exactly what SPEC-0006 #39 tests for.
+
+  **For 33 of 35 consortia this is trivial**, because an unidentified UTE is an operador **per
+  bid**: withdraw the bid and every membership under that UTE goes with it, since no other
+  procedure can reach it. **For the identified minority it is not**, because one UTE operador can
+  be published by several procedures with different member lists, and a membership procedure A no
+  longer states may still be stated by procedure B. The rule is therefore *"no visible bid of this
+  UTE publishes it"* rather than *"its bid was withdrawn"*, and the reconciliation re-derives that
+  UTE's membership from the procedures that remain visible. **Task 14 owns the mechanism**; it is
+  called out here because the cheap reading — follow the one bid — is right for the 94% and wrong
+  for the rest;
 - a **licitación absent from a later import is retained unchanged** (R14). Absence is not evidence of
   withdrawal, and the explicit removal that is (R15) is a later feature's.
 
@@ -740,10 +752,12 @@ that promise for the whole catalogue.
 
 ### Operadores: extract the resolution, do not rewrite it
 
-Every award and every **single-firm** bidder resolves to an operador under SPEC-0006 R3, and this
-family stores no name of its own on either. That is R18's rule and it is why an unusable identifier
-leaves a party with nothing to display rather than a name without a link. **An unidentified UTE is
-the single exception**, described under *Consortia* below and legitimised by amendment 1.
+Every award and **every** bidder — single firm, member firm and consortium alike — resolves to an
+operador under SPEC-0006 R3, and this family stores no name of its own on any of them. That is
+R18's rule and it is why an unusable identifier leaves a party with nothing to display rather than
+a name without a link. A consortium the source declines to identify still resolves to an operador,
+keyed on its bid rather than on an identifier; amendment 1 is what admits that, and *Consortia*
+below describes it.
 
 **The resolution already ships.** [FEAT-0010](../FEAT-0010-operadores-economicos-base/README.md)'s
 derivation is done and `contrato_menor.operador_economico_id` is written today — but the logic lives
@@ -780,7 +794,8 @@ because there the award *was* the publication.
 
 **A consortium is the exception, and it is the whole of amendment 1.** R16 as written would have an
 unidentified UTE recorded as *no participant*, which is precisely what the model refuses to do: it
-is recorded as a participant, under its published name, with its membership intact. The distinction
+is catalogued as an operador holding no fiscal identifier, under its published name, with its
+membership intact. The distinction
 is not a softening of R16 — a party the source names and structures as a bidder **is** a bidder,
 and R16's rule exists for a party the source names and cannot identify, which is a different case.
 Stating the rule uniformly, as an earlier draft of this section did, contradicted the table below
@@ -849,11 +864,14 @@ Two disagreements are possible and they are answered differently:
   is a fact about signing, and attributing the award to that party would put money against an
   operador the source never awarded it to;
 - **the formalisation identifies a consortium the bidder row did not.** Then the consortium **is**
-  identified, and is catalogued (R17) — the identifier is taken from the first of the bidder row
-  and the formalisation that has one. This case is what makes *identified* a property of the
-  procedure rather than of the bidder row, and getting it wrong is not cosmetic: the participation
-  would hold an uncatalogued consortium while the award held a catalogued one, and the operador
-  would then have an award and no members, which SPEC-0006 #40 forbids.
+  identified, and is catalogued under that identifier (R17) — taken from the first of the bidder
+  row and the formalisation that has one. This case is what makes *identified* a property of the
+  procedure rather than of the bidder row, and it is why **the identifier is resolved before the
+  operador is created**. Creating the bid's operador first would mint an identifier-less UTE that
+  the formalisation then has to merge into the identified one — a retro-active re-partition of a
+  row already written, which ADR-0023 rests on never having to do. Getting it wrong is not
+  cosmetic either way: the bid would point at one operador and the award at another, and the
+  identified one would hold an award and no members, which SPEC-0006 #40 forbids.
 
 #### Splitting the `Contratista` cell
 
@@ -905,37 +923,46 @@ identifiers are numeric and total where one is not. Nothing in this feature feed
 from a licitación before task 12, which depends on task 21, so no code meets the gap in the
 meantime.
 
-### Consortia: detected by structure, recorded either way
+### Consortia: detected by structure, catalogued either way
 
 **The parser takes the consortium branch before it resolves any identifier**, on the nested `<ul>`
 that a UTE cell carries. That ordering is the whole design, and it does three things at once: it is
 the only test that is exact (613 rows, no false positive, no miss, against 7 of 35 missed by a name
 test); it is what keeps `-` and `TEMP-…` away from `FiscalIdentifier.of`, since neither was ever
-observed on a single-firm row; and it means a UTE is recognised as one **before** the question of
-whether it can be catalogued arises.
+observed on a single-firm row; and it means a UTE is recognised as one **before** any question
+about its identity arises.
 
-What is stored then depends only on whether the source published an identifier:
+**A UTE is an operador either way**, and the source's reticence changes one thing only:
 
 | | UTE with a `U…` identifier (2 of 35) | UTE without one (33 of 35) |
 | --- | --- | --- |
-| The consortium | an operador under R3 | recorded on the participation, with its **published name** |
+| The consortium | an operador under R3, holding that identifier | an operador under R3, holding **none** |
+| Reached across procedures | the **same** operador wherever it appears | a **separate** operador per bid |
+| Found by | name **and** identifier lookup | name only |
 | Its members | operadores under R3 | operadores under R3 |
-| The membership | stored | stored |
-| The award, if it won | held by the UTE operador | names the consortium, holds no operador |
+| The membership | operador ↔ operador | operador ↔ operador |
+| The award, if it won | held by the UTE operador | held by the UTE operador |
 | Members' awarded totals | exclude it | exclude it |
 
-**Membership hangs off the participation in both cases**, rather than off the UTE operador in one
-and somewhere else in the other. That keeps one shape for a fact the source publishes one way, and
-it follows R17's own observation that "a UTE is constituted for one procedure" — the consortium is a
-property of a bid, and the member firms are the durable entities. A member's history reaches its
-consortia through its memberships, and an identified UTE reaches its members through its
-participations. **Only one of those directions survives for an uncatalogued consortium**, and this
-says so rather than asserting parity: *member → its consortia* is answerable from the catalogue,
-while *consortium → its members* has no catalogue entry to open and is answerable only on the
-licitación's own page under R21 — a later feature's surface.
+**Membership relates two operadores**, so it reads in both directions in every case: *member → its
+consortia* and *consortium → its members* are one relation asked from two ends, and neither branch
+gives one of them up. That is the change amendment 1 buys — the earlier model hung membership off
+the bid, which left an unidentified consortium with no page to answer the second question from.
+
+**What the unidentified branch gives up is continuity, and only that.** Two bids by a consortium a
+reader would call the same one are two operadores, because no published fact says they are one and
+SPEC-0006 R5 forbids inventing the identifier that would. The system does not claim otherwise, and
+because an identifier-less entry is never *matched* on anything, it can neither absorb another
+party's contract nor be re-partitioned once written.
+
+**The identifier is resolved before the operador is created**, which is what stops a procedure
+holding its consortium twice. R17's *anywhere on the procedure* is load-bearing: a formalisation
+often publishes an identifier the bidder row did not (`U86486669` on procedure 16938 was observed),
+and taking the bidder row first would create an identifier-less operador that the formalisation
+then has to merge away — the retro-active re-partition ADR-0023 warns against.
 
 **No euro is counted twice under either branch**, which is the property R17 exists to protect: an
-award to a consortium is never attributed to a member, whether or not the consortium is catalogued.
+award to a consortium is held by the consortium's own operador and never attributed to a member.
 
 ### API surface
 
@@ -1003,10 +1030,12 @@ one branch off it, at the same depth as 18.
    the **`Cpv` and `Nut` vocabularies** the regulated European lists are, each keyed on the code
    the list assigns and never on its wording, with the CPV/NUT classification **referring** to one
    and carrying its **nullable lote reference**, award (carrying **how its operador was resolved**,
-   per amendment 3), formalisation, participation (carrying the **consortium marker and published
-   name**, per amendment 1) and UTE membership, each with its back-reference and withdrawal marker,
-   plus the **shared lote normaliser**. Under R8's one-place rule with no second copy at procedure
-   level. *(SPEC-0008 #9 as amended, #10 storage half, #33 the reference R23's filter needs)*
+   per amendment 3), formalisation, and participation — which under amendment 1 carries **no
+   consortium marker and no published name**, a consortium being an operador like any other party.
+   Each with its back-reference and withdrawal marker, plus the **shared lote normaliser**. Under
+   R8's one-place rule with no second copy at procedure level. **UTE membership moved out of this
+   family** and into the operadores catalogue, where both its ends live.
+   *(SPEC-0008 #9 as amended, #10 storage half, #33 the reference R23's filter needs)*
 5. **Licitacións store: the procedure and its award points** — migrations creating `licitacion`,
    the four vocabulary tables its state and types are keyed in,
    `licitacion_lote`, the two classification tables, `licitacion_award` and
@@ -1015,10 +1044,12 @@ one branch off it, at the same depth as 18.
    on, and the withdrawal marker on all of them) and their JDBC repositories. *Depends on 3, 4.*
    *(SPEC-0008 #16 retention half, #17 no-duplicates half)*
 6. **Licitacións store: the competition tables** — `licitacion_participation` and
-   `licitacion_ute_membership` migrations and repositories. A participation carries a nullable
-   operador FK, a **consortium marker**, and the **published consortium name** that amendment 1
-   makes R18's one exception; a membership carries its participation and its member operador, and
-   takes its visibility from that participation. *Depends on 4, 5.* *(SPEC-0008 #21 storage half)*
+   `operador_ute_membership` migrations and repositories, plus the catalogue change amendment 1
+   needs: `operador_economico.fiscal_id` becomes **nullable** and the row gains a **`ute`
+   marker**. A participation carries a nullable operador FK and nothing else about the party —
+   no consortium marker, no published name. A membership is **operador ↔ operador**, keyed on the
+   pair, carrying its own withdrawal marker so a member's reachability can follow it.
+   *Depends on 4, 5.* *(SPEC-0008 #21 storage half; SPEC-0006 #40 storage half)*
 7. **`LicitacionListingSource` port + JSON adapter** — one (Órgano, offset, order) page over the
    shared `contratosdegalicia` client, sending the **full DataTables payload**, surfacing
    `recordsTotal`, **refusing** an over-wide page before issuing a request, and failing cleanly when
@@ -1038,7 +1069,9 @@ one branch off it, at the same depth as 18.
 10. **Record parse: bidders, consortium detection and the `Part.` cross-check** — a bidder row
     classified **by the nested `<ul>`**, never by its name or its identifier; a consortium's
     published name and its member entries parsed out of the inner list; and a count mismatch failing
-    the procedure rather than storing a short list, on a lote whose bidder table was published.
+    the procedure rather than storing a short list, on a lote whose bidder table was published. It
+    answers **what the source published** — a party, its optional identifier, and its members where
+    it has them — and decides nothing about how any of it is catalogued.
     *Depends on 4, 8, 9.* *(SPEC-0008 #19 storage half)*
 11. **Extract `ResolveOperador`** — lift SPEC-0006 R3's resolution and R4's name ranking out of
     `StoreContratosMenoresBatch` (`operadorAwarded`, and the `account` path driving
@@ -1053,21 +1086,24 @@ one branch off it, at the same depth as 18.
     path, since task 13 attributes it; the match normalisation used for comparison only and never
     stored; and the resolution path recorded on the award. *Depends on 9, 22.*
     *(SPEC-0008 #46, #19 awarded-one half, #20 storage half, #23 storage half)*
-13. **Consortia and their membership** — a UTE catalogued as an operador where **either** the
-    bidder row **or the formalisation** publishes an identifier for it, and recorded on its
-    participation under its published name where neither does; each member firm an operador either
-    way; the membership stored in both cases and hung off the participation, so a consortium is
-    never held catalogued on its award and uncatalogued on its bid; and the award attributed to the
-    consortium alone, entering no member's totals. *Depends on 6, 12.*
+13. **Consortia and their membership** — a UTE catalogued as an operador **always**, under the
+    identifier **either** the bidder row **or the formalisation** publishes, and under its bid
+    where neither does; **the identifier resolved before the operador is created**, so a
+    procedure never mints an identifier-less UTE it then has to merge away; each member firm an
+    operador; the membership stored as an **operador ↔ operador** pair in both cases; and the
+    award attributed to the consortium's operador alone, entering no member's totals.
+    *Depends on 6, 12.*
     *(SPEC-0008 #21 import half, as amendment 1 restates it; SPEC-0006 #40)*
 14. **Reconciling a restated procedure** — `StoreLicitacion`, taking **the listing entry and the
     parsed record together**, matching by publication identifier, refreshing in place, and marking
     withdrawn any lote, classification, bidder, award, **formalisation or UTE membership** the
-    record no longer publishes, a membership's visibility following its participation's. **The
-    awardee link is re-resolved on every restatement** under a stated total order over the four
-    resolution paths, so a published identifier supersedes a derived one even where that moves the
-    award to a different operador — which is what closes the historical tail when a procedure
-    formalises. *Depends on 5, 6, 9, 13.* *(SPEC-0008 #16 import half, #17)*
+    record no longer publishes. A membership stops being visible when **no visible bid of its UTE
+    still publishes it** — which for an unidentified UTE is its one bid, and for an identified one
+    published by several procedures means re-deriving that UTE's membership from the procedures
+    that remain. **The awardee link is re-resolved on every restatement** under a stated total
+    order over the four resolution paths, so a published identifier supersedes a derived one even
+    where that moves the award to a different operador — which is what closes the historical tail
+    when a procedure formalises. *Depends on 5, 6, 9, 13.* *(SPEC-0008 #16 import half, #17)*
 15. **A single Órgano's initial import** — the `id`-ascending walk paged at 100, one record per
     entry, **ending when the listing is exhausted**, the state row created at `INCOMPLETE` on first
     start, cursor advanced after each page, resumption stepping back one page and adding no
@@ -1113,9 +1149,10 @@ one branch off it, at the same depth as 18.
     `JdbcOperadorRepository` that duplicate the rule. *Depends on 11.* *(SPEC-0006 #36)*
 22. **Resolve the bidders** — every single-firm bidder resolved from its published identifier
     through task 11's collaborator and stored on its participation, holding **no name of its own**
-    (R18). Consortium rows are routed past it by task 10's classification, so no placeholder
-    identifier reaches R3. *Depends on 6, 10, 11, 21.* *(SPEC-0008 #19 storage half, #24 storage
-    half)*
+    (R18). Consortium rows are still routed past it by task 10's classification — task 13
+    catalogues those, because a UTE's identifier may come from the formalisation rather than the
+    bidder row — so no placeholder identifier reaches R3 here either.
+    *Depends on 6, 10, 11, 21.* *(SPEC-0008 #19 storage half, #24 storage half)*
 23. **The outstanding-record ledger in the walk** — a record whose retrieval or parse fails written
     to the ledger while the walk carries on; a resumption retrying the ledger **before** the cursor;
     and `COMPLETE` gated on nothing being outstanding. The mechanism FEAT-0009 never had, and what
@@ -1158,10 +1195,10 @@ Two notes on that list, both from writing the tasks against it:
 
 - **#22 stays deferred, and task 13 proves its storage precondition anyway.** The criterion's own
   note says *"stated here, proved in SPEC-0006"*, and its *awarded total* needs a read nothing here
-  builds — so it is not claimed. But amendment 1 rewrote it so the no-double-counting property holds
-  whether or not the consortium is catalogued, and that property has a **storage** form — no award
-  row on a procedure points at a member operador — which task 13 asserts in both branches under
-  SPEC-0006 #40. The deferral is honest and the property is still tested.
+  builds — so it is not claimed. But amendment 1 rewrote it so the award always lands on a UTE
+  operador, and the no-double-counting property has a **storage** form — no award row on a
+  procedure points at a member operador — which task 13 asserts in both branches under SPEC-0006
+  #40. The deferral is honest and the property is still tested.
 - **#42 is claimed by no task, and that is now stated rather than implied.** Its subject is the
   aggregate request rate against the source staying inside the configured bound. Tasks 7 and 8 bind
   the shared `contratosdegalicia` client id, which is the *mechanism* — but binding a client id is
@@ -1210,14 +1247,29 @@ source publishes for that Órgano is stored.
   lotes exist. Taken from the award table, with description and estimated value left absent.
   *(SPEC-0008 #10)*
 - **A consortium published with `-` or a `TEMP-` placeholder** — 33 of 35 measured. Detected by its
-  nested `<ul>` before any identifier is read, so the placeholder never reaches R3. It is recorded on
-  its participation under its published name, its member firms are catalogued normally, the
-  membership is stored, and any award it won names it while entering no member's totals.
-  *(SPEC-0008 #20, #21 as amended)*
+  nested `<ul>` before any identifier is read, so the placeholder never reaches R3 and never
+  becomes an identity. It is catalogued as an operador **keyed on this bid**, holding its published
+  name and no fiscal identifier; its member firms are catalogued normally under theirs; the
+  membership relates the two; and any award it won is held by that operador while entering no
+  member's totals. A second procedure publishing a consortium under the same name is a **second**
+  operador. *(SPEC-0008 #20, #21 as amended)*
+- **One UTE bidding on two procedures under a published `U…` identifier** — 2 of 35 carry one on the
+  bidder row, and more are identified by their formalisation. Both procedures resolve to the **same**
+  operador, whose membership is the union of what they publish. This is the case that makes
+  *"a membership stops being visible when no visible bid of its UTE still publishes it"* more than a
+  restatement of *"its bid was withdrawn"*. *(SPEC-0008 #21 as amended; SPEC-0006 #40)*
 - **A consortium published under a name that does not begin `UTE`** — 7 of 35, such as
   `MISTURAS-INGESAN`. Detected identically, because the test is the markup and not the name. A
   name-prefix test would have recorded it as a single firm bidding under a placeholder identifier.
   *(SPEC-0008 #21 as amended)*
+- **Two bidders on one award point that both resolve to nobody** — they key alike, so the store
+  holds **one** row and the second write takes the first's identity and overwrites its award
+  marker. The parse cannot prevent it: one row out per source row still yields two values with the
+  key `(procedure, lote, no operador)`. Amendment 1 shrank the exposure sharply — a consortium is
+  catalogued now, so a null operador means only *an unusable identifier* — and 0 of 578 measured
+  single-firm rows carried one. It is **not** fixed, only made rare, and the participation port
+  says so rather than claiming the parse handles it. A discriminator would cost a column on a table
+  that has no other use for one, and nothing measured yet justifies it. *(SPEC-0008 #19, #20)*
 - **A single-firm bidder row carrying `-`** — never observed in 578 rows, and harmless if it appears:
   amendment 4's widening makes it yield no operador rather than joining a shared one. The structural
   branch is what makes this the unobserved case rather than the common one. *(SPEC-0008 #20)*
