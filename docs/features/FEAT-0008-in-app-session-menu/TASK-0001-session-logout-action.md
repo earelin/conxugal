@@ -15,8 +15,9 @@ Governed by [ADR-0005](../../architecture/0005-session-based-authentication.md)
 and the navigation that follows it, alongside the existing session read in
 `shared/entities/currentUser.ts`. It adds **no chrome** — the control that triggers it
 arrives in [TASK-0002](TASK-0002-header-user-menu.md) — and it changes **nothing on the
-backend**: `POST /logout` and the 401-on-XHR behaviour are already delivered by
-[FEAT-0002](../FEAT-0002-user-authentication/TASK-0005-logout-and-spa-401-handling.md).
+backend**: `POST /logout` and the 401-on-XHR behaviour are already delivered for
+[SPEC-0002](../../specs/SPEC-0002-user-authentication.md), and documented in
+[`server/CLAUDE.md`](../../../server/CLAUDE.md).
 
 ## Scope
 - A `logout()` call in `ui/src/shared/entities/currentUser.ts` — the module ADR-0015
