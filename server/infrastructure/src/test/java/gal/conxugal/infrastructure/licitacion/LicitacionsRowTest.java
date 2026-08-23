@@ -75,6 +75,44 @@ class LicitacionsRowTest {
   }
 
   /**
+   * The identifier is stripped before it becomes a {@link PublicationId}, so a padded reading of a
+   * procedure matches the row already stored rather than filing a second one beside it.
+   */
+  @Test
+  void strips_the_padding_around_the_published_identifier() {
+    LicitacionListingEntry entry =
+        new LicitacionsRow("  822054  ", null, null, null, null, 8, "Formalizado")
+            .toListingEntry();
+
+    assertThat(entry.publicationId()).isEqualTo(new PublicationId("822054"));
+  }
+
+  /**
+   * Ten codes were observed and the set is not closed — code 7 was not among them and higher ones
+   * may exist. An unseen code is carried as published, which is what keeps it from costing a real
+   * procedure.
+   */
+  @Test
+  void carries_an_unseen_state_code_the_measured_vocabulary_does_not_list() {
+    LicitacionListingEntry entry =
+        new LicitacionsRow(PUBLICATION_ID, null, null, null, null, 7, null).toListingEntry();
+
+    assertThat(entry)
+        .extracting(LicitacionListingEntry::stateCode, LicitacionListingEntry::stateLabel)
+        .containsExactly(7, null);
+  }
+
+  /** The source caps the object at no length and neither does this: nothing here truncates. */
+  @Test
+  void carries_the_published_object_at_any_length() {
+    String objeto = "Actuacións de mellora ".repeat(100);
+
+    LicitacionListingEntry entry = row("08-03-2024", "20-08-2026", objeto, null).toListingEntry();
+
+    assertThat(entry.obxecto()).isEqualTo(objeto.strip());
+  }
+
+  /**
    * The date column is nullable at the source and unreadable text is not a reason to refuse a real
    * procedure: it is surfaced as absent, and whether that hides the procedure from readers is
    * decided above the port.
