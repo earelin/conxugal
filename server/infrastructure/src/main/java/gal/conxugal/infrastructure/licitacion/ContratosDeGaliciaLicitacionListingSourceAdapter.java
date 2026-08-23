@@ -67,10 +67,11 @@ public class ContratosDeGaliciaLicitacionListingSourceAdapter implements Licitac
 
   private LicitacionsTable fetchTable(
       String sourceKey, LicitacionListingOrder order, int offset, int pageSize) {
+    TableOrder tableOrder = tableOrder(order);
     try {
       HttpResponse<LicitacionsTable> response =
           licitacionsClient.table(
-              sourceKey, offset, pageSize, DRAW, orderColumn(order), orderDirection(order));
+              sourceKey, offset, pageSize, DRAW, tableOrder.column(), tableOrder.direction());
       // The one error status that arrives as a response rather than an exception: a declarative
       // client reads 404 as an absent value, so judging it is the adapter's to do.
       if (response.code() >= HttpStatus.BAD_REQUEST.getCode()) {
@@ -94,15 +95,17 @@ public class ContratosDeGaliciaLicitacionListingSourceAdapter implements Licitac
     }
   }
 
-  private static int orderColumn(LicitacionListingOrder order) {
-    return switch (order) {
-      case ID_ASCENDING -> LicitacionsClient.ID_COLUMN;
-    };
-  }
+  /**
+   * How one order is spelled on the wire: the column's index in the payload the client always
+   * sends, and the direction beside it. The two travel together so that a second order cannot
+   * acquire the column of one and the direction of another — a pair that would compile, request a
+   * real page, and return the wrong one.
+   */
+  private record TableOrder(int column, String direction) {}
 
-  private static String orderDirection(LicitacionListingOrder order) {
+  private static TableOrder tableOrder(LicitacionListingOrder order) {
     return switch (order) {
-      case ID_ASCENDING -> LicitacionsClient.ASCENDING;
+      case ID_ASCENDING -> new TableOrder(LicitacionsClient.ID_COLUMN, LicitacionsClient.ASCENDING);
     };
   }
 }
