@@ -21,8 +21,12 @@ import io.micronaut.http.client.annotation.Client;
  *
  * <p>The {@code id} keys the transport settings — base URL and the connect and read timeouts —
  * under {@code micronaut.http.services.contratosdegalicia}, and is deliberately the same one the
- * Órganos client binds: the resilience policies are singletons per source, so sharing the id is
- * what makes the two share one rate budget rather than each holding a full one.
+ * Órganos client binds, so that both are configured as one source.
+ *
+ * <p>The id is not, however, what makes the two share a rate budget. The policy beans are plain
+ * unqualified singletons that {@code ResilientClientInterceptor} injects without a qualifier, so
+ * every client carrying the advice draws on one budget whatever id it binds; a different id would
+ * buy a second set of transport settings and go on sharing the first budget silently.
  *
  * <p>{@code draw} is the table widget's own echo counter. The source requires it and nothing here
  * reads it back, so it is sent as a constant.

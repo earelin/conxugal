@@ -47,6 +47,18 @@
  * through before anything is compared against it — the four tables that carry a lote column do not
  * spell one the same way.
  *
+ * <p>Retrieval enters through
+ * {@link gal.conxugal.domain.licitacion.LicitacionListingSource}, which answers one
+ * {@link gal.conxugal.domain.licitacion.LicitacionListingPage} of an Órgano's published history —
+ * its {@link gal.conxugal.domain.licitacion.LicitacionListingEntry entries} and the Órgano's own
+ * count — in an explicitly asked-for
+ * {@link gal.conxugal.domain.licitacion.LicitacionListingOrder}, or throws
+ * {@link gal.conxugal.domain.licitacion.LicitacionListingUnavailableException} rather than let a
+ * walk mistake a failure for the end of a history. It is the cheap half of a two-mechanism
+ * retrieval, and its entry is not a whole procedure — but it is the only place four of the
+ * aggregate's values are published, which is why the listing is read even when the record is
+ * already in hand.
+ *
  * <p>{@code @NullMarked}: every type, field, parameter and return value in this package is
  * non-null unless explicitly annotated {@link org.jspecify.annotations.Nullable}.
  */
