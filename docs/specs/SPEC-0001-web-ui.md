@@ -72,7 +72,24 @@ Galician, consistent with the project and its data source.
     — the `ui/` module's structure, routing, theme, i18n seam and scripts as built
   - Behaviour: `ui/src/App.test.tsx` covers AC1 (shell with product name and primary
     navigation) and AC4 (in-shell Galician not-found state)
-  - Production deep-linking (AC2/AC4 outside the dev server) is closed by
-    **FEAT-0003**'s backend SPA history fallback
+  - Production deep-linking (AC2/AC4 outside the dev server) is closed by FEAT-0003
+    below
+- **FEAT-0003** — Backend serves the UI application (retired 2026-08-23, commit `73cf32f`)
+  - Decisions: [ADR-0003](../architecture/0003-react-router-ui-served-by-backend.md)
+    (the backend is the single origin for both the API and the built UI),
+    [ADR-0006](../architecture/0006-reserved-api-url-prefix.md) (the reserved `/api/`
+    prefix that lets the fallback tell a missing endpoint from a client-side route),
+    [ADR-0007](../architecture/0007-acceptance-testing-module.md) (Playwright, scoped to
+    the served UI)
+  - System: [`server/CLAUDE.md`](../../server/CLAUDE.md) — the UI build inside the server
+    build, and the routing/fallback matrix as built;
+    [`server/README.md`](../../server/README.md) — what the server build needs and what a
+    request without a session gets
+  - Behaviour: `application`'s `SpaHistoryFallbackTest` (7 scenarios) and `acceptance`'s
+    browser-driven `AuthenticatedSpaRoutingTest` together close AC2 and AC4 against a
+    production build — the latter's `root_serves_the_spa_shell_with_its_built_assets`
+    fetches every asset the served page references. `ApiUrlPrefixArchTest` enforces
+    ADR-0006 at build time.
 
 <!-- distilled-from: FEAT-0001 @ 3f17cc0 -->
+<!-- distilled-from: FEAT-0003 @ 73cf32f -->

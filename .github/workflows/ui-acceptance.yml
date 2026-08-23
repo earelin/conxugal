@@ -10,14 +10,14 @@ on:
     branches: [trunk]
     paths:
       - "ui/**"
-      - "!ui/**/*.md"
       - ".github/workflows/ui-acceptance.yml"
+      - "!ui/**/*.md"
   push:
     branches: [trunk]
     paths:
       - "ui/**"
-      - "!ui/**/*.md"
       - ".github/workflows/ui-acceptance.yml"
+      - "!ui/**/*.md"
 
 concurrency:
   group: ui-acceptance-${{ github.ref }}

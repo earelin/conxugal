@@ -153,6 +153,31 @@ Dependency versions are centralized in `gradle/libs.versions.toml`; most
 platform BOM (`micronautVersion` in `gradle.properties`) resolves them at build time —
 bump that one property rather than pinning individual library versions.
 
+## The UI build is part of the server build
+
+`./gradlew build`, `run` and `:application:dockerBuild` from `server/` all build the UI
+first: `npmCi` → `npmBuild` → `copyUiDist` in `application/build.gradle.kts` run the
+`ui/` module's own `npm ci` and `npm run build`, then copy `ui/dist` onto the runtime
+classpath under `public/`, where `micronaut.router.static-resources` picks it up. **The
+server build therefore needs Node**, not just a JVM — the version is pinned in
+`ui/package.json`'s `volta.node`, which CI's `setup-node` reads — and a UI source change
+reaches the next server build with no manual `npm run build`.
+
+Two things here are load-bearing and easy to undo:
+
+- **The dist is registered as a `resources` source dir**
+  (`resources.srcDir(files(…).builtBy(copyUiDist))`), not as `output.dir`. `jar` reads
+  the whole SourceSet output either way, so `output.dir` looks correct locally — but the
+  Micronaut Gradle plugin's Docker `buildLayers` task reads only
+  `output.resourcesDir`, and the SPA silently never reaches the image. Nothing in
+  `build` catches it; `acceptance`'s `AuthenticatedSpaRoutingTest`, which CI runs
+  against the built image, is what does.
+- **Vite's `base` and the static-resource mapping must agree.** `ui/vite.config.ts` sets
+  `base: '/'` to match `micronaut.router.static-resources.ui.mapping` (`/**`); serving
+  the app under a sub-path means changing both. The only thing coupling them is
+  `AuthenticatedSpaRoutingTest#root_serves_the_spa_shell_with_its_built_assets`, which
+  fetches every `<script>`/`<link>` the rendered page actually references.
+
 ## HTTP routing conventions
 
 The `application` module is the single origin for both the REST API and the built UI
@@ -177,3 +202,36 @@ The `application` module is the single origin for both the REST API and the buil
   - **Under `/api/**`** → RFC 9457 `application/problem+json` `404`, matching the
     API-error shape `ServerErrorHandler` uses; never the shell.
   - **Any non-`GET`** → plain `404`.
+
+## Authentication and authorization
+
+Session-based per `docs/architecture/0005-session-based-authentication.md`, wired entirely
+in `application.yml` (`micronaut.security`, `micronaut.session`) — read it for the cookie,
+CSRF and redirect settings, whose trade-offs are commented there. `POST /login` and
+`/logout` are Micronaut Security's own; only `GET /login` and `GET /forbidden` are ours
+(`http/auth/`), and `GET /login` sends an already-authenticated visitor to `/`. Idle window
+is **30 minutes**; sessions are in-memory, so a second replica needs a shared store first.
+`application/src/integrationTest/.../http/auth/` pins all of it.
+
+Four things here are easy to break by accident:
+
+- **Failure is indistinct across three branches.** An unknown email still pays for a
+  password comparison (`PasswordEncoder.matchAgainstDummyHash`), and a disabled account is
+  rejected *after* its password check. Moving the `enabled` check earlier in
+  `domain/auth/Authenticate` looks like a harmless reorder and breaks the rule.
+- **Authorization is declared twice** — the `intercept-url-map` and a `@Secured` on almost
+  every controller — and **nothing enforces that they agree**. A new controller needs the
+  annotation even when the URL map appears to cover it.
+- **Rejection is content-negotiated, not custom**: a browser navigation gets `303` to
+  `/login`, an XHR gets `401`. There is no `RejectionHandler` here and writing one would
+  silently change both halves (`AcceptHeaderRejectionTest`).
+- **The last-login stamp is best-effort** — if the write fails the login still succeeds.
+
+The three views in `resources/views/` (login, forbidden, server error) render outside the
+SPA so a denial or a crash never depends on the React bundle; the bundle itself is served
+only once a session exists. Their styling hand-copies the Mantine palette from
+`ui/src/app/theme.ts` and drifts silently — see the `frontend-design` skill before
+changing either.
+
+<!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->
+<!-- distilled-from: FEAT-0003 @ 73cf32f -->

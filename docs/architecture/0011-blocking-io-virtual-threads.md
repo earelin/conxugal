@@ -22,8 +22,8 @@ blocking work explicitly redirected to a separate executor per call site (`@Exec
 Most of this application's work is blocking by nature: `micronaut-data-jdbc` over a
 JDBC driver, Argon2id password verification, and outbound HTTP scraping/ingestion
 against contratosdegalicia.gal. Relying on per-call-site dispatch to keep this off the
-event loop is easy to get wrong silently — exactly what surfaced while scoping
-[TASK-0008](../features/FEAT-0002-user-authentication/TASK-0008-run-controllers-on-blocking-virtual-threads.md):
+event loop is easy to get wrong silently — exactly what surfaced while scoping this switch
+for the login path of [SPEC-0002](../specs/SPEC-0002-user-authentication.md):
 `UserAuthenticationProvider` was already annotated `@Blocking`, but that annotation is a
 no-op under Micronaut's default (`MANUAL`) thread selection, so every login would have
 blocked an event-loop thread absent a per-provider fix.
@@ -62,9 +62,9 @@ inherits it automatically.
   the workload becomes read-heavy at very high QPS with mostly non-blocking I/O —
   revisit with a new ADR if that materializes.
 - Virtual threads pin their carrier thread during `synchronized` blocks or native
-  (JNI) calls; the JDBC driver and the Argon2id encoder ([TASK-0003](../features/FEAT-0002-user-authentication/TASK-0003-security-config-session-auth.md))
+  (JNI) calls; the JDBC driver and the Argon2id encoder
+  ([ADR-0024](0024-argon2id-password-hashing.md))
   need verifying under load to confirm neither pins pathologically.
 - A narrower, per-provider dispatch (`HttpRequestExecutorAuthenticationProvider`) is no
-  longer needed once the whole request path defaults to the blocking executor —
-  [TASK-0008](../features/FEAT-0002-user-authentication/TASK-0008-run-controllers-on-blocking-virtual-threads.md)
-  keeps the simpler `HttpRequestAuthenticationProvider` instead.
+  longer needed once the whole request path defaults to the blocking executor — the
+  authentication provider keeps the simpler `HttpRequestAuthenticationProvider` instead.
