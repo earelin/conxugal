@@ -2,7 +2,7 @@
 feat: FEAT-0015
 domain: backend
 adrs: [0008, 0019]
-status: todo
+status: done
 depends_on: [TASK-0003]
 ---
 
@@ -30,6 +30,36 @@ the tables and not in the types.
   every child that another row references: `LoteId` and `ParticipationId` at minimum, each a record
   wrapping a database-assigned `UUID` with its converter, on the `LicitacionId` shape
   [TASK-0003](TASK-0003-licitacion-domain-model.md) establishes.
+
+  **The implementation took six rather than two, and the "at minimum" is why.** `Award`,
+  `Formalisation`, `CpvClassification` and `NutClassification` are referenced by nothing, but each
+  is a `@MappedEntity` and so needs an `@Id` of some kind — and the natural key each one upserts on
+  (TASK-0005's table) carries a **nullable** `lote_id`, which PostgreSQL forbids in a primary key.
+  TASK-0005 already declares those keys `UNIQUE … NULLS NOT DISTINCT`, which is a unique constraint
+  and not a primary key, so each of the four takes a surrogate identity beside it: `AwardId`,
+  `FormalisationId`, `CpvClassificationId`, `NutClassificationId`. Typed rather than a bare `UUID`
+  because TASK-0003 typed all four vocabularies for the same reason, and a mixed idiom inside one
+  package is the confusion ADR-0019 exists to prevent.
+
+  **It also buys the equality a restatement needs.** An entity keyed on an identity compares by it,
+  so an award whose amount is corrected or whose awardee moves to a different operador is still the
+  same award — which is precisely what
+  [TASK-0014](TASK-0014-reconciling-a-restated-procedure.md) must be able to conclude. Keyed on its
+  contents instead, the corrected row would compare unequal to the row it corrects.
+
+  **`UteMembership` is the one child that takes none**, and that is not an omission: TASK-0006
+  gives it no `id` and a key of `(participation_id, operador_economico_id)`, both non-null, so the
+  pair is what the table keys on. `EntityIdentityArchTest` then requires it **not** to override
+  `equals`/`hashCode` — it is a value filed under its owner, on `NomeAlternativo`'s shape, and the
+  record's own equality is the one it gets.
+
+  **One consequence is named rather than left to be discovered**: that equality is the *triple*, so
+  two readings of one row either side of a withdrawal compare unequal, and a caller collecting
+  memberships into a set while a reconciliation flips markers holds one row twice. `NomeAlternativo`
+  answers the same problem by comparing on its natural key alone, which is not open here — every
+  component this table keys on is another aggregate's identifier, and that is precisely the case
+  the arch rule refuses an override for. Nothing this feature builds notices; a caller that needs
+  the pair alone changes the rule rather than the record.
 - **`Lote`** — its `LicitacionId`, its **identifier as text**, optionally a description and an
   estimated value, and a withdrawal marker.
 
@@ -39,9 +69,41 @@ the tables and not in the types.
   procedure. Both extras are optional because `Relación de lotes` was **empty** on procedure 822054
   while `Nº lotes` said `2` and the award table named both — a lote's *existence* comes from the
   award table; the lotes table supplies decoration.
+- **`Cpv` and `Nut`** — the two regulated European lists a classification cites, each an entity
+  with a table of its own on the `LicitacionState` shape: a system-assigned identity, the **code
+  the list assigns** as its natural key, and a **nullable description that carries no unique
+  constraint**.
+
+  **They are vocabularies, not columns, because the lists are regulated and shared.** A CPV code is
+  not this source's coinage and not a procedure's property — it is an external standard thousands
+  of procedures cite — so it is held once and referred to. That is what lets
+  [SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) R23 offer *only the codes a
+  year's selection actually contains* as a reference rather than a `DISTINCT` over a column
+  repeated once per procedure per code, and it is why a code must be an independent entity **to be
+  referenced by others**.
+
+  **An import matches an entry on its code and never on its description.** The code is what the
+  list identifies an entry by; the description is wording — translated, revised, and repeated
+  across sibling entries. A store unique on it would reject a real entry and matching on it would
+  merge entries the list distinguishes, so it carries no constraint, exactly as the state's label
+  carries none.
+
+  **Nothing seeds either table.** Regulated is not the same as closed: CPV is versioned, and the
+  2008 revision retired codes the 2003 one issued, while this system imports procedures published
+  across both. A seeded catalogue would turn a code retired before our copy was taken into a
+  foreign-key violation and a rejected procedure — the harm R33's store-as-published exists to
+  prevent. An unseen code costs a row.
+
+  **The description is nullable and nothing populates it yet.** The record's CPV and NUT tables
+  publish the code alone ([`design/source-contract.md`](design/source-contract.md)), so an import
+  stores the code and leaves the description null. It is declared now so the official wording has
+  somewhere to go without a later migration; null means nobody has supplied one, never that the
+  entry has none.
 - **`CpvClassification` and `NutClassification`** — two records, not one, because they map two
-  tables and one `@MappedEntity` record cannot map both. Each carries its `LicitacionId`, its code,
-  its diffusion date, a **nullable `LoteId`** and a withdrawal marker.
+  tables and one `@MappedEntity` record cannot map both. Each carries its `LicitacionId`, a
+  **required reference to its `Cpv` or `Nut` entry**, its diffusion date, a **nullable `LoteId`**
+  and a withdrawal marker. What the row holds is that *this* procedure cites *that* entry, on that
+  date, for that award point — which is the only part of the fact that belongs to the procedure.
 
   The nullable lote is **amendment 2**, and it is the departure worth stating: on 822054 — two
   lotes, two separate awards — **every** CPV and NUT row's lote cell was procedure-wide. A model
@@ -62,6 +124,13 @@ the tables and not in the types.
   PUBLISHED_BY_FORMALISATION > PUBLISHED_BY_BIDDER > NAME_DERIVED > UNRESOLVED
   ```
 
+  Built as `AwardeeResolutionPath`, an enum declared **weakest first** so the order is the enum's
+  natural one and `supersedes` is `compareTo(…) > 0` — the `NomeRank.outranks` shape, so no caller
+  has to read the comparison in the right direction. It is **never null**: `UNRESOLVED` is the
+  value an award nothing resolved carries, so the absence of a link is stated rather than inferred
+  from a null beside a null operador. It is named apart from the award's `resolution`, which is the
+  published `Resolución` cell and a different thing entirely.
+
   The **awarded amount is the resolution table's `Importe` and nothing else.** The listing's
   `importe` is the base budget, and a model that let one stand in for the other would fill every
   R24 total with budgets, silently and plausibly.
@@ -78,6 +147,13 @@ the tables and not in the types.
   type. R18 holds that this family stores no name of its own because a name belongs on the operador
   an identifier resolves to; an unidentified consortium has no such operador, so the alternative to
   storing its published name is losing it. This is **amendment 1**.
+
+  **The record refuses the name where the catalogue could have held the party**, mirroring the
+  `CHECK` [TASK-0006](TASK-0006-licitacions-store-the-competition-tables.md) puts on the column. The
+  constraint stays in the migration — it is the guarantee — but a parse defect then fails where the
+  mistake is rather than at the insert, where under this feature's rules it would send the whole
+  procedure to the outstanding ledger. The refusal is one-directional exactly as the `CHECK` is, so
+  a consortium the source published no name for is accepted.
 - **`UteMembership`** — a `ParticipationId`, one member operador and a withdrawal marker. **Hung off
   the participation**, never off a UTE operador, so one shape serves an identified and an
   unidentified consortium alike, and a membership's visibility can follow its participation's.
@@ -97,6 +173,13 @@ the tables and not in the types.
   and `05`), and the award table's procedure-wide cell is `_`, not empty as the source contract
   once recorded.
 
+  Built as `LoteKey.normalise(String)` answering an `Optional<String>`, where **empty is the
+  procedure-as-a-whole value** — the shape that maps straight onto the nullable `lote_id`. It
+  normalises **for comparison and never for storage**: a lote published as `05` is stored as `05`,
+  which is what TASK-0005's criterion asks for, and this is what lets a row spelling it `5` find
+  that lote all the same. A cell of nothing but zeros keeps one, so `000` is the lote `0` rather
+  than the procedure as a whole — a published lote must never reduce to the absence of one.
+
 **Out of scope:** every table and repository, every parse, and the awardee resolution itself.
 
 **The R8 invariant is not enforced by the model, and saying otherwise would be false.** Making
@@ -113,6 +196,14 @@ the problem.
 - A classification constructs **with and without** a lote, and a procedure that has lotes accepts a
   classification carrying none. ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md)
   #9 as amended, #10)
+- A classification **refers to** its `Cpv` or `Nut` entry and holds no code of its own, so two
+  procedures citing one code refer to one entry; a classification citing no entry is refused, where
+  a null would otherwise reach a `NOT NULL` foreign key whose error names the column rather than
+  the mistake. (SPEC-0008 #23 storage half, #44)
+- A `Cpv` constructs with a code the table has never held and with no description, two entries
+  sharing one description stay two entries, and one entry read either side of its wording being
+  supplied is the same entry. The same for `Nut`. Nothing seeds either, and nothing validates a
+  code against a known set — the lists are versioned, not closed. (SPEC-0008 #44)
 - A `Lote` constructs with the identifier `OU0028` and with `05`, and with no description and no
   estimated value. An integer identifier is not expressible. (SPEC-0008 #10, #44)
 - Every type that a table stores carries its back-reference and its withdrawal marker, so no column

@@ -19,6 +19,33 @@
  * and none of them is seeded or validated against: a value the source has not published before
  * simply creates its row.
  *
+ * <p>Under the procedure sit its <strong>award points</strong> — a
+ * {@link gal.conxugal.domain.licitacion.Lote} where it has lotes and the procedure itself where it
+ * does not, which is why the lote reference is nullable on every row that carries one and a null
+ * one reads as <em>the procedure as a whole</em> rather than as <em>unattached</em>. Each award
+ * point carries its {@link gal.conxugal.domain.licitacion.CpvClassification} and
+ * {@link gal.conxugal.domain.licitacion.NutClassification} — two records because they map two
+ * tables, and either may hang off the procedure even where lotes exist, because that is what the
+ * source publishes. Each one <em>refers</em> to its entry rather than copying it:
+ * {@link gal.conxugal.domain.licitacion.Cpv} and {@link gal.conxugal.domain.licitacion.Nut} are
+ * regulated European lists rather than this source's own vocabulary, so an entry thousands of
+ * procedures cite is held once, matched on the code the list assigns and never on its wording, and
+ * unseeded because a regulated list is versioned rather than closed. Beside them sit its
+ * {@link gal.conxugal.domain.licitacion.Award}, its
+ * {@link gal.conxugal.domain.licitacion.Formalisation}, and the
+ * {@link gal.conxugal.domain.licitacion.Participation} of each published bidder. One place per
+ * thing awarded, with no second copy at procedure level; the model makes both expressible and the
+ * parse is what keeps the invariant.
+ *
+ * <p>An award records
+ * {@link gal.conxugal.domain.licitacion.AwardeeResolutionPath how its operador was reached}, a
+ * totally ordered vocabulary so a published identifier is known to supersede a derived one. A
+ * {@link gal.conxugal.domain.licitacion.UteMembership} hangs off the participation rather than off
+ * a UTE operador, so an identified and an unidentified consortium store the same rows. And
+ * {@link gal.conxugal.domain.licitacion.LoteKey} is the one reduction every lote cell passes
+ * through before anything is compared against it — the four tables that carry a lote column do not
+ * spell one the same way.
+ *
  * <p>{@code @NullMarked}: every type, field, parameter and return value in this package is
  * non-null unless explicitly annotated {@link org.jspecify.annotations.Nullable}.
  */

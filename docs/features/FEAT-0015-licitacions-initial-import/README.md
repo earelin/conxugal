@@ -1000,11 +1000,13 @@ one branch off it, at the same depth as 18.
    publishes so an unseen value costs a row rather than a rejected procedure. *(SPEC-0008 #7
    per-field half, #44)*
 4. **Award points and competition value types** — lote (its identifier **text**, not a number),
-   CPV/NUT classification with its **nullable lote reference**, award (carrying **how its operador
-   was resolved**, per amendment 3), formalisation, participation (carrying the **consortium marker
-   and published name**, per amendment 1) and UTE membership, each with its back-reference and
-   withdrawal marker, plus the **shared lote normaliser**. Under R8's one-place rule with no second
-   copy at procedure level. *(SPEC-0008 #9 as amended, #10 storage half)*
+   the **`Cpv` and `Nut` vocabularies** the regulated European lists are, each keyed on the code
+   the list assigns and never on its wording, with the CPV/NUT classification **referring** to one
+   and carrying its **nullable lote reference**, award (carrying **how its operador was resolved**,
+   per amendment 3), formalisation, participation (carrying the **consortium marker and published
+   name**, per amendment 1) and UTE membership, each with its back-reference and withdrawal marker,
+   plus the **shared lote normaliser**. Under R8's one-place rule with no second copy at procedure
+   level. *(SPEC-0008 #9 as amended, #10 storage half, #33 the reference R23's filter needs)*
 5. **Licitacións store: the procedure and its award points** — migrations creating `licitacion`,
    the four vocabulary tables its state and types are keyed in,
    `licitacion_lote`, the two classification tables, `licitacion_award` and

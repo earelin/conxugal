@@ -47,6 +47,13 @@ resolution needs available, and the formalisation is the one that matters most.
   types. A procedure-wide lote cell yields a **null lote reference even on a procedure that has
   lotes** — that case is 822054, which has two lotes and classifies neither, and it is the departure
   amendment 2 legitimises.
+
+  **The code is not a value on the classification, it names an entry.**
+  [TASK-0004](TASK-0004-award-points-and-competition-value-types.md) makes `Cpv` and `Nut`
+  vocabularies with tables of their own, so this parse yields the **code** and whatever stores it
+  upserts the entry first — matched on the code, never on a description — and hands the
+  classification the entry it got back. Same ordering as the state and the three types on the
+  procedure itself, and the same reason: the row's foreign key needs an identity that exists.
 - **Lotes come from the award table, not the lotes table.** `Relación de lotes` was header-row-only
   on 822054 while `Nº lotes` said `2` and the award table named both; a parse that discovered lotes
   from the lotes table would have found none and **lost both awards**. `Relación de lotes` is read

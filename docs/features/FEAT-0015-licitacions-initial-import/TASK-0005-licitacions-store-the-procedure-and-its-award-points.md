@@ -54,16 +54,56 @@ behind TASK-0003's port.
     before, inside the transaction that stores the procedure. A seeded catalogue would turn an
     unseen code into a foreign-key violation and a rejected procedure, which is the harm R33's
     store-as-published exists to prevent.
-  - **`licitacion_lote`** — its `licitacion_id`, its identifier as **`TEXT`** (measured: `OU0028`,
-    `LU4001` and `CO0642` are all real lote identifiers), the two optional extras and the
-    withdrawal marker;
-  - **`licitacion_cpv`** and **`licitacion_nut`** — `licitacion_id`, the code, the diffusion date, a
-    **nullable** `lote_id` and the withdrawal marker;
-  - **`licitacion_award`** — `licitacion_id`, a nullable `lote_id`, the resolution, its date, the
-    amount, the execution period, the published awardee name, a nullable `operador_economico_id`
-    FK, the resolution path and the withdrawal marker;
-  - **`licitacion_formalisation`** — `licitacion_id`, a nullable `lote_id`, the date, contratista
-    name, published fiscal identifier (nullable), nationality, amount and the withdrawal marker.
+  - **`licitacion_lote`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, its `licitacion_id`, its
+    identifier as **`TEXT`** in a `lote_identifier` column (measured: `OU0028`, `LU4001` and
+    `CO0642` are all real lote identifiers), the two optional extras and the withdrawal marker;
+  - **`cpv`** and **`nut`** — the two regulated European lists, each `id UUID PRIMARY KEY DEFAULT
+    uuidv7()` beside `code TEXT NOT NULL UNIQUE` and a nullable `description` that is
+    **deliberately not unique**, on the `licitacion_state` shape and for its reason: an import
+    matches an entry on the code the list assigns, never on wording that is translated and revised
+    and shared across sibling entries. **Neither is seeded** — CPV is versioned, the 2008 revision
+    retired codes the 2003 one issued, and this system imports procedures published across both, so
+    an unseen code creates its row inside the transaction that stores the procedure rather than
+    failing a foreign key. Unprefixed, unlike the four `licitacion_*` vocabularies, because these
+    are external standards rather than this source's own vocabulary;
+  - **`licitacion_cpv`** and **`licitacion_nut`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`,
+    `licitacion_id`, a `cpv_id` / `nut_id` FK **NOT NULL**, the diffusion date, a **nullable**
+    `lote_id` and the withdrawal marker. The code itself is not a column here: a classification row
+    records that this procedure cites that entry, and the entry is the list's;
+  - **`licitacion_award`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, `licitacion_id`, a nullable
+    `lote_id`, the resolution, its date, the amount, the execution period, the published awardee
+    name, a nullable `operador_economico_id` FK, the resolution path and the withdrawal marker;
+  - **`licitacion_formalisation`** — `id UUID PRIMARY KEY DEFAULT uuidv7()`, `licitacion_id`, a
+    nullable `lote_id`, the date, contratista name, published fiscal identifier (nullable),
+    nationality, amount and the withdrawal marker.
+
+  **Every one of the five carries a surrogate `id` beside its natural key, and the nullable
+  `lote_id` is why.** Four of the natural keys below contain it, and PostgreSQL forbids a null in a
+  primary key — so those keys are `UNIQUE … NULLS NOT DISTINCT` constraints and the primary key is
+  the surrogate. [TASK-0004](TASK-0004-award-points-and-competition-value-types.md) mints a typed
+  identifier for each, so the domain records carry `LoteId`, `CpvClassificationId`,
+  `NutClassificationId`, `AwardId` and `FormalisationId` respectively.
+- **The column names TASK-0004's records map to, where prose above would not settle them.** Under
+  [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md) the
+  record *is* the mapping, so a migration naming a column differently is a runtime failure rather
+  than a mismatch anyone reviews. Micronaut Data derives the rest from the component name; these
+  are the five a reader would otherwise guess wrong:
+
+  | Table | Prose above | Column the record maps to |
+  | --- | --- | --- |
+  | `licitacion_lote` | its identifier | `lote_identifier` |
+  | `licitacion_cpv` / `licitacion_nut` | the diffusion date | `diffusion_date` |
+  | `licitacion_cpv` / `licitacion_nut` | the entry it cites | `cpv_id` / `nut_id` |
+  | `licitacion_award` | its date | `resolution_date` |
+  | `licitacion_award` | the resolution path | `awardee_resolution_path` |
+  | `licitacion_formalisation` | the date | `formalisation_date` |
+  | `licitacion_formalisation` | published fiscal identifier | `fiscal_identifier` |
+
+  **`fiscal_identifier`, not `fiscal_id`.** `operador_economico` spells the same concept the
+  shorter way, and the divergence is deliberate rather than an oversight: the two hold different
+  things — one is the catalogue's key, the other is what a single formalisation cell carried, which
+  may identify nobody the catalogue holds. Renaming either to match would suggest they are the same
+  column.
 - **Every child carries `licitacion_id NOT NULL`, and a null `lote_id` means *the procedure as a
   whole* rather than *unattached*.** An earlier draft gave three of these tables only a nullable
   `lote_id`, which left the lotless procedure — **85 of 100 measured, the ordinary case** — with
@@ -75,13 +115,32 @@ behind TASK-0003's port.
   | Table | Natural key |
   | --- | --- |
   | `licitacion_lote` | `(licitacion_id, lote_identifier)` |
-  | `licitacion_cpv` / `licitacion_nut` | `(licitacion_id, lote_id, code)`, `NULLS NOT DISTINCT` |
+  | `cpv` / `nut` | `code` |
+  | `licitacion_cpv` / `licitacion_nut` | `(licitacion_id, lote_id, cpv_id)` / `(…, nut_id)`, `NULLS NOT DISTINCT` |
   | `licitacion_award` | `(licitacion_id, lote_id)`, `NULLS NOT DISTINCT` |
   | `licitacion_formalisation` | `(licitacion_id, lote_id)`, `NULLS NOT DISTINCT` |
 
   `NULLS NOT DISTINCT` is load-bearing: PostgreSQL treats NULLs as distinct by default, so without
   it the procedure-wide row of a lotless procedure would insert afresh on every re-import — which is
   every procedure, on every run.
+
+  **The lote's key is the published spelling, and that is a decision this task owes an answer
+  to.** `lote_identifier` holds what the source printed — `05` stays `05`, which this task's own
+  criterion requires — while
+  [TASK-0004](TASK-0004-award-points-and-competition-value-types.md)'s `LoteKey` holds that `05`
+  and `5` are one lote. The two disagree, and the disagreement is reachable: a procedure whose
+  award table spells one lote both ways, or a source that respells the padding between imports,
+  would insert a second lote row where the normaliser says there is one — the artefact `LoteKey`
+  was measured over 240 procedures to eliminate, and it would pass this task's no-duplicate
+  criterion while the source could still break it.
+
+  It is **not demonstrated**: the measured padding varies between procedures rather than within
+  one, so this is a re-import hazard rather than a defect anyone has seen. Two ways to settle it,
+  and this task picks one before writing the migration — carry the normalised form as a
+  `lote_key` column and move the unique constraint to `(licitacion_id, lote_key)`, keeping
+  `lote_identifier` as the published spelling for display; or leave the key as it is and state that
+  the caller matches on the normalised form before upserting. Either way the criterion to add is
+  **one procedure whose award table names `01` and `1` leaves one lote**.
 - **No vocabulary table carries a withdrawal marker.** The four are not parts of a procedure the
   source restates; they are the values it publishes, and a state or a type no procedure references
   any more is still one the source published. R13's withdrawal has nothing to say about them.
@@ -103,8 +162,16 @@ behind TASK-0003's port.
   partial indexes on a generated `publication_year`. The browsing feature measures R32 over its own
   queries and adds what those measurements ask for.
 - **JDBC repositories** implementing TASK-0003's ports and the award-point ports — including one
-  per vocabulary, each upserting on its published key (`code` for the state, `name` for a type) and
-  answering the stored value with its identity.
+  per vocabulary, each upserting on its published key (`code` for the state, `name` for a type,
+  `code` for a CPV or NUTS entry) and answering the stored value with its identity.
+
+  **The two regulated lists need their ports declaring here.**
+  [TASK-0004](TASK-0004-award-points-and-competition-value-types.md) puts every repository out of
+  scope, so it ships `Cpv` and `Nut` as entities and no `CpvRepository` / `NutRepository` beside
+  them. This task owns both, in `domain` under ADR-0002, on the shape TASK-0003's four vocabulary
+  ports set: an `upsert` and nothing else. A CPV upsert **must not** write the description — it
+  matches on the code and leaves whatever wording is already stored alone, so an import cannot
+  blank a description something else supplied.
 - **`findByPublicationId` must fetch-join all four vocabulary references**, and the joins must be
   **left**:
 
