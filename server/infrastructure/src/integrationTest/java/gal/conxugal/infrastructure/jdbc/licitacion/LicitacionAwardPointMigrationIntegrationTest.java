@@ -61,7 +61,7 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
 
   @BeforeEach
   void setUp() throws Exception {
-    schema = new SchemaFixture(dataSource);
+    schema = SchemaFixture.committing(dataSource);
     UUID organoId = schema.insertOrgano("consorcio-x");
     UUID stateId = schema.insertState(2, "Adxudicado");
     licitacionId = schema.insertLicitacion("822054", organoId, stateId);
@@ -145,6 +145,7 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
     schema.insertNutClassification(licitacionId, null, schema.insertNut("ES111", null));
 
     for (String child : CHILD_TABLES) {
+      assertThat(table(child)).hasNumberOfRows(1);
       assertThat(table(child)).row(0).value("withdrawn").isFalse();
     }
   }

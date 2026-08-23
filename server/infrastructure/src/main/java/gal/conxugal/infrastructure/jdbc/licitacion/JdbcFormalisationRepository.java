@@ -3,7 +3,6 @@ package gal.conxugal.infrastructure.jdbc.licitacion;
 import gal.conxugal.domain.licitacion.Formalisation;
 import gal.conxugal.domain.licitacion.FormalisationId;
 import gal.conxugal.domain.licitacion.FormalisationRepository;
-import gal.conxugal.domain.operador.FiscalIdentifier;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
@@ -11,7 +10,6 @@ import io.micronaut.data.repository.GenericRepository;
 import io.micronaut.transaction.annotation.Transactional;
 import java.util.Objects;
 import java.util.UUID;
-import org.jspecify.annotations.Nullable;
 
 /**
  * Stores a procedure's formalisations, on {@link JdbcAwardRepository}'s shape: keyed on the award
@@ -67,7 +65,7 @@ public abstract class JdbcFormalisationRepository
               statement.setObject(2, Upserts.lote(formalisation.loteId()));
               statement.setObject(3, Upserts.date(formalisation.formalisationDate()));
               statement.setString(4, formalisation.contratistaName());
-              statement.setString(5, published(formalisation.fiscalIdentifier()));
+              statement.setString(5, Upserts.fiscalIdentifier(formalisation.fiscalIdentifier()));
               statement.setString(6, formalisation.nationality());
               statement.setObject(7, Upserts.amount(formalisation.amount()));
               statement.setBoolean(8, formalisation.withdrawn());
@@ -82,9 +80,5 @@ public abstract class JdbcFormalisationRepository
         formalisation.nationality(),
         formalisation.amount(),
         formalisation.withdrawn());
-  }
-
-  private static @Nullable String published(@Nullable FiscalIdentifier fiscalIdentifier) {
-    return fiscalIdentifier == null ? null : fiscalIdentifier.value();
   }
 }

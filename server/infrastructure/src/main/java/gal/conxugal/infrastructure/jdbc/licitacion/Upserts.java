@@ -2,6 +2,8 @@ package gal.conxugal.infrastructure.jdbc.licitacion;
 
 import gal.conxugal.domain.licitacion.LoteId;
 import gal.conxugal.domain.money.Money;
+import gal.conxugal.domain.operador.FiscalIdentifier;
+import gal.conxugal.domain.operador.OperadorId;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import java.math.BigDecimal;
 import java.sql.Date;
@@ -14,11 +16,11 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * The plumbing every statement in this package shares: bind, execute, take the one row the
- * {@code RETURNING} clause promised. Shared because each of the eleven upserts here would otherwise
+ * {@code RETURNING} clause promised. Shared because each of the twelve upserts here would otherwise
  * repeat it verbatim, and because "answered no row" is a bug in the statement rather than an
  * outcome a caller should have to consider — an upsert that reaches the database always writes.
  *
- * <p>The three converters exist for the same reason: a domain value type reaches JDBC as null or as
+ * <p>The four converters exist for the same reason: a domain value type reaches JDBC as null or as
  * the thing it wraps, and spelling that ternary out at every binding site is where one of them
  * eventually gets it wrong.
  */
@@ -43,6 +45,9 @@ final class Upserts {
     return jdbcOperations.prepareStatement(sql, statement -> {
       binding.bind(statement);
       try (ResultSet rows = statement.executeQuery()) {
+        // Unreachable while every statement here is an unconditional DO UPDATE over a table with
+        // no trigger, which always returns its one row. Stated rather than covered: it is what
+        // would catch a conflict clause that grew a WHERE and started declining rows silently.
         if (!rows.next()) {
           throw new IllegalStateException("An upsert answered no row: %s".formatted(sql));
         }
@@ -71,5 +76,19 @@ final class Upserts {
    */
   static @Nullable UUID lote(@Nullable LoteId loteId) {
     return loteId == null ? null : loteId.value();
+  }
+
+  /**
+   * The operador a row names, where it names one. A null is a party the catalogue does not hold —
+   * an award that names nobody is a supported outcome — rather than an operador that was not
+   * stored, which the entity's own identity check would have refused first.
+   */
+  static @Nullable UUID operador(@Nullable OperadorId operadorId) {
+    return operadorId == null ? null : operadorId.value();
+  }
+
+  /** The identifier a published cell carried, where its trailing token was identifier-shaped. */
+  static @Nullable String fiscalIdentifier(@Nullable FiscalIdentifier fiscalIdentifier) {
+    return fiscalIdentifier == null ? null : fiscalIdentifier.value();
   }
 }

@@ -22,9 +22,27 @@ import java.util.UUID;
  * two spellings of it could drift apart without anything noticing. So the rule stays in one
  * language and this statement carries its answer.
  *
- * <p>The conflict branch refreshes {@code lote_identifier} as well, so a source that respells the
- * padding between imports moves the published spelling on the row it already has rather than
- * gaining a twin.
+ * <p><strong>{@code lote_identifier} is not refreshed, and that is a decision rather than an
+ * omission.</strong> The first spelling this store saw is the one it keeps. Refreshing it would
+ * make the spelling a reader is shown depend on the order its caller happened to upsert in: the
+ * lotes table and the award table of one record publish the same lote differently — {@code 05} and
+ * {@code 5} were both measured — so neither is the more published one, and last-write-wins would
+ * flip a displayed identifier back and forth between re-imports for no reason a reader could see. A
+ * stale spelling is worse than nothing only if it is wrong, and both of these are what the source
+ * printed. If a genuine respelling at the source ever has to propagate, that is a rule for the
+ * reconciliation to state, not a side effect of statement order.
+ *
+ * <p>The decoration beside it — the description and the estimated value — <em>is</em> refreshed, on
+ * the ordinary rule that a restatement's published attributes are written over. The identifier is
+ * not one of them: it is the published form of what this row is keyed on, which is why
+ * {@code licitacion}'s own upsert leaves {@code publication_id} out of its refresh too.
+ *
+ * <p><strong>It must stay a {@link GenericRepository}, which declares no methods.</strong>
+ * {@code lote_key} is the one column in this feature that no record component maps, which is safe
+ * only while every write here is hand-written. Widening this interface to {@code CrudRepository},
+ * or adding a derived {@code save}/{@code update}, would have Micronaut Data build its statement
+ * from {@link Lote}'s components alone — omitting {@code lote_key} — and every write would fail on
+ * a {@code NOT NULL} violation naming the column rather than the change that caused it.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public abstract class JdbcLoteRepository
@@ -36,11 +54,10 @@ public abstract class JdbcLoteRepository
           licitacion_id, lote_identifier, lote_key, description, estimated_value, withdrawn)
       VALUES (?::uuid, ?::text, ?::text, ?::text, ?::numeric, ?::boolean)
       ON CONFLICT ON CONSTRAINT licitacion_lote_key DO UPDATE SET
-          lote_identifier = EXCLUDED.lote_identifier,
           description = EXCLUDED.description,
           estimated_value = EXCLUDED.estimated_value,
           withdrawn = EXCLUDED.withdrawn
-      RETURNING id
+      RETURNING id, lote_identifier
       """;
 
   private final JdbcOperations jdbcOperations;
@@ -54,25 +71,27 @@ public abstract class JdbcLoteRepository
   public Lote upsert(Lote lote) {
     Objects.requireNonNull(lote, "lote must not be null");
     String loteKey = keyOf(lote);
-    UUID id =
-        Upserts.returningId(
-            jdbcOperations,
-            UPSERT,
-            statement -> {
-              statement.setObject(1, lote.licitacionId().value());
-              statement.setString(2, lote.identifier());
-              statement.setString(3, loteKey);
-              statement.setString(4, lote.description());
-              statement.setObject(5, Upserts.amount(lote.estimatedValue()));
-              statement.setBoolean(6, lote.withdrawn());
-            });
-    return new Lote(
-        new LoteId(id),
-        lote.licitacionId(),
-        lote.identifier(),
-        lote.description(),
-        lote.estimatedValue(),
-        lote.withdrawn());
+    return Upserts.returning(
+        jdbcOperations,
+        UPSERT,
+        statement -> {
+          statement.setObject(1, lote.licitacionId().value());
+          statement.setString(2, lote.identifier());
+          statement.setString(3, loteKey);
+          statement.setString(4, lote.description());
+          statement.setObject(5, Upserts.amount(lote.estimatedValue()));
+          statement.setBoolean(6, lote.withdrawn());
+        },
+        // The identifier comes back rather than being echoed, because the statement declines to
+        // refresh it: for a lote already stored the two differ, and the stored one is the answer.
+        rows ->
+            new Lote(
+                new LoteId(rows.getObject("id", UUID.class)),
+                lote.licitacionId(),
+                rows.getString("lote_identifier"),
+                lote.description(),
+                lote.estimatedValue(),
+                lote.withdrawn()));
   }
 
   /**

@@ -143,10 +143,22 @@ behind TASK-0003's port.
   nothing to notice. `lote_key` is therefore the one column no record component maps —
   [ADR-0008](../../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md)
   reads on the write path here, and every write in this task is a hand-written statement rather
-  than a derived `save`. The upsert refreshes `lote_identifier` from the incoming row, so a
-  respelling moves the published spelling on the lote already stored instead of adding a twin, and
-  it **refuses** an identifier that reduces to nothing (`_`, `-`): those are how the source spells
-  *the procedure as a whole*, which hangs off the procedure with no lote row at all.
+  than a derived `save`. The adapter must stay free of a derived `save`/`update` for that reason,
+  and says so.
+
+  **The upsert does not refresh `lote_identifier`: the first spelling stored is the one kept**, and
+  the upsert answers with it rather than with the one it was handed. Refreshing it would make what
+  a reader is shown depend on the order its caller wrote in — the lotes table and the award table
+  of one record spell the same lote differently, and neither is the more published — so a
+  last-write-wins column would flip a displayed identifier back and forth across re-imports for no
+  reason a reader could see. The decoration beside it *is* refreshed, on the ordinary rule that a
+  restatement's attributes are written over; the identifier is not one, being the published form of
+  what the row is keyed on. A genuine respelling at the source is then a rule for
+  [TASK-0014](TASK-0014-reconciling-a-restated-procedure.md) to state rather than a side effect of
+  statement order.
+
+  The upsert also **refuses** an identifier that reduces to nothing (`_`, `-`): those are how the
+  source spells *the procedure as a whole*, which hangs off the procedure with no lote row at all.
 
   It was **not demonstrated**: the measured padding varies between procedures rather than within
   one, so this is a re-import hazard rather than a defect anyone had seen. The criterion it adds is
@@ -245,9 +257,10 @@ browse-shaped query.
   classifying the procedure as a whole. This is procedure 822054 and the case a `NOT NULL` column
   would have lost. (SPEC-0008 #10 as amended)
 - A lote stores under the identifier `OU0028`, and under `05`. (SPEC-0008 #10, #44)
-- **One procedure whose award table names `01` and `1` leaves one lote**, stored under the spelling
-  the source published. This is what keying on `lote_key` rather than on `lote_identifier` buys, and
-  the test that would fail if the key moved back. (SPEC-0008 #10, #44)
+- **One procedure whose award table names `01` and `1` leaves one lote**, held under the spelling it
+  was first stored with and answering the caller with that rather than with the incoming one. This
+  is what keying on `lote_key` rather than on `lote_identifier` buys, and the test that would fail
+  if the key moved back. (SPEC-0008 #10, #44)
 - An award stores with a null operador and with a null lote, independently. (SPEC-0008 #20)
 - A procedure with two lotes stores two awards, and neither is duplicated at procedure level: a
   query for procedure-level awards on that procedure returns none. *This is the regression test for

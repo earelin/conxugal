@@ -89,7 +89,7 @@ class JdbcLicitacionRepositoryIntegrationTest implements TestPropertyProvider {
 
   @BeforeEach
   void setUp() throws Exception {
-    organoId = new CatalogueFixture(dataSource).organo("consorcio-x");
+    organoId = SchemaFixture.joiningTheTestTransaction(dataSource).organo("consorcio-x");
   }
 
   @AfterEach

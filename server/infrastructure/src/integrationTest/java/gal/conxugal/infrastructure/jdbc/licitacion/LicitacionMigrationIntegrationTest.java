@@ -63,7 +63,7 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
 
   @BeforeEach
   void setUp() {
-    schema = new SchemaFixture(dataSource);
+    schema = SchemaFixture.committing(dataSource);
   }
 
   @AfterEach
@@ -132,6 +132,7 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
   void the_procedure_is_born_visible() throws Exception {
     storedProcedure("822054");
 
+    assertThat(table("licitacion", "publication_id")).hasNumberOfRows(1);
     assertThat(table("licitacion", "publication_id"))
         .row(0)
             .value("withdrawn").isFalse();
@@ -173,6 +174,7 @@ class LicitacionMigrationIntegrationTest implements TestPropertyProvider {
 
     schema.insertLicitacion("LIC-2026/0001", organoId, stateId);
 
+    assertThat(table("licitacion", "publication_id")).hasNumberOfRows(1);
     assertThat(table("licitacion", "publication_id"))
         .row(0)
             .value("publication_id").isEqualTo("LIC-2026/0001");

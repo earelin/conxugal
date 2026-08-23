@@ -1,5 +1,7 @@
 package gal.conxugal.infrastructure.jdbc.licitacion;
 
+import gal.conxugal.domain.operador.OperadorId;
+import gal.conxugal.domain.organo.OrganoId;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -10,23 +12,58 @@ import java.util.UUID;
 import javax.sql.DataSource;
 
 /**
- * Raw SQL against the migrated schema, for the two migration tests. Every write commits, because
- * those tests violate constraints on purpose: a failed statement aborts the connection Micronaut
- * Data shares with them, so each has to stand on its own and be rolled back before the next runs.
+ * Raw SQL against the migrated schema, for every test in this package. The two factories are the
+ * whole of the difference between its two uses, and it is a real one:
  *
- * <p>Shared between the procedure's schema test and its children's, because the children all need a
- * stored procedure to hang off and a second copy of these inserts would drift from the first.
+ * <ul>
+ *   <li>the migration tests <strong>commit</strong>, because they violate constraints on purpose —
+ *       a failed statement aborts the connection Micronaut Data shares with them, so each has to
+ *       stand on its own and be rolled back before the next runs;
+ *   <li>the adapter tests <strong>do not</strong>, because they expect every write to succeed and
+ *       the adapter under test shares that connection, so it sees them uncommitted.
+ * </ul>
  *
- * <p>Every statement is written out rather than assembled, including the four that exist only to be
- * refused: a helper taking SQL from its caller would put an unbounded statement behind a
- * package-private door, and these are fixtures rather than a query API.
+ * <p>One class rather than two, because the alternative was two fixtures in one package holding the
+ * same {@code organo_contratacion} insert and the same insert-returning-id plumbing, differing in a
+ * commit.
+ *
+ * <p>Every statement is written out rather than assembled, including the three that exist only to
+ * be refused: a helper taking SQL from its caller would put an unbounded statement behind a
+ * package-private door, and this is a fixture rather than a query API.
  */
 final class SchemaFixture {
 
   private final DataSource dataSource;
+  private final boolean committing;
 
-  SchemaFixture(DataSource dataSource) {
+  private SchemaFixture(DataSource dataSource, boolean committing) {
     this.dataSource = dataSource;
+    this.committing = committing;
+  }
+
+  /** For a test that violates a constraint on purpose, and must leave the connection usable. */
+  static SchemaFixture committing(DataSource dataSource) {
+    return new SchemaFixture(dataSource, true);
+  }
+
+  /** For a test whose writes the adapter under test has to see, on the connection they share. */
+  static SchemaFixture joiningTheTestTransaction(DataSource dataSource) {
+    return new SchemaFixture(dataSource, false);
+  }
+
+  /** The convening Órgano, typed, for the tests that hand it to an adapter. */
+  OrganoId organo(String sourceKey) throws SQLException {
+    return new OrganoId(insertOrgano(sourceKey));
+  }
+
+  /** An operador for an award to name, typed, for the tests that hand it to an adapter. */
+  OperadorId operador(String fiscalId, String name) throws SQLException {
+    return new OperadorId(
+        insertReturningId(
+            "INSERT INTO operador_economico (id, fiscal_id, name, name_rank_source_id)"
+                + " VALUES (uuidv7(), ?, ?, 4711) RETURNING id",
+            fiscalId,
+            name));
   }
 
   UUID insertOrgano(String sourceKey) throws SQLException {
@@ -146,7 +183,7 @@ final class SchemaFixture {
             connection.prepareStatement("DELETE FROM licitacion_state WHERE id = ?")) {
       statement.setObject(1, stateId);
       statement.executeUpdate();
-      connection.commit();
+      commit(connection);
     } catch (SQLException e) {
       rollbackQuietly(e);
       throw e;
@@ -189,7 +226,7 @@ final class SchemaFixture {
           throw new IllegalStateException("Insert did not return a generated id");
         }
         UUID id = rows.getObject("id", UUID.class);
-        connection.commit();
+        commit(connection);
         return id;
       }
     } catch (SQLException e) {
@@ -211,6 +248,17 @@ final class SchemaFixture {
       }
     }
     return values;
+  }
+
+  /**
+   * Committing is what makes a write outlive the transaction the test method runs in, and the
+   * autocommit guard is {@link gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup}'s: a
+   * connection that commits as it goes has nothing to commit here and refuses to be asked.
+   */
+  private void commit(Connection connection) throws SQLException {
+    if (committing && !connection.getAutoCommit()) {
+      connection.commit();
+    }
   }
 
   /**

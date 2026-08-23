@@ -20,6 +20,11 @@ public interface LoteRepository {
    * on the published spelling would split one lote in two on a procedure the source publishes
    * perfectly well.
    *
+   * <p><strong>A lote already stored keeps the spelling it is stored under</strong>, and the answer
+   * carries that rather than the one passed in. The two source tables that name a lote do not agree
+   * on how to spell one, so neither spelling is the more published; taking the later one would make
+   * what a reader is shown depend on the order its caller wrote in.
+   *
    * <p>The procedure must already be stored, carrying the identity its own upsert answered with.
    */
   Lote upsert(Lote lote);

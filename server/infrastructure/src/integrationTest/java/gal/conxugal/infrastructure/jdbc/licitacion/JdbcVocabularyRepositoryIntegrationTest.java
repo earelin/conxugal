@@ -124,6 +124,7 @@ class JdbcVocabularyRepositoryIntegrationTest implements TestPropertyProvider {
     LicitacionState stored = stateRepository.upsert(new LicitacionState(7, null));
 
     assertThat(stored.id()).isNotNull();
+    assertThat(stateTable()).hasNumberOfRows(1);
     assertThat(stateTable())
         .row(0)
             .value("code").isEqualTo(7)
@@ -202,6 +203,33 @@ class JdbcVocabularyRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(table("licitacion_tramitacion_type", "name")).hasNumberOfRows(1);
   }
 
+  // The criterion is one row in each of the four, and the three type adapters are byte-identical
+  // to one another — which is exactly why a copy that named the wrong table or the wrong constraint
+  // would go unnoticed unless each one is driven into its own conflict branch.
+  @Test
+  void re_storing_procedure_type_the_source_has_published_before_leaves_one_row() {
+    LicitacionProcedureType first =
+        procedureTypeRepository.upsert(new LicitacionProcedureType("Aberto"));
+
+    LicitacionProcedureType again =
+        procedureTypeRepository.upsert(new LicitacionProcedureType("Aberto"));
+
+    assertThat(again.id()).isEqualTo(first.id());
+    assertThat(table("licitacion_procedure_type", "name")).hasNumberOfRows(1);
+  }
+
+  @Test
+  void re_storing_tramitacion_type_the_source_has_published_before_leaves_one_row() {
+    LicitacionTramitacionType first =
+        tramitacionTypeRepository.upsert(new LicitacionTramitacionType("Ordinaria"));
+
+    LicitacionTramitacionType again =
+        tramitacionTypeRepository.upsert(new LicitacionTramitacionType("Ordinaria"));
+
+    assertThat(again.id()).isEqualTo(first.id());
+    assertThat(table("licitacion_tramitacion_type", "name")).hasNumberOfRows(1);
+  }
+
   // CPV is versioned rather than closed — the 2008 revision retired codes the 2003 one issued —
   // and this system imports procedures published across both, so nothing seeds the list.
   @Test
@@ -239,8 +267,10 @@ class JdbcVocabularyRepositoryIntegrationTest implements TestPropertyProvider {
     Nut again = nutRepository.upsert(new Nut("ES111"));
 
     assertThat(again.description()).isEqualTo("A Coruña");
+    assertThat(nutTable()).hasNumberOfRows(1);
     assertThat(nutTable())
         .row(0)
+            .value("code").isEqualTo("ES111")
             .value("description").isEqualTo("A Coruña");
   }
 

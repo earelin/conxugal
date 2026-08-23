@@ -3,7 +3,6 @@ package gal.conxugal.infrastructure.jdbc.licitacion;
 import gal.conxugal.domain.licitacion.Award;
 import gal.conxugal.domain.licitacion.AwardId;
 import gal.conxugal.domain.licitacion.AwardRepository;
-import gal.conxugal.domain.operador.OperadorId;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
@@ -11,7 +10,6 @@ import io.micronaut.data.repository.GenericRepository;
 import io.micronaut.transaction.annotation.Transactional;
 import java.util.Objects;
 import java.util.UUID;
-import org.jspecify.annotations.Nullable;
 
 /**
  * Stores a procedure's awards. One statement, keyed on the award point — the procedure and the
@@ -75,7 +73,7 @@ public abstract class JdbcAwardRepository
               statement.setObject(5, Upserts.amount(award.amount()));
               statement.setString(6, award.executionPeriod());
               statement.setString(7, award.awardeeName());
-              statement.setObject(8, operador(award.operadorEconomicoId()));
+              statement.setObject(8, Upserts.operador(award.operadorEconomicoId()));
               statement.setString(9, award.awardeeResolutionPath().name());
               statement.setBoolean(10, award.withdrawn());
             });
@@ -91,13 +89,5 @@ public abstract class JdbcAwardRepository
         award.operadorEconomicoId(),
         award.awardeeResolutionPath(),
         award.withdrawn());
-  }
-
-  /**
-   * No awardee is a null operador and nothing else: an award that names nobody is a supported
-   * outcome here rather than a failure, and the resolution path beside it says why.
-   */
-  private static @Nullable UUID operador(@Nullable OperadorId operadorId) {
-    return operadorId == null ? null : operadorId.value();
   }
 }

@@ -42,6 +42,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -108,12 +109,12 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
   @Inject
   DataSource dataSource;
 
-  private CatalogueFixture catalogue;
+  private SchemaFixture catalogue;
   private LicitacionId licitacionId;
 
   @BeforeEach
   void setUp() throws Exception {
-    catalogue = new CatalogueFixture(dataSource);
+    catalogue = SchemaFixture.joiningTheTestTransaction(dataSource);
     licitacionId = storedProcedure("822054");
   }
 
@@ -133,14 +134,17 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
     cpvClassificationRepository.upsert(
         new CpvClassification(licitacionId, null, cpv, PUBLISHED_ON));
 
+    assertThat(table("licitacion_award")).hasNumberOfRows(1);
     assertThat(table("licitacion_award"))
         .row(0)
             .value("licitacion_id").isEqualTo(licitacionId.value())
             .value("lote_id").isNull();
+    assertThat(table("licitacion_formalisation")).hasNumberOfRows(1);
     assertThat(table("licitacion_formalisation"))
         .row(0)
             .value("licitacion_id").isEqualTo(licitacionId.value())
             .value("lote_id").isNull();
+    assertThat(table("licitacion_cpv")).hasNumberOfRows(1);
     assertThat(table("licitacion_cpv"))
         .row(0)
             .value("licitacion_id").isEqualTo(licitacionId.value())
@@ -195,6 +199,7 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
     Lote stored = loteRepository.upsert(new Lote(licitacionId, "OU0028", null, null));
 
     assertThat(stored.id()).isNotNull();
+    assertThat(loteTable()).hasNumberOfRows(1);
     assertThat(loteTable())
         .row(0)
             .value("lote_identifier").isEqualTo("OU0028")
@@ -207,6 +212,7 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
   void lote_stores_under_the_padded_identifier_the_source_printed() {
     loteRepository.upsert(new Lote(licitacionId, "05", "Subministración", null));
 
+    assertThat(loteTable()).hasNumberOfRows(1);
     assertThat(loteTable())
         .row(0)
             .value("lote_identifier").isEqualTo("05")
@@ -225,6 +231,28 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
 
     assertThat(bare.id()).isEqualTo(padded.id());
     assertThat(loteTable()).hasNumberOfRows(1);
+    assertThat(loteTable())
+        .row(0)
+            .value("lote_identifier").isEqualTo("01")
+            .value("lote_key").isEqualTo("1");
+  }
+
+  // The lote keeps the spelling it is stored under, and the answer carries that rather than what
+  // was passed in. Otherwise what a reader is shown would depend on which of the record's two
+  // tables its caller happened to read first, and would flip between re-imports.
+  @Test
+  void re_storing_lote_under_another_spelling_keeps_the_one_already_stored() {
+    loteRepository.upsert(new Lote(licitacionId, "01", null, null));
+
+    Lote answered =
+        loteRepository.upsert(new Lote(licitacionId, "1", "Subministración", null));
+
+    assertThat(answered.identifier()).isEqualTo("01");
+    assertThat(loteTable()).hasNumberOfRows(1);
+    assertThat(loteTable())
+        .row(0)
+            .value("lote_identifier").isEqualTo("01")
+            .value("description").isEqualTo("Subministración");
   }
 
   // "_" and "-" are how the source's tables spell the procedure as a whole; a row standing for
@@ -253,6 +281,7 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
     Award stored = awardRepository.upsert(awardOf(null, "Adxudicado", null));
 
     assertThat(stored.id()).isNotNull();
+    assertThat(table("licitacion_award")).hasNumberOfRows(1);
     assertThat(table("licitacion_award"))
         .row(0)
             .value("operador_economico_id").isNull()
@@ -276,6 +305,7 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
             operadorId,
             AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION));
 
+    assertThat(table("licitacion_award")).hasNumberOfRows(1);
     assertThat(table("licitacion_award"))
         .row(0)
             .value("operador_economico_id").isEqualTo(operadorId.value())
@@ -298,6 +328,24 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(procedureLevelAwards()).isZero();
   }
 
+  // Every other idempotence test here keys on a null lote, which is the case NULLS NOT DISTINCT
+  // exists for. This is the ordinary half: a child of a lote, whose key has no null in it at all.
+  @Test
+  void re_storing_award_of_one_lote_refreshes_it_in_place() {
+    Lote lote = loteRepository.upsert(new Lote(licitacionId, "1", null, null));
+    Award first = awardRepository.upsert(awardOf(lote.id(), "Adxudicado", null));
+
+    Award corrected =
+        awardRepository.upsert(awardOf(lote.id(), "Adxudicado", new BigDecimal("999.99")));
+
+    assertThat(corrected.id()).isEqualTo(first.id());
+    assertThat(table("licitacion_award")).hasNumberOfRows(1);
+    assertThat(table("licitacion_award"))
+        .row(0)
+            .value("lote_id").isEqualTo(identityOf(lote))
+            .value("amount").isEqualTo(new BigDecimal("999.99"));
+  }
+
   // The identifier the Contratista cell carried, which a cell whose trailing token was not
   // identifier-shaped did not carry at all.
   @Test
@@ -305,6 +353,7 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
     Formalisation stored = formalisationRepository.upsert(formalisationOf(null, "AQUAGEST", null));
 
     assertThat(stored.id()).isNotNull();
+    assertThat(table("licitacion_formalisation")).hasNumberOfRows(1);
     assertThat(table("licitacion_formalisation"))
         .row(0)
             .value("contratista_name").isEqualTo("AQUAGEST")
@@ -334,11 +383,18 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
     cpvClassificationRepository.upsert(
         new CpvClassification(
             licitacionId, null, cpvRepository.upsert(new Cpv("45000000")), PUBLISHED_ON));
+    nutClassificationRepository.upsert(
+        new NutClassification(
+            licitacionId, null, nutRepository.upsert(new Nut("ES111")), PUBLISHED_ON));
 
+    assertThat(loteTable()).hasNumberOfRows(1);
     assertThat(loteTable()).row(0).value("withdrawn").isFalse();
-    assertThat(table("licitacion_award")).row(0).value("withdrawn").isFalse();
-    assertThat(table("licitacion_formalisation")).row(0).value("withdrawn").isFalse();
-    assertThat(table("licitacion_cpv")).row(0).value("withdrawn").isFalse();
+    for (String child :
+        List.of(
+            "licitacion_award", "licitacion_formalisation", "licitacion_cpv", "licitacion_nut")) {
+      assertThat(table(child)).hasNumberOfRows(1);
+      assertThat(table(child)).row(0).value("withdrawn").isFalse();
+    }
   }
 
   // The entry is the list's, and one the database has never assigned an identity to cannot be
@@ -380,6 +436,11 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
 
   // The identity the CPV upsert answered with, which is nullable until the database assigns it: a
   // null reaching the comparison would read as the row simply not matching.
+  private static UUID identityOf(Lote lote) {
+    return Objects.requireNonNull(lote.id(), "the upsert answers the stored lote with its identity")
+        .value();
+  }
+
   private static UUID identityOf(Cpv cpv) {
     return Objects.requireNonNull(cpv.id(), "the upsert answers the stored entry with its identity")
         .value();

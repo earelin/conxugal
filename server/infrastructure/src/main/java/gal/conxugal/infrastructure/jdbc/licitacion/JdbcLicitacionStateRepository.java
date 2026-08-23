@@ -23,6 +23,15 @@ import java.util.Objects;
  * the port's shape: a code the table has never held creates its row inside the very transaction
  * that stores the procedure naming it, so an unseen code costs a row rather than a rejected
  * procedure.
+ *
+ * <p><strong>That choice is also this family's known scaling limit, named here rather than left to
+ * be discovered.</strong> A {@code DO UPDATE} that matches takes a row lock on the matched row and
+ * holds it until the caller's transaction commits, and it writes a new tuple version on a table of
+ * a few dozen rows once per procedure. With the single-import guard in force that costs nothing —
+ * one writer, no contention. The moment a run is parallelised, every procedure in the same state
+ * queues behind one row and these six tables become the ceiling. The measured answer then, if it is
+ * ever needed, is a read-first fast path or a short transaction of its own — an orphan vocabulary
+ * row is harmless, since nothing here is a closed set — and not a change to the port.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public abstract class JdbcLicitacionStateRepository
