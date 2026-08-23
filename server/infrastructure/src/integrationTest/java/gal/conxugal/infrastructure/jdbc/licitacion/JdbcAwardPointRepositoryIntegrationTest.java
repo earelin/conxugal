@@ -58,10 +58,18 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * The five award-point adapters against a real PostgreSQL. The case they all have to serve is the
- * <strong>lotless</strong> procedure — 85 of 100 measured, and the ordinary one — whose award,
- * formalisation and classification hang off the procedure itself with a null lote, and whose keys
- * therefore each carry a null component.
+ * {@link JdbcAwardRepository} against a real PostgreSQL, and the three claims that belong to no
+ * single child adapter: the <strong>lotless</strong> procedure — 85 of 100 measured, and the
+ * ordinary one — whose award, formalisation and classifications all hang off the procedure itself
+ * with a null lote; that storing all four of them twice leaves one of each, which is where
+ * {@code NULLS NOT DISTINCT} earns its place; and that every child is born visible.
+ *
+ * <p>Those three are asserted here because each spans four or five adapters at once, and a class
+ * named after one of them would be asserting mostly about the others. What each adapter does on its
+ * own lives in its own class — {@link JdbcLoteRepositoryIntegrationTest},
+ * {@link JdbcCpvClassificationRepositoryIntegrationTest},
+ * {@link JdbcNutClassificationRepositoryIntegrationTest} and
+ * {@link JdbcFormalisationRepositoryIntegrationTest}.
  */
 @MicronautTest(startApplication = false)
 @Testcontainers(disabledWithoutDocker = true)
@@ -173,106 +181,6 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(table("licitacion_nut")).hasNumberOfRows(1);
   }
 
-  // Procedure 822054: two lotes with two separate awards, and every CPV and NUT row published
-  // procedure-wide. A model requiring a lote on a procedure that has them could not store this.
-  @Test
-  void classification_stores_against_the_procedure_as_whole_though_it_has_lotes() {
-    loteRepository.upsert(new Lote(licitacionId, "1", null, null));
-    loteRepository.upsert(new Lote(licitacionId, "2", null, null));
-    Cpv cpv = cpvRepository.upsert(new Cpv("45000000"));
-
-    cpvClassificationRepository.upsert(
-        new CpvClassification(licitacionId, null, cpv, PUBLISHED_ON));
-
-    assertThat(table("licitacion_cpv")).hasNumberOfRows(1);
-    assertThat(table("licitacion_cpv"))
-        .row(0)
-            .value("lote_id").isNull()
-            .value("licitacion_id").isEqualTo(licitacionId.value());
-  }
-
-  // OU0028, LU4001 and CO0642 are all real lote identifiers, so an integer column would have
-  // rejected a real procedure.
-  @Test
-  void lote_stores_under_the_identifier_that_is_not_number() {
-    Lote stored = loteRepository.upsert(new Lote(licitacionId, "OU0028", null, null));
-
-    assertThat(stored.id()).isNotNull();
-    assertThat(loteTable()).hasNumberOfRows(1);
-    assertThat(loteTable())
-        .row(0)
-            .value("lote_identifier").isEqualTo("OU0028")
-            .value("lote_key").isEqualTo("OU0028");
-  }
-
-  // Stored as published: the reduction is for comparison and never for storage, so "05" that a
-  // reader is shown is the "05" the source printed.
-  @Test
-  void lote_stores_under_the_padded_identifier_the_source_printed() {
-    loteRepository.upsert(new Lote(licitacionId, "05", "Subministración", null));
-
-    assertThat(loteTable()).hasNumberOfRows(1);
-    assertThat(loteTable())
-        .row(0)
-            .value("lote_identifier").isEqualTo("05")
-            .value("lote_key").isEqualTo("5")
-            .value("description").isEqualTo("Subministración");
-  }
-
-  // The award table produced both "1" and "05" in one measured sample, so one procedure can spell
-  // one lote two ways. Keyed on the published spelling this would be two lotes, and every award
-  // and bidder count hanging off them would be split between the halves.
-  @Test
-  void procedure_spelling_one_lote_padded_and_bare_stores_one_lote() {
-    Lote padded = loteRepository.upsert(new Lote(licitacionId, "01", null, null));
-
-    Lote bare = loteRepository.upsert(new Lote(licitacionId, "1", null, null));
-
-    assertThat(bare.id()).isEqualTo(padded.id());
-    assertThat(loteTable()).hasNumberOfRows(1);
-    assertThat(loteTable())
-        .row(0)
-            .value("lote_identifier").isEqualTo("01")
-            .value("lote_key").isEqualTo("1");
-  }
-
-  // The lote keeps the spelling it is stored under, and the answer carries that rather than what
-  // was passed in. Otherwise what a reader is shown would depend on which of the record's two
-  // tables its caller happened to read first, and would flip between re-imports.
-  @Test
-  void re_storing_lote_under_another_spelling_keeps_the_one_already_stored() {
-    loteRepository.upsert(new Lote(licitacionId, "01", null, null));
-
-    Lote answered =
-        loteRepository.upsert(new Lote(licitacionId, "1", "Subministración", null));
-
-    assertThat(answered.identifier()).isEqualTo("01");
-    assertThat(loteTable()).hasNumberOfRows(1);
-    assertThat(loteTable())
-        .row(0)
-            .value("lote_identifier").isEqualTo("01")
-            .value("description").isEqualTo("Subministración");
-  }
-
-  // "_" and "-" are how the source's tables spell the procedure as a whole; a row standing for
-  // that hangs off the procedure with no lote at all, so storing one as a lote is a caller's slip.
-  @Test
-  void lote_whose_identifier_names_the_procedure_as_whole_is_refused() {
-    Lote notLote = new Lote(licitacionId, "_", null, null);
-
-    assertThatThrownBy(() -> loteRepository.upsert(notLote))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("names the procedure as a whole");
-  }
-
-  @Test
-  void two_lotes_of_one_procedure_are_two_lotes() {
-    loteRepository.upsert(new Lote(licitacionId, "1", null, null));
-    loteRepository.upsert(new Lote(licitacionId, "2", null, null));
-
-    assertThat(loteTable()).hasNumberOfRows(2);
-  }
-
   // R16 and R25 make an award that names nobody a supported outcome rather than a failure, and
   // the resolution path beside it is what says so rather than a null being read as one.
   @Test
@@ -345,21 +253,6 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
             .value("amount").isEqualTo(new BigDecimal("999.99"));
   }
 
-  // The identifier the Contratista cell carried, which a cell whose trailing token was not
-  // identifier-shaped did not carry at all.
-  @Test
-  void formalisation_stores_with_no_fiscal_identifier() {
-    Formalisation stored = formalisationRepository.upsert(formalisationOf(null, "AQUAGEST", null));
-
-    assertThat(stored.id()).isNotNull();
-    assertThat(table("licitacion_formalisation")).hasNumberOfRows(1);
-    assertThat(table("licitacion_formalisation"))
-        .row(0)
-            .value("contratista_name").isEqualTo("AQUAGEST")
-            .value("fiscal_identifier").isNull()
-            .value("nationality").isEqualTo("España");
-  }
-
   @Test
   void re_storing_award_of_one_award_point_refreshes_it_in_place() {
     Award first = awardRepository.upsert(awardOf(null, "Adxudicado", null));
@@ -394,43 +287,6 @@ class JdbcAwardPointRepositoryIntegrationTest implements TestPropertyProvider {
       assertThat(table(child)).hasNumberOfRows(1);
       assertThat(table(child)).row(0).value("withdrawn").isFalse();
     }
-  }
-
-  // The entry is the list's, and one the database has never assigned an identity to cannot be
-  // referenced — so the mistake is named here rather than reported as a null in a NOT NULL column.
-  @Test
-  void classification_citing_entry_that_carries_no_identity_is_refused() {
-    CpvClassification unstoredEntry =
-        new CpvClassification(licitacionId, null, new Cpv("45000000"), PUBLISHED_ON);
-
-    assertThatThrownBy(() -> cpvClassificationRepository.upsert(unstoredEntry))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("CPV entry must be stored");
-  }
-
-  @Test
-  void nut_classification_citing_entry_that_carries_no_identity_is_refused() {
-    NutClassification unstoredEntry =
-        new NutClassification(licitacionId, null, new Nut("ES111"), PUBLISHED_ON);
-
-    assertThatThrownBy(() -> nutClassificationRepository.upsert(unstoredEntry))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("NUTS entry must be stored");
-  }
-
-  // A classification on a lote and one on the procedure are two facts about two award points, and
-  // the entry is part of the key, so citing one code twice at two levels is two rows.
-  @Test
-  void classification_of_lote_and_one_of_the_procedure_are_two_rows() {
-    Lote lote = loteRepository.upsert(new Lote(licitacionId, "1", null, null));
-    Cpv cpv = cpvRepository.upsert(new Cpv("45000000"));
-
-    cpvClassificationRepository.upsert(
-        new CpvClassification(licitacionId, lote.id(), cpv, PUBLISHED_ON));
-    cpvClassificationRepository.upsert(
-        new CpvClassification(licitacionId, null, cpv, PUBLISHED_ON));
-
-    assertThat(table("licitacion_cpv")).hasNumberOfRows(2);
   }
 
   // The identity the CPV upsert answered with, which is nullable until the database assigns it: a

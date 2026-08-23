@@ -1,5 +1,6 @@
 package gal.conxugal.infrastructure.jdbc.licitacion;
 
+import gal.conxugal.domain.licitacion.LicitacionId;
 import gal.conxugal.domain.operador.OperadorId;
 import gal.conxugal.domain.organo.OrganoId;
 import java.sql.Connection;
@@ -64,6 +65,17 @@ final class SchemaFixture {
                 + " VALUES (uuidv7(), ?, ?, 4711) RETURNING id",
             fiscalId,
             name));
+  }
+
+  /**
+   * A stored procedure for a child to hang off, typed, with the Órgano and the state it needs.
+   * Written straight rather than through the adapters: what these tests are about is the child, and
+   * the procedure beneath it is scenery.
+   */
+  LicitacionId licitacion(String publicationId) throws SQLException {
+    UUID organoId = insertOrgano("consorcio-%s".formatted(publicationId));
+    UUID stateId = insertState(2, "Adxudicado");
+    return new LicitacionId(insertLicitacion(publicationId, organoId, stateId));
   }
 
   UUID insertOrgano(String sourceKey) throws SQLException {
