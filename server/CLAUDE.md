@@ -177,3 +177,68 @@ The `application` module is the single origin for both the REST API and the buil
   - **Under `/api/**`** → RFC 9457 `application/problem+json` `404`, matching the
     API-error shape `ServerErrorHandler` uses; never the shell.
   - **Any non-`GET`** → plain `404`.
+
+## Authentication and authorization
+
+Session-based, per `docs/architecture/0005-session-based-authentication.md`: a login
+establishes server-held session state identified by a `SESSION` cookie, and logout
+invalidates it. `/login` and `/logout` are Micronaut Security's own controllers — there is
+no hand-written login or logout endpoint here, only configuration. Everything below is
+wired in `application/src/main/resources/application.yml` under `micronaut.security` and
+`micronaut.session`, and pinned by `application/src/integrationTest`.
+
+- **Idle window: 30 minutes** (`micronaut.session.max-inactive-interval: 30m`) — the
+  concrete value SPEC-0002 R10 leaves to the implementation. `IdleSessionTimeoutTest`
+  pins the behaviour by overriding the property to `1s`, so the guarantee is tested
+  without waiting out the real window; the window itself is only ever the config value.
+- **Session store is in-memory.** Nothing shares it between instances, so more than one
+  replica needs a shared store first — the horizontal-scaling caveat ADR-0005 records.
+- **Rejection is content-negotiated, not custom.** `micronaut.security.redirect.enabled`
+  plus Micronaut's stock rejection handler answer a browser navigation (`Accept:
+  text/html`) with a `303` to `/login`, and anything else — an XHR asking for JSON — with
+  a bare `401`. There is no `RejectionHandler` implementation in this codebase, and
+  writing one would silently change both halves; `AcceptHeaderRejectionTest` holds them
+  together. The same split is why `acceptance`'s anonymous client deliberately sends
+  `Accept: application/json`.
+- **Authorization is declared twice.** The `intercept-url-map` in `application.yml`
+  (`/api/admin/**` → `ADMIN`, `/api/**` and `/**` → authenticated, `/login` and
+  `/health` → anonymous) and a `@Secured` annotation on almost every controller. Both
+  must agree and **nothing enforces that they do** — `:architecture:test` checks module
+  boundaries and the `/api/` prefix, not security coverage. A new controller needs the
+  annotation even when the URL map appears to cover it.
+- **The session cookie is `SameSite=Lax` and not Base64-encoded**, both stated rather than
+  defaulted; the comments in `application.yml` explain what each closes. CSRF covers the
+  server-rendered form flow only and is withdrawn from `/api/**` — same file, same
+  reasoning.
+
+### The authenticate contract
+
+`domain/auth/Authenticate` is the whole rule; `UserAuthenticationProvider` only adapts it
+to Micronaut Security, mapping every rejection to one `CREDENTIALS_DO_NOT_MATCH`.
+
+- **Failure is indistinct across three branches, not two.** An unknown email still pays for
+  a password comparison (`PasswordEncoder.matchAgainstDummyHash`), and a **disabled account
+  is rejected only after its password has been checked** — so unknown-vs-wrong-vs-disabled
+  is separable neither by message nor by timing. Moving the `enabled` check earlier would
+  look like a harmless reorder and would break the rule.
+- **The last-login stamp is best-effort.** A successful authentication writes
+  `lastLoginAt` through the repository port, but the write is wrapped: if it fails, the
+  login still succeeds and returns the user unstamped. A failed authentication writes
+  nothing, on any branch.
+- The instant comes from the `domain/time/Clock` port, so the stamping is unit-testable
+  against a fixed clock.
+
+### Server-rendered pages
+
+Three Thymeleaf views in `application/src/main/resources/views/` render outside the SPA, so
+a login, a denial or a crash never depends on the React bundle booting: `login.html`
+(the form, and the single generic failure message), `forbidden.html`, and
+`server-error.html`. The latter two share one error template — the same one that backs a
+`404` under `/api/**` — so a new error page is a copy change, not a new layout. Galician
+copy lives in the templates themselves.
+
+`CsrfProtectedPage` renders these and attaches the CSRF cookie, **reusing a still-valid
+token** rather than minting one per render: a fresh token on every render breaks
+double-submit when the browser is redirected to `/login` and then loads it.
+
+<!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->

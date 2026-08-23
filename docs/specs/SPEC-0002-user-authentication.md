@@ -114,3 +114,38 @@ granted to ADMIN.
     at a 360 px-wide viewport, the account the session belongs to is identifiable and
     a control that ends the session is reachable within one interaction; using that
     control satisfies criterion 7.
+
+## Implemented by
+
+- **FEAT-0002** — User authentication (retired 2026-08-23, commit `6d8a9f4`)
+  - Decisions: [ADR-0005](../architecture/0005-session-based-authentication.md)
+    (server-side sessions over JWT, server-rendered login outside the SPA, indistinct
+    failure, 401-not-redirect),
+    [ADR-0008](../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md)
+    (`lastLoginAt` mapped on the domain `User`, no shadow entity),
+    [ADR-0011](../architecture/0011-blocking-io-virtual-threads.md) (login runs on a
+    virtual thread, not the event loop),
+    [ADR-0024](../architecture/0024-argon2id-password-hashing.md) (Argon2id and its
+    self-describing stored form)
+  - System: [`server/CLAUDE.md`](../../server/CLAUDE.md) — the session model as
+    configured, the 30-minute idle window, the Accept-header 401/303 split, the
+    three-branch indistinct-failure contract and the server-rendered views;
+    [`ui/CLAUDE.md`](../../ui/CLAUDE.md) — how the SPA detects a gone session and
+    redirects once
+  - Behaviour: `SessionAuthenticationTest` covers AC1, AC2, AC4–AC6;
+    `AuthenticateTest`, `UserAuthenticationProviderTest` and
+    `LoginPageTest#failed_login_query_param_shows_single_generic_error` cover AC3 —
+    including `compares_the_password_against_the_dummy_hash_when_the_email_is_unknown`,
+    which pins the no-short-circuit rule; `LogoutTest` covers AC7;
+    `IdleSessionTimeoutTest` covers AC8;
+    `JdbcUserRepositoryIntegrationTest#never_stores_the_password_as_plaintext` and
+    `UserTest#toString_redacts_password_hash` cover AC9; `AuthenticateTest` and
+    `JdbcUserRepositoryIntegrationTest` cover AC10;
+    `AcceptHeaderRejectionTest` pins the 401-vs-303 split the SPA depends on
+  - FEAT-0002 closed neither **R14** nor **R15**: the self-lookup endpoint
+    (`GET /api/me`, AC11) was delivered by
+    [FEAT-0004](../features/FEAT-0004-administration-area/README.md), and the in-app
+    account menu that ends the session (AC12) by
+    [FEAT-0008](../features/FEAT-0008-in-app-session-menu/README.md)
+
+<!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->

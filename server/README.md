@@ -64,8 +64,23 @@ flowchart LR
   downstreams) up first, then run `./gradlew acceptance`. Point it at a non-default
   instance with `-Dapp.baseUrl=…`.
 
+## Access
+
+Every route needs a session except `/login` and `/health`; `/api/admin/**` additionally
+needs the `ADMIN` role. Signing in is a server-rendered form at `/login`, outside the SPA
+([ADR-0005](../docs/architecture/0005-session-based-authentication.md)) — the session
+cookie it sets expires after 30 minutes of inactivity. Passwords are stored as Argon2id
+hashes ([ADR-0024](../docs/architecture/0024-argon2id-password-hashing.md)). A request
+without a valid session is redirected to `/login` if it asked for HTML and answered `401`
+if it did not. `CLAUDE.md` documents the wiring.
+
+The local and CI databases seed two accounts: `root@local` / `secret` (ADMIN) and
+`demo@local` / `demo` (USER, local and CI only).
+
 ## More
 
 See [ADR-0002](../docs/architecture/0002-hexagonal-architecture.md) for the architecture
 rationale and the dependency rule that keeps the modules decoupled, and the
 [`docs/`](../docs) tree for the *spec → feature → task* workflow.
+
+<!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->

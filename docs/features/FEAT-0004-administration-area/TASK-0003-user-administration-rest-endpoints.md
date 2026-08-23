@@ -12,7 +12,7 @@ Governed by [ADR-0006](../../architecture/0006-reserved-api-url-prefix.md) (rese
 ## Scope
 - `GET  /api/admin/users` — list accounts (email, role, enabled, created date, and last
   login date). The last-login value is the `lastLoginAt` already carried on `User` (from
-  [FEAT-0002](../FEAT-0002-user-authentication/README.md), SPEC-0002 R13); the endpoint
+  [SPEC-0002](../../specs/SPEC-0002-user-authentication.md) R13); the endpoint
   only reads it, and it is null until the account's first successful login.
 - `POST /api/admin/users` — create account from email and role only; the server generates the initial password and returns it **once** in the response body.
 - `POST /api/admin/users/{id}/enabled` — set enabled true/false.

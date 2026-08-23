@@ -94,6 +94,15 @@ class AuthenticateTest {
   }
 
   @Test
+  void compares_the_password_against_the_dummy_hash_when_the_email_is_unknown() {
+    when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+
+    authenticate.authenticate("ghost@example.com", "whatever");
+
+    verify(passwordEncoder).matchAgainstDummyHash("whatever");
+  }
+
+  @Test
   void fails_for_disabled_account_after_the_password_check_succeeds() {
     User user =
         new User(

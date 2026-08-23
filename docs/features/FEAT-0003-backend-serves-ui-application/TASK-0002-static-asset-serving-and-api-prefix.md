@@ -21,7 +21,7 @@ route. Application-module driving-side config only.
   *decision*: before this task nothing was served at `/`, so no access rule existed for
   it; ADR-0005 already settled the policy, this task is its first application to actual
   served content. Endpoint-level `USER`/`ADMIN` authorization inside the SPA/API stays
-  out of scope (FEAT-0002).
+  out of scope (SPEC-0002).
 - Reserve `/api/` as the path prefix every REST endpoint must use from now on; document
   the convention in `server/CLAUDE.md` so future endpoint work follows it without
   re-deciding.

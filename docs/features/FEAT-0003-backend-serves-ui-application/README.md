@@ -32,7 +32,7 @@ R2/AC2 and R3/AC4 only hold in Vite's dev server, not in a production build.
 
 **Out of scope (separate features):** any actual REST API endpoints or business logic
 behind `/api/`; authentication/authorization for either the API or the SPA shell
-(`docs/features/FEAT-0002-user-authentication.md`); caching/CDN or other production
+([SPEC-0002](../../specs/SPEC-0002-user-authentication.md)); caching/CDN or other production
 hardening beyond functional correctness.
 
 ## Design

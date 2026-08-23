@@ -93,6 +93,12 @@ Ship-time `ui/public/logo.svg` and `logo-glyph.svg` are the ones the app serves;
   dimmed section label above the links. The active item uses the `light`/filled active
   state (indigo). Gate section visibility by role in the navbar for affordance only —
   the **server is the real gate**; never treat a hidden link as security.
+- **Three pages are deliberately outside the shell**: login, forbidden and server error
+  are plain server-rendered HTML from the backend (`server/.../resources/views/`), with
+  no `AppShell`, no navbar and no application JavaScript — a denial or a crash must not
+  depend on the SPA booting. They share only the **tokens** (colour, radius, type,
+  Galician copy) and the brand mark, so the seam between "before the app" and "inside the
+  app" is invisible. Do not give them app chrome, and do not move them into `ui/`.
 - All chrome and copy is **Galician**, sourced from `strings.ts`.
 
 ## Page & component patterns
@@ -159,6 +165,11 @@ followed by dimmed `Text size="sm"`. Keep captions to one line where possible.
 
 - **Healthy/enabled → green; disabled/inert → grey; destructive/required → red.** Do
   not use red for merely-inactive state.
+- **Error *pages* are not red either.** The 403 and 5xx pages render their glyph, code
+  and actions in calm **indigo** — a denied route or a transient fault is a system state,
+  not something the reader broke. The one exception is the login form's generic failure
+  alert (`red.0`/`red.3` tint, `red.9` text), which is a validation error the reader must
+  act on.
 - Convey liveness for status data (a "Comprobado o …" timestamp + a refresh affordance)
   so a reader can tell fresh from stale.
 - Never surface secrets: no credentials, connection strings, tokens, or raw passwords in
