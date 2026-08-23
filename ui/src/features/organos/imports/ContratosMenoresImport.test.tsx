@@ -93,7 +93,7 @@ function mockRun(body: ImportRun) {
  * on a slow enough run `delay()` lands first and the in-flight state under
  * assertion is never observed.
  */
-function held(scope: nock.Interceptor, body: unknown) {
+function held(scope: nock.Interceptor, body: nock.ReplyBody) {
   let release = () => {};
   const answered = new Promise<void>((resolve) => {
     release = resolve;
