@@ -7,10 +7,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import javax.sql.DataSource;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Raw SQL against the migrated schema, for every test in this package. The two factories are the
@@ -197,11 +199,95 @@ final class SchemaFixture {
     }
   }
 
+  void insertLicitacionImportState(
+      UUID organoId, String state, @Nullable Integer cursorOffset) throws SQLException {
+    executeUpdate(
+        "INSERT INTO licitacion_import_state (organo_id, state, cursor_offset)"
+            + " VALUES (?, ?, ?)",
+        organoId,
+        state,
+        cursorOffset);
+  }
+
+  /** An import that has started always has a status, so this exists only to be refused. */
+  void insertLicitacionImportStateWithoutState(UUID organoId) throws SQLException {
+    executeUpdate("INSERT INTO licitacion_import_state (organo_id) VALUES (?)", organoId);
+  }
+
+  void insertOutstandingRecord(
+      UUID organoId,
+      String publicationId,
+      @Nullable LocalDate publicationDate,
+      @Nullable LocalDate lastModified,
+      int stateCode,
+      @Nullable String stateLabel)
+      throws SQLException {
+    executeUpdate(
+        "INSERT INTO licitacion_outstanding_record (organo_id, publication_id, publication_date,"
+            + " last_modified, state_code, state_label) VALUES (?, ?, ?, ?, ?, ?)",
+        organoId,
+        publicationId,
+        publicationDate,
+        lastModified,
+        stateCode,
+        stateLabel);
+  }
+
+  /** The listing always publishes a state code, so this exists only to be refused. */
+  void insertOutstandingRecordWithoutStateCode(UUID organoId, String publicationId)
+      throws SQLException {
+    executeUpdate(
+        "INSERT INTO licitacion_outstanding_record (organo_id, publication_id) VALUES (?, ?)",
+        organoId,
+        publicationId);
+  }
+
+  /**
+   * One Órgano's other-family progress rendered as PostgreSQL renders a whole row: the literal
+   * bytes of every column at once, which is what the claim that a licitacións write leaves it
+   * unchanged is about. Casting in SQL also keeps the instant out of a JDBC type whose reading
+   * depends on the session's zone.
+   */
+  String contratosMenoresImportStateRowOf(UUID organoId) throws SQLException {
+    return queryStrings(
+            """
+            SELECT progress::text AS whole_row FROM contrato_menor_import_state progress
+             WHERE organo_id = ?
+            """,
+            "whole_row",
+            organoId)
+        .getFirst();
+  }
+
+  /** The same reading of this family's own progress, for the claim in the other direction. */
+  String licitacionImportStateRowOf(UUID organoId) throws SQLException {
+    return queryStrings(
+            """
+            SELECT progress::text AS whole_row FROM licitacion_import_state progress
+             WHERE organo_id = ?
+            """,
+            "whole_row",
+            organoId)
+        .getFirst();
+  }
+
   List<String> columnNamesOf(String table) throws SQLException {
     return queryStrings(
         "SELECT column_name FROM information_schema.columns WHERE table_name = ?",
         "column_name",
         table);
+  }
+
+  String columnTypeOf(String table, String column) throws SQLException {
+    return queryStrings(
+            """
+            SELECT data_type FROM information_schema.columns
+             WHERE table_name = ? AND column_name = ?
+            """,
+            "data_type",
+            table,
+            column)
+        .getFirst();
   }
 
   List<String> indexNamesOf(String table) throws SQLException {
@@ -242,12 +328,28 @@ final class SchemaFixture {
     }
   }
 
-  private List<String> queryStrings(String sql, String column, Object parameter)
+  private void executeUpdate(String sql, Object... parameters) throws SQLException {
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement statement = connection.prepareStatement(sql)) {
+      for (int index = 0; index < parameters.length; index++) {
+        statement.setObject(index + 1, parameters[index]);
+      }
+      statement.executeUpdate();
+      commit(connection);
+    } catch (SQLException e) {
+      rollbackQuietly(e);
+      throw e;
+    }
+  }
+
+  private List<String> queryStrings(String sql, String column, Object... parameters)
       throws SQLException {
     List<String> values = new ArrayList<>();
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setObject(1, parameter);
+      for (int index = 0; index < parameters.length; index++) {
+        statement.setObject(index + 1, parameters[index]);
+      }
       try (ResultSet rows = statement.executeQuery()) {
         while (rows.next()) {
           values.add(rows.getString(column));
