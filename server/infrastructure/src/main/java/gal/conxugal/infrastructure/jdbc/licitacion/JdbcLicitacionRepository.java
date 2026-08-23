@@ -132,12 +132,16 @@ public abstract class JdbcLicitacionRepository
    * otherwise send a null into a {@code NOT NULL} foreign key, whose error names the column rather
    * than the mistake. Refused here on the precedent {@code JdbcOperadorRepository.retainName} sets
    * for an unstored operador — the diagnosis belongs where the mistake is.
+   *
+   * <p>Four of them, because the four vocabularies share no supertype: they are separate types
+   * precisely so the compiler stops a procedure type reaching the contract-type reference. What
+   * they can share is the sentence, which is written once below rather than four times — four
+   * copies of one diagnosis is how three of them come to say the right thing and one does not.
    */
   private static UUID identityOf(LicitacionState state) {
     LicitacionStateId id = state.id();
     if (id == null) {
-      throw new IllegalArgumentException(
-          "the state must be stored before a procedure naming it: %d".formatted(state.code()));
+      throw unstored("state", state.code());
     }
     return id.value();
   }
@@ -149,9 +153,7 @@ public abstract class JdbcLicitacionRepository
     }
     LicitacionContractTypeId id = type.id();
     if (id == null) {
-      throw new IllegalArgumentException(
-          "the contract type must be stored before a procedure naming it: %s".formatted(
-              type.name()));
+      throw unstored("contract type", type.name());
     }
     return id.value();
   }
@@ -162,9 +164,7 @@ public abstract class JdbcLicitacionRepository
     }
     LicitacionProcedureTypeId id = type.id();
     if (id == null) {
-      throw new IllegalArgumentException(
-          "the procedure type must be stored before a procedure naming it: %s".formatted(
-              type.name()));
+      throw unstored("procedure type", type.name());
     }
     return id.value();
   }
@@ -175,10 +175,14 @@ public abstract class JdbcLicitacionRepository
     }
     LicitacionTramitacionTypeId id = type.id();
     if (id == null) {
-      throw new IllegalArgumentException(
-          "the tramitación type must be stored before a procedure naming it: %s".formatted(
-              type.name()));
+      throw unstored("tramitación type", type.name());
     }
     return id.value();
+  }
+
+  private static IllegalArgumentException unstored(String vocabulary, Object publishedKey) {
+    return new IllegalArgumentException(
+        "the %s must be stored before a procedure naming it: %s"
+            .formatted(vocabulary, publishedKey));
   }
 }
