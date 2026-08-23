@@ -182,10 +182,13 @@ The `application` module is the single origin for both the REST API and the buil
 
 Session-based, per `docs/architecture/0005-session-based-authentication.md`: a login
 establishes server-held session state identified by a `SESSION` cookie, and logout
-invalidates it. `/login` and `/logout` are Micronaut Security's own controllers — there is
-no hand-written login or logout endpoint here, only configuration. Everything below is
-wired in `application/src/main/resources/application.yml` under `micronaut.security` and
-`micronaut.session`, and pinned by `application/src/integrationTest`.
+invalidates it. `POST /login` and `/logout` are Micronaut Security's own endpoints,
+configured and not written here; only `GET /login` and `GET /forbidden` are hand-written
+(`http/auth/LoginController`, `ForbiddenController`). `GET /login` **redirects an
+already-authenticated visitor to `/`** rather than showing the form again. Everything else
+below is wired in `application/src/main/resources/application.yml` under
+`micronaut.security` and `micronaut.session`, and pinned by
+`application/src/integrationTest`.
 
 - **Idle window: 30 minutes** (`micronaut.session.max-inactive-interval: 30m`) — the
   concrete value SPEC-0002 R10 leaves to the implementation. `IdleSessionTimeoutTest`
@@ -201,8 +204,10 @@ wired in `application/src/main/resources/application.yml` under `micronaut.secur
   together. The same split is why `acceptance`'s anonymous client deliberately sends
   `Accept: application/json`.
 - **Authorization is declared twice.** The `intercept-url-map` in `application.yml`
-  (`/api/admin/**` → `ADMIN`, `/api/**` and `/**` → authenticated, `/login` and
-  `/health` → anonymous) and a `@Secured` annotation on almost every controller. Both
+  (`/api/admin/**` → `ADMIN`, `/api/**` and `/**` → authenticated, and exactly three
+  anonymous patterns — `/login`, `/health` and `/assets/static-pages/**`, the last being
+  what lets the server-rendered pages below load their stylesheet before a session
+  exists) and a `@Secured` annotation on almost every controller. Both
   must agree and **nothing enforces that they do** — `:architecture:test` checks module
   boundaries and the `/api/` prefix, not security coverage. A new controller needs the
   annotation even when the URL map appears to cover it.
@@ -233,12 +238,27 @@ to Micronaut Security, mapping every rejection to one `CREDENTIALS_DO_NOT_MATCH`
 Three Thymeleaf views in `application/src/main/resources/views/` render outside the SPA, so
 a login, a denial or a crash never depends on the React bundle booting: `login.html`
 (the form, and the single generic failure message), `forbidden.html`, and
-`server-error.html`. The latter two share one error template — the same one that backs a
-`404` under `/api/**` — so a new error page is a copy change, not a new layout. Galician
-copy lives in the templates themselves.
+`server-error.html`. The SPA bundle is served only once a session exists — `/**` requires
+authentication — which is what makes `SpaHistoryFallback` safe to hand `index.html` to any
+unmatched non-asset `GET`.
 
-`CsrfProtectedPage` renders these and attaches the CSRF cookie, **reusing a still-valid
-token** rather than minting one per render: a fresh token on every render breaks
-double-submit when the browser is redirected to `/login` and then loads it.
+The latter two are separate files sharing a `status-card` markup and class vocabulary, not
+a Thymeleaf fragment, so a new error page is a copy change rather than a new layout. **No
+`404` renders them**: an unmatched `/api/**` path answers `application/problem+json`
+(`SpaHistoryFallback`) and anything else answers a bare `404`. Galician copy lives in the
+templates themselves.
+
+Their styling is `application/src/main/resources/static-pages/static-pages.css`, which
+**hand-copies** the Mantine palette out of `ui/src/app/theme.ts` as CSS custom properties —
+the two modules cannot share a build, so nothing keeps them in sync. Change the theme and
+change this file too. For the same reason `views/fragments/brand.html` inlines the logo's
+SVG paths instead of referencing `/logo.svg`, which is the rule everywhere in `ui/`: these
+templates cannot reach `ui/public/`.
+
+`CsrfProtectedPage` renders the first two and attaches the CSRF cookie, **reusing a
+still-valid token** rather than minting one per render: a fresh token on every render
+breaks double-submit when the browser is redirected to `/login` and then loads it.
+`server-error.html` is rendered directly by `http/error/ServerErrorHandler` and carries no
+CSRF cookie.
 
 <!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->

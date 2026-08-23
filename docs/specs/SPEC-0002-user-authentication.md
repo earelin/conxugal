@@ -132,7 +132,10 @@ granted to ADMIN.
     three-branch indistinct-failure contract and the server-rendered views;
     [`ui/CLAUDE.md`](../../ui/CLAUDE.md) — how the SPA detects a gone session and
     redirects once
-  - Behaviour: `SessionAuthenticationTest` covers AC1, AC2, AC4–AC6;
+  - Behaviour: `AcceptHeaderRejectionTest` covers AC1 — a browser navigation without a
+    session gets `303` to `/login`, an XHR gets `401`, which is the split the SPA depends
+    on; `SessionAuthenticationTest` covers AC2 and AC4–AC6, plus the `401` half of AC1
+    with redirects disabled;
     `AuthenticateTest`, `UserAuthenticationProviderTest` and
     `LoginPageTest#failed_login_query_param_shows_single_generic_error` cover AC3 —
     including `compares_the_password_against_the_dummy_hash_when_the_email_is_unknown`,
@@ -140,8 +143,7 @@ granted to ADMIN.
     `IdleSessionTimeoutTest` covers AC8;
     `JdbcUserRepositoryIntegrationTest#never_stores_the_password_as_plaintext` and
     `UserTest#toString_redacts_password_hash` cover AC9; `AuthenticateTest` and
-    `JdbcUserRepositoryIntegrationTest` cover AC10;
-    `AcceptHeaderRejectionTest` pins the 401-vs-303 split the SPA depends on
+    `JdbcUserRepositoryIntegrationTest` cover AC10
   - FEAT-0002 closed neither **R14** nor **R15**: the self-lookup endpoint
     (`GET /api/me`, AC11) was delivered by
     [FEAT-0004](../features/FEAT-0004-administration-area/README.md), and the in-app

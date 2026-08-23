@@ -6,7 +6,9 @@ description: >-
   a new page/route or non-trivial component so it reads as part of the same Mantine
   product rather than a bolt-on. Covers layout chrome, design tokens, component
   patterns (cards, stat cards, tables, badges, buttons, forms/modals), status
-  semantics, and Galician copy. Grounded in the FEAT-0004 visual design.
+  semantics, and Galician copy. Also covers the three server-rendered pages the backend
+  serves outside the SPA (login, forbidden, server error). Grounded in the FEAT-0004
+  visual design.
 ---
 
 # conxugal frontend design
@@ -85,7 +87,8 @@ Ship-time `ui/public/logo.svg` and `logo-glyph.svg` are the ones the app serves;
 
 ## Layout & chrome
 
-- Every authenticated screen lives inside the existing `AppShell` from `AppLayout.tsx`.
+- Every authenticated screen **in `ui/`** lives inside the existing `AppShell` from
+  `AppLayout.tsx`.
   Header carries product name + tagline (+ signed-in user where relevant); the navbar
   collapses behind the burger below `sm`. Do not add a second shell or a page-level
   sidebar.
@@ -99,6 +102,11 @@ Ship-time `ui/public/logo.svg` and `logo-glyph.svg` are the ones the app serves;
   depend on the SPA booting. They share only the **tokens** (colour, radius, type,
   Galician copy) and the brand mark, so the seam between "before the app" and "inside the
   app" is invisible. Do not give them app chrome, and do not move them into `ui/`.
+  Two rules above are **knowingly broken** there, because those templates cannot reach
+  `ui/`: their stylesheet (`server/.../static-pages/static-pages.css`) hand-copies the
+  palette out of `theme.ts` rather than sharing it, and `views/fragments/brand.html`
+  inlines the mark's SVG paths rather than referencing `/logo.svg`. Both must be updated
+  by hand when the theme or the mark changes.
 - All chrome and copy is **Galician**, sourced from `strings.ts`.
 
 ## Page & component patterns
@@ -189,8 +197,10 @@ followed by dimmed `Text size="sm"`. Keep captions to one line where possible.
 
 - [ ] New user-facing text added to `strings.ts` (Galician), not inlined.
 - [ ] Colours/spacing/radius via theme tokens & Mantine props — no stray hex or ad-hoc CSS.
-- [ ] Icons from `@tabler/icons-react`; screen sits inside the existing `AppShell`.
+- [ ] Icons from `@tabler/icons-react`; a `ui/` screen sits inside the existing `AppShell`.
 - [ ] Status colours follow the semantics (green/grey/red) above.
 - [ ] Inactive records are dimmed, not removed; blocked actions disabled with a reason, not hidden.
 - [ ] Icon-only controls have `aria-label`; layout stays within the viewport at `sm`.
 - [ ] From `ui/`: `npm run lint`, `npm run build`, `npm run test` pass.
+
+<!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->

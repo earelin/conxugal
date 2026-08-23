@@ -18,9 +18,10 @@ domain classes; anything persistence-related was expected to live on a separate
 `infrastructure`-only type.
 
 The user store built for [SPEC-0002](../specs/SPEC-0002-user-authentication.md)
-(FEAT-0002, since distilled) followed that rule literally: persisting the domain `User` record (email,
-password hash, role) via Micronaut Data JDBC required a parallel infrastructure-only
-`UserEntity` (carrying `@MappedEntity`/`@Id`), plus a `JdbcUserRepository` adapter whose
+(FEAT-0002, since distilled) followed that rule literally: persisting the domain `User`
+record (email, password hash, role) via Micronaut Data JDBC required a parallel
+infrastructure-only `UserEntity` (carrying `@MappedEntity`/`@Id`), plus a
+`JdbcUserRepository` adapter whose
 only job was copying fields between `UserEntity` and `User`. The two types are — and are
 expected to stay — structurally identical; the mapping code exists solely to satisfy the
 persistence-purity rule, not because the persisted shape differs from the domain shape.

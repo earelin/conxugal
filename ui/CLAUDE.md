@@ -83,14 +83,16 @@ failures before committing changes to this module.
   only blames a redeployment when that is actually the cause.
 - **Session loss** (`src/shared/lib/queryClient.ts`): the server answers an
   unauthenticated XHR with a `401` rather than an HTML redirect (ADR-0005), so a
-  gone session surfaces here as an `HttpError` and nowhere else. The handler is
+  gone session surfaces as an `HttpError` and this is where it is acted on. The handler is
   wired into **both** the query and the mutation cache, and redirects to
   `/login` **once** per client — several requests failing together, or a logout
   racing a background refetch, must not each call `location.replace`.
   `redirectToLogin(client)` exports that same guard for callers outside the
-  caches (`useLogout`'s own success path). There is no client-side session
-  state to keep in sync: the cookie is the session, and the only question the
-  app ever asks is whether the last response was a `401`.
+  caches (`useLogout`'s own success path). `UserMenu` also inspects a `401` — only
+  to stay quiet, leaving the redirect to the shared handler. There is no separate
+  session flag to keep in sync: the cookie is the session, `useCurrentUser`'s cache
+  is the only session-derived state, and the full-page navigation to `/login`
+  discards it.
 - **`AdminRoute`** (`src/app/AdminRoute.tsx`) is a **role guard**, not only the
   chunking concern described above — it gates the admin section on the role from
   `/api/me`. Role-gated nav visibility is affordance only; the server is the
