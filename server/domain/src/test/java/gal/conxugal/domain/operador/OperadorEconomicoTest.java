@@ -25,7 +25,7 @@ class OperadorEconomicoTest {
   void the_identity_is_distinct_from_the_fiscal_identifier() {
     OperadorId id = new OperadorId(UUID.randomUUID());
     OperadorEconomico operador =
-        new OperadorEconomico(id, FISCAL_ID, "Obradoiro Naval", RANK, Set.of());
+        new OperadorEconomico(id, FISCAL_ID, "Obradoiro Naval", false, RANK, Set.of());
 
     assertThat(operador.id()).isEqualTo(id);
     assertThat(operador.fiscalId()).isEqualTo(FISCAL_ID);
@@ -66,7 +66,7 @@ class OperadorEconomicoTest {
         new OperadorEconomico(
             null,
             FISCAL_ID,
-            "Obradoiro Naval",
+            "Obradoiro Naval", false,
             RANK,
             Set.of(
                 new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER),
@@ -77,10 +77,56 @@ class OperadorEconomicoTest {
         .containsExactlyInAnyOrder("Obradoiro Naval, S.L.", "Obradoiro Naval SL");
   }
 
+  // The identifier is optional only for a consortium the source declines to identify, so an
+  // ordinary party without one is the caller forgetting rather than a party the source published.
   @Test
-  void rejects_null_fiscal_id() {
-    assertThatNullPointerException()
+  void rejects_null_fiscal_id_on_party_that_is_not_consortium() {
+    assertThatIllegalArgumentException()
         .isThrownBy(() -> new OperadorEconomico(null, "Obradoiro Naval", RANK));
+  }
+
+  @Test
+  void an_ordinary_operador_is_not_marked_as_consortium() {
+    assertThat(new OperadorEconomico(FISCAL_ID, "Obradoiro Naval", RANK).ute()).isFalse();
+  }
+
+  // 33 of 35 measured consortia publish no identifier of their own. It is catalogued under the bid
+  // that published it, holding its published name and nothing to be found again by.
+  @Test
+  void consortium_the_source_declines_to_identify_is_catalogued_without_one() {
+    OperadorEconomico consortium =
+        OperadorEconomico.unidentifiedUte("UTE PRACE-TABOADA RAMOS", RANK);
+
+    assertThat(consortium.fiscalId()).isNull();
+    assertThat(consortium.ute()).isTrue();
+    assertThat(consortium.name()).isEqualTo("UTE PRACE-TABOADA RAMOS");
+  }
+
+  // The other 2 of 35: an ordinary catalogue entry that happens to be a consortium, so a second
+  // procedure naming it resolves to this same operador.
+  @Test
+  void consortium_the_source_identifies_is_catalogued_under_its_identifier() {
+    OperadorEconomico consortium =
+        OperadorEconomico.identifiedUte(new FiscalIdentifier("U88779475"), "UTE Ponte", RANK);
+
+    assertThat(consortium.fiscalId()).isEqualTo(new FiscalIdentifier("U88779475"));
+    assertThat(consortium.ute()).isTrue();
+  }
+
+  @Test
+  void advancing_the_display_keeps_the_consortium_marker() {
+    OperadorEconomico consortium = OperadorEconomico.unidentifiedUte("UTE PRACE", RANK);
+
+    assertThat(consortium.displaying("UTE PRACE-TABOADA RAMOS", NEWER).ute()).isTrue();
+  }
+
+  // The other branch, and the ordinary one for a consortium published twice: republishing the name
+  // already displayed advances the rank alone, and must not drop the marker on the way through.
+  @Test
+  void republishing_the_displayed_name_keeps_the_consortium_marker() {
+    OperadorEconomico consortium = OperadorEconomico.unidentifiedUte("UTE PRACE", RANK);
+
+    assertThat(consortium.displaying("UTE PRACE", NEWER).ute()).isTrue();
   }
 
   @Test
@@ -99,7 +145,7 @@ class OperadorEconomicoTest {
   void rejects_null_nomes_alternativos() {
     assertThatNullPointerException()
         .isThrownBy(
-            () -> new OperadorEconomico(null, FISCAL_ID, "Obradoiro Naval", RANK, null));
+            () -> new OperadorEconomico(null, FISCAL_ID, "Obradoiro Naval", false, RANK, null));
   }
 
   @Test
@@ -111,7 +157,7 @@ class OperadorEconomicoTest {
         .isThrownBy(
             () ->
                 new OperadorEconomico(
-                    null, FISCAL_ID, "Obradoiro Naval", RANK, alternativos));
+                    null, FISCAL_ID, "Obradoiro Naval", false, RANK, alternativos));
   }
 
   /**
@@ -128,7 +174,7 @@ class OperadorEconomicoTest {
                 new NomeAlternativo(null, "Obradoiro Naval, S.L.", NEWER)));
 
     OperadorEconomico operador =
-        new OperadorEconomico(null, FISCAL_ID, "Obradoiro Naval", RANK, alternativos);
+        new OperadorEconomico(null, FISCAL_ID, "Obradoiro Naval", false, RANK, alternativos);
 
     assertThat(operador.nomesAlternativos())
         .extracting(NomeAlternativo::name)
@@ -141,7 +187,7 @@ class OperadorEconomicoTest {
         new OperadorEconomico(
             null,
             FISCAL_ID,
-            "Obradoiro Naval",
+            "Obradoiro Naval", false,
             RANK,
             Set.of(new NomeAlternativo(null, "OBRADOIRO NAVAL", RANK)));
 
@@ -154,7 +200,7 @@ class OperadorEconomicoTest {
         new OperadorEconomico(
             null,
             FISCAL_ID,
-            "Obradoiro Naval",
+            "Obradoiro Naval", false,
             RANK,
             Set.of(new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER)));
 
@@ -187,7 +233,7 @@ class OperadorEconomicoTest {
   void the_name_it_displaced_is_retained_against_the_operador_it_belongs_to() {
     OperadorId id = new OperadorId(UUID.randomUUID());
     OperadorEconomico operador =
-        new OperadorEconomico(id, FISCAL_ID, "Obradoiro Naval", RANK, Set.of());
+        new OperadorEconomico(id, FISCAL_ID, "Obradoiro Naval", false, RANK, Set.of());
 
     OperadorEconomico advanced = operador.displaying("Obradoiro Naval, S.L.", NEWER);
 
@@ -202,7 +248,7 @@ class OperadorEconomicoTest {
         new OperadorEconomico(
             null,
             FISCAL_ID,
-            "Obradoiro Naval",
+            "Obradoiro Naval", false,
             RANK,
             Set.of(new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER)));
 
@@ -217,7 +263,7 @@ class OperadorEconomicoTest {
   void advancing_the_display_keeps_the_identity_and_the_fiscal_identifier() {
     OperadorId id = new OperadorId(UUID.randomUUID());
     OperadorEconomico operador =
-        new OperadorEconomico(id, FISCAL_ID, "Obradoiro Naval", RANK, Set.of());
+        new OperadorEconomico(id, FISCAL_ID, "Obradoiro Naval", false, RANK, Set.of());
 
     OperadorEconomico advanced = operador.displaying("Obradoiro Naval, S.L.", NEWER);
 
@@ -241,7 +287,7 @@ class OperadorEconomicoTest {
         new OperadorEconomico(
             null,
             FISCAL_ID,
-            "Obradoiro Naval",
+            "Obradoiro Naval", false,
             RANK,
             Set.of(new NomeAlternativo(null, "Obradoiro Naval, S.L.", OLDER)));
 
@@ -258,7 +304,7 @@ class OperadorEconomicoTest {
   void an_operador_displayed_under_another_name_is_still_the_same_operador() {
     OperadorId id = new OperadorId(UUID.randomUUID());
     OperadorEconomico before =
-        new OperadorEconomico(id, FISCAL_ID, "Obradoiro Naval", RANK, Set.of());
+        new OperadorEconomico(id, FISCAL_ID, "Obradoiro Naval", false, RANK, Set.of());
     OperadorEconomico after = before.displaying("Obradoiro Naval, S.L.", NEWER);
 
     assertThat(before).isEqualTo(after);
@@ -269,10 +315,10 @@ class OperadorEconomicoTest {
   void operadores_under_different_ids_are_different_operadores_whatever_their_fiscal_identifier() {
     OperadorEconomico one =
         new OperadorEconomico(
-            new OperadorId(UUID.randomUUID()), FISCAL_ID, "Obradoiro Naval", RANK, Set.of());
+            new OperadorId(UUID.randomUUID()), FISCAL_ID, "Obradoiro Naval", false, RANK, Set.of());
     OperadorEconomico other =
         new OperadorEconomico(
-            new OperadorId(UUID.randomUUID()), FISCAL_ID, "Obradoiro Naval", RANK, Set.of());
+            new OperadorId(UUID.randomUUID()), FISCAL_ID, "Obradoiro Naval", false, RANK, Set.of());
 
     assertThat(one).isNotEqualTo(other);
   }
@@ -293,7 +339,7 @@ class OperadorEconomicoTest {
     OperadorEconomico uncatalogued = new OperadorEconomico(FISCAL_ID, "Obradoiro Naval", RANK);
     OperadorEconomico catalogued =
         new OperadorEconomico(
-            new OperadorId(UUID.randomUUID()), FISCAL_ID, "Obradoiro Naval", RANK, Set.of());
+            new OperadorId(UUID.randomUUID()), FISCAL_ID, "Obradoiro Naval", false, RANK, Set.of());
 
     assertThat(uncatalogued).isNotEqualTo(catalogued);
     assertThat(catalogued).isNotEqualTo(uncatalogued);

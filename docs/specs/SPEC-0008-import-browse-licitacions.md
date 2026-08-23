@@ -27,11 +27,12 @@ What it adds is everything that follows from a procedure being competitive:
   and who competed and lost — is information the contratos menores family cannot produce at
   all.
 - **A bidder or an awardee may be a UTE** (*unión temporal de empresas*): a temporary
-  consortium published together with the fiscal identifier and name of **each member firm**. Its
-  membership is stored, so *what has this firm been part of* is answerable. A UTE **has** a fiscal
-  identifier of its own, and where the source publishes it the UTE is an operador económico in its
-  own right; the source usually does not, so R17 records the consortium on the bid it made
-  instead. Either way the award belongs to it and to no member.
+  consortium published together with the fiscal identifier and name of **each member firm**. A UTE
+  is an **operador económico in its own right**, and its membership relates it to each member —
+  so *what has this firm been part of* and *who was this consortium made of* are the same fact
+  read from two ends. A UTE **has** a fiscal identifier of its own; the source usually does not
+  publish it, and a UTE it declines to identify is catalogued per bid instead (R17). Either way
+  the award belongs to the UTE and to no member.
 - **A licitación is worth opening.** Where a contrato menor's row is the whole record
   (SPEC-0005 R16), a licitación carries a procedure type, a classification, budget and
   estimated value, lotes, bidders, an award and a formalisation — so it has a page of its
@@ -156,9 +157,9 @@ Deliberately **out of scope**, each owned elsewhere or left to a later increment
 - **Operadores económicos** — the catalogue, identity and matching rules, how a user finds
   one, and the cross-Órgano history — belong to
   [SPEC-0006](SPEC-0006-operadores-economicos.md). This spec supplies what that catalogue is
-  derived from, and R18 states exactly what it owes it. **UTE membership is the one thing
-  this spec adds to that catalogue's shape**, and R17 states it here because this is the only
-  family that publishes it.
+  derived from, and R18 states exactly what it owes it. **UTE membership — and with it the fact
+  that an operador is a UTE — is what this spec adds to that catalogue's shape**, and R17 states
+  it here because this is the only family that publishes it.
 - **Documents, mesas de contratación, the event history, appeals and annulment
   proceedings.** All are published on the procedure page and none is imported. They roughly
   double the record and the parsing surface, and none is needed to answer *who was awarded
@@ -195,12 +196,14 @@ claims an acceptance criterion whose surface another spec still contradicts:
   **A second round of amendments followed**, once the source was measured against rather than
   assumed, and they are named on the same principle. In SPEC-0006: **R5** treats a published
   placeholder — a lone dash, a `TEMP-…` value — as unusable, so it cannot become an identity;
-  **R16** and **#40** admit a membership whose consortium the source did not identify, and **R9**
-  notes that such a consortium has no totals of its own; and **R3** admits a contract attaching to
-  an operador whose identifier it did not publish, where its family bounds the derivation. In this
-  spec: **R8**, **#9** and **#10** admit a classification the source does not put on a lote;
-  **R16**, **R17**, **R18** and **#20**–**#24** admit the unidentified consortium; and **R18**,
-  **R33** and a new **#46** settle how an awardee's identifier is reached.
+  **R3** admits a second identity, for the one party the source names and structures while
+  declining to identify it — a UTE, catalogued per bid — and **R6**, **R8**, **R9**, **R16**,
+  **#10**, **#17** and **#40** follow it through the catalogue's surfaces; and **R3** also admits
+  a contract attaching to an operador whose identifier it did not publish, where its family bounds
+  the derivation. In this spec: **R8**, **#9** and **#10** admit a classification the source does
+  not put on a lote; **R16**, **R17**, **R18**, **R21** and **#20**–**#24** make the unidentified
+  consortium an operador like any other; and **R18**, **R33** and a new **#46** settle how an
+  awardee's identifier is reached.
 
   Criteria #20, #21 and #24 below are consequently **stated here and proved there**, on the
   device [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) uses for the same situation:
@@ -223,17 +226,19 @@ Five decisions are **settled** by this spec and stated here so no feature reopen
    per lote — was rejected because it makes an Órgano's count mean something other than
    *procedures* and repeats a procedure across a list a reader is scanning, and it would do so
    to accommodate a minority of procedures.
-2. **A UTE's members are operadores, the UTE is one where the source identifies it, and the
-   award belongs to the UTE alone either way** (R17). A member's history shows the award as won
-   *through* the UTE and excludes it from that member's own totals. Attributing it to every
-   member as well was rejected: the same euro would be counted once per member and every
-   cross-operador total would overstate real spending.
+2. **A UTE and its members are all operadores, and the award belongs to the UTE alone** (R17).
+   Membership relates one catalogue entry to another, so it reads in both directions. A member's
+   history shows the award as won *through* the UTE and excludes it from that member's own
+   totals. Attributing it to every member as well was rejected: the same euro would be counted
+   once per member and every cross-operador total would overstate real spending.
 
-   **The identified/unidentified split is the source's doing, not a design choice.** It publishes
-   a fiscal identifier for 2 of every 35 consortia, so the catalogue can hold only those; the rest
-   are recorded on the bid they made, under their published name and with their membership. The
-   no-double-counting property above holds under both, which is what makes the split acceptable
-   rather than a compromise.
+   **What the source's reticence costs is continuity, not the catalogue entry.** It publishes a
+   fiscal identifier for 2 of every 35 consortia; the rest are catalogued **per bid**, holding
+   none. So every UTE has a page, its members and its own totals, and what is given up is only
+   the claim that two bids by a similarly-named consortium are one party — a claim no published
+   fact supports and SPEC-0006 R5 forbids inventing. Recording it on the bid instead was
+   rejected: it left the consortium with no page, no totals and a name no operador could carry,
+   and split every consumer of this family into two branches.
 3. **Losing bidders are shown, and kept away from the money** (R18). Participation appears in
    an operador's history in a section of its own, and never in any awarded total.
 4. **Open procedures are imported and shown**, marked by their state (R25). The system is
@@ -476,37 +481,39 @@ One decision remains outside this spec:
   **A consortium is the one party this rule does not remove**, because the source names it,
   structures it and lists its members while publishing no identifier for it in 94% of cases. A
   party the source declines to identify is not the same as a party it does not publish: the
-  first has nothing to catalogue, the second has nothing at all. So an unidentified consortium
-  **is recorded as a participant** — under its published name, with its membership — and R17
-  states what that record holds. Removing it would discard the competitive information this
-  spec exists to expose, on 33 of every 35 consortia.
+  first has a name, a bid and a membership list, the second has nothing at all. So an
+  unidentified consortium **is catalogued as an operador** under
+  [SPEC-0006](SPEC-0006-operadores-economicos.md) R3's second identity — one entry per bid,
+  holding no fiscal identifier — and R17 states what that record holds. Removing it would
+  discard the competitive information this spec exists to expose, on 33 of every 35 consortia.
 
   This is information the contratos menores family cannot produce at all, and it is the reason
   this spec touches SPEC-0006's shape rather than merely feeding it.
 - **R17** — **A UTE is an operador in its own right, and its membership is stored.** Where the
   source publishes a bidder or awardee as a *unión temporal de empresas*, the system stores:
 
-  - the **UTE itself** as an operador **where the source publishes a fiscal identifier for
-    it — anywhere on the procedure**, under SPEC-0006 R3, and **as a named consortium on the bid
-    it made** where it does not. *Anywhere* is load-bearing: the bidder list and the formalisation
-    are both places one may appear, and a consortium identified by either is the same consortium.
-    A procedure must not hold it twice — catalogued on its award and uncatalogued on its bid — or
-    the operador would hold an award and no members, which is what SPEC-0006 #40 forbids. Both are records of the same fact; they differ only in whether the catalogue can hold
-    one, and the source settles that, not the system;
+  - the **UTE itself** as an operador, always. Where the source publishes a fiscal identifier
+    for it — **anywhere on the procedure** — it is catalogued under that identifier, and is the
+    same operador on every other procedure naming it. *Anywhere* is load-bearing: the bidder list
+    and the formalisation are both places one may appear, and a consortium identified by either
+    is the same consortium, so **the identifier is resolved before the operador is created**. A
+    procedure must not hold it twice — catalogued on its award and separately on its bid — or the
+    operador would hold an award and no members, which is what SPEC-0006 #40 forbids. Where the
+    source publishes no identifier anywhere on the procedure, the UTE is catalogued **under the
+    bid it made**, holding none, per SPEC-0006 R3;
   - **each member firm** as an operador, identified by its own published fiscal identifier —
     and a member whose identifier is unusable yields no operador and no membership, under
     R16's rule, without costing the UTE or its other members anything;
-  - the **membership** between them, so a UTE states who its members are and a member states
-    which UTEs it has been part of.
+  - the **membership** between them — a relation between two operadores — so a UTE states who
+    its members are and a member states which UTEs it has been part of.
 
-  **A consortium the source does not identify is still recorded in full.** It cannot be
-  catalogued as an operador — SPEC-0006 R3 makes the fiscal identifier the identity and R5
-  rightly forbids inventing one — so what holds it is the **bid itself**: the consortium's
-  published name, the fact that the bidder was a consortium, and each membership. Its members
-  are operadores either way, since they publish ordinary identifiers, so *what has this firm
-  been part of* stays answerable from the member's end. What is not answerable is the reverse:
-  an unidentified consortium has no catalogue entry to open, and its members are named on the
-  licitación that published it rather than on a page of its own.
+  **A consortium the source does not identify is recorded exactly as one it does.** The two
+  differ in one thing only: whether the catalogue entry holds a fiscal identifier. Both have a
+  page, both state their members, both hold their own awards and totals, and a member reaches
+  either from its own history. What the unidentified case gives up is **continuity across
+  procedures** — two bids by what a reader would call the same consortium are two entries,
+  because no published fact says they are one and SPEC-0006 R5 forbids inventing the identifier
+  that would.
 
   A UTE's identifier, where there is one, is recognisable by its form — in Spain it begins with
   `U`. That is a fact about how the identifier reads and **not a test the system identifies
@@ -514,13 +521,10 @@ One decision remains outside this spec:
   are published under a name that does not begin *UTE* either. The paragraph below says what the
   system actually relies on.
 
-  **The award belongs to the UTE alone**, catalogued or not. A licitación awarded to a UTE is
-  one award, held by the UTE where it is an operador and naming the consortium where it is not —
-  and in **neither case** does it enter a member's totals. That property does not depend on the
-  UTE being catalogued, which is what makes the two records above equivalent where it matters:
-  no euro is counted twice under either. Where the consortium is uncatalogued there is simply no
-  total of its own for the award to appear in, and a member's history shows it as won *through*
-  that consortium exactly as it would otherwise.
+  **The award belongs to the UTE alone.** A licitación awarded to a UTE is one award, held by
+  the UTE's own operador, and it enters **no member's** totals — it is counted once, in the UTE's
+  own history, whether or not the source identified it. A member's history shows it as won
+  *through* that consortium, named and reachable, and excluded from that member's arithmetic.
 
   The same holds for participation (R18): a bid submitted by a UTE is the UTE's bid, visible
   from each member as *through* it, and counted as no member's own.
@@ -583,9 +587,9 @@ One decision remains outside this spec:
     **The name is supplied, not stored on the contract**: as in SPEC-0005 R7 it is held once on
     the operador the identifier resolves to, so what any row shows is the name SPEC-0006 R4
     selects and every published spelling feeds that spec's retained names (R15). This family
-    stores **one** per-row name and no other: the published name of a **consortium the source
-    does not identify** (R17), which has no operador to hold it and would otherwise appear as a
-    bidder that is nobody. Every other party is named through its operador, which is why R16's
+    stores **no per-row name at all**, including for a consortium the source does not identify —
+    that party is an operador too (R17), so its published name is held where every other party's
+    is. Every party is named through its operador, which is why R16's
     unusable identifier leaves it with nothing to display rather than a name without a link;
   - **a comparable date** — the licitación's **publication date**, which every licitación has
     from the day it appears, including one never awarded. The award date is published too and
@@ -652,10 +656,10 @@ One decision remains outside this spec:
   scoped to one.
 
   **A row names its awardee only when it has exactly one** — which a procedure with no lotes
-  does once it is awarded, as does one whose lotes all went to the same operador. An awardee the
-  system holds but has not catalogued — an unidentified consortium (R17) — **is named and offers
-  no route**, since the name is published and there is no operador page to reach; that is a named
-  party without a link, not a link that dead-ends, and the two are different things. Where a
+  does once it is awarded, as does one whose lotes all went to the same operador. An awardee that
+  is a consortium the source did not identify (R17) is named and **offers a route like any
+  other**, since it is catalogued as an operador; what it lacks is a fiscal identifier to show
+  beside its name, not a page to open. Where a
   procedure's lotes were awarded to more than one, the row states **how many** rather than
   picking one of them, and R21's page is where they are named. A row that names an awardee is a route to that operador under SPEC-0006 R8; a row that
   states a count is a route to the procedure, which is where the routes then are. Nothing here
@@ -677,15 +681,13 @@ One decision remains outside this spec:
   bidder distinguished from the rest. The page states which bidders belong to which lote wherever
   the procedure has them, and links to the publication at the official source.
 
-  **How a party is named depends on what the system could catalogue**, and the page shows all
-  three cases rather than only the ordinary one:
+  **Every party the system could catalogue is named through its operador**, and the page shows
+  the two cases that remain:
 
-  - an operador — the usual case, and a **UTE the source identified** — is named under the name
-    SPEC-0006 R4 selects and that operador's canonical fiscal identifier, and is a **route** to
-    it, since R18 holds no per-row name for any party the catalogue can hold;
-  - a **consortium the source did not identify** (R17) is named under its **published** name, the
-    one per-row name R18 admits, shows its member firms — each of them a route — and offers no
-    route of its own, having no operador page to reach;
+  - an operador — the usual case, a **UTE the source identified**, and a **consortium it did
+    not** (R17) — is named under the name SPEC-0006 R4 selects and, where it holds one, that
+    operador's canonical fiscal identifier, and is a **route** to it. A UTE additionally shows
+    its member firms, each of them a route of its own;
   - a party whose identifier is **unusable** (R16) is not shown as a party at all.
 
   This is where this family departs from contratos menores, which deliberately have no detail
@@ -993,25 +995,26 @@ One decision remains outside this spec:
     nor awardee, every other party on the same procedure is unaffected, and where the
     unresolvable party was the awardee the licitación shows an award naming nobody — offering
     no route that dead-ends. **A consortium the source does not identify is not such a party**:
-    it is recorded as a participant under its published name, with its membership, per R17.
-21. **(R17)** A licitación whose bidder is a UTE **the source identifies** stores the UTE as an
-    operador under its own fiscal identifier, each member firm as an operador under its own, and
-    the membership between them; opening the UTE names its members and opening a member names
-    the UTEs it has belonged to. One whose UTE the source **does not** identify — the ordinary
-    case — stores the consortium on the bid it made, under its published name and with the same
-    membership, and each member firm as an operador; opening a member still names it, while the
-    consortium itself has no page to open and is named on the licitación instead. In both cases
-    a member whose own identifier is unusable yields no operador and no membership, and the
-    consortium and its other members are unaffected.
+    it is catalogued as an operador holding no fiscal identifier, with its membership, per R17.
+21. **(R17)** A licitación whose bidder is a UTE stores the UTE as an **operador**, each member
+    firm as an operador under its own fiscal identifier, and the membership between them;
+    opening the UTE names its members and opening a member names the UTEs it has belonged to.
+    Where the source identifies the UTE — anywhere on the procedure, bidder row or formalisation
+    — that operador holds its published fiscal identifier and a second procedure naming it
+    resolves to the **same** operador. Where it does not — the ordinary case — the operador holds
+    none, is found by name rather than by identifier lookup, and a second bid by a consortium
+    published under the same name is a **separate** operador. In both cases a member whose own
+    identifier is unusable yields no operador and no membership, and the consortium and its
+    other members are unaffected.
     > **Stated here, proved in [SPEC-0006](SPEC-0006-operadores-economicos.md).** The surfaces
     > this criterion describes are that spec's, and it cannot host them until the amendments
     > Scope names have landed. A feature under this spec owes the import and storage half.
 22. **(R17)** A licitación **awarded** to a UTE counts as one award to that UTE and to no
-    member: **no member's awarded total includes it**, and each member's history shows it
-    identified as won through that consortium. Where the source identifies the UTE, the award
-    also appears in the UTE's own awarded total; where it does not, there is no such total and
-    the award is named on the licitación — the no-double-counting property holds either way, and
-    it is the property this criterion exists to test. *(Stated here, proved in SPEC-0006.)*
+    member: **no member's awarded total includes it**, the award appears in the **UTE's own**
+    awarded total, and each member's history shows it identified as won through that consortium.
+    That holds whether or not the source identified the UTE, since it is catalogued either way —
+    the euro is counted exactly once, which is the property this criterion exists to test.
+    *(Stated here, proved in SPEC-0006.)*
 23. **(R18)** An operador awarded a procedure with **no lotes** holds exactly **one** row in
     its contract history, identified by that procedure's publication identifier alone; one
     awarded **two of a procedure's five lotes** holds **two**, each carrying that lote's own
@@ -1019,9 +1022,9 @@ One decision remains outside this spec:
     amount another operador was awarded.
 24. **(R18)** A licitación appears in its awardee's history in a *licitacións* section carrying
     its **awarded amount** — never its base budget or estimated value — and every party named on
-    any row is named under the name SPEC-0006 R4 selects for that operador. This family holds no
-    per-row name for any party the catalogue can hold; its **one** exception is the published
-    name of a consortium the source does not identify (R17), which no operador can carry.
+    any row is named under the name SPEC-0006 R4 selects for that operador. This family holds
+    **no per-row name at all**, for any party — including a consortium the source does not
+    identify, whose published name is held on the operador it is catalogued as (R17).
 25. **(R18)** An operador that bid for a licitación and did not win it sees that licitación in
     a **participation** section of its history, separate from its awards, carrying no amount,
     and included in no awarded total. An operador that won one lote and lost another of the

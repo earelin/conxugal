@@ -6,13 +6,14 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * A stored participation's identity. Its own type so it cannot be passed where a lote's or the
- * procedure's identifier is expected — a participation carries all three, and a
- * {@link UteMembership} is filed under this one alone.
+ * A stored participation's identity. Its own type so it cannot be passed where a lote's, the
+ * procedure's or an operador's identifier is expected — a participation carries all three beside
+ * this one.
  *
- * <p>It is what makes a consortium's membership expressible whether or not the source identified
- * the consortium: the membership hangs off the bid that was made, never off a UTE operador that
- * may not exist. {@code toString} is the bare UUID because messages interpolate the id directly.
+ * <p>Nothing else is filed under it. UTE membership relates two operadores and lives in
+ * {@code gal.conxugal.domain.operador}, so a bid is referred to by nothing and this identity
+ * serves the row alone. {@code toString} is the bare UUID because messages interpolate the id
+ * directly.
  */
 @TypeDef(type = DataType.UUID, converter = ParticipationIdConverter.class)
 public record ParticipationId(UUID value) {

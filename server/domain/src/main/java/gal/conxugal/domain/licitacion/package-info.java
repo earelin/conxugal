@@ -40,8 +40,9 @@
  * <p>An award records
  * {@link gal.conxugal.domain.licitacion.AwardeeResolutionPath how its operador was reached}, a
  * totally ordered vocabulary so a published identifier is known to supersede a derived one. A
- * {@link gal.conxugal.domain.licitacion.UteMembership} hangs off the participation rather than off
- * a UTE operador, so an identified and an unidentified consortium store the same rows. And
+ * participation names its party by reference and holds no name of its own — a consortium is an
+ * operador like any other bidder, so UTE membership relates two catalogue entries and lives in
+ * {@link gal.conxugal.domain.operador} rather than here. And
  * {@link gal.conxugal.domain.licitacion.LoteKey} is the one reduction every lote cell passes
  * through before anything is compared against it — the four tables that carry a lote column do not
  * spell one the same way.

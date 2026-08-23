@@ -578,7 +578,7 @@ class JdbcVisibleContratoMenorRepositoryIntegrationTest implements TestPropertyP
         return new OperadorEconomico(
             new OperadorId(resultSet.getObject("id", UUID.class)),
             canonical,
-            OPERADOR_NAME,
+            OPERADOR_NAME, false,
             new NomeRank(PUBLISHED_ON, 4711L),
             Set.of());
       }

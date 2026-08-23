@@ -30,8 +30,8 @@ import org.jspecify.annotations.Nullable;
  * same {@code organo_contratacion} insert and the same insert-returning-id plumbing, differing in a
  * commit.
  *
- * <p>Every statement is written out rather than assembled, including the three that exist only to
- * be refused: a helper taking SQL from its caller would put an unbounded statement behind a
+ * <p>Every statement is written out rather than assembled, including the several that exist only
+ * to be refused: a helper taking SQL from its caller would put an unbounded statement behind a
  * package-private door, and this is a fixture rather than a query API.
  */
 final class SchemaFixture {
@@ -61,12 +61,15 @@ final class SchemaFixture {
 
   /** An operador for an award to name, typed, for the tests that hand it to an adapter. */
   OperadorId operador(String fiscalId, String name) throws SQLException {
-    return new OperadorId(
-        insertReturningId(
-            "INSERT INTO operador_economico (id, fiscal_id, name, name_rank_source_id)"
-                + " VALUES (uuidv7(), ?, ?, 4711) RETURNING id",
-            fiscalId,
-            name));
+    return new OperadorId(insertOperadorEconomico(fiscalId, name));
+  }
+
+  /**
+   * A consortium the source declined to identify, typed. It is an operador like any other party —
+   * the point of amendment 1 — and holds no fiscal identifier to be found again by.
+   */
+  OperadorId unidentifiedUte(String name) throws SQLException {
+    return new OperadorId(insertUnidentifiedUte(name));
   }
 
   /**
@@ -86,6 +89,14 @@ final class SchemaFixture {
             + " VALUES (uuidv7(), ?, ?, TRUE) RETURNING id",
         sourceKey,
         sourceKey);
+  }
+
+  UUID insertOperadorEconomico(String fiscalId, String name) throws SQLException {
+    return insertReturningId(
+        "INSERT INTO operador_economico (id, fiscal_id, name, name_rank_source_id)"
+            + " VALUES (uuidv7(), ?, ?, 4711) RETURNING id",
+        fiscalId,
+        name);
   }
 
   UUID insertState(int code, String label) throws SQLException {
@@ -185,18 +196,45 @@ final class SchemaFixture {
         nutId);
   }
 
+  UUID insertParticipation(UUID licitacionId, UUID loteId, UUID operadorId) throws SQLException {
+    return insertReturningId(
+        "INSERT INTO licitacion_participation (licitacion_id, lote_id, operador_economico_id)"
+            + " VALUES (?, ?, ?) RETURNING id",
+        licitacionId,
+        loteId,
+        operadorId);
+  }
+
+  /** The 33-of-35 case: a consortium catalogued under its bid, holding no fiscal identifier. */
+  UUID insertUnidentifiedUte(String name) throws SQLException {
+    return insertReturningId(
+        "INSERT INTO operador_economico (id, fiscal_id, name, ute, name_rank_source_id)"
+            + " VALUES (uuidv7(), NULL, ?, TRUE, 4711) RETURNING id",
+        name);
+  }
+
+  /**
+   * A member firm of a consortium that bid. No {@code RETURNING id}: the table holds no such
+   * column, the pair being its whole identity, so this answers nothing.
+   */
+  void insertUteMembership(UUID uteId, UUID operadorId) throws SQLException {
+    executeUpdate(
+        "INSERT INTO operador_ute_membership (ute_id, operador_economico_id) VALUES (?, ?)",
+        uteId,
+        operadorId);
+  }
+
+  /** Nothing but a consortium is catalogued without one, so this exists to be refused. */
+  UUID insertOperadorWithoutFiscalId(String name) throws SQLException {
+    return insertReturningId(
+        "INSERT INTO operador_economico (id, fiscal_id, name, name_rank_source_id)"
+            + " VALUES (uuidv7(), NULL, ?, 4711) RETURNING id",
+        name);
+  }
+
   /** Nothing an import does deletes a published value, so this exists to be refused. */
   void deleteState(UUID stateId) throws SQLException {
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement statement =
-            connection.prepareStatement("DELETE FROM licitacion_state WHERE id = ?")) {
-      statement.setObject(1, stateId);
-      statement.executeUpdate();
-      commit(connection);
-    } catch (SQLException e) {
-      rollbackQuietly(e);
-      throw e;
-    }
+    executeUpdate("DELETE FROM licitacion_state WHERE id = ?", stateId);
   }
 
   void insertLicitacionImportState(

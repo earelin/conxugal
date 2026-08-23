@@ -48,10 +48,12 @@ the tables and not in the types.
   contents instead, the corrected row would compare unequal to the row it corrects.
 
   **`UteMembership` is the one child that takes none**, and that is not an omission: TASK-0006
-  gives it no `id` and a key of `(participation_id, operador_economico_id)`, both non-null, so the
+  gives it no `id` and a key of `(ute_id, operador_economico_id)`, both non-null, so the
   pair is what the table keys on. `EntityIdentityArchTest` then requires it **not** to override
   `equals`/`hashCode` — it is a value filed under its owner, on `NomeAlternativo`'s shape, and the
-  record's own equality is the one it gets.
+  record's own equality is the one it gets. *(The key was `(participation_id,
+  operador_economico_id)` as first shipped; amendment 1 moved both ends onto the catalogue, and the
+  reasoning here is unchanged because both are still another aggregate's identifier.)*
 
   **One consequence is named rather than left to be discovered**: that equality is the *triple*, so
   two readings of one row either side of a withdrawal compare unequal, and a caller collecting
@@ -140,23 +142,25 @@ the tables and not in the types.
   publications that can disagree and [TASK-0012](TASK-0012-resolve-the-awardee.md) has a rule for
   when they do.
 - **`Participation`** — its `LicitacionId`, a nullable `LoteId`, a nullable operador reference, a
-  marker for **whether it won**, a **consortium marker**, a **published consortium name** and a
-  withdrawal marker.
+  marker for **whether it won**, and a withdrawal marker.
 
-  The consortium name is **R18's one exception**, and it is exactly one field on exactly one row
-  type. R18 holds that this family stores no name of its own because a name belongs on the operador
-  an identifier resolves to; an unidentified consortium has no such operador, so the alternative to
-  storing its published name is losing it. This is **amendment 1**.
+  > **Superseded, and the code with it.** This task shipped a `Participation` carrying a
+  > **consortium marker** and a **published consortium name**, plus a constructor refusal
+  > mirroring a `CHECK` on the column — R18's one exception under the first reading of amendment 1.
+  > Amendment 1 has since been restated: a UTE is an **operador económico**, so a consortium's
+  > published name lives on its operador like every other party's and this family stores no
+  > per-row name at all.
+  > [TASK-0006](TASK-0006-licitacions-store-the-competition-tables.md) removes both components,
+  > the refusal and the `CHECK`.
+- **`UteMembership`** — one UTE operador, one member operador and a withdrawal marker.
 
-  **The record refuses the name where the catalogue could have held the party**, mirroring the
-  `CHECK` [TASK-0006](TASK-0006-licitacions-store-the-competition-tables.md) puts on the column. The
-  constraint stays in the migration — it is the guarantee — but a parse defect then fails where the
-  mistake is rather than at the insert, where under this feature's rules it would send the whole
-  procedure to the outstanding ledger. The refusal is one-directional exactly as the `CHECK` is, so
-  a consortium the source published no name for is accepted.
-- **`UteMembership`** — a `ParticipationId`, one member operador and a withdrawal marker. **Hung off
-  the participation**, never off a UTE operador, so one shape serves an identified and an
-  unidentified consortium alike, and a membership's visibility can follow its participation's.
+  > **Superseded, and the code with it.** This task shipped a `UteMembership` keyed on a
+  > `ParticipationId` and one member operador — hung off the bid, so that one shape served an
+  > identified and an unidentified consortium alike. Under amendment 1 as restated **both ends are
+  > operadores**, which is what lets the relation read in both directions rather than only from the
+  > member's end. TASK-0006 re-keys it and moves it beside `OperadorRepository`, both of its ends
+  > being catalogue entries. The equality reasoning below is unaffected: both components are still
+  > another aggregate's identifier, so the record must still not override `equals`/`hashCode`.
 - **The shared lote normaliser**, measured over 240 procedures and recorded in
   [`design/source-contract.md`](design/source-contract.md):
 
@@ -217,11 +221,12 @@ the problem.
   a convention a caller applies: comparing any two answers which supersedes. (SPEC-0008 #46)
 - An award with no operador constructs — R16 and R25 make an award that names nobody a supported
   outcome, not a failure. (SPEC-0008 #20)
-- A participation constructs in all four shapes: single firm with an operador, single firm without
-  one, consortium with an operador, and consortium with a published name and no operador.
+- A participation constructs both with an operador and without one. *(Restated by TASK-0006: the
+  four shapes this criterion named collapsed to two when the consortium became an operador.)*
   (SPEC-0008 #21 as amended)
-- A `UteMembership` references its **participation**, not an operador-to-operador pair, so an
-  unidentified consortium's membership is expressible. (SPEC-0008 #21 as amended)
+- A `UteMembership` relates **one operador to another**, so an unidentified consortium's membership
+  is expressible and reads from either end. *(Restated by TASK-0006, which re-keys it off the
+  participation.)* (SPEC-0008 #21 as amended)
 - The lote normaliser maps `_`, `-`, the empty string and a blank string to the same
   procedure-as-a-whole value; maps `01`, `1` and ` 1 ` to the same lote; and leaves `OU0028`
   intact. Unit-tested over **every spelling the four tables were measured to produce**.
