@@ -109,7 +109,56 @@ class JdbcOperadorRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(found.id()).isEqualTo(inserted.id());
     assertThat(found.fiscalId()).isEqualTo(new FiscalIdentifier("B12345678"));
     assertThat(found.name()).isEqualTo("Servizos Galegos SL");
+    assertThat(found.ute()).isFalse();
     assertThat(found.nameRank()).isEqualTo(new NomeRank(PUBLISHED_ON, 4711L));
+  }
+
+  // The marker has to survive the round trip, and nothing else asserts that it does: the record
+  // carries a constructor of the arity the aggregate had before it gained the marker, so a mapping
+  // that bound the wrong one would answer false for every operador and stay invisible.
+  @Test
+  void consortium_the_source_identifies_reads_back_carrying_its_marker() {
+    OperadorEconomico inserted =
+        operadorRepository.insert(
+            OperadorEconomico.identifiedUte(
+                new FiscalIdentifier("U88779475"), "UTE Ponte", new NomeRank(PUBLISHED_ON, 4711L)));
+
+    OperadorEconomico found =
+        operadorRepository.findByFiscalId(new FiscalIdentifier("U88779475")).orElseThrow();
+
+    assertThat(found.id()).isEqualTo(inserted.id());
+    assertThat(found.ute()).isTrue();
+    assertThat(found.fiscalId()).isEqualTo(new FiscalIdentifier("U88779475"));
+  }
+
+  // The 33-of-35 case, stored through the adapter rather than by raw SQL: the row lands with the
+  // marker set and the identifier absent, and no lookup can ever reach it again.
+  @Test
+  void consortium_the_source_declines_to_identify_stores_with_no_identifier() {
+    operadorRepository.insert(
+        OperadorEconomico.unidentifiedUte(
+            "UTE PRACE-TABOADA RAMOS", new NomeRank(PUBLISHED_ON, 4711L)));
+
+    assertThat(operadorTable()).hasNumberOfRows(1);
+    assertThat(operadorTable())
+        .row(0)
+            .value("fiscal_id").isNull()
+            .value("ute").isTrue()
+            .value("name").isEqualTo("UTE PRACE-TABOADA RAMOS");
+  }
+
+  // The two coexist: an identifier-less consortium collides with neither the other of its kind nor
+  // any catalogued firm, which is what leaving the UNIQUE nulls-distinct is for.
+  @Test
+  void identifier_less_consortium_sits_beside_catalogued_firm_without_colliding() {
+    insertOperador("B12345678", "Servizos Galegos SL", PUBLISHED_ON);
+    operadorRepository.insert(
+        OperadorEconomico.unidentifiedUte("UTE PRACE", new NomeRank(PUBLISHED_ON, 4712L)));
+    operadorRepository.insert(
+        OperadorEconomico.unidentifiedUte("UTE Ría", new NomeRank(PUBLISHED_ON, 4713L)));
+
+    assertThat(operadorTable()).hasNumberOfRows(3);
+    assertThat(operadorRepository.findByFiscalId(new FiscalIdentifier("B12345678"))).isPresent();
   }
 
   @Test

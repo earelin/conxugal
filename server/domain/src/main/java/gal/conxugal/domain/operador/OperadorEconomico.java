@@ -21,6 +21,15 @@ import org.jspecify.annotations.Nullable;
  * published case is retained nowhere. Whether an award yields an operador at all is asked of that
  * type before one is built, not of this record.
  *
+ * <p><strong>It is null for one party and one only: a UTE the source declines to identify.</strong>
+ * A <em>unión temporal de empresas</em> is named, structured and listed the members of while
+ * carrying no identifier of its own on 33 of 35 measured rows, and it is catalogued under the bid
+ * that published it instead. A null here is therefore <em>this party has no published
+ * identifier</em>, never <em>the identifier was unusable</em> — that case yields no operador at
+ * all, and never one holding a placeholder. Because such a row is matched on nothing, it can
+ * neither absorb another party's contract nor be re-partitioned once written; the price is that
+ * two bids by what a reader would call one consortium are two operadores.
+ *
  * <p>The {@code name}, by contrast, is exactly as the winning contract published it. Nothing
  * folds a name and nothing preserves an identifier's published case; the asymmetry is the point.
  *
@@ -29,20 +38,28 @@ import org.jspecify.annotations.Nullable;
  * {@code nomesAlternativos} holds every <em>other</em> name the operador's contracts have
  * published — never the principal one, so promoting a name moves it between the two.
  *
- * <p>Nothing recorded here says whether the awardee is a natural person or a legal entity.
+ * <p>{@code ute} is the one kind this record carries. Nothing here says whether the awardee is a
+ * natural person or a legal entity — that would have to be derived from the shape of an
+ * identifier — while being a consortium is something the source publishes structurally, and a
+ * fact about a group of firms rather than about a person.
  */
 @MappedEntity("operador_economico")
 public record OperadorEconomico(
     @Id @GeneratedValue @Nullable OperadorId id,
-    FiscalIdentifier fiscalId,
+    @Nullable FiscalIdentifier fiscalId,
     String name,
+    boolean ute,
     @Relation(Relation.Kind.EMBEDDED) @MappedProperty("name_rank") NomeRank nameRank,
     @Relation(value = Relation.Kind.ONE_TO_MANY, mappedBy = "operadorEconomicoId")
         Set<NomeAlternativo> nomesAlternativos) {
 
   public OperadorEconomico {
-    Objects.requireNonNull(fiscalId, "fiscalId must not be null");
     Objects.requireNonNull(name, "name must not be null");
+    if (fiscalId == null && !ute) {
+      throw new IllegalArgumentException(
+          "only a UTE the source declines to identify is catalogued without a fiscal identifier: "
+              + name);
+    }
     Objects.requireNonNull(nameRank, "nameRank must not be null");
     Objects.requireNonNull(nomesAlternativos, "nomesAlternativos must not be null");
     nomesAlternativos = Set.copyOf(nomesAlternativos);
@@ -56,7 +73,24 @@ public record OperadorEconomico(
 
   /** An operador no contract has named before: the database assigns its id on insert. */
   public OperadorEconomico(FiscalIdentifier fiscalId, String name, NomeRank nameRank) {
-    this(null, fiscalId, name, nameRank, Set.of());
+    this(null, fiscalId, name, false, nameRank, Set.of());
+  }
+
+  /**
+   * A UTE the source declines to identify, catalogued under the bid that published it. It holds no
+   * fiscal identifier, so nothing will ever find it again by one — which is what keeps it from
+   * absorbing another party's contract, and what makes a second bid by a similarly-named
+   * consortium a second operador rather than this one.
+   */
+  public static OperadorEconomico unidentifiedUte(String name, NomeRank nameRank) {
+    return new OperadorEconomico(null, null, name, true, nameRank, Set.of());
+  }
+
+  /** A UTE the source publishes an identifier for: an ordinary catalogue entry, marked as one. */
+  public static OperadorEconomico identifiedUte(
+      FiscalIdentifier fiscalId, String name, NomeRank nameRank) {
+    Objects.requireNonNull(fiscalId, "fiscalId must not be null");
+    return new OperadorEconomico(null, fiscalId, name, true, nameRank, Set.of());
   }
 
   /**
@@ -71,7 +105,7 @@ public record OperadorEconomico(
    */
   public OperadorEconomico displaying(String newName, NomeRank newRank) {
     if (name.equals(newName)) {
-      return new OperadorEconomico(id, fiscalId, name, newRank, nomesAlternativos);
+      return new OperadorEconomico(id, fiscalId, name, ute, newRank, nomesAlternativos);
     }
     Set<NomeAlternativo> retained = new HashSet<>();
     for (NomeAlternativo alternativo : nomesAlternativos) {
@@ -80,7 +114,7 @@ public record OperadorEconomico(
       }
     }
     retained.add(new NomeAlternativo(id, name, nameRank));
-    return new OperadorEconomico(id, fiscalId, newName, newRank, retained);
+    return new OperadorEconomico(id, fiscalId, newName, ute, newRank, retained);
   }
 
   /**
