@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the `ui/` module of conxugal — see the root `CLAUDE.md` for the repo-wide
 spec-driven workflow (`SPEC → FEAT → TASK`). This module implements
-`docs/specs/SPEC-0001-web-ui.md` via `docs/features/FEAT-0001-ui-application-scaffolding.md`.
+`docs/specs/SPEC-0001-web-ui.md`.
 
 ## Commands
 
@@ -85,7 +85,10 @@ failures before committing changes to this module.
   `src/app/theme.ts`) and `RouterProvider`. History-API routing (not hash) — in
   production the server must serve `index.html` as the SPA fallback for non-API
   paths (owned by the server module, ADR-0003); Vite's dev server does this
-  automatically.
+  automatically. `<ColorSchemeScript defaultColorScheme="auto">` renders ahead of
+  the provider so the stored/system scheme is applied before first paint —
+  without it the app flashes the light palette on every load for a reader whose
+  scheme resolves to dark.
 - **i18n seam** (`src/shared/lib/strings.ts`): all user-facing text (Galician)
   lives in one `strings` object rather than scattered through components, so a
   future i18n feature can lift it into a translation catalogue without
@@ -158,3 +161,5 @@ failures before committing changes to this module.
   helpers (`debounce`, `groupBy`, `chunk`, etc.) instead of hand-rolling them. Import from
   `es-toolkit` itself, never from `es-toolkit/compat` — that subpath only exists to match
   lodash's exact (looser) behaviour for projects migrating off it, which doesn't apply here.
+
+<!-- distilled-from: FEAT-0001 @ 3f17cc0 -->

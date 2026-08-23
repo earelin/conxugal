@@ -60,3 +60,19 @@ Galician, consistent with the project and its data source.
 - **AC6 (R5):** At a 360 px-wide viewport (≈ the smallest common mobile viewport width),
   the shell's primary content has no horizontal scrollbar and navigation remains reachable.
 - **AC7 (R6):** The navigation labels and the not-found message are presented in Galician.
+
+## Implemented by
+
+- **FEAT-0001** — UI application scaffolding (retired 2026-08-23, commit `3f17cc0`)
+  - Decisions: [ADR-0003](../architecture/0003-react-router-ui-served-by-backend.md)
+    (React Router served by the backend),
+    [ADR-0004](../architecture/0004-ui-stack-vite-mantine.md) (Vite build, library-mode
+    SPA, Mantine, npm)
+  - System: [`ui/README.md`](../../ui/README.md) and [`ui/CLAUDE.md`](../../ui/CLAUDE.md)
+    — the `ui/` module's structure, routing, theme, i18n seam and scripts as built
+  - Behaviour: `ui/src/App.test.tsx` covers AC1 (shell with product name and primary
+    navigation) and AC4 (in-shell Galician not-found state)
+  - Production deep-linking (AC2/AC4 outside the dev server) is closed by
+    **FEAT-0003**'s backend SPA history fallback
+
+<!-- distilled-from: FEAT-0001 @ 3f17cc0 -->

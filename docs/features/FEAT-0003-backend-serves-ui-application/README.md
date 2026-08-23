@@ -13,8 +13,8 @@ origin for both the REST API and the built UI, as decided in
 from the backend) and **[ADR-0004](../../architecture/0004-ui-stack-vite-mantine.md)**
 (static-asset build, history routing, backend-owned SPA fallback and asset base path).
 
-`docs/features/FEAT-0001-ui-application-scaffolding.md` built the UI shell and
-explicitly deferred this wiring; without it, **[SPEC-0001](../../specs/SPEC-0001-web-ui.md)**
+The `ui/` module's scaffolding built the UI shell and explicitly deferred this
+wiring; without it, **[SPEC-0001](../../specs/SPEC-0001-web-ui.md)**
 R2/AC2 and R3/AC4 only hold in Vite's dev server, not in a production build.
 
 ## Scope
@@ -28,7 +28,7 @@ R2/AC2 and R3/AC4 only hold in Vite's dev server, not in a production build.
   matching a static asset returns `index.html` (200), so React Router's client-side
   routes deep-link and survive a reload in production (SPEC-0001 AC2, AC4).
 - Confirming/setting Vite's `base` for root-path serving, closing the "asset base path"
-  edge case FEAT-0001 deferred here.
+  edge case the UI scaffolding deferred here.
 
 **Out of scope (separate features):** any actual REST API endpoints or business logic
 behind `/api/`; authentication/authorization for either the API or the SPA shell
