@@ -33,8 +33,9 @@ the domain, the adapter in `infrastructure`
 - **A `LicitacionsClient` declarative client** at
   `/api/v1/organismos/{organismo}/licitaciones/table`, bound to `@Client(id = "contratosdegalicia")`
   and `@ResilientClient` — **the same client id** the contratos menores and Órganos clients bind, so
-  the R31 rate budget is one budget across every family and the catalogue import together, and this
-  feature chooses no rate.
+  all three are configured as one source. The R31 rate budget is one budget across every family and
+  the catalogue import together, enforced by the advice's unqualified policy singletons rather than
+  by the id, and this feature chooses no rate.
 - **The full DataTables payload on every request, ordered or not.** The server resolves the order
   column **by name**, so `order[0][column]` alone answers `500` and only the request carrying every
   `columns[i][name]` answers `200`. The adapter has **no short form** and must not offer one as a
@@ -88,9 +89,12 @@ that ordering "was not made to work" — the feature names that as a follow-up i
   ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #41)
 - A `publicado` or `modificado` that cannot be read as `DD-MM-YYYY` is surfaced as absent and the
   entry is still returned. (SPEC-0008 #44)
-- The client binds `id = "contratosdegalicia"`, so a licitacións walk and a contratos menores import
-  draw on **one** rate budget. *The mechanism for R31; #42's measurement is taken by no task in this
-  feature.*
+- The client binds `id = "contratosdegalicia"`, so it is configured as the same source as the
+  contratos menores and Órganos clients, and a licitacións walk and a contratos menores import draw
+  on **one** R31 rate budget. *The id is not what enforces that budget — the unqualified policy
+  singletons the resilience advice injects are, so a client binding a different id would go on
+  sharing this budget rather than getting one of its own. #42's measurement is taken by no task in
+  this feature.*
 - Integration-tested against a **WireMock** source on the
   `ContratosDeGaliciaContratoMenorSourceAdapterIntegrationTest` precedent — including the
   malformed-body, non-`200` and connection-fault cases — with no database.

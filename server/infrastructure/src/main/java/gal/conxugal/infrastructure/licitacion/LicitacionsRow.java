@@ -22,11 +22,16 @@ import org.jspecify.annotations.Nullable;
  * ever reached a {@link Money}. It is the procedure's base budget, and the entry it becomes says
  * so — the awarded amounts are on the per-procedure record and appear nowhere here.
  *
+ * <p>{@code id} binds as text although every identifier measured is a JSON number, because that is
+ * what {@link PublicationId} is: how the source mints them is the source's business, and one that
+ * started issuing alphanumeric identifiers should cost a parse here rather than fail every page as
+ * an undecodable body. The binding coerces the number it does publish.
+ *
  * <p>{@code draw} and {@code recordsFiltered} are not bound — nothing above the port reads either.
  */
 @Serdeable.Deserializable
 record LicitacionsRow(
-    @Nullable Long id,
+    @Nullable String id,
     @Nullable String publicado,
     @Nullable String modificado,
     @Nullable String objeto,
@@ -59,12 +64,16 @@ record LicitacionsRow(
    * the column is nullable at the source and a real procedure is not refused over a date nobody
    * can use.
    *
-   * @throws LicitacionListingUnavailableException if the row carries no identifier or no state
-   *     code — the two fields nothing downstream can do without, since a procedure is matched on
-   *     the first and cannot be stored without the second
+   * @throws LicitacionListingUnavailableException if the row carries no usable identifier or no
+   *     state code — the two fields nothing downstream can do without, since a procedure is matched
+   *     on the first and cannot be stored without the second. The identifier is judged here rather
+   *     than left to {@link PublicationId}, which refuses a blank one as an
+   *     {@link IllegalArgumentException} — the exception this port reserves for a page we asked
+   *     for wrongly, which a value the source published can never be.
    */
   LicitacionListingEntry toListingEntry() {
-    if (id == null) {
+    String publicationId = published(id);
+    if (publicationId == null) {
       throw new LicitacionListingUnavailableException(
           "Source response is not the documented shape: a row carries no id");
     }
@@ -73,7 +82,7 @@ record LicitacionsRow(
           "Source response is not the documented shape: a row carries no estado");
     }
     return new LicitacionListingEntry(
-        new PublicationId(String.valueOf(id)),
+        new PublicationId(publicationId),
         publishedDate(publicado),
         publishedDate(modificado),
         published(objeto),

@@ -21,19 +21,25 @@ import io.micronaut.http.client.annotation.Client;
  *
  * <p>The {@code id} keys the transport settings — base URL and the connect and read timeouts —
  * under {@code micronaut.http.services.contratosdegalicia}, and is deliberately the same one the
- * contratos menores and Órganos clients bind: the resilience policies are singletons per source,
- * so sharing the id is what makes a licitacións walk and a contratos menores import draw on one
- * rate budget rather than each holding a full one.
+ * contratos menores and Órganos clients bind, so that all three are configured as one source.
+ *
+ * <p><strong>The id is not what makes them share a rate budget</strong>, and it is worth being
+ * exact about that before a third client is written on this model. The rate limiter, breaker and
+ * retry are plain unqualified singletons that {@code ResilientClientInterceptor} injects without a
+ * qualifier, so <em>every</em> client carrying the advice draws on one budget whatever id it
+ * binds. Binding a different id would not buy a client a budget of its own — it would buy a second
+ * set of transport settings and go on sharing the first budget silently. Giving a second source
+ * its own budget means qualifying the policy beans, which nothing has needed yet.
  *
  * <p><strong>{@link #COLUMNS} is not optional and there is no method without it.</strong> The
  * server resolves the order column by name, so a request carrying {@code order[0][column]} alone
  * answers {@code 500} and only one carrying every {@code columns[i][name]} answers {@code 200}. It
  * belongs to the endpoint's contract rather than to any caller, which is why it is written into
- * the path here instead of being passed in — an abbreviated request works against a lenient stub
- * and fails against the source, and that defect has no way in from this declaration.
+ * the query string here instead of being passed in — an abbreviated request works against a
+ * lenient stub and fails against the source, and that defect has no way in from this declaration.
  *
- * <p>{@code idioma} pins the state labels to the vocabulary the source contract measured; two of
- * its ten codes already share a label, and a response in another language would give the same
+ * <p>{@link #LANGUAGE} pins the state labels to the vocabulary the source contract measured; two
+ * of its ten codes already share a label, and a response in another language would give the same
  * codes different ones.
  *
  * <p>{@code draw} is the table widget's own echo counter. The source requires it and nothing here
@@ -47,13 +53,17 @@ interface LicitacionsClient {
 
   String COLUMNS =
       "?columns[0][name]=id&columns[1][name]=objeto&columns[2][name]=importe"
-          + "&columns[3][name]=estado&columns[4][name]=publicado&columns[5][name]=modificado"
-          + "&idioma=gl";
+          + "&columns[3][name]=estado&columns[4][name]=publicado&columns[5][name]=modificado";
+
+  String LANGUAGE = "&idioma=gl";
 
   /** Where {@code id} sits in {@link #COLUMNS}, which is what {@code order[0][column]} names. */
   int ID_COLUMN = 0;
 
-  @Get(TABLE_PATH + COLUMNS)
+  /** The one direction {@link #ID_COLUMN} is ever asked for, spelled as the source spells it. */
+  String ASCENDING = "asc";
+
+  @Get(TABLE_PATH + COLUMNS + LANGUAGE)
   HttpResponse<LicitacionsTable> table(
       @PathVariable String organismo,
       @QueryValue("start") int start,

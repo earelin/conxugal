@@ -29,6 +29,8 @@ dependencies {
     runtimeOnly(libs.flyway.core)
     runtimeOnly(libs.flyway.database.postgresql)
 
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)
     testImplementation(libs.mockito.junit.jupiter)
 }

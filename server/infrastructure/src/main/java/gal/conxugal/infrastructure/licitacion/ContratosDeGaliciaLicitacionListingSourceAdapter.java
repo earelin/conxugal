@@ -28,7 +28,6 @@ public class ContratosDeGaliciaLicitacionListingSourceAdapter implements Licitac
   static final int MAX_PAGE_SIZE = 100;
 
   private static final int DRAW = 1;
-  private static final String ASCENDING = "asc";
 
   private final LicitacionsClient licitacionsClient;
 
@@ -103,7 +102,7 @@ public class ContratosDeGaliciaLicitacionListingSourceAdapter implements Licitac
 
   private static String orderDirection(LicitacionListingOrder order) {
     return switch (order) {
-      case ID_ASCENDING -> ASCENDING;
+      case ID_ASCENDING -> LicitacionsClient.ASCENDING;
     };
   }
 }

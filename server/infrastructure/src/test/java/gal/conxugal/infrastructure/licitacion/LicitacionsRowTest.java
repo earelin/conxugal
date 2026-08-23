@@ -9,14 +9,16 @@ import gal.conxugal.domain.licitacion.PublicationId;
 import gal.conxugal.domain.money.Money;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EmptySource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** What one published listing row means, which is where the source's shape stops. */
 class LicitacionsRowTest {
 
-  private static final long PUBLICATION_ID = 822054L;
+  private static final String PUBLICATION_ID = "822054";
 
   /** The measured sample row, whose object is long and accented and whose amount has scale. */
   @Test
@@ -77,22 +79,19 @@ class LicitacionsRowTest {
    * procedure: it is surfaced as absent, and whether that hides the procedure from readers is
    * decided above the port.
    *
-   * <p>{@code 31-02-2026} is in the list because of the strict resolver — the default one clamps
-   * an impossible day to the month's last, which would store a date nobody published.
+   * <p>{@code 31-02-2026} is among the inputs because of the strict resolver — the default one
+   * clamps an impossible day to the month's last, which would store a date nobody published.
    */
-  @Test
-  void surfaces_dates_it_cannot_read_as_absent_and_still_returns_the_entry() {
-    List<String> unreadable =
-        Arrays.asList(null, "", "   ", "2024-03-08", "08/03/2024", "onte", "31-02-2026");
+  @ParameterizedTest
+  @NullSource
+  @EmptySource
+  @ValueSource(strings = {"   ", "2024-03-08", "08/03/2024", "onte", "31-02-2026"})
+  void surfaces_dates_it_cannot_read_as_absent_and_still_returns_the_entry(String published) {
+    LicitacionListingEntry entry = row(published, published, "Obxecto", null).toListingEntry();
 
-    assertThat(unreadable)
-        .allSatisfy(
-            published ->
-                assertThat(row(published, published, "Obxecto", null).toListingEntry())
-                    .extracting(
-                        LicitacionListingEntry::publicationDate,
-                        LicitacionListingEntry::lastModified)
-                    .containsExactly(null, null));
+    assertThat(entry)
+        .extracting(LicitacionListingEntry::publicationDate, LicitacionListingEntry::lastModified)
+        .containsExactly(null, null);
   }
 
   /** The boundary the strict resolver must not refuse: a last day of February that really was. */
@@ -119,10 +118,30 @@ class LicitacionsRowTest {
         .containsExactly(102, "Histórico");
   }
 
+  /**
+   * The identifier is bound as text so that a source which started issuing alphanumeric ones would
+   * cost a parse here rather than fail every page as an undecodable body.
+   */
   @Test
-  void refuses_the_row_when_the_source_published_no_identifier() {
+  void carries_an_identifier_the_source_did_not_publish_as_number() {
+    LicitacionListingEntry entry =
+        new LicitacionsRow("OU0028", null, null, null, null, 8, "Formalizado").toListingEntry();
+
+    assertThat(entry.publicationId()).isEqualTo(new PublicationId("OU0028"));
+  }
+
+  /**
+   * Blank as well as absent, and judged here rather than left to {@link PublicationId}: that type
+   * refuses a blank identifier with an {@link IllegalArgumentException}, which is what this port
+   * answers when <em>we</em> asked for a page wrongly. A value the source published is never that.
+   */
+  @ParameterizedTest
+  @NullSource
+  @EmptySource
+  @ValueSource(strings = {"   "})
+  void refuses_the_row_when_the_source_published_no_usable_identifier(String id) {
     LicitacionsRow row =
-        new LicitacionsRow(null, "08-03-2024", "20-08-2026", "Obxecto", null, 8, "Formalizado");
+        new LicitacionsRow(id, "08-03-2024", "20-08-2026", "Obxecto", null, 8, "Formalizado");
 
     assertThatThrownBy(row::toListingEntry)
         .isInstanceOf(LicitacionListingUnavailableException.class)

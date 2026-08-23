@@ -6,16 +6,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import gal.conxugal.domain.licitacion.LicitacionListingEntry;
 import gal.conxugal.domain.licitacion.LicitacionListingPage;
 import gal.conxugal.domain.licitacion.LicitacionListingUnavailableException;
-import gal.conxugal.domain.licitacion.PublicationId;
-import gal.conxugal.domain.money.Money;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.exceptions.HttpClientException;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -36,38 +32,28 @@ class ContratosDeGaliciaLicitacionListingSourceAdapterTest {
       ContratosDeGaliciaLicitacionListingSourceAdapter.MAX_PAGE_SIZE;
 
   private static final String SOURCE_KEY = "242";
-  private static final int OFFSET = 0;
+
+  /**
+   * Deliberately not zero, and not the {@code id} column's index either: both are arguments of the
+   * one stubbed call, so an offset passed where the order column belongs would otherwise satisfy
+   * strict stubbing and leave every test here green.
+   */
+  private static final int OFFSET = 200;
+
   private static final long RECORDS_TOTAL = 16798L;
-  private static final long PUBLICATION_ID = 822054L;
+  private static final String PUBLICATION_ID = "822054";
 
   @Mock private LicitacionsClient licitacionsClient;
 
-  /** The published row reaches the port narrowed, so the conversion is really delegated to. */
-  @Test
-  void returns_the_rows_converted_to_listing_entries() {
-    stubPage(row(PUBLICATION_ID));
-
-    LicitacionListingPage page = fetchPage();
-
-    assertThat(page.entries())
-        .containsExactly(
-            new LicitacionListingEntry(
-                new PublicationId("822054"),
-                LocalDate.of(2024, 3, 8),
-                LocalDate.of(2026, 8, 20),
-                "Obxecto",
-                new Money(new BigDecimal("3378552.09")),
-                8,
-                "Formalizado"));
-  }
-
   /**
    * The source's own order is the answer, and the adapter adds none of its own — a walk resuming
-   * from an offset depends on the page it reads matching the page the source paged.
+   * from an offset depends on the page it reads matching the page the source paged. Reading the
+   * entries at all is what proves the conversion is delegated to; what one row means is {@link
+   * LicitacionsRowTest}'s.
    */
   @Test
   void returns_the_rows_in_the_order_the_source_sent_them() {
-    stubPage(row(828959L), row(PUBLICATION_ID), row(18747L));
+    stubPage(row("828959"), row(PUBLICATION_ID), row("18747"));
 
     LicitacionListingPage page = fetchPage();
 
@@ -213,14 +199,19 @@ class ContratosDeGaliciaLicitacionListingSourceAdapterTest {
   private OngoingStubbing<HttpResponse<LicitacionsTable>> stubTable() {
     return when(
         licitacionsClient.table(
-            SOURCE_KEY, OFFSET, MAX_PAGE_SIZE, 1, LicitacionsClient.ID_COLUMN, "asc"));
+            SOURCE_KEY,
+            OFFSET,
+            MAX_PAGE_SIZE,
+            1,
+            LicitacionsClient.ID_COLUMN,
+            LicitacionsClient.ASCENDING));
   }
 
   private void stubPage(LicitacionsRow... rows) {
     stubTable().thenReturn(HttpResponse.ok(new LicitacionsTable(RECORDS_TOTAL, List.of(rows))));
   }
 
-  private static LicitacionsRow row(long publicationId) {
+  private static LicitacionsRow row(String publicationId) {
     return new LicitacionsRow(
         publicationId,
         "08-03-2024",

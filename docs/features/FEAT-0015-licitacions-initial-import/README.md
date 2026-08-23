@@ -647,10 +647,24 @@ guard free during those hours, is the deferred piece named in Scope.
 
 ### Retrieval and the two adapters ([ADR-0014](../../architecture/0014-resilient-throttled-outbound-http-client.md))
 
-Both adapters ride the shared `contratosdegalicia` client id, so the R31 budget is enforced across
-**every** family and the catalogue import together, and this feature chooses no rate. That matters
-more here than anywhere: the record walk is the longest sustained outbound stream the system will
-ever produce, and it is what criterion #42 measures.
+Both adapters ride the shared `contratosdegalicia` client id, so all of this feature's outbound
+calls are configured as one source, and this feature chooses no rate. The R31 budget is enforced
+across **every** family and the catalogue import together — but the id is not what enforces it, and
+this is worth stating exactly because it reads the other way. The rate limiter, breaker and retry
+are unqualified singletons the resilience interceptor injects without a qualifier, so *every*
+client carrying the advice already shares one budget whatever id it binds; a different id would buy
+a second set of transport settings and go on sharing the first budget silently. Giving a source a
+budget of its own means qualifying the policy beans, which nothing has needed yet. That the budget
+is shared matters more here than anywhere: the record walk is the longest sustained outbound stream
+the system will ever produce, and it is what criterion #42 measures.
+
+**The two adapters will be the third and fourth near-copy of one exchange.** The status-and-body
+judgement, the `Table`/`Row` conversion pair and the strict date formatter are already duplicated
+byte-for-byte between the contratos menores adapter and TASK-0007's, and TASK-0008 adds a third
+reading of the first. Two copies were cheaper than an abstraction; at three, a fix to the
+status-judgement applies in three places with nothing linking them. **This is the point at which a
+shared helper in `infrastructure/http` stops being speculative** — TASK-0008 should either extract
+it or record why it still should not.
 
 Three things the adapters must get right, each measured rather than assumed:
 
