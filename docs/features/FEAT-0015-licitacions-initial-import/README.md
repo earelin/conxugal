@@ -684,8 +684,9 @@ Three things the adapters must get right, each measured rather than assumed:
 
 ### Parsing the record, and the three places the model must be looser than R8 reads
 
-The parse is narrow — nine labelled `<dt>`/`<dd>` pairs and five tables out of a 138 KB page whose
-bulk is documents and mesas — but three findings shape the model, and each is a case where taking R8
+The parse is narrow — seven labelled `<dt>`/`<dd>` pairs, a reference block, a state paragraph and
+five tables out of a 138 KB page whose bulk is documents and mesas — but three findings shape the
+model, and each is a case where taking R8
 literally would lose data the source publishes:
 
 - **A classification row's lote is optional.** CPV and NUT tables carry a lote column, and on
@@ -703,9 +704,11 @@ literally would lose data the source publishes:
   and from nowhere else.**
 
 Two parsing hazards are named because they pass every test written against an ASCII stub: **amounts
-are Galician-formatted text** in the record (`3.052.743,72 EUR`) though the listing's are JSON
-numbers, and **dates come in two forms** — `DD-MM-YYYY` in the listing, `DD-MM-YYYY HH:MM:SS` in the
-record.
+are Galician-formatted text** in the record (`3.052.743,72 €`) though the listing's are JSON
+numbers, and **dates come in several forms** — `DD-MM-YYYY` in the listing, and `DD-MM-YYYY`,
+`DD-MM-YYYY HH:MM` or `DD-MM-YYYY HH:MM:SS` in the record. A third, measured later and recorded in
+the source contract, is that three of the record's labels **repeat elsewhere in the page**, so a
+document-wide lookup by label reads the wrong copy.
 
 The award table's **`Part.` column states how many bidders that lote had**, which is a free
 cross-check: a parse producing a different count has failed, and the procedure goes to the
