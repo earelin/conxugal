@@ -48,6 +48,8 @@ UI_API_TARGET=http://localhost:8080 npm run dev
 | `npm run dev`          | Start Vite dev server with HMR.                |
 | `npm run build`        | Type-check and build static assets to `dist/`. |
 | `npm run preview`      | Preview the production build locally.          |
+| `npm run storybook`    | Start the component workshop (Storybook).      |
+| `npm run build-storybook` | Build the workshop to `storybook-static/`.  |
 | `npm run lint`         | Run ESLint.                                    |
 | `npm run format`       | Format with Prettier.                          |
 | `npm run format:check` | Check formatting without writing.              |
@@ -57,6 +59,24 @@ UI_API_TARGET=http://localhost:8080 npm run dev
 | `npm run test:acceptance:ui`  | Run the acceptance suite in Playwright's UI.   |
 | `npm run api:up`       | Start the stubbed API (WireMock).              |
 | `npm run api:down`     | Stop it.                                       |
+
+## Component workshop
+
+Every reusable component is stored in [Storybook](https://storybook.js.org), a
+state per story, so a component can be built and reviewed without driving the whole
+app against WireMock:
+
+```bash
+npm run storybook     # http://localhost:6006
+```
+
+Stories live beside their component as `<Component>.stories.tsx`. Route-level pages
+and the containers that fetch on mount (`MetricsPanel`, `ImportToolbar`,
+`ContratosMenoresList`) are deliberately not stored — see `CLAUDE.md`.
+
+Both gates run in CI: `npm run build` type-checks the stories (they are their own
+TypeScript project, `tsconfig.storybook.json`) and `npm run build-storybook` proves
+they still bundle. A story that rots fails the build rather than doing it quietly.
 
 ## Acceptance tests
 

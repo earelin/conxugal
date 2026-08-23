@@ -21,13 +21,15 @@ Run from `ui/`:
 - `npm run api:up` / `npm run api:down` — start/stop the stubbed API (WireMock)
 - `npm run test:acceptance` — Playwright acceptance suite (`npx playwright install chromium` first)
 - `npm run test:acceptance -- acceptance/specs/admin-users.spec.ts` — run a single acceptance spec
+- `npm run storybook` — the component workshop (<http://localhost:6006>)
+- `npm run build-storybook` — build it to `storybook-static/` (what CI runs)
 - `npm run lint` — ESLint
 - `npm run format` / `npm run format:check` — Prettier write/check
 
 ## Before committing
 
-Run `npm run lint`, `npm run build` and `npm run test` from `ui/` and fix any
-failures before committing changes to this module.
+Run `npm run lint`, `npm run build`, `npm run test` and `npm run build-storybook`
+from `ui/` and fix any failures before committing changes to this module.
 
 ## Architecture
 
@@ -106,6 +108,36 @@ failures before committing changes to this module.
   assertion that such a page is *absent* proves nothing until its module has
   loaded, since it would otherwise pass by outrunning the import (see
   `src/app/AdminRoute.test.tsx`).
+- **Component workshop** (`.storybook/`): every reusable component is stored as
+  `<Component>.stories.tsx` beside itself, one story per meaningful state, copy read
+  from `strings` rather than inlined. `preview.tsx` is a second composition root —
+  `MantineProvider` (the real theme) + `QueryClientProvider` + a `createMemoryRouter`
+  splat route, which is what lets components calling `useMutation`, `useMatch` or
+  rendering router links draw with no server. Four things there are load-bearing and
+  non-obvious: it imports `@mantine/charts/styles.css`, which `main.tsx` deliberately
+  does *not* (the app defers it into the lazy metrics chunk, and Storybook has no such
+  chunk); `reactDocgen` stays at the default JS-based `react-docgen`, because
+  `react-docgen-typescript` resolves the `typescript` module and here that name is the
+  TS 6 shim; `.storybook/**` is in `boundaries/ignore`, since `no-unknown-files` is an
+  error; and `**/*.stories.{ts,tsx}` is **excluded from `tsconfig.app.json`** and checked by
+  `tsconfig.storybook.json` instead, which is what keeps Storybook's types — and the
+  `@types/node` they pull in — out of a program that runs in the browser. Keep the two
+  globs and `main.ts`'s `stories` glob in step: a `.stories.ts` checked by neither
+  project is how the split springs a leak. Shared fixtures live in `storyFixtures.ts` files rather than in the
+  `*Harness.tsx` modules beside them, which import `vitest` and would drag the test
+  runner into the browser bundle. Not stored, on purpose: route-level pages, `AppLayout`
+  and `AdminRoute`, and the three containers that hit the network on mount
+  (`MetricsPanel`, `ImportToolbar`, `ContratosMenoresList`) — those would need request
+  mocking. Note the builder merges `vite.config.ts`, so `npm run storybook` inherits the
+  `/api` proxy: a story that writes behaves differently with `npm run api:up` running. Adding a `shared/ui` primitive without a story is a gap; this finds them:
+
+  ```sh
+  comm -23 \
+    <(find src/features src/shared/ui src/app/layout -name '*.tsx' \
+        ! -name '*.test.tsx' ! -name '*Harness.tsx' ! -name '*.stories.tsx' | sort) \
+    <(find src -name '*.stories.tsx' | sed 's/\.stories\.tsx/.tsx/' | sort)
+  ```
+
 - **Local API / acceptance tests** (ADR-0018): the app calls same-origin `/api`
   paths, and Vite proxies them (dev *and* preview) to a WireMock container in
   `docker-compose.yml`, so the admin area runs with no backend. Stub state lives
