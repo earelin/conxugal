@@ -177,3 +177,35 @@ The `application` module is the single origin for both the REST API and the buil
   - **Under `/api/**`** → RFC 9457 `application/problem+json` `404`, matching the
     API-error shape `ServerErrorHandler` uses; never the shell.
   - **Any non-`GET`** → plain `404`.
+
+## Authentication and authorization
+
+Session-based per `docs/architecture/0005-session-based-authentication.md`, wired entirely
+in `application.yml` (`micronaut.security`, `micronaut.session`) — read it for the cookie,
+CSRF and redirect settings, whose trade-offs are commented there. `POST /login` and
+`/logout` are Micronaut Security's own; only `GET /login` and `GET /forbidden` are ours
+(`http/auth/`), and `GET /login` sends an already-authenticated visitor to `/`. Idle window
+is **30 minutes**; sessions are in-memory, so a second replica needs a shared store first.
+`application/src/integrationTest/.../http/auth/` pins all of it.
+
+Four things here are easy to break by accident:
+
+- **Failure is indistinct across three branches.** An unknown email still pays for a
+  password comparison (`PasswordEncoder.matchAgainstDummyHash`), and a disabled account is
+  rejected *after* its password check. Moving the `enabled` check earlier in
+  `domain/auth/Authenticate` looks like a harmless reorder and breaks the rule.
+- **Authorization is declared twice** — the `intercept-url-map` and a `@Secured` on almost
+  every controller — and **nothing enforces that they agree**. A new controller needs the
+  annotation even when the URL map appears to cover it.
+- **Rejection is content-negotiated, not custom**: a browser navigation gets `303` to
+  `/login`, an XHR gets `401`. There is no `RejectionHandler` here and writing one would
+  silently change both halves (`AcceptHeaderRejectionTest`).
+- **The last-login stamp is best-effort** — if the write fails the login still succeeds.
+
+The three views in `resources/views/` (login, forbidden, server error) render outside the
+SPA so a denial or a crash never depends on the React bundle; the bundle itself is served
+only once a session exists. Their styling hand-copies the Mantine palette from
+`ui/src/app/theme.ts` and drifts silently — see the `frontend-design` skill before
+changing either.
+
+<!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->

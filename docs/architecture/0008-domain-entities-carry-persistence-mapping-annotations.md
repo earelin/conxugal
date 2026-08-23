@@ -17,10 +17,11 @@ and persistence concerns," allowing only Micronaut dependency-injection annotati
 domain classes; anything persistence-related was expected to live on a separate
 `infrastructure`-only type.
 
-[TASK-0002](../features/FEAT-0002-user-authentication/TASK-0002-auth-infrastructure-postgres-user-store.md)
-(FEAT-0002) followed that rule literally: persisting the domain `User` record (email,
-password hash, role) via Micronaut Data JDBC required a parallel infrastructure-only
-`UserEntity` (carrying `@MappedEntity`/`@Id`), plus a `JdbcUserRepository` adapter whose
+The user store built for [SPEC-0002](../specs/SPEC-0002-user-authentication.md)
+(FEAT-0002, since distilled) followed that rule literally: persisting the domain `User`
+record (email, password hash, role) via Micronaut Data JDBC required a parallel
+infrastructure-only `UserEntity` (carrying `@MappedEntity`/`@Id`), plus a
+`JdbcUserRepository` adapter whose
 only job was copying fields between `UserEntity` and `User`. The two types are — and are
 expected to stay — structurally identical; the mapping code exists solely to satisfy the
 persistence-purity rule, not because the persisted shape differs from the domain shape.
@@ -60,7 +61,7 @@ persistence *code*: JDBC/SQL, connections, dialects, and transactions stay entir
 
 ### Pros
 - Fewer classes for the common case: one domain type serves as both the business model
-  and the persisted row, removing the hand-written mapping code TASK-0002 needed for
+  and the persisted row, removing the hand-written mapping code the user store needed for
   `UserEntity` ↔ `User`.
 - Matches the project's preference for a simple, data-driven approach over layering
   ceremony that isn't paying for itself yet.

@@ -58,7 +58,7 @@ copy, the trigger and item states (rest, hover/focus, open, in flight, failed, b
   checked against `design/user-menu-narrow.svg`, drawn at exactly 360 px.
 - Activating the logout item invokes the TASK-0001 action once and, on success, triggers
   its navigation (asserted with a stubbed action; the session actually ending is
-  FEAT-0002/TASK-0005 behaviour and is not re-verified here).
+  already-delivered logout behaviour and is not re-verified here).
 - The item is disabled and shows a `Loader` while the request is in flight, so repeat
   clicks cannot fire two logouts.
 - A logout that fails for a reason other than a lost session leaves the user on the
