@@ -16,6 +16,9 @@ Java 25, PostgreSQL), [ADR-0002](../docs/architecture/0002-hexagonal-architectur
 - **Java 25** — the toolchain is pinned in `build.gradle.kts` and auto-provisioned by
   Gradle if not installed, so no manual JDK setup is required.
 - **PostgreSQL** — the datastore ([ADR-0001](../docs/architecture/0001-backend-stack.md)).
+- **Node.js and npm** — `./gradlew build` also builds the UI it serves
+  ([ADR-0003](../docs/architecture/0003-react-router-ui-served-by-backend.md)), so a
+  JVM alone is not enough. The version is pinned in `../ui/package.json`.
 
 ## Getting started
 
@@ -87,3 +90,4 @@ rationale and the dependency rule that keeps the modules decoupled, and the
 [`docs/`](../docs) tree for the *spec → feature → task* workflow.
 
 <!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->
+<!-- distilled-from: FEAT-0003 @ 73cf32f -->
