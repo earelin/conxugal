@@ -175,6 +175,11 @@ public abstract class JdbcContratoMenorRepository
         JOIN operador_economico
           ON operador_economico.id = contrato_menor.operador_economico_id
       """
+          // fiscal_id is nullable at the schema now -- one party is catalogued without one -- and
+          // the row mapper below reads it as present. What holds is that this family reaches an
+          // operador only by resolving a published identifier, so it can never join to a row that
+          // has none. That guarantee moved from the column to the importer and is stated here
+          // because nothing enforces it any more.
           + VISIBLE_WHERE;
 
   /**

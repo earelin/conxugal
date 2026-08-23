@@ -431,7 +431,7 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
                 new OperadorEconomico(
                     operadorId,
                     new FiscalIdentifier("B12345678"),
-                    "Servizos Galegos SL",
+                    "Servizos Galegos SL", false,
                     new NomeRank(PUBLISHED_ON, 4711L),
                     Set.of()))));
 
@@ -495,7 +495,7 @@ class JdbcContratoMenorRepositoryIntegrationTest implements TestPropertyProvider
         new OperadorEconomico(
             operadorId,
             new FiscalIdentifier(fiscalId),
-            "Servizos Galegos SL",
+            "Servizos Galegos SL", false,
             new NomeRank(PUBLISHED_ON, sourceId),
             Set.of()));
   }

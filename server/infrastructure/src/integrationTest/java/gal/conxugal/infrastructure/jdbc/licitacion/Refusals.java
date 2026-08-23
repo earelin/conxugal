@@ -5,13 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.sql.SQLException;
 
 /**
- * What the two migration tests assert when the schema refuses a write. Both need the same two
- * checks, and both need the same reason for making them: the SQLSTATE says which <em>kind</em> of
+ * What the migration tests assert when the schema refuses a write. They need the same handful of
+ * checks, and the same reason for making them: the SQLSTATE says which <em>kind</em> of
  * constraint fired, and pinning the constraint name beside it rules out a coincidental different
  * constraint failing for the wrong reason and reading as a pass.
  *
- * <p>Shared rather than copied, because a pair of assertions duplicated across two classes is a
- * pair that can come to disagree about what a refusal looks like.
+ * <p>Shared rather than copied, because assertions duplicated across three classes are ones that
+ * can come to disagree about what a refusal looks like.
  */
 final class Refusals {
 
@@ -23,6 +23,9 @@ final class Refusals {
 
   /** SQLSTATE 23502 is not_null_violation. */
   private static final String NOT_NULL_VIOLATION = "23502";
+
+  /** SQLSTATE 23514 is check_violation. */
+  private static final String CHECK_VIOLATION = "23514";
 
   private Refusals() {
   }
@@ -37,6 +40,10 @@ final class Refusals {
    */
   static void violatesUniqueness(SQLException exception) {
     assertThat(exception.getSQLState()).isEqualTo(UNIQUE_VIOLATION);
+  }
+
+  static void violatesCheck(SQLException exception, String constraint) {
+    assertViolates(exception, CHECK_VIOLATION, constraint);
   }
 
   static void violatesForeignKey(SQLException exception, String constraint) {

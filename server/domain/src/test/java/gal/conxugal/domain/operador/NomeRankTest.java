@@ -105,7 +105,7 @@ class NomeRankTest {
         new OperadorEconomico(
             null,
             FISCAL_ID,
-            "Obradoiro Naval",
+            "Obradoiro Naval", false,
             new NomeRank(LocalDate.of(2026, 3, 14), 5100L),
             Set.of(
                 new NomeAlternativo(
@@ -121,7 +121,7 @@ class NomeRankTest {
         new OperadorEconomico(
             null,
             FISCAL_ID,
-            "Obradoiro Naval",
+            "Obradoiro Naval", false,
             EARLIER,
             Set.of(
                 new NomeAlternativo(null, "Obradoiro Naval, S.L.", new NomeRank(null, 5100L))));

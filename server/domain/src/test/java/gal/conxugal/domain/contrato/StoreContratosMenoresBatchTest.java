@@ -372,7 +372,7 @@ class StoreContratosMenoresBatchTest {
                   new OperadorEconomico(
                       new OperadorId(UUID.randomUUID()),
                       incoming.fiscalId(),
-                      incoming.name(),
+                      incoming.name(), false,
                       incoming.nameRank(),
                       Set.of());
               created.add(stored);
@@ -388,7 +388,7 @@ class StoreContratosMenoresBatchTest {
         new OperadorEconomico(
             INCUMBENT_ID,
             new FiscalIdentifier(fiscalId),
-            name,
+            name, false,
             new NomeRank(date, sourceId),
             Set.of());
     when(operadores.findByFiscalId(operador.fiscalId())).thenReturn(Optional.of(operador));

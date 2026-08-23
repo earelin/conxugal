@@ -230,7 +230,7 @@ class JdbcContratoMenorVisibleOrganosIntegrationTest implements TestPropertyProv
         return new OperadorEconomico(
             new OperadorId(resultSet.getObject("id", UUID.class)),
             new FiscalIdentifier(fiscalId),
-            OPERADOR_NAME,
+            OPERADOR_NAME, false,
             new NomeRank(PUBLISHED_ON, 4711L),
             Set.of());
       }
