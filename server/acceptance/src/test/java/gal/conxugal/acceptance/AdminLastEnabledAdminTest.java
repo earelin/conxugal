@@ -21,8 +21,16 @@ class AdminLastEnabledAdminTest {
 
   private String adminSession;
 
+  /**
+   * Repairs before it drives, not only after. Reaching the datastore first is what makes a run
+   * that was pointed at one instance and another's datastore refuse here — while nothing has been
+   * disabled yet — rather than in the teardown that was meant to be the way back. It also lifts an
+   * instance that a previously failed run left with no enabled administrator, which is a state no
+   * endpoint can leave.
+   */
   @BeforeEach
-  void logInAsAdministrator() {
+  void restoreTheAdministratorAndLogIn() {
+    ApplicationDatabase.enableAccount(ApplicationSession.ADMIN_EMAIL);
     adminSession = ApplicationSession.logInAsAdmin();
   }
 
@@ -41,9 +49,16 @@ class AdminLastEnabledAdminTest {
     JsonPath listing = listAccounts().jsonPath();
     List<String> enabledAdmins =
         listing.getList("findAll { it.role == 'ADMIN' && it.enabled }.email", String.class);
-    // Asserted rather than assumed: were the instance to seed a second administrator, the
-    // refusal below would never be reached and the scenario would pass without proving anything.
-    assertThat(enabledAdmins).containsExactly(ApplicationSession.ADMIN_EMAIL);
+    // Asserted rather than assumed: with a second enabled administrator the refusal below would
+    // never be reached and the scenario would pass without proving anything. The contract test
+    // fuzzes account creation and its accounts cannot be deleted, so it is the likely way an
+    // instance acquires one — hence a message that names the recovery rather than a bare diff.
+    assertThat(enabledAdmins)
+        .as(
+            "this instance must hold exactly one enabled ADMIN; a contract-test run leaves more "
+                + "behind, and accounts are never deleted — recreate the stack with "
+                + "'docker compose --profile app down -v'")
+        .containsExactly(ApplicationSession.ADMIN_EMAIL);
     String administratorId = listing.getString(field(ApplicationSession.ADMIN_EMAIL, "id"));
 
     Response refused =

@@ -116,7 +116,10 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
         "409":
-          description: An account with that email already exists; the existing account is unchanged.
+          description: >-
+            An account with that email already exists; the existing account is unchanged. The
+            problem type is `urn:conxugal:problem-type:duplicate-email`, which is what
+            distinguishes this refusal from any other conflict on this operation.
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
@@ -128,6 +131,11 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                type: "urn:conxugal:problem-type:duplicate-email"
+                title: "Conflict"
+                status: 409
+                detail: "An account with email new.admin@conxugal.gal already exists."
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -173,7 +181,10 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
-          description: The change is refused because it would disable the last enabled administrator.
+          description: >-
+            The change is refused because it would disable the last enabled administrator. The
+            problem type is `urn:conxugal:problem-type:last-enabled-admin`, which is what
+            distinguishes this refusal from any other conflict on this operation.
           headers:
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
@@ -185,6 +196,13 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                type: "urn:conxugal:problem-type:last-enabled-admin"
+                title: "Conflict"
+                status: 409
+                detail: >-
+                  Cannot disable the only remaining enabled ADMIN account:
+                  3fa85f64-5717-4562-b3fc-2c963f66afa6
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
