@@ -146,8 +146,7 @@ granted to ADMIN.
     `JdbcUserRepositoryIntegrationTest` cover AC10
   - FEAT-0002 closed neither **R14** nor **R15**: the self-lookup endpoint
     (`GET /api/me`, AC11) was delivered by
-    FEAT-0004 (retired — see
-    [SPEC-0003](SPEC-0003-administration-area.md) § Implemented by), and the in-app
+    the administration area ([SPEC-0003](SPEC-0003-administration-area.md)), and the in-app
     account menu that ends the session (AC12) by
     [FEAT-0008](../features/FEAT-0008-in-app-session-menu/README.md)
 
