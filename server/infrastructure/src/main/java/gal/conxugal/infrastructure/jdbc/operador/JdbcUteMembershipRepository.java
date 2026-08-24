@@ -8,8 +8,6 @@ import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.GenericRepository;
 import io.micronaut.transaction.annotation.Transactional;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
 
@@ -57,7 +55,9 @@ public abstract class JdbcUteMembershipRepository
   public void upsert(UteMembership membership) {
     Objects.requireNonNull(membership, "membership must not be null");
     jdbcOperations.prepareStatement(UPSERT, statement -> {
-      bind(statement, membership);
+      statement.setObject(1, membership.uteId().value());
+      statement.setObject(2, membership.operadorId().value());
+      statement.setBoolean(3, membership.withdrawn());
       return statement.executeUpdate();
     });
   }
@@ -67,11 +67,4 @@ public abstract class JdbcUteMembershipRepository
 
   @Override
   public abstract List<UteMembership> findByUteIdAndWithdrawnFalse(OperadorId uteId);
-
-  private static void bind(PreparedStatement statement, UteMembership membership)
-      throws SQLException {
-    statement.setObject(1, membership.uteId().value());
-    statement.setObject(2, membership.operadorId().value());
-    statement.setBoolean(3, membership.withdrawn());
-  }
 }
