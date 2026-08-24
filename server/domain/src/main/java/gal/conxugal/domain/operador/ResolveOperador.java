@@ -1,0 +1,97 @@
+package gal.conxugal.domain.operador;
+
+import jakarta.inject.Singleton;
+import java.util.Objects;
+import java.util.Optional;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * Resolves a published awardee to the operador it names, cataloguing one if nothing named that
+ * identifier before and accounting for the name the publication carried.
+ *
+ * <p>Every contract family derives its operadores through this, and there is deliberately only one
+ * of it. The rule is subtle in three places — an undated publication ranks last, the rank
+ * comparison is a strict win, and a promotion files the name it displaced afterwards rather than
+ * before — and a second copy diverging on any of them would show up as an operador displayed under
+ * different names depending on which family last touched it.
+ *
+ * <p><strong>It takes the values the rule needs, not a family's row type.</strong> The published
+ * identifier, the published name and the {@link NomeRank} the publication supplies are all of it,
+ * so a second family calls this without borrowing the first family's source entry.
+ *
+ * <p><strong>It owns no transaction.</strong> The caller's boundary is the one the writes join, so
+ * the operador a contract names is created beside the write that stores the contract and the two
+ * commit together — and the second contract of a batch naming a new operador reads what the first
+ * wrote.
+ */
+@Singleton
+public class ResolveOperador {
+
+  private final OperadorRepository operadores;
+
+  public ResolveOperador(OperadorRepository operadores) {
+    this.operadores = operadores;
+  }
+
+  /**
+   * The operador this publication names, or nothing when its published identifier is unusable —
+   * absent, or empty once surrounding whitespace is ignored. Nothing is catalogued for such a
+   * publication: never a placeholder, and never a shared <em>unknown</em> row that would pool
+   * unrelated parties under one identity.
+   *
+   * <p>A publication that carried <b>no name</b> contributes none: it is catalogued under the empty
+   * name if nothing named its identifier before, because an operador has to be displayed as
+   * something and inventing one is what R13 forbids — but it never displaces a name that was
+   * published, and never enters the retained set, where the empty string is not a name the operador
+   * has borne.
+   *
+   * @param publishedFiscalId the fiscal identifier as published, in whatever spelling
+   * @param publishedName the name as published, or null where the source carried none
+   * @param rank which publication these values were taken from
+   */
+  public Optional<OperadorEconomico> resolve(
+      @Nullable String publishedFiscalId, @Nullable String publishedName, NomeRank rank) {
+    Objects.requireNonNull(rank, "rank must not be null");
+    Optional<FiscalIdentifier> published = FiscalIdentifier.of(publishedFiscalId);
+    if (published.isEmpty()) {
+      return Optional.empty();
+    }
+    FiscalIdentifier fiscalId = published.get();
+    Optional<OperadorEconomico> catalogued = operadores.findByFiscalId(fiscalId);
+    if (catalogued.isEmpty()) {
+      return Optional.of(
+          operadores.insert(
+              new OperadorEconomico(fiscalId, publishedName == null ? "" : publishedName, rank)));
+    }
+    OperadorEconomico incumbent = catalogued.get();
+    if (publishedName != null) {
+      account(incumbent, publishedName, rank);
+    }
+    return Optional.of(incumbent);
+  }
+
+  /**
+   * Accounts for the name this publication carried: either it moves into the display and the name
+   * it displaced is retained beside the operador, or it is retained itself. One name moves into the
+   * retained set every time, so <em>no retained name equals the displayed one</em> holds after
+   * every publication — except when the name already displayed is republished, which advances the
+   * rank and retains nothing, there being no second name to file.
+   *
+   * <p><strong>Promoting comes first.</strong> Retaining the displaced name before the promotion
+   * would ask the store to file a name that is still the displayed one, which it declines — losing
+   * the name silently.
+   */
+  private void account(OperadorEconomico incumbent, String publishedName, NomeRank rank) {
+    OperadorId id =
+        Objects.requireNonNull(incumbent.id(), "a catalogued operador must carry an identity");
+    boolean renaming = !incumbent.name().equals(publishedName);
+    if (rank.outranks(incumbent.nameRank())) {
+      operadores.promoteName(id, publishedName, rank);
+      if (renaming) {
+        operadores.retainName(new NomeAlternativo(id, incumbent.name(), incumbent.nameRank()));
+      }
+    } else if (renaming) {
+      operadores.retainName(new NomeAlternativo(id, publishedName, rank));
+    }
+  }
+}

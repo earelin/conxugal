@@ -16,6 +16,7 @@ import gal.conxugal.domain.contrato.UpsertCounts;
 import gal.conxugal.domain.importrun.ImportRunId;
 import gal.conxugal.domain.importrun.ImportRunRepository;
 import gal.conxugal.domain.operador.OperadorRepository;
+import gal.conxugal.domain.operador.ResolveOperador;
 import gal.conxugal.domain.organo.ContratosMenoresImportState;
 import gal.conxugal.domain.organo.ContratosMenoresImportStateRepository;
 import gal.conxugal.domain.organo.ContratosMenoresImportStatus;
@@ -117,7 +118,7 @@ class ContratosMenoresWalkSliceLimitsTest {
     return new ImportOrganoContratosMenores(
         new ReadContratosMenoresWindow(
             new ContratosDeGaliciaContratoMenorSourceAdapter(contratosMenoresClient),
-            new StoreContratosMenoresBatch(operadores, contratos),
+            new StoreContratosMenoresBatch(new ResolveOperador(operadores), contratos),
             importRuns),
         contratos,
         importStates,

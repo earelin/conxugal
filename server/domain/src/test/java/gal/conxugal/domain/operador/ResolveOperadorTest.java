@@ -1,0 +1,190 @@
+package gal.conxugal.domain.operador;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import java.time.LocalDate;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+/**
+ * The derivation every contract family shares, driven with the loose values it takes rather than
+ * with any one family's source row.
+ *
+ * <p>What this class does is drive one port, so several of these assert on the calls the operador
+ * store received. Promoting a name and retaining one are void, and the order of the two is itself
+ * the rule the store's own contract states — neither leaves a return value to assert on.
+ */
+@ExtendWith(MockitoExtension.class)
+class ResolveOperadorTest {
+
+  private static final FiscalIdentifier ACME_ID = new FiscalIdentifier("B12345678");
+  private static final OperadorId INCUMBENT_ID = new OperadorId(UUID.randomUUID());
+  private static final LocalDate MARCH = LocalDate.of(2026, 3, 1);
+  private static final LocalDate MAY = LocalDate.of(2026, 5, 1);
+  private static final LocalDate JUNE = LocalDate.of(2026, 6, 1);
+
+  @Mock
+  private OperadorRepository operadores;
+
+  @Test
+  void publication_naming_an_operador_nothing_named_before_catalogues_it_under_that_rank() {
+    nothingIsCatalogued();
+
+    Optional<OperadorEconomico> resolved = resolve("b12345678", "ACME SL", JUNE, 4711L);
+
+    assertThat(resolved)
+        .get()
+        .satisfies(
+            operador -> {
+              assertThat(operador.fiscalId()).isEqualTo(ACME_ID);
+              assertThat(operador.name()).isEqualTo("ACME SL");
+              assertThat(operador.nameRank()).isEqualTo(new NomeRank(JUNE, 4711L));
+            });
+  }
+
+  // Identity is the canonical identifier alone, so a padded, differently-cased publication finds
+  // what an earlier one catalogued rather than cataloguing a second entry beside it.
+  @Test
+  void publication_naming_catalogued_operador_answers_with_it_and_catalogues_nothing() {
+    catalogued("ACME SL", JUNE, 2L);
+
+    Optional<OperadorEconomico> resolved = resolve(" b12345678 ", "ACME SL", JUNE, 2L);
+
+    assertThat(resolved)
+        .get()
+        .extracting(OperadorEconomico::id)
+        .isEqualTo(INCUMBENT_ID);
+    verify(operadores, never()).insert(any());
+  }
+
+  // Never a placeholder, and never a shared "unknown" row that would pool unrelated parties under
+  // one identity — the caller is left with nothing to attach rather than something invented.
+  @Test
+  void publication_whose_identifier_is_unusable_yields_no_operador() {
+    Optional<OperadorEconomico> resolved = resolve("   ", "ACME SL", JUNE, 1L);
+
+    assertThat(resolved).isEmpty();
+    verifyNoInteractions(operadores);
+  }
+
+  // Retaining the displaced name before the promotion would ask the store to file a name that is
+  // still the displayed one, which it declines — losing the name silently.
+  @Test
+  void outranking_name_is_promoted_before_the_name_it_displaced_is_retained() {
+    catalogued("Antiga Denominación SL", MAY, 1L);
+
+    resolve("B12345678", "ACME SL", JUNE, 2L);
+
+    ArgumentCaptor<NomeAlternativo> retained = ArgumentCaptor.forClass(NomeAlternativo.class);
+    InOrder promotionThenRetention = inOrder(operadores);
+    promotionThenRetention
+        .verify(operadores)
+        .promoteName(INCUMBENT_ID, "ACME SL", new NomeRank(JUNE, 2L));
+    promotionThenRetention.verify(operadores).retainName(retained.capture());
+    assertThat(retained.getValue())
+        .usingRecursiveComparison()
+        .isEqualTo(
+            new NomeAlternativo(INCUMBENT_ID, "Antiga Denominación SL", new NomeRank(MAY, 1L)));
+  }
+
+  @Test
+  void name_that_does_not_outrank_the_incumbent_is_retained_and_moves_nothing() {
+    catalogued("ACME SL", JUNE, 2L);
+
+    resolve("B12345678", "Antiga Denominación SL", MAY, 1L);
+
+    ArgumentCaptor<NomeAlternativo> retained = ArgumentCaptor.forClass(NomeAlternativo.class);
+    verify(operadores).retainName(retained.capture());
+    assertThat(retained.getValue())
+        .usingRecursiveComparison()
+        .isEqualTo(
+            new NomeAlternativo(INCUMBENT_ID, "Antiga Denominación SL", new NomeRank(MAY, 1L)));
+    verify(operadores, never()).promoteName(any(), any(), any());
+  }
+
+  // Replaying an import: the rank comparison is a strict win, so nothing is promoted, no retained
+  // name is re-dated, and the displayed name cannot flap.
+  @Test
+  void resolving_the_same_publication_again_moves_nothing_and_retains_nothing() {
+    catalogued("ACME SL", JUNE, 4711L);
+
+    resolve("B12345678", "ACME SL", JUNE, 4711L);
+
+    verify(operadores, never()).promoteName(any(), any(), any());
+    verify(operadores, never()).retainName(any());
+  }
+
+  // Every name the operador has borne survives, so three publications under three names leave the
+  // two it no longer displays retained beside it, each under the rank it was published at. The
+  // second read answers what the first promotion left, as it would inside the caller's transaction.
+  @Test
+  void operador_published_under_three_names_retains_the_two_it_no_longer_displays() {
+    when(operadores.findByFiscalId(ACME_ID))
+        .thenReturn(Optional.of(incumbent("Primeira SL", MARCH, 1L)))
+        .thenReturn(Optional.of(incumbent("Segunda SL", MAY, 2L)));
+
+    resolve("B12345678", "Segunda SL", MAY, 2L);
+    resolve("B12345678", "Terceira SL", JUNE, 3L);
+
+    ArgumentCaptor<NomeAlternativo> retained = ArgumentCaptor.forClass(NomeAlternativo.class);
+    verify(operadores, times(2)).retainName(retained.capture());
+    assertThat(retained.getAllValues())
+        .usingRecursiveFieldByFieldElementComparator()
+        .containsExactly(
+            new NomeAlternativo(INCUMBENT_ID, "Primeira SL", new NomeRank(MARCH, 1L)),
+            new NomeAlternativo(INCUMBENT_ID, "Segunda SL", new NomeRank(MAY, 2L)));
+  }
+
+  private Optional<OperadorEconomico> resolve(
+      @Nullable String publishedFiscalId,
+      @Nullable String publishedName,
+      @Nullable LocalDate date,
+      long sourceId) {
+    return new ResolveOperador(operadores)
+        .resolve(publishedFiscalId, publishedName, new NomeRank(date, sourceId));
+  }
+
+  /** A catalogue nothing has named yet, which assigns the identity the database would on insert. */
+  private void nothingIsCatalogued() {
+    when(operadores.findByFiscalId(any())).thenReturn(Optional.empty());
+    when(operadores.insert(any()))
+        .thenAnswer(
+            invocation -> {
+              OperadorEconomico incoming = invocation.getArgument(0);
+              return new OperadorEconomico(
+                  new OperadorId(UUID.randomUUID()),
+                  incoming.fiscalId(),
+                  incoming.name(),
+                  false,
+                  incoming.nameRank(),
+                  Set.of());
+            });
+  }
+
+  /** An operador an earlier import already catalogued, displayed under {@code name}. */
+  private void catalogued(String name, @Nullable LocalDate date, long sourceId) {
+    when(operadores.findByFiscalId(ACME_ID))
+        .thenReturn(Optional.of(incumbent(name, date, sourceId)));
+  }
+
+  private static OperadorEconomico incumbent(
+      String name, @Nullable LocalDate date, long sourceId) {
+    return new OperadorEconomico(
+        INCUMBENT_ID, ACME_ID, name, false, new NomeRank(date, sourceId), Set.of());
+  }
+}

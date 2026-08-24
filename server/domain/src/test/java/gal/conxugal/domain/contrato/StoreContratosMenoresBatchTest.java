@@ -16,6 +16,7 @@ import gal.conxugal.domain.operador.NomeRank;
 import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.OperadorId;
 import gal.conxugal.domain.operador.OperadorRepository;
+import gal.conxugal.domain.operador.ResolveOperador;
 import gal.conxugal.domain.organo.OrganoId;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -334,7 +335,7 @@ class StoreContratosMenoresBatchTest {
   }
 
   private UpsertCounts store(ContratoMenorSourceEntry... entries) {
-    return new StoreContratosMenoresBatch(operadores, contratos)
+    return new StoreContratosMenoresBatch(new ResolveOperador(operadores), contratos)
         .store(List.of(entries), ORGANO_ID);
   }
 
