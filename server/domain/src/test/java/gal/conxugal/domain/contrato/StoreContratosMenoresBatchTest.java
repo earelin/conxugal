@@ -103,6 +103,22 @@ class StoreContratosMenoresBatchTest {
     verifyNoInteractions(operadores);
   }
 
+  // Pooling is what the placeholder rule exists to stop, and it takes two awards to show: the
+  // failure was never one contract holding `-`, it was every contract holding it becoming one
+  // operador, so the two-award case is asserted rather than inferred from the one-award one.
+  @Test
+  void two_awards_sharing_placeholder_are_attached_to_no_operador_and_never_to_each_other() {
+    theStoreAcceptsTheBatch();
+
+    store(award(1L, JUNE, "ACME SL", "-"), award(2L, JUNE, "OUTRA SL", "-"));
+
+    assertThat(upserted)
+        .hasSize(2)
+        .extracting(ContratoMenor::operadorEconomico)
+        .containsOnlyNulls();
+    verifyNoInteractions(operadores);
+  }
+
   // Nothing beyond emptiness and the two published placeholder forms disqualifies an identifier:
   // a foreign VAT number or a malformed NIF is a real award, and refusing it would discard one.
   @Test

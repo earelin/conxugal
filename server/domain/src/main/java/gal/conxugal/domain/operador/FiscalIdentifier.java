@@ -34,8 +34,16 @@ import org.jspecify.annotations.Nullable;
 @TypeDef(type = DataType.STRING, converter = FiscalIdentifierConverter.class)
 public record FiscalIdentifier(String value) {
 
-  private static final String DASH_PLACEHOLDER = "-";
-  private static final String TEMPORARY_PLACEHOLDER_PREFIX = "TEMP-";
+  private static final String TEMPORARY_PLACEHOLDER_STEM = "TEMP";
+
+  /**
+   * The dash spellings a placeholder may be published in. The record page is ISO-8859-1, which
+   * carries no dash but the ASCII one, and every measured placeholder used it — but the listing is
+   * JSON and under no such limit, and a character that reads as a dash to a person has to read as
+   * one here, or the pooling this refuses simply returns in another spelling.
+   */
+  private static final String DASHES =
+      "-\u2010\u2011\u2012\u2013\u2014\u2212\uff0d"; // hyphens, dashes, minus, fullwidth
 
   /**
    * Reduces whatever it is handed, so an identifier read back from the store and rebuilt is the
@@ -73,9 +81,11 @@ public record FiscalIdentifier(String value) {
    * publishes irregular but genuine ones — foreign VAT numbers, malformed NIFs, values merely
    * carrying a dash — and rejecting them would discard real awards.
    *
-   * <p><b>This is the gate for published input, and the only one.</b> The canonical constructor
-   * stays permissive because the other way a value reaches this type is by being read back out of
-   * the store, and a placeholder already persisted has to rehydrate rather than fail the read.
+   * <p><b>This is the gate for published input.</b> The canonical constructor stays permissive
+   * because a value also reaches this type by being read back out of the store, and a placeholder
+   * already persisted has to rehydrate rather than fail the read — which is why every half of
+   * {@link FiscalIdentifierConverter} rebuilds through the constructor and none of them through
+   * here.
    *
    * <p>Stripping here duplicates what the source adapter already does, deliberately. The same
    * reduction has to govern what a <em>user</em> types when looking an operador up, and a rule
@@ -95,7 +105,22 @@ public record FiscalIdentifier(String value) {
 
   /** Judged on the canonical form, so a padded or lower-cased placeholder is still one. */
   private boolean isPublishedPlaceholder() {
-    return DASH_PLACEHOLDER.equals(value) || value.startsWith(TEMPORARY_PLACEHOLDER_PREFIX);
+    return isLoneDash() || isTemporaryForm();
+  }
+
+  private boolean isLoneDash() {
+    return value.length() == 1 && isDash(value.charAt(0));
+  }
+
+  private boolean isTemporaryForm() {
+    int dash = TEMPORARY_PLACEHOLDER_STEM.length();
+    return value.length() > dash
+        && value.startsWith(TEMPORARY_PLACEHOLDER_STEM)
+        && isDash(value.charAt(dash));
+  }
+
+  private static boolean isDash(char character) {
+    return DASHES.indexOf(character) >= 0;
   }
 
   @Override

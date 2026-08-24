@@ -45,14 +45,38 @@ class FiscalIdentifierConverterTest {
   }
 
   /**
-   * The path a browse row travels: the identifier is joined in from the operador rather than held
-   * on the contract, so a projection reads it as bare text and rebuilds it through the core
-   * conversion service instead of through the attribute half above.
+   * A placeholder is turned away when it is published, not when it is read: a row the store took
+   * under {@code -} before that rule existed has to come back rather than fail the read that finds
+   * it.
    */
   @Test
-  void converts_the_joined_column_into_the_canonical_identifier() {
+  void reads_back_the_column_holding_placeholder_rather_than_refusing_it() {
+    assertThat(converter.convertToEntityValue("-", ConversionContext.DEFAULT))
+        .isEqualTo(new FiscalIdentifier("-"));
+  }
+
+  @Test
+  void reads_back_the_column_holding_temporary_placeholder_rather_than_refusing_it() {
+    assertThat(converter.convertToEntityValue("TEMP-00934", ConversionContext.DEFAULT))
+        .isEqualTo(new FiscalIdentifier("TEMP-00934"));
+  }
+
+  /**
+   * The rebuild the core conversion service is offered, for a column that reaches a caller as bare
+   * text. Nothing asks for it today, so what it is pinned against is the attribute half beside it:
+   * both rebuild through the canonical constructor, and a column one accepts the other cannot
+   * refuse.
+   */
+  @Test
+  void converts_the_bare_column_into_the_canonical_identifier() {
     assertThat(converter.convert(" b12345678 ", FiscalIdentifier.class, ConversionContext.DEFAULT))
         .contains(new FiscalIdentifier("B12345678"));
+  }
+
+  @Test
+  void converts_the_bare_column_holding_placeholder_rather_than_refusing_it() {
+    assertThat(converter.convert("-", FiscalIdentifier.class, ConversionContext.DEFAULT))
+        .contains(new FiscalIdentifier("-"));
   }
 
   @Test

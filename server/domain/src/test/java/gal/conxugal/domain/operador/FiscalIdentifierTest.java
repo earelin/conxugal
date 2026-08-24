@@ -12,6 +12,10 @@ class FiscalIdentifierTest {
 
   private static final String NON_BREAKING_SPACE = "\u00a0";
   private static final String GROUP_SEPARATOR = "\u001d";
+  private static final String EN_DASH = "\u2013"; // –
+  private static final String EM_DASH = "\u2014"; // —
+  private static final String NON_BREAKING_HYPHEN = "\u2011"; // ‑
+  private static final String MINUS_SIGN = "\u2212"; // −
 
   @Test
   void identifiers_differing_only_in_padding_and_case_are_one_identifier() {
@@ -83,11 +87,9 @@ class FiscalIdentifierTest {
     assertThatIllegalArgumentException().isThrownBy(() -> new FiscalIdentifier(""));
   }
 
-  /**
-   * The canonical constructor is deliberately permissive about placeholders: a row persisted
-   * under one before {@link FiscalIdentifier#of} turned them away has to read back rather than
-   * fail the read.
-   */
+  // The canonical constructor is deliberately permissive about placeholders, in both spellings a
+  // store may already hold: a row persisted under one before FiscalIdentifier.of turned them away
+  // has to read back rather than fail the read that finds it.
   @Test
   void constructs_the_dash_placeholder_so_stored_row_reads_back() {
     assertThat(new FiscalIdentifier("-").value()).isEqualTo("-");
@@ -95,7 +97,7 @@ class FiscalIdentifierTest {
 
   @Test
   void constructs_the_temporary_placeholder_so_stored_row_reads_back() {
-    assertThat(new FiscalIdentifier("temp-00934").value()).isEqualTo("TEMP-00934");
+    assertThat(new FiscalIdentifier("TEMP-00934").value()).isEqualTo("TEMP-00934");
   }
 
   @Test
@@ -129,6 +131,17 @@ class FiscalIdentifierTest {
     assertThat(FiscalIdentifier.of(" - ")).isEmpty();
   }
 
+  // A dash the source spells with a typographic character is the same placeholder, and admitting
+  // it would return the pooling this refuses under another spelling. The record page is
+  // ISO-8859-1 and cannot carry one, but the listing is JSON and is under no such limit.
+  @Test
+  void lone_dash_published_as_typographic_variant_is_the_same_placeholder() {
+    assertThat(FiscalIdentifier.of(EN_DASH)).isEmpty();
+    assertThat(FiscalIdentifier.of(EM_DASH)).isEmpty();
+    assertThat(FiscalIdentifier.of(NON_BREAKING_HYPHEN)).isEmpty();
+    assertThat(FiscalIdentifier.of(MINUS_SIGN)).isEmpty();
+  }
+
   @Test
   void published_temporary_placeholder_is_unusable() {
     assertThat(FiscalIdentifier.of("TEMP-00934")).isEmpty();
@@ -138,6 +151,11 @@ class FiscalIdentifierTest {
   @Test
   void temporary_placeholder_published_in_lower_case_is_unusable() {
     assertThat(FiscalIdentifier.of("temp-00934")).isEmpty();
+  }
+
+  @Test
+  void temporary_placeholder_carrying_typographic_dash_is_the_same_placeholder() {
+    assertThat(FiscalIdentifier.of("TEMP" + EN_DASH + "00934")).isEmpty();
   }
 
   // The rule rejects the two published placeholder forms and nothing else: an identifier that
