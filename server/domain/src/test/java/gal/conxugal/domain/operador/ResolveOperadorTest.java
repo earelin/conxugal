@@ -110,9 +110,7 @@ class ResolveOperadorTest {
 
     resolve("B12345678", "Antiga Denominación SL", MAY, 1L);
 
-    ArgumentCaptor<NomeAlternativo> retained = ArgumentCaptor.forClass(NomeAlternativo.class);
-    verify(operadores).retainName(retained.capture());
-    assertThat(retained.getValue())
+    assertThat(theNameRetained())
         .usingRecursiveComparison()
         .isEqualTo(
             new NomeAlternativo(INCUMBENT_ID, "Antiga Denominación SL", new NomeRank(MAY, 1L)));
@@ -163,9 +161,7 @@ class ResolveOperadorTest {
 
     resolve("B12345678", "Sen Data SL", null, 9999L);
 
-    ArgumentCaptor<NomeAlternativo> retained = ArgumentCaptor.forClass(NomeAlternativo.class);
-    verify(operadores).retainName(retained.capture());
-    assertThat(retained.getValue())
+    assertThat(theNameRetained())
         .usingRecursiveComparison()
         .isEqualTo(new NomeAlternativo(INCUMBENT_ID, "Sen Data SL", new NomeRank(null, 9999L)));
     verify(operadores, never()).promoteName(any(), any(), any());
@@ -201,6 +197,17 @@ class ResolveOperadorTest {
         .containsExactly(
             new NomeAlternativo(INCUMBENT_ID, "Primeira SL", new NomeRank(MARCH, 1L)),
             new NomeAlternativo(INCUMBENT_ID, "Segunda SL", new NomeRank(MAY, 2L)));
+  }
+
+  /**
+   * The one name the store was asked to retain. Captured rather than matched, because a retained
+   * name is distinct by its spelling alone — an expected value would match whatever rank the call
+   * carried, which is the half these tests are about.
+   */
+  private NomeAlternativo theNameRetained() {
+    ArgumentCaptor<NomeAlternativo> retained = ArgumentCaptor.forClass(NomeAlternativo.class);
+    verify(operadores).retainName(retained.capture());
+    return retained.getValue();
   }
 
   private Optional<OperadorEconomico> resolve(
