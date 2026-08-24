@@ -2,6 +2,7 @@ package gal.conxugal.domain.operador;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -13,6 +14,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -129,14 +131,65 @@ class ResolveOperadorTest {
     verify(operadores, never()).retainName(any());
   }
 
+  // Identity is the identifier alone, so a publication the source carried no name for is still
+  // catalogued under it. Nothing invents a name for the operador in the meantime.
+  @Test
+  void publication_that_carried_no_name_catalogues_the_operador_under_the_empty_name() {
+    nothingIsCatalogued();
+
+    Optional<OperadorEconomico> resolved = resolve("B12345678", null, JUNE, 1L);
+
+    assertThat(resolved).get().extracting(OperadorEconomico::name).isEqualTo("");
+  }
+
+  // The empty name is what an operador nothing has named is displayed as, never a name that can
+  // win R4 — and it is not a name the operador has borne, so it does not enter the retained set
+  // either. A blank the source left would otherwise take the display from a name really published.
+  @Test
+  void publication_that_carried_no_name_neither_promotes_nor_retains() {
+    catalogued("ACME SL", MAY, 1L);
+
+    resolve("B12345678", null, JUNE, 2L);
+
+    verify(operadores, never()).promoteName(any(), any(), any());
+    verify(operadores, never()).retainName(any());
+  }
+
+  // Undated ranks last however high its source identifier and however late it arrives, so the
+  // displayed name cannot be taken by a publication nobody can date.
+  @Test
+  void undated_publication_never_displaces_one_that_carries_its_date() {
+    catalogued("ACME SL", MAY, 1L);
+
+    resolve("B12345678", "Sen Data SL", null, 9999L);
+
+    ArgumentCaptor<NomeAlternativo> retained = ArgumentCaptor.forClass(NomeAlternativo.class);
+    verify(operadores).retainName(retained.capture());
+    assertThat(retained.getValue())
+        .usingRecursiveComparison()
+        .isEqualTo(new NomeAlternativo(INCUMBENT_ID, "Sen Data SL", new NomeRank(null, 9999L)));
+    verify(operadores, never()).promoteName(any(), any(), any());
+  }
+
+  // Which keeps the choice total: an operador every publication of which is undated still has
+  // exactly one name, settled between them by the higher source identifier.
+  @Test
+  void undated_publications_settle_the_displayed_name_on_the_higher_source_identifier() {
+    catalogued("Primeira SL", null, 5L);
+
+    resolve("B12345678", "Segunda SL", null, 9L);
+
+    verify(operadores).promoteName(INCUMBENT_ID, "Segunda SL", new NomeRank(null, 9L));
+  }
+
   // Every name the operador has borne survives, so three publications under three names leave the
   // two it no longer displays retained beside it, each under the rank it was published at. The
-  // second read answers what the first promotion left, as it would inside the caller's transaction.
+  // second read answers what the first promotion actually wrote, as it would inside the caller's
+  // transaction — stubbing the promoted state instead would assert a conclusion the stub supplied,
+  // and would stay green with the promotion deleted.
   @Test
   void operador_published_under_three_names_retains_the_two_it_no_longer_displays() {
-    when(operadores.findByFiscalId(ACME_ID))
-        .thenReturn(Optional.of(incumbent("Primeira SL", MARCH, 1L)))
-        .thenReturn(Optional.of(incumbent("Segunda SL", MAY, 2L)));
+    theStoreDisplays("Primeira SL", MARCH, 1L);
 
     resolve("B12345678", "Segunda SL", MAY, 2L);
     resolve("B12345678", "Terceira SL", JUNE, 3L);
@@ -182,9 +235,32 @@ class ResolveOperadorTest {
         .thenReturn(Optional.of(incumbent(name, date, sourceId)));
   }
 
+  /**
+   * The same, for a sequence: what the store displays moves when a promotion writes it, so a second
+   * resolution reads the name and rank the first one left rather than a state the stub supplied.
+   * Inside the caller's transaction that is what the store would answer.
+   */
+  private void theStoreDisplays(String name, @Nullable LocalDate date, long sourceId) {
+    AtomicReference<OperadorEconomico> displayed =
+        new AtomicReference<>(incumbent(name, date, sourceId));
+    when(operadores.findByFiscalId(ACME_ID))
+        .thenAnswer(invocation -> Optional.of(displayed.get()));
+    doAnswer(
+            invocation ->
+                displayed.updateAndGet(
+                    operador ->
+                        incumbent(
+                            invocation.getArgument(1), invocation.<NomeRank>getArgument(2))))
+        .when(operadores)
+        .promoteName(any(), any(), any());
+  }
+
   private static OperadorEconomico incumbent(
       String name, @Nullable LocalDate date, long sourceId) {
-    return new OperadorEconomico(
-        INCUMBENT_ID, ACME_ID, name, false, new NomeRank(date, sourceId), Set.of());
+    return incumbent(name, new NomeRank(date, sourceId));
+  }
+
+  private static OperadorEconomico incumbent(String name, NomeRank nameRank) {
+    return new OperadorEconomico(INCUMBENT_ID, ACME_ID, name, false, nameRank, Set.of());
   }
 }

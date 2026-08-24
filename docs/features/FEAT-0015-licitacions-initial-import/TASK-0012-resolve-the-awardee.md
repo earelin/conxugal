@@ -120,5 +120,10 @@ convergence mechanism, and it arrives with the incremental feature.
   **deterministically**: the same name displays whichever order the two are stored in. Before the
   lote joins the rank tuple this fails, which is why TASK-0021 precedes it. (SPEC-0006 #36)
 - Every award carries a resolution path, including the unresolved one. (SPEC-0008 #46)
+- The use case calling `ResolveOperador` **opens the transaction** the resolution's writes join, so
+  an operador cannot be created and named while the award write that justified it rolls back. The
+  collaborator owns no boundary of its own — that is
+  [TASK-0011](TASK-0011-extract-resolve-operador.md)'s design, and it makes the boundary each
+  caller's to supply. (SPEC-0006 #37)
 - Repository ports stubbed with Mockito for the routing cases; the catalogue-match and
   rank-determinism cases integration-tested against PostgreSQL with a real operadores table.

@@ -1,6 +1,7 @@
 package gal.conxugal.domain.contrato;
 
 import gal.conxugal.domain.operador.NomeRank;
+import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.ResolveOperador;
 import gal.conxugal.domain.organo.OrganoId;
 import io.micronaut.transaction.annotation.Transactional;
@@ -11,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Stores one batch of published contratos menores together with the operadores they were awarded
@@ -40,10 +42,14 @@ import java.util.Objects;
  * accumulated in memory, where a name arriving at two ranks would collapse to whichever the set
  * happened to keep.
  *
- * <p><strong>What a contract supplies to the derivation is a rank</strong> — its publication date
- * and its source identifier, this family's contract identity. What becomes of the identifier and
- * the name beside it is {@link ResolveOperador}'s, and shared with every other family, so an award
- * whose identifier is unusable yields no operador here for the same reason it does there.
+ * <p><strong>What this family contributes to the derivation is its rank</strong> — the publication
+ * date and the source identifier, which is this family's contract identity. The published
+ * identifier and name it passes beside them are the source's own values, and what becomes of all
+ * three is {@link ResolveOperador}'s and shared with every other family, so an award whose
+ * identifier is unusable yields no operador here for the same reason it does there.
+ *
+ * <p>The source is not expected to publish either an award without a name or one without an
+ * identifier.
  */
 @Singleton
 public class StoreContratosMenoresBatch {
@@ -85,12 +91,23 @@ public class StoreContratosMenoresBatch {
         entry.obxecto(),
         entry.amount(),
         entry.duration(),
-        resolveOperador
-            .resolve(
-                entry.awardeeFiscalId(),
-                entry.awardeeName(),
-                new NomeRank(entry.publicationDate(), entry.sourceId()))
-            .orElse(null));
+        awardeeOf(entry));
+  }
+
+  /**
+   * The operador this award names, or null where the derivation yields none. Because the schema is
+   * normalised, such a contract records no awardee at all rather than an invented one.
+   *
+   * <p>The rank is built here because the pair it carries is this family's contract identity: the
+   * date the award was published, and the source identifier that orders two awards sharing one.
+   */
+  private @Nullable OperadorEconomico awardeeOf(ContratoMenorSourceEntry entry) {
+    return resolveOperador
+        .resolve(
+            entry.awardeeFiscalId(),
+            entry.awardeeName(),
+            new NomeRank(entry.publicationDate(), entry.sourceId()))
+        .orElse(null);
   }
 
   /**

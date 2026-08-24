@@ -9,15 +9,21 @@ import org.jspecify.annotations.Nullable;
  * Resolves a published awardee to the operador it names, cataloguing one if nothing named that
  * identifier before and accounting for the name the publication carried.
  *
- * <p>Every contract family derives its operadores through this, and there is deliberately only one
- * of it. The rule is subtle in three places — an undated publication ranks last, the rank
+ * <p>Every contract family derives its operadores through this class, and there is deliberately
+ * only one of it. The rule is subtle in three places — an undated publication ranks last, the rank
  * comparison is a strict win, and a promotion files the name it displaced afterwards rather than
  * before — and a second copy diverging on any of them would show up as an operador displayed under
  * different names depending on which family last touched it.
  *
- * <p><strong>It takes the values the rule needs, not a family's row type.</strong> The published
- * identifier, the published name and the {@link NomeRank} the publication supplies are all of it,
- * so a second family calls this without borrowing the first family's source entry.
+ * <p><strong>It takes values, not a family's row type</strong>, so a family calls it without
+ * borrowing another's source entry. What {@link #resolve} takes is what the <em>ranking</em>
+ * derivation needs, which is not the same as everything a family might want to catalogue from.
+ *
+ * <p><strong>A caller that must catalogue without contributing a rank needs a second entry point
+ * here, never a rank engineered to lose.</strong> A losing rank does not express <em>this
+ * publication ranks nothing</em>: it still reaches {@code retainName}, filing the name among the
+ * operador's alternatives, and no port drops a retained name except as a side effect of promoting
+ * it — so the mistake is permanent and silent. A losing bid is exactly such a caller.
  *
  * <p><strong>It owns no transaction.</strong> The caller's boundary is the one the writes join, so
  * the operador a contract names is created beside the write that stores the contract and the two
