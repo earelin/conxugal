@@ -7,6 +7,8 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import java.util.HashSet;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class FiscalIdentifierTest {
 
@@ -120,42 +122,22 @@ class FiscalIdentifierTest {
     assertThat(FiscalIdentifier.of(NON_BREAKING_SPACE + GROUP_SEPARATOR)).isEmpty();
   }
 
-  @Test
-  void published_lone_dash_is_unusable() {
-    assertThat(FiscalIdentifier.of("-")).isEmpty();
+  // Every spelling of a lone dash is the same placeholder. The rule reads the canonical form, so
+  // padding and case cannot smuggle one past it, and a dash the source spells typographically has
+  // to count as one too or the pooling this refuses returns under another spelling. The record
+  // page is ISO-8859-1 and cannot carry one; the listing is JSON and is under no such limit.
+  @ParameterizedTest
+  @ValueSource(strings = {"-", " - ", EN_DASH, EM_DASH, NON_BREAKING_HYPHEN, MINUS_SIGN})
+  void published_lone_dash_is_unusable_however_it_is_spelled(String published) {
+    assertThat(FiscalIdentifier.of(published)).isEmpty();
   }
 
-  // The placeholder test reads the canonical form, so padding cannot smuggle one past it.
-  @Test
-  void padded_lone_dash_is_the_same_placeholder_and_unusable() {
-    assertThat(FiscalIdentifier.of(" - ")).isEmpty();
-  }
-
-  // A dash the source spells with a typographic character is the same placeholder, and admitting
-  // it would return the pooling this refuses under another spelling. The record page is
-  // ISO-8859-1 and cannot carry one, but the listing is JSON and is under no such limit.
-  @Test
-  void lone_dash_published_as_typographic_variant_is_the_same_placeholder() {
-    assertThat(FiscalIdentifier.of(EN_DASH)).isEmpty();
-    assertThat(FiscalIdentifier.of(EM_DASH)).isEmpty();
-    assertThat(FiscalIdentifier.of(NON_BREAKING_HYPHEN)).isEmpty();
-    assertThat(FiscalIdentifier.of(MINUS_SIGN)).isEmpty();
-  }
-
-  @Test
-  void published_temporary_placeholder_is_unusable() {
-    assertThat(FiscalIdentifier.of("TEMP-00934")).isEmpty();
-  }
-
-  // Upper-casing runs before the test too, so the published case cannot smuggle one past it.
-  @Test
-  void temporary_placeholder_published_in_lower_case_is_unusable() {
-    assertThat(FiscalIdentifier.of("temp-00934")).isEmpty();
-  }
-
-  @Test
-  void temporary_placeholder_carrying_typographic_dash_is_the_same_placeholder() {
-    assertThat(FiscalIdentifier.of("TEMP" + EN_DASH + "00934")).isEmpty();
+  // Likewise the temporary form, whose dash is subject to the same spellings and whose letters
+  // reach the rule already upper-cased.
+  @ParameterizedTest
+  @ValueSource(strings = {"TEMP-00934", "temp-00934", "TEMP" + EN_DASH + "00934"})
+  void published_temporary_placeholder_is_unusable_however_it_is_spelled(String published) {
+    assertThat(FiscalIdentifier.of(published)).isEmpty();
   }
 
   // The rule rejects the two published placeholder forms and nothing else: an identifier that
