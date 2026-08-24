@@ -44,16 +44,13 @@ class ApiUrlPrefixArchTest {
         }
       };
 
-  // allowEmptyShould: no REST (non-HTML) @Controller exists yet — this rule guards
-  // the ones FEAT-0004's TASK-0003/TASK-0004 are about to add.
   @ArchTest
   static final ArchRule REST_CONTROLLERS_ARE_MOUNTED_UNDER_API_PREFIX =
       classes()
           .that()
           .areAnnotatedWith(Controller.class)
           .and(SERVES_A_NON_HTML_RESPONSE)
-          .should(haveControllerPathStartingWithApi())
-          .allowEmptyShould(true);
+          .should(haveControllerPathStartingWithApi());
 
   private static boolean isHandlerMethod(JavaMethod method) {
     return HTTP_METHOD_MAPPINGS.stream().anyMatch(method::isAnnotatedWith);

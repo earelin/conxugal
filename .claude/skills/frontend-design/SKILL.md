@@ -7,17 +7,18 @@ description: >-
   product rather than a bolt-on. Covers layout chrome, design tokens, component
   patterns (cards, stat cards, tables, badges, buttons, forms/modals), status
   semantics, and Galician copy. Also covers the three server-rendered pages the backend
-  serves outside the SPA (login, forbidden, server error). Grounded in the FEAT-0004
-  visual design.
+  serves outside the SPA (login, forbidden, server error). Grounded in the
+  administration-area visual design.
 ---
 
 # conxugal frontend design
 
 Build every screen so it reads as one product. The design language is **Mantine v9
 with the project theme** — do not invent new colours, spacings, radii, or bespoke CSS
-when a theme token or Mantine prop already expresses it. The FEAT-0004 mockups
-(`docs/features/FEAT-0004-administration-area/design/`) are the canonical reference for
-what "coherent" looks like here; mirror their structure.
+when a theme token or Mantine prop already expresses it. The administration-area mockups
+(`docs/design/administration-area/`) are the canonical reference for what "coherent" looks
+like at full-screen scale; mirror their structure. This file is the authority on the rules —
+where a mockup disagrees with it or with a shipped screen, the mockup is stale.
 
 ## Sources of truth — read these first
 
@@ -160,10 +161,17 @@ lock affordance and a tooltip explaining why — never hidden.
 ### Forms & dialogs
 Create/edit flows are a Mantine `Modal` (`radius="md"`) over the list, with a titled
 header, a hairline divider, stacked fields, and a footer of `Cancelar`
-(`variant="default"`) + a filled primary. Required fields carry a **red `*`**. Sensitive
-fields (passwords) get a dimmed helper note stating the handling
-("Gárdase cifrado; nunca se mostra…"). Prefer `@mantine/form` for validation; surface
-server-side errors (e.g. uniqueness) as field errors at submit time.
+(`variant="default"`) + a filled primary. Required fields carry a **red `*`**. Prefer
+`@mantine/form` for validation; surface server-side errors (e.g. uniqueness) as field
+errors at submit time.
+
+**Never ask for a secret the server should mint.** The create-user dialog takes email and
+role only. A value the reader gets exactly once is revealed *after* the write, in the same
+modal, as a read-only `TextInput` with a `CopyButton` and a yellow `Alert` warning it will
+not be shown again — not as a field they fill in, and not on a page they might navigate
+away from. Reopening the dialog offers a fresh form, never the value again. See
+`CreateUserModal.tsx`, whose two states are what `create-user.svg` and the shipped reveal
+render.
 
 ### Icons & captions
 Contextual helper text uses a small dimmed Tabler icon (`IconInfoCircle`, `IconLock`)
@@ -204,3 +212,4 @@ followed by dimmed `Text size="sm"`. Keep captions to one line where possible.
 - [ ] From `ui/`: `npm run lint`, `npm run build`, `npm run test` pass.
 
 <!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->
+<!-- distilled-from: FEAT-0004 @ 7402d8a -->

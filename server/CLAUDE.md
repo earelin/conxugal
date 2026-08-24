@@ -227,6 +227,26 @@ Four things here are easy to break by accident:
   silently change both halves (`AcceptHeaderRejectionTest`).
 - **The last-login stamp is best-effort** — if the write fails the login still succeeds.
 
+An account's whole lifecycle is create → enable/disable, and **nothing else**. An
+administrator creates one through `POST /api/admin/users`; the server mints the initial
+password and returns it in that one response. There is no reset, no change-password and no
+delete anywhere — `UserRepository` exposes no password write after `create`, and SPEC-0003 R11
+forbids removal. Since `users.email` is `UNIQUE`, **an initial password lost before it reaches
+its user strands that address permanently**: the account cannot be recreated under the same
+email, cannot be deleted, and cannot be given a new password through any endpoint. Restoring
+access today means an operator `UPDATE`ing `password_hash` by hand. Treat that as the cost of
+adding any other write-once credential, and disabling the last enabled `ADMIN` is refused
+(`SetUserEnabled`) so the area itself can never become unreachable the same way.
+
+**A role is fixed at creation, and `SetUserEnabled` is built on that.** Its guard takes a
+`FOR UPDATE` lock over the enabled-admin set only when the target is a *currently-enabled*
+admin, which is sound precisely because no other case can newly become the guarded one
+mid-transaction. Nothing enforces the invariant — there is no constraint, no test and no
+endpoint that writes `role` after `create`. Adding role editing (still unbuilt, along with
+email editing, self-registration and audit logging of admin actions) therefore breaks that
+guard silently: it would have to lock unconditionally, or lock the row it is about to
+promote. Read `SetUserEnabled`'s Javadoc before touching either.
+
 The three views in `resources/views/` (login, forbidden, server error) render outside the
 SPA so a denial or a crash never depends on the React bundle; the bundle itself is served
 only once a session exists. Their styling hand-copies the Mantine palette from
@@ -235,3 +255,4 @@ changing either.
 
 <!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->
 <!-- distilled-from: FEAT-0003 @ 73cf32f -->
+<!-- distilled-from: FEAT-0004 @ 7402d8a -->

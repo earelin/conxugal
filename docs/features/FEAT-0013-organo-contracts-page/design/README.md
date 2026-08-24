@@ -54,8 +54,9 @@ flowchart LR
 ## Design language
 
 The mockups reuse the `AppShell` chrome from `ui/src/app/layout/AppLayout.tsx` and the
-theme in `ui/src/app/theme.ts`, and follow the tokens, chrome and status semantics of
-[FEAT-0004's design README](../../FEAT-0004-administration-area/design/README.md) —
+theme in `ui/src/app/theme.ts`, and follow the tokens, chrome and status semantics stated in
+[the `frontend-design` skill](../../../../.claude/skills/frontend-design/SKILL.md) and rendered by
+[the administration-area mockups](../../../design/administration-area/README.md) —
 `indigo` primary, `md` radius, `gray.0`/white surfaces, green/grey/red status semantics,
 Galician chrome throughout. `organo-page.svg` also carries
 [FEAT-0012's picker](../../FEAT-0012-organos-visible-set-and-browse/design/README.md)

@@ -17,7 +17,7 @@ info:
 
     This document is the design-first, authoritative contract for the API (ADR-0010): endpoints
     are specified here before they are implemented, and controllers conform to it. It currently
-    covers the planned endpoints of FEAT-0004 (user administration, system status, and the
+    covers the administration area's own endpoints (user administration, system status, and the
     current-user lookup), FEAT-0005 (real-time metrics), FEAT-0006 (the Órganos de Contratación
     catalogue import trigger), FEAT-0007 (the Órganos catalogue and taxonomía reads, and the
     administration of the taxonomía and of each Órgano's placement in it), FEAT-0009 (the
