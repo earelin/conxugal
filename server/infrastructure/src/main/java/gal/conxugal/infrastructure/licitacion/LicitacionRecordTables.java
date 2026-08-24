@@ -83,25 +83,29 @@ final class LicitacionRecordTables {
     // that the lote is stored under the spelling the award table used rather than a later one's.
     List<String> loteCells = new ArrayList<>();
 
-    this.awards = readAwards(publicationId, document, loteCells);
-    this.formalisations = readFormalisations(publicationId, document, loteCells);
+    // Copied here rather than in each accessor, so the one place a field is set is the one place
+    // that says what it holds: a list nothing can change afterwards.
+    this.awards = List.copyOf(readAwards(publicationId, document, loteCells));
+    this.formalisations = List.copyOf(readFormalisations(publicationId, document, loteCells));
     this.cpvClassifications =
-        readClassifications(
-            publicationId,
-            document,
-            loteCells,
-            CPV_TABLE,
-            CODIGO_CPV,
-            PublishedCpvClassification::new);
+        List.copyOf(
+            readClassifications(
+                publicationId,
+                document,
+                loteCells,
+                CPV_TABLE,
+                CODIGO_CPV,
+                PublishedCpvClassification::new));
     this.nutClassifications =
-        readClassifications(
-            publicationId,
-            document,
-            loteCells,
-            NUT_TABLE,
-            NUT_CODE,
-            PublishedNutClassification::new);
-    this.lotes = readLotes(publicationId, document, loteCells);
+        List.copyOf(
+            readClassifications(
+                publicationId,
+                document,
+                loteCells,
+                NUT_TABLE,
+                NUT_CODE,
+                PublishedNutClassification::new));
+    this.lotes = List.copyOf(readLotes(publicationId, document, loteCells));
   }
 
   List<PublishedAward> awards() {
@@ -273,7 +277,7 @@ final class LicitacionRecordTables {
     // The lotes table's own rows last: a lote only it names is still a lote, and one an earlier
     // table already named keeps that table's spelling.
     decoration.forEach(named::putIfAbsent);
-    return List.copyOf(named.values());
+    return new ArrayList<>(named.values());
   }
 
   /**
