@@ -113,10 +113,10 @@ public record FiscalIdentifier(String value) {
   }
 
   private boolean isTemporaryForm() {
-    int dash = TEMPORARY_PLACEHOLDER_STEM.length();
-    return value.length() > dash
+    int dashIndex = TEMPORARY_PLACEHOLDER_STEM.length();
+    return value.length() > dashIndex
         && value.startsWith(TEMPORARY_PLACEHOLDER_STEM)
-        && isDash(value.charAt(dash));
+        && isDash(value.charAt(dashIndex));
   }
 
   private static boolean isDash(char character) {
