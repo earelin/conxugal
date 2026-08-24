@@ -116,7 +116,7 @@ class ContratosDeGaliciaLicitacionRecordSourceAdapterIntegrationTest
    */
   @Test
   void reads_the_captured_record_with_every_accent_the_source_published() {
-    stubRecord(WITH_LOTES, recordResponse(RECORD_WITH_LOTES));
+    stubLotesRecord();
 
     LicitacionRecord record = fetchRecord(WITH_LOTES);
 
@@ -133,7 +133,7 @@ class ContratosDeGaliciaLicitacionRecordSourceAdapterIntegrationTest
 
   @Test
   void reads_every_labelled_scalar_the_captured_record_publishes() {
-    stubRecord(WITH_LOTES, recordResponse(RECORD_WITH_LOTES));
+    stubLotesRecord();
 
     LicitacionRecord record = fetchRecord(WITH_LOTES);
 
@@ -154,7 +154,7 @@ class ContratosDeGaliciaLicitacionRecordSourceAdapterIntegrationTest
    */
   @Test
   void keeps_the_double_space_the_captured_object_carries() {
-    stubRecord(WITH_LOTES, recordResponse(RECORD_WITH_LOTES));
+    stubLotesRecord();
 
     LicitacionRecord record = fetchRecord(WITH_LOTES);
 
@@ -164,7 +164,7 @@ class ContratosDeGaliciaLicitacionRecordSourceAdapterIntegrationTest
   /** Galician-formatted text in the record where the listing publishes JSON numbers. */
   @Test
   void reads_the_captured_amounts_at_the_scale_the_source_published() {
-    stubRecord(WITH_LOTES, recordResponse(RECORD_WITH_LOTES));
+    stubLotesRecord();
 
     LicitacionRecord record = fetchRecord(WITH_LOTES);
 
@@ -180,7 +180,7 @@ class ContratosDeGaliciaLicitacionRecordSourceAdapterIntegrationTest
   @Test
   void reads_the_reference_only_from_the_captured_record_that_publishes_one() {
     stubRecord(WITH_REFERENCE, recordResponse(RECORD_WITH_REFERENCE));
-    stubRecord(WITH_LOTES, recordResponse(RECORD_WITH_LOTES));
+    stubLotesRecord();
 
     assertThat(fetchRecord(WITH_REFERENCE).expediente()).isEqualTo("ATG-2026-0098");
     assertThat(fetchRecord(WITH_LOTES).expediente()).isNull();
@@ -216,7 +216,7 @@ class ContratosDeGaliciaLicitacionRecordSourceAdapterIntegrationTest
 
   @Test
   void asks_the_source_for_the_record_under_the_parameter_it_publishes() {
-    stubRecord(WITH_LOTES, recordResponse(RECORD_WITH_LOTES));
+    stubLotesRecord();
 
     fetchRecord(WITH_LOTES);
 
@@ -283,6 +283,11 @@ class ContratosDeGaliciaLicitacionRecordSourceAdapterIntegrationTest
 
     assertThatThrownBy(() -> fetchRecord(WITH_LOTES))
         .isInstanceOf(LicitacionRecordUnavailableException.class);
+  }
+
+  /** The capture most of these tests read, stubbed under the identifier it publishes. */
+  private void stubLotesRecord() {
+    stubRecord(WITH_LOTES, recordResponse(RECORD_WITH_LOTES));
   }
 
   private LicitacionRecord fetchRecord(PublicationId publicationId) {
