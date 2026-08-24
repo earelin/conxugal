@@ -32,9 +32,8 @@ import org.jspecify.annotations.Nullable;
  * <strong>exact</strong> — never firing on a single firm, never missing a consortium. The
  * alternatives are not close: a name test beginning {@code UTE} misses <strong>7 of 35</strong>
  * ({@code MISTURAS-INGESAN} among them), and the {@code U}-prefix identifier test misses
- * <strong>33 of 35</strong>. This is not the inference SPEC-0006 R6 forbids — the markup
- * <em>is</em> the publication, which is precisely what R17's own <em>membership is published, not
- * inferred</em> asks for.
+ * <strong>33 of 35</strong>. This is not inference: the markup <em>is</em> the publication, which
+ * is precisely what <em>membership is published, not inferred</em> asks for.
  *
  * <p><strong>The branch is taken before the {@code NIF} cell is read at all, and that ordering is
  * load-bearing.</strong> {@code -} and {@code TEMP-…} appeared on 33 of 35 consortium rows and
@@ -46,6 +45,28 @@ import org.jspecify.annotations.Nullable;
  * party, its optional identifier, and its members where it has them.
  */
 final class LicitadorRow {
+
+  /**
+   * A second list inside the name cell's first, whichever of the two places it sits in.
+   *
+   * <p><strong>Both branches are needed, and only one of them is what the source serves.</strong>
+   * The source closes the name's {@code </li>} before opening the inner {@code <ul>}, so jsoup
+   * leaves that list a <em>sibling</em> of the name item rather than its child — which is invalid
+   * HTML, and matched by {@code > ul}. Well-formed nesting puts the same list <em>inside</em> the
+   * name item, which is {@code > li > ul}.
+   *
+   * <p>Matching only the shape the source happens to emit would make this classification depend on
+   * a defect in the publisher's template: the day it is corrected, or an upstream proxy normalises
+   * the markup, every consortium would silently become a single firm holding the {@code -} its NIF
+   * cell carries — no member list, no refusal, and the row count the {@code Part.} cross-check
+   * compares unchanged. That is the exact harm this branch exists to prevent, arriving through the
+   * branch itself.
+   *
+   * <p>The child combinator is load-bearing in both: {@code Element.select} matches the element it
+   * is called on as well as its descendants, so a bare {@code ul} would answer the outer list
+   * itself and read every single firm as a consortium.
+   */
+  private static final String NESTED_LIST = "> ul, > li > ul";
 
   /** The class {@link PublishedValues} and {@code Whitespace} both call blank. */
   private static final String BLANK = "[\\s\\p{Z}\\x{85}\\x{1C}-\\x{1F}]";
@@ -85,10 +106,7 @@ final class LicitadorRow {
   static PublishedBidder read(
       @Nullable String loteCell, @Nullable String nifCell, @Nullable Element nomeCell) {
     Element list = nomeCell == null ? null : nomeCell.selectFirst("ul");
-    // jsoup keeps the inner list a child of the outer one, so this is the nested <ul> and never
-    // the outer itself — Element.select matches the element it is called on as well as its
-    // descendants, which is what makes the child combinator necessary rather than tidy.
-    Element memberList = list == null ? null : list.selectFirst("> ul");
+    Element memberList = list == null ? null : list.selectFirst(NESTED_LIST);
     String name = nameOf(nomeCell, list);
     if (memberList == null) {
       // Held exactly as published. FiscalIdentifier's own rule is that nothing beyond emptiness
@@ -125,17 +143,31 @@ final class LicitadorRow {
   }
 
   /**
-   * The party's own name: the outer list's first item, read as <em>its own</em> text so that a
-   * consortium's members can never leak into the name that identifies it. A cell publishing no list
-   * at all falls back to the whole cell, which no captured row does but which costs nothing to
-   * survive.
+   * The party's own name: the outer list's first item, with any member list nested beneath it
+   * removed and everything else kept.
+   *
+   * <p><strong>Removing the list rather than reading only the item's own text.</strong> The two
+   * agree on every captured row and disagree on two shapes that cost the name entirely. Own text
+   * answers nothing at all for a name the source wraps in an inline element — and this page wraps
+   * text in {@code <span class="tooltip-cpg">} freely, on the {@code Resolución} and {@code Part.}
+   * cells among others. A consortium the source declines to identify is found by its name and by
+   * nothing else, so losing it loses the party.
+   *
+   * <p>Reading the item whole would be the opposite failure: where the members are nested
+   * <em>inside</em> the name item, the name would read {@code UTE X A70319678 - PRACE …}. Taking
+   * the list out first is the one rule that is right in both.
+   *
+   * <p>A cell publishing no list at all falls back to the whole cell, which no captured row does
+   * but which costs nothing to survive.
    */
   private static @Nullable String nameOf(@Nullable Element cell, @Nullable Element list) {
     Element first = list == null ? null : list.selectFirst("> li");
-    if (first != null) {
-      return PublishedValues.text(first.wholeOwnText());
+    if (first == null) {
+      return cell == null ? null : PublishedValues.text(cell.wholeText());
     }
-    return cell == null ? null : PublishedValues.text(cell.wholeText());
+    Element named = first.clone();
+    named.select("ul").remove();
+    return PublishedValues.text(named.wholeText());
   }
 
   /**

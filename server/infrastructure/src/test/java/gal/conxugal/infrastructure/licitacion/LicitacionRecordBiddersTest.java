@@ -3,6 +3,7 @@ package gal.conxugal.infrastructure.licitacion;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.assertj.core.api.InstanceOfAssertFactories.type;
 
 import gal.conxugal.domain.licitacion.LicitacionRecord;
 import gal.conxugal.domain.licitacion.LicitacionRecordUnavailableException;
@@ -219,6 +220,58 @@ class LicitacionRecordBiddersTest {
   }
 
   /**
+   * <strong>The same consortium written as valid HTML.</strong> The source closes the name's
+   * {@code </li>} before opening the member list, which leaves that list a sibling rather than a
+   * child — so a classification matching only what the source emits would depend on a defect in the
+   * publisher's template.
+   *
+   * <p>What it would cost is the whole point of the branch: corrected upstream, every consortium
+   * would become a single firm holding the {@code -} its NIF cell carries, with its members gone
+   * and nothing raising — the row count the {@code Part.} cross-check compares is unchanged, and
+   * the name still reads plausibly. Silent, permanent, and exactly the harm this branch exists to
+   * prevent.
+   */
+  @Test
+  void recognises_the_consortium_whose_member_list_is_nested_as_valid_markup() {
+    String wellFormed =
+        "<ul class='list-unstyled'><li>UTE ACME-BETA"
+            + "<ul><li>A32118705 - ACME</li><li>B36746584 - BETA</li></ul></li></ul>";
+
+    LicitacionRecord record = read(bidderTable(bidderRow("1", "-", wellFormed)));
+
+    assertThat(consortiumOf(record).name()).isEqualTo("UTE ACME-BETA");
+    assertThat(membersOf(record))
+        .extracting(PublishedConsortiumMember::fiscalIdentifier, PublishedConsortiumMember::name)
+        .containsExactly(
+            tuple(new FiscalIdentifier("A32118705"), "ACME"),
+            tuple(new FiscalIdentifier("B36746584"), "BETA"));
+  }
+
+  /**
+   * <strong>A name the source wraps in an inline element is still a name.</strong> This page wraps
+   * text in {@code <span class="tooltip-cpg">} freely — the {@code Resolución} and {@code Part.}
+   * cells both do — so a bidder cell that starts doing the same is not far-fetched. Read as the
+   * item's own text it would answer nothing at all, and a consortium the source declines to
+   * identify is found by its name and by nothing else.
+   */
+  @Test
+  void keeps_the_bidder_name_the_source_wraps_in_an_inline_element() {
+    LicitacionRecord record =
+        read(
+            bidderTable(
+                bidderRow(
+                    "1",
+                    "B36746584",
+                    "<ul class='list-unstyled'><li><span>ACME, S.L.</span></li></ul>")));
+
+    assertThat(record.bidders())
+        .singleElement()
+        .isInstanceOf(PublishedBidder.SingleFirm.class)
+        .extracting(PublishedBidder::name)
+        .isEqualTo("ACME, S.L.");
+  }
+
+  /**
    * Every captured row wraps its name in a list, so this is the shape the source has not been seen
    * publishing — and the one a template change could produce tomorrow. The whole cell is the name
    * and the row is still a bidder, rather than a party the record published and the parse dropped.
@@ -409,8 +462,16 @@ class LicitacionRecordBiddersTest {
         .containsExactly("05");
   }
 
+  /**
+   * The record's single bidder, asserted to be a consortium before it is read as one — so a
+   * regression in the structural branch fails as the classification it is, rather than as a cast
+   * inside a helper that names none of the case it was serving.
+   */
   private static PublishedBidder.Consortium consortiumOf(LicitacionRecord record) {
-    return (PublishedBidder.Consortium) record.bidders().getFirst();
+    return assertThat(record.bidders())
+        .singleElement()
+        .asInstanceOf(type(PublishedBidder.Consortium.class))
+        .actual();
   }
 
   private static List<PublishedConsortiumMember> membersOf(LicitacionRecord record) {

@@ -260,9 +260,19 @@ final class LicitacionRecordTables {
    * award row carrying a non-zero count on such a page. The source's own modal is per-lote, so a
    * lote the table names no row for has not published its bidders either.
    *
-   * <p>The cost, which is real: a lote whose {@code Part.} says 5 and which publishes no row of its
-   * own passes unchecked. What is bought for it is that no procedure is refused over a table the
-   * source simply did not publish for it.
+   * <p>The cost, which is real and has two forms. The stated one: a lote whose {@code Part.} says 5
+   * and which publishes no row of its own passes unchecked. The one worth knowing about, because
+   * this check cannot tell it from the first: <strong>a lote key that stops matching is
+   * indistinguishable from a lote whose bidders were never published.</strong> Were the source to
+   * begin writing the bidder table's lote cell as {@code Lote 1} rather than {@code 1}, no bidder
+   * key would meet any award key, every row would be skipped, and the guard would report nothing
+   * on a record it no longer understands.
+   *
+   * <p>Refusing when the table holds rows and none of their keys meets any award key would catch
+   * that — and would also refuse a multi-lote procedure whose awards and whose published bidders do
+   * not yet overlap, which nothing measured rules out. It is left undone for want of the sample
+   * that would settle which of the two is real. What is bought meanwhile is that no procedure is
+   * refused over a table the source simply did not publish for it.
    */
   private static void crossCheckParticipantCounts(
       PublicationId publicationId,
