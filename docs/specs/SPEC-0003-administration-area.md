@@ -188,15 +188,27 @@ Access control for the area itself is established by SPEC-0002 (the admin area i
     `user_role_is_forbidden`/`unauthenticated_caller_is_unauthorized` pair cover AC1, with
     `admin-access.spec.ts` covering the nav's affordance-only half;
     `SystemStatusControllerIntegrationTest#admin_sees_up_status_when_the_datastore_is_reachable`
-    and `admin-dashboard.spec.ts` cover AC2, `#admin_sees_degraded_status_when_the_datastore_is_unreachable`
-    and `admin-dashboard.spec.ts`'s second scenario cover AC3, and
+    and `#admin_sees_degraded_status_when_the_datastore_is_unreachable` cover AC2 in both
+    of its states; AC3 is the *freshness* claim and needs a test that asks twice —
     `AdminSystemStatusTest#admin_reads_system_status_reporting_the_datastore_is_reachable`
-    covers AC4 by asserting the payload carries no `jdbc:`, `postgres` or `password`;
+    calls the endpoint a second time and requires `checkedAt` to have moved on, and
+    `admin-dashboard.spec.ts`'s second scenario navigates away and back rather than
+    reloading, so a cached snapshot would fail it; that same `AdminSystemStatusTest` covers
+    AC4 by asserting the payload carries no `jdbc:`, `postgres`, `password` or the local
+    datastore credential;
     `AdminUserAdministrationTest#admin_lists_accounts_including_the_new_one_that_never_logged_in`
-    and `admin-users.spec.ts` cover AC5 and AC10; `AdminUserAdministrationTest#admin_creates_account_and_the_new_user_signs_in_with_the_generated_password`
+    and `admin-users.spec.ts` cover AC5 — the Java one also asserting the *admin's own*
+    last-login is present, so an empty value means "never" rather than a field that stopped
+    rendering; `AdminUserAdministrationTest#admin_creates_account_and_the_new_user_signs_in_with_the_generated_password`
     covers AC6, AC12 and AC14 end to end; `UsersControllerIntegrationTest#create_with_existing_email_is_conflict`
-    covers AC7; `AdminUserAdministrationTest#admin_disables_account_denying_sign_in_and_re_enables_it`
-    covers AC8 and AC9; `SetUserEnabledTest#refuses_to_disable_the_only_remaining_enabled_admin`
+    covers AC7's refusal and `CreateUserTest#refuses_to_create_an_account_with_an_already_used_email`
+    the half it cannot — that the existing account is left untouched, which a test mocking
+    the use case can never show; `AdminUserAdministrationTest#admin_disables_account_denying_sign_in_and_re_enables_it`
+    covers AC8, AC9 and AC10 — it re-lists the account while disabled and finds it still
+    there, which is the half AC10 turns on; `admin-users.spec.ts` covers AC10 from the UI in
+    its first scenario (a disabled account listed, offering *Activar*) and its third (a row
+    that survives a disable/re-enable round trip);
+    `SetUserEnabledTest#refuses_to_disable_the_only_remaining_enabled_admin`
     and `UsersControllerIntegrationTest#disabling_last_admin_is_conflict` cover AC11; and
     `PasswordGeneratorTest`'s three cases cover AC13
   - **R17–R21 are closed by [FEAT-0005](../features/FEAT-0005-admin-realtime-metrics/README.md)**,

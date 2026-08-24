@@ -79,7 +79,8 @@ is needed.
 ## Design language
 
 Tokens are unchanged from the
-[administration-area design language](../../../design/administration-area/README.md): primary
+[project design language](../../../../.claude/skills/frontend-design/SKILL.md), as the
+[administration-area mockups](../../../design/administration-area/README.md) render it: primary
 `indigo`, radius `md`, page background `gray.0` on white surfaces, borders `gray.3`,
 hairlines `gray.1`, body `gray.9`, dimmed `gray.6`, green for healthy. The metrics section
 adds only:

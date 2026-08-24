@@ -69,8 +69,9 @@ flowchart LR
 ## Design language
 
 The mockups reuse the `AppShell` chrome from `ui/src/app/layout/AppLayout.tsx` and the theme in
-`ui/src/app/theme.ts`, and follow the tokens and status semantics of
-[the administration-area design README](../../../design/administration-area/README.md) — `indigo`
+`ui/src/app/theme.ts`, and follow the tokens and status semantics stated in
+[the `frontend-design` skill](../../../../.claude/skills/frontend-design/SKILL.md) and rendered by
+[the administration-area mockups](../../../design/administration-area/README.md) — `indigo`
 primary, `md` radius, `gray.0`/white surfaces, uppercase dimmed letter-spaced table headers on a
 `gray.0` header row, `gray.1` hairlines between rows, Galician chrome throughout.
 

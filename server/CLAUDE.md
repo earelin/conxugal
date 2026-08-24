@@ -238,6 +238,15 @@ access today means an operator `UPDATE`ing `password_hash` by hand. Treat that a
 adding any other write-once credential, and disabling the last enabled `ADMIN` is refused
 (`SetUserEnabled`) so the area itself can never become unreachable the same way.
 
+**A role is fixed at creation, and `SetUserEnabled` is built on that.** Its guard takes a
+`FOR UPDATE` lock over the enabled-admin set only when the target is a *currently-enabled*
+admin, which is sound precisely because no other case can newly become the guarded one
+mid-transaction. Nothing enforces the invariant — there is no constraint, no test and no
+endpoint that writes `role` after `create`. Adding role editing (still unbuilt, along with
+email editing, self-registration and audit logging of admin actions) therefore breaks that
+guard silently: it would have to lock unconditionally, or lock the row it is about to
+promote. Read `SetUserEnabled`'s Javadoc before touching either.
+
 The three views in `resources/views/` (login, forbidden, server error) render outside the
 SPA so a denial or a crash never depends on the React bundle; the bundle itself is served
 only once a session exists. Their styling hand-copies the Mantine palette from

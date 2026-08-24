@@ -166,11 +166,12 @@ header, a hairline divider, stacked fields, and a footer of `Cancelar`
 errors at submit time.
 
 **Never ask for a secret the server should mint.** The create-user dialog takes email and
-role only; a soft `indigo.0` note says the server generates the initial password. A value
-the reader gets exactly once is revealed *after* the write, in the same modal, as a
-read-only `TextInput` with a `CopyButton` and a yellow `Alert` warning it will not be shown
-again — not as a field they fill in and not on a page they might navigate away from. See
-`create-user.svg` and `CreateUserModal.tsx`.
+role only. A value the reader gets exactly once is revealed *after* the write, in the same
+modal, as a read-only `TextInput` with a `CopyButton` and a yellow `Alert` warning it will
+not be shown again — not as a field they fill in, and not on a page they might navigate
+away from. Reopening the dialog offers a fresh form, never the value again. See
+`CreateUserModal.tsx`, whose two states are what `create-user.svg` and the shipped reveal
+render.
 
 ### Icons & captions
 Contextual helper text uses a small dimmed Tabler icon (`IconInfoCircle`, `IconLock`)

@@ -55,7 +55,7 @@ shadow, so it reads as floating over the page rather than as part of the header.
 
 Ending a session is **not destructive**: nothing is deleted, and signing back in undoes
 it. Red in this product is reserved for destructive actions and required-field markers
-([administration-area design language](../../../design/administration-area/README.md)), so
+([the `frontend-design` skill](../../../../.claude/skills/frontend-design/SKILL.md)), so
 the logout item uses the ordinary body colour. Red here would train users to read the
 palette as decoration.
 
@@ -102,7 +102,8 @@ breakpoint.
 ## Design language
 
 Tokens are unchanged from the
-[administration-area design language](../../../design/administration-area/README.md):
+[project design language](../../../../.claude/skills/frontend-design/SKILL.md), as the
+[administration-area mockups](../../../design/administration-area/README.md) render it:
 primary `indigo` (avatar `indigo.6` `#4c6ef5`, focus ring `#4c6ef5`), radius `md`,
 surfaces white on a `gray.0` page, borders `gray.3` (`#dee2e6`), body `gray.9`
 (`#212529`), dimmed `gray.6` (`#868e96`). The menu adds only:
