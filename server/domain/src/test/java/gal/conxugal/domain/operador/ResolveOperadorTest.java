@@ -253,11 +253,12 @@ class ResolveOperadorTest {
     when(operadores.findByFiscalId(ACME_ID))
         .thenAnswer(invocation -> Optional.of(displayed.get()));
     doAnswer(
-            invocation ->
-                displayed.updateAndGet(
-                    operador ->
-                        incumbent(
-                            invocation.getArgument(1), invocation.<NomeRank>getArgument(2))))
+            invocation -> {
+              String promotedName = invocation.getArgument(1);
+              NomeRank promotedRank = invocation.getArgument(2);
+              displayed.set(incumbent(promotedName, promotedRank));
+              return null;
+            })
         .when(operadores)
         .promoteName(any(), any(), any());
   }
