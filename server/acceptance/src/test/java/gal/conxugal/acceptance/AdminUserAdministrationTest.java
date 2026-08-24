@@ -68,6 +68,54 @@ class AdminUserAdministrationTest {
   }
 
   @Test
+  void creating_an_account_with_an_existing_email_is_refused_and_the_original_is_unchanged() {
+    Response original = createAccount();
+    String originalId = original.jsonPath().getString("id");
+    String originalPassword = original.jsonPath().getString("initialPassword");
+    // Read back from the listing rather than reused from the creation response: that response
+    // carries the clock's nanoseconds, while every later read carries what the datastore kept,
+    // rounded to microseconds. Comparing the two would fail on the rounding, not on a change.
+    String originalCreatedAt =
+        listAccounts().jsonPath().getString(field(newAccountEmail, "createdAt"));
+
+    // A different role from the original, so an account quietly overwritten rather than left
+    // alone shows up in the listing below instead of reading exactly like a refusal that worked.
+    Response refused =
+        ApplicationSession.authenticatedAs(adminSession)
+            .body(
+                """
+                {"email":"%s","role":"ADMIN"}\
+                """.formatted(newAccountEmail))
+        .when()
+            .post("/api/admin/users");
+
+    refused.then()
+        .statusCode(409);
+    // The problem type, not only the status: a conflict raised for any other reason would
+    // otherwise read as the uniqueness rule holding.
+    assertThat(refused.jsonPath().getString("type"))
+        .isEqualTo("urn:conxugal:problem-type:duplicate-email");
+    JsonPath listing = listAccounts().jsonPath();
+    assertThat(listing.getList("findAll { it.email == '%s' }".formatted(newAccountEmail)))
+        .hasSize(1);
+    assertThat(listing.getString(field(newAccountEmail, "id"))).isEqualTo(originalId);
+    assertThat(listing.getString(field(newAccountEmail, "role"))).isEqualTo("USER");
+    assertThat(listing.getString(field(newAccountEmail, "createdAt")))
+        .isEqualTo(originalCreatedAt);
+
+    // The row surviving is only half of it: a refusal that had rotated the credential would
+    // leave the listing identical and still have locked the account's holder out.
+    String sessionOfTheUntouchedAccount =
+        ApplicationSession.logInOrFail(newAccountEmail, originalPassword);
+
+    ApplicationSession.authenticatedAs(sessionOfTheUntouchedAccount)
+    .when()
+        .get("/api/me")
+    .then()
+        .statusCode(200);
+  }
+
+  @Test
   void admin_lists_accounts_including_the_new_one_that_never_logged_in() {
     String initialPassword = createAccount().jsonPath().getString("initialPassword");
 
