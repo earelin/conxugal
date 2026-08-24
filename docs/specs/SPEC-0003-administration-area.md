@@ -147,3 +147,59 @@ Access control for the area itself is established by SPEC-0002 (the admin area i
     or store that returns a past metric value, and history held in the client is cleared
     on reload.
 18. **(R21)** No secret or credential value appears anywhere in the detailed metrics.
+
+## Implemented by
+
+- **FEAT-0004** — Administration area (retired 2026-08-24, commit `7402d8a`)
+  - Decisions: no ADR of its own. It is governed by
+    [ADR-0002](../architecture/0002-hexagonal-architecture.md) (the module split its use
+    cases, ports and adapters sit in),
+    [ADR-0006](../architecture/0006-reserved-api-url-prefix.md) (the `/api/` prefix its
+    endpoints are mounted under),
+    [ADR-0008](../architecture/0008-domain-entities-carry-persistence-mapping-annotations.md)
+    (`enabled` and `createdAt` mapped on the domain `User`, and the database's
+    `DEFAULT uuidv7()` assigning identity on insert),
+    [ADR-0010](../architecture/0010-design-first-openapi-contract.md) (the contract is
+    authoritative, which is why the endpoint shapes are not restated in prose),
+    [ADR-0004](../architecture/0004-ui-stack-vite-mantine.md) and
+    [ADR-0018](../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md) (the
+    admin screens and how they are covered). R17–R21 are not this feature's: they are
+    [ADR-0009](../architecture/0009-sse-admin-realtime-metrics.md)'s and FEAT-0005's, and
+    this feature's status snapshot deliberately stayed coarse rather than growing into them.
+  - Contract: [`docs/api/openapi.yaml`](../api/openapi.yaml) — `GET`/`POST /api/admin/users`,
+    `POST /api/admin/users/{id}/enabled`, `GET /api/admin/system-status` and `GET /api/me`,
+    with `CreateUserRequest.email` carrying the `pattern` that is the enforced rule and
+    `CreatedUser.initialPassword` the generated-password strength policy. The `description`
+    on that email field records why the response schemas deliberately carry no such pattern
+    (the seeded dot-less accounts stay readable), which is the open half of QA finding
+    [L-7](../qa/2026-08-05-ui-qa-review.md). The rule it generalises to —
+    *a rule the server enforces is a `pattern`, never a `format`* — is in
+    [`docs/api/CLAUDE.md`](../api/CLAUDE.md).
+  - System: [`server/CLAUDE.md`](../../server/CLAUDE.md) § Authentication and authorization
+    — the account lifecycle as built (create, enable/disable, and nothing else), why a lost
+    initial password strands its email address permanently, and why the disabled-account
+    check must stay *after* the password check;
+    [`ui/CLAUDE.md`](../../ui/CLAUDE.md) — `AdminRoute` as both role guard and chunk-warming
+    seam, and the WireMock-stubbed local API the admin screens run against.
+  - Design: [administration-area mockups](../design/administration-area/README.md) — the
+    two screens and the create dialog at full-screen scale; the rules they render are stated
+    in the [`frontend-design` skill](../../.claude/skills/frontend-design/SKILL.md).
+  - Behaviour: `AdminApiAccessControlTest` and every controller test's
+    `user_role_is_forbidden`/`unauthenticated_caller_is_unauthorized` pair cover AC1, with
+    `admin-access.spec.ts` covering the nav's affordance-only half;
+    `SystemStatusControllerIntegrationTest#admin_sees_up_status_when_the_datastore_is_reachable`
+    and `admin-dashboard.spec.ts` cover AC2, `#admin_sees_degraded_status_when_the_datastore_is_unreachable`
+    and `admin-dashboard.spec.ts`'s second scenario cover AC3, and
+    `AdminSystemStatusTest#admin_reads_system_status_reporting_the_datastore_is_reachable`
+    covers AC4 by asserting the payload carries no `jdbc:`, `postgres` or `password`;
+    `AdminUserAdministrationTest#admin_lists_accounts_including_the_new_one_that_never_logged_in`
+    and `admin-users.spec.ts` cover AC5 and AC10; `AdminUserAdministrationTest#admin_creates_account_and_the_new_user_signs_in_with_the_generated_password`
+    covers AC6, AC12 and AC14 end to end; `UsersControllerIntegrationTest#create_with_existing_email_is_conflict`
+    covers AC7; `AdminUserAdministrationTest#admin_disables_account_denying_sign_in_and_re_enables_it`
+    covers AC8 and AC9; `SetUserEnabledTest#refuses_to_disable_the_only_remaining_enabled_admin`
+    and `UsersControllerIntegrationTest#disabling_last_admin_is_conflict` cover AC11; and
+    `PasswordGeneratorTest`'s three cases cover AC13
+  - **R17–R21 are closed by [FEAT-0005](../features/FEAT-0005-admin-realtime-metrics/README.md)**,
+    not by this feature
+
+<!-- distilled-from: FEAT-0004 @ 7402d8a -->

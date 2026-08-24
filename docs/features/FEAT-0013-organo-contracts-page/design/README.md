@@ -55,7 +55,7 @@ flowchart LR
 
 The mockups reuse the `AppShell` chrome from `ui/src/app/layout/AppLayout.tsx` and the
 theme in `ui/src/app/theme.ts`, and follow the tokens, chrome and status semantics of
-[FEAT-0004's design README](../../FEAT-0004-administration-area/design/README.md) —
+[the administration-area design README](../../../design/administration-area/README.md) —
 `indigo` primary, `md` radius, `gray.0`/white surfaces, green/grey/red status semantics,
 Galician chrome throughout. `organo-page.svg` also carries
 [FEAT-0012's picker](../../FEAT-0012-organos-visible-set-and-browse/design/README.md)

@@ -65,20 +65,13 @@
   <text x="590" y="391" font-size="14" fill="#212529">Usuario</text>
   <path d="M944 383 l6 6 l6 -6" stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- field: password -->
-  <text x="574" y="438" font-size="13" font-weight="600" fill="#212529">Contrasinal inicial<tspan fill="#fa5252"> *</tspan></text>
-  <rect x="574" y="448" width="392" height="42" rx="8" fill="#ffffff" stroke="#4c6ef5" stroke-width="1.5"/>
-  <g fill="#495057">
-    <circle cx="592" cy="469" r="3"/><circle cx="604" cy="469" r="3"/><circle cx="616" cy="469" r="3"/>
-    <circle cx="628" cy="469" r="3"/><circle cx="640" cy="469" r="3"/><circle cx="652" cy="469" r="3"/>
-    <circle cx="664" cy="469" r="3"/><circle cx="676" cy="469" r="3"/><circle cx="688" cy="469" r="3"/>
-    <circle cx="700" cy="469" r="3"/><circle cx="712" cy="469" r="3"/><circle cx="724" cy="469" r="3"/>
-  </g>
-  <g stroke="#868e96" stroke-width="1.5" fill="none">
-    <path d="M938 469 c3 -5 9 -5 12 0 c-3 5 -9 5 -12 0 z"/>
-    <circle cx="944" cy="469" r="2" fill="#868e96" stroke="none"/>
-  </g>
-  <text x="574" y="510" font-size="12" fill="#868e96">Gárdase cifrado; nunca se mostra nin se recupera en claro.</text>
+  <!-- note: the server generates the initial password; there is no password field -->
+  <rect x="574" y="430" width="392" height="76" rx="8" fill="#edf2ff" stroke="#dbe4ff"/>
+  <circle cx="598" cy="454" r="8" fill="none" stroke="#4c6ef5" stroke-width="1.6"/>
+  <text x="598" y="454" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#4c6ef5">i</text>
+  <text x="616" y="459" font-size="12.5" font-weight="600" fill="#364fc7">O contrasinal inicial xérao o servidor</text>
+  <text x="616" y="479" font-size="12" fill="#495057">Amosarase unha soa vez ao crear a conta.</text>
+  <text x="616" y="497" font-size="12" fill="#868e96">Non se garda en claro nin se pode recuperar despois.</text>
 
   <!-- footer -->
   <line x1="550" y1="536" x2="990" y2="536" stroke="#f1f3f5"/>

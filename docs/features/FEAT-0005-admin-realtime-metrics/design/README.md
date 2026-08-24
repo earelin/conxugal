@@ -10,7 +10,7 @@ project's Mantine stack
 
 These are **design artifacts, not code**: hand-authored SVG that mirrors the real
 Mantine `AppShell`, `Card`, `Badge` and `SimpleGrid` components with the project theme.
-They continue the [FEAT-0004 mockups](../../FEAT-0004-administration-area/design/README.md)
+They continue the [administration-area mockups](../../../design/administration-area/README.md)
 — the dashboard chrome above the metrics section is reproduced unchanged from
 `dashboard.svg`, so the panel reads as an addition to that page rather than a new screen.
 
@@ -79,7 +79,7 @@ is needed.
 ## Design language
 
 Tokens are unchanged from the
-[FEAT-0004 design language](../../FEAT-0004-administration-area/design/README.md): primary
+[administration-area design language](../../../design/administration-area/README.md): primary
 `indigo`, radius `md`, page background `gray.0` on white surfaces, borders `gray.3`,
 hairlines `gray.1`, body `gray.9`, dimmed `gray.6`, green for healthy. The metrics section
 adds only:

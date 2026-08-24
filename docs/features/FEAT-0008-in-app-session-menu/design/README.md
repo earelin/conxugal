@@ -8,7 +8,7 @@ render the feature's *Design* section — the header user block turned into a Ma
 
 These are **design artifacts, not code**: hand-authored SVG that mirrors the real
 Mantine `AppShell`, `UnstyledButton`, `Menu` and `Avatar` components with the project
-theme. They continue the [FEAT-0004 mockups](../../FEAT-0004-administration-area/design/README.md)
+theme. They continue the [administration-area mockups](../../../design/administration-area/README.md)
 — the shell and the screen underneath are reproduced unchanged, so the menu reads as a
 change to existing chrome rather than a new screen. The feature adds **no route and no
 screen**; every mockup here is the same admin dashboard with the header behaving
@@ -55,7 +55,7 @@ shadow, so it reads as floating over the page rather than as part of the header.
 
 Ending a session is **not destructive**: nothing is deleted, and signing back in undoes
 it. Red in this product is reserved for destructive actions and required-field markers
-([FEAT-0004 design language](../../FEAT-0004-administration-area/design/README.md)), so
+([administration-area design language](../../../design/administration-area/README.md)), so
 the logout item uses the ordinary body colour. Red here would train users to read the
 palette as decoration.
 
@@ -102,7 +102,7 @@ breakpoint.
 ## Design language
 
 Tokens are unchanged from the
-[FEAT-0004 design language](../../FEAT-0004-administration-area/design/README.md):
+[administration-area design language](../../../design/administration-area/README.md):
 primary `indigo` (avatar `indigo.6` `#4c6ef5`, focus ring `#4c6ef5`), radius `md`,
 surfaces white on a `gray.0` page, borders `gray.3` (`#dee2e6`), body `gray.9`
 (`#212529`), dimmed `gray.6` (`#868e96`). The menu adds only:

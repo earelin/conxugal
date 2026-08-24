@@ -34,7 +34,8 @@ the viewing client, for that admin's debugging, and is discarded on reload.
 
 **Out of scope (owned elsewhere):** the coarse operational status snapshot
 `GET /api/admin/system-status` and its `SystemStatusProbe`
-([FEAT-0004](../FEAT-0004-administration-area/README.md)); any **server-side** persistence,
+([SPEC-0003](../../specs/SPEC-0003-administration-area.md) R2–R5, delivered by the retired
+FEAT-0004); any **server-side** persistence,
 historical query, or alerting on metrics (explicitly excluded by SPEC-0003 R20 — no future
 feature stores them without a new spec); and metrics for non-admin users.
 
