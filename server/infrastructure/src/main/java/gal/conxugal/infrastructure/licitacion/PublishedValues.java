@@ -155,6 +155,42 @@ final class PublishedValues {
   }
 
   /**
+   * The regulated-list code a classification cell names: everything up to the first blank run.
+   *
+   * <p><strong>The cell carries the code and its description together.</strong> Measured on
+   * 822054, a CPV cell reads {@code 45000000}, a non-breaking space, then
+   * {@code Trabajos de construcción}, and a NUT cell reads {@code ES111} then {@code A Coruña} —
+   * so a parse taking the whole cell would key the vocabulary on a code-and-wording string, and
+   * one splitting on a plain space would not split at all. The separator is U+00A0, which
+   * {@link #BLANK_RUN} already calls blank, so this splits on the same character class everything
+   * else here trims by.
+   *
+   * <p>The description beside it is {@link #description}'s.
+   */
+  static @Nullable String code(@Nullable String published) {
+    String trimmed = text(published);
+    if (trimmed == null) {
+      return null;
+    }
+    Matcher blank = BLANK_RUN.matcher(trimmed);
+    return blank.find() ? trimmed.substring(0, blank.start()) : trimmed;
+  }
+
+  /**
+   * The wording a classification cell carries after its code, or null where it carries none. The
+   * remainder is trimmed at its ends and reduced no further, so its own internal spacing is the
+   * source's.
+   */
+  static @Nullable String description(@Nullable String published) {
+    String trimmed = text(published);
+    if (trimmed == null) {
+      return null;
+    }
+    Matcher blank = BLANK_RUN.matcher(trimmed);
+    return blank.find() ? text(trimmed.substring(blank.end())) : null;
+  }
+
+  /**
    * Internal whitespace runs flattened to one space, which {@link #text} deliberately does not do.
    * A number's layout carries no meaning — the markup breaks {@code 3.378.552,09} and its
    * {@code con IVE} across four lines — so the two rules differ because the two kinds of value do.

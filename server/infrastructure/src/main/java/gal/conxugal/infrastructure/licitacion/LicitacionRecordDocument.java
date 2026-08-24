@@ -77,9 +77,14 @@ final class LicitacionRecordDocument {
     return new LicitacionRecordDocument(publicationId, document, block).toRecord();
   }
 
+  /**
+   * The two required values are read first, so a page that is not a procedure's record is refused
+   * for that reason rather than for whichever table it also fails to publish.
+   */
   private LicitacionRecord toRecord() {
     String stateLabel = stateLabel();
     requireLabel(OBXECTO);
+    LicitacionRecordTables tables = new LicitacionRecordTables(publicationId, document);
     return new LicitacionRecord(
         publicationId,
         expediente(),
@@ -90,7 +95,12 @@ final class LicitacionRecordDocument {
         PublishedValues.count(valueOf("Nº lotes")),
         PublishedValues.amount(valueOf("Orzamento base de licitación")),
         PublishedValues.amount(valueOf("Valor estimado")),
-        stateLabel);
+        stateLabel,
+        tables.lotes(),
+        tables.awards(),
+        tables.formalisations(),
+        tables.cpvClassifications(),
+        tables.nutClassifications());
   }
 
   /**

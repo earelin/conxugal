@@ -152,4 +152,32 @@ class PublishedValuesTest {
     assertThat(PublishedValues.text("")).isNull();
     assertThat(PublishedValues.text(null)).isNull();
   }
+
+  /**
+   * The separator is written here as an explicit {@code  } rather than as a space, because a
+   * plain space is what a hand-written fixture reaches for and it would let an implementation that
+   * splits on {@code " "} pass while failing on every page the source serves.
+   */
+  @Test
+  void separates_the_classification_code_from_the_wording_joined_to_it() {
+    assertThat(PublishedValues.code("45000000 Trabajos de construcción"))
+        .isEqualTo("45000000");
+    assertThat(PublishedValues.description("45000000 Trabajos de construcción"))
+        .isEqualTo("Trabajos de construcción");
+    assertThat(PublishedValues.code("ES111 A Coruña")).isEqualTo("ES111");
+    assertThat(PublishedValues.description("ES111 A Coruña")).isEqualTo("A Coruña");
+  }
+
+  @Test
+  void answers_the_whole_cell_as_the_code_where_it_carries_no_wording() {
+    assertThat(PublishedValues.code("  ES111  ")).isEqualTo("ES111");
+    assertThat(PublishedValues.description("  ES111  ")).isNull();
+  }
+
+  @Test
+  void answers_no_code_for_the_cell_that_is_empty_once_trimmed() {
+    assertThat(PublishedValues.code("   ")).isNull();
+    assertThat(PublishedValues.code(null)).isNull();
+    assertThat(PublishedValues.description("   ")).isNull();
+  }
 }
