@@ -21,6 +21,31 @@ read differently by ECMA-262 than by the server, so a pattern using them needs i
 divergence spelled out in the field's `description` — see `CreateTermoRequest.name` for one
 that does, and `CreateUserRequest.email` for one that avoids the need.
 
+### A `pattern` is also read by the contract test's generator
+
+Adding one changes how [ADR-0021](../architecture/0021-openapi-contract-testing-with-schemathesis.md)'s
+suite generates data for that field, which is where three non-obvious traps live. All three
+were paid for once on `CreateUserRequest.email`; re-check them whenever a `pattern` or the
+`format` beside it changes.
+
+- **Keep the `pattern` strictly inside what the `format` admits.** The suite validates with
+  `jsonschema_rs`, whose email format is a full RFC check enforcing the 64- and 63-character
+  limits. A pattern allowing more contradicts the format beside it, and the negative phase
+  then generates a value it calls format-violating that the pattern permits. The first
+  attempt at `CreateUserRequest.email` omitted the length bounds and the gate refused a
+  174-character address. Worth re-proving by differential fuzzing when either half moves.
+- **Keep the `pattern` a superset of the alphabet the generator draws from.** Positive
+  examples are filtered through it, and too narrow a pattern discards too many — measured at
+  95% surviving for `CreateUserRequest.email`. Narrowing its local part to the set the web
+  client's `z.email()` accepts would drop that far enough to trip hypothesis's
+  `filter_too_much` health check, which surfaces as a nightly failure with no explanation
+  attached. This is the trap sitting in front of the obvious remedy for QA finding
+  [L-7](../qa/2026-08-05-ui-qa-review.md) — read it before aligning the two rules.
+- **Do not delete a `format` as redundant once a `pattern` covers it.** The `format` is what
+  keeps the generator drawing from its own strategy rather than from the pattern, whose `$`
+  means something different in Python than it does in Java. Removing `format: email` would
+  make the suite send addresses ending in a line break and expect them accepted.
+
 ## Resource naming
 
 Every path is mounted under `/api/`
@@ -75,3 +100,5 @@ above, which is the one place the operation decides. If the caller must supply a
 identifier to name the thing being acted on, the noun is singular. A path that reaches one
 element through a plural noun is a defect, and review is what catches it — nothing in
 Micronaut enforces it.
+
+<!-- distilled-from: FEAT-0004 @ 7402d8a -->
