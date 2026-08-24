@@ -131,8 +131,7 @@ final class LicitacionRecordDocument {
    */
   private void requireLabel(String label) {
     if (!fields.carries(label)) {
-      throw new LicitacionRecordUnavailableException(
-          "Record %s publishes no %s".formatted(publicationId.value(), label));
+      throw missing(label);
     }
   }
 
@@ -151,8 +150,13 @@ final class LicitacionRecordDocument {
         return label;
       }
     }
-    throw new LicitacionRecordUnavailableException(
-        "Record %s publishes no %s".formatted(publicationId.value(), STATE_LABEL));
+    throw missing(STATE_LABEL);
+  }
+
+  /** The refusal both required values raise, so one procedure reads the same way whichever. */
+  private LicitacionRecordUnavailableException missing(String label) {
+    return new LicitacionRecordUnavailableException(
+        "Record %s publishes no %s".formatted(publicationId.value(), label));
   }
 
   /**
