@@ -9,6 +9,7 @@ import gal.conxugal.domain.licitacion.PublishedFormalisation;
 import gal.conxugal.domain.licitacion.PublishedLote;
 import gal.conxugal.domain.licitacion.PublishedNutClassification;
 import gal.conxugal.domain.money.Money;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -84,8 +85,22 @@ final class LicitacionRecordTables {
 
     readAwards(publicationId, document, loteCells);
     readFormalisations(publicationId, document, loteCells);
-    readCpvClassifications(publicationId, document, loteCells);
-    readNutClassifications(publicationId, document, loteCells);
+    cpvClassifications.addAll(
+        readClassifications(
+            publicationId,
+            document,
+            loteCells,
+            CPV_TABLE,
+            CODIGO_CPV,
+            PublishedCpvClassification::new));
+    nutClassifications.addAll(
+        readClassifications(
+            publicationId,
+            document,
+            loteCells,
+            NUT_TABLE,
+            NUT_CODE,
+            PublishedNutClassification::new));
     readLotes(publicationId, document, loteCells);
   }
 
@@ -171,54 +186,57 @@ final class LicitacionRecordTables {
     }
   }
 
-  private void readCpvClassifications(
-      PublicationId publicationId, Document document, List<String> loteCells) {
-    Optional<PublishedTable> table =
-        PublishedTable.under(
-            publicationId, document, CPV_TABLE, CODIGO_CPV, LOTE, DATA_DIFUSION);
-    if (table.isEmpty()) {
-      return;
-    }
-    for (PublishedTable.Row row : table.get().rows()) {
-      String lote = row.text(LOTE);
-      addLoteCell(loteCells, lote);
-      String cell = row.text(CODIGO_CPV);
-      String code = PublishedValues.code(cell);
-      if (code == null) {
-        continue;
-      }
-      cpvClassifications.add(
-          new PublishedCpvClassification(
-              code,
-              PublishedValues.description(cell),
-              lote,
-              PublishedValues.date(row.text(DATA_DIFUSION))));
-    }
+  /**
+   * How a classification row becomes its own vocabulary's kind of row. The two vocabularies are
+   * separate types on purpose — a row filed under the wrong one classifies a procedure by a region
+   * as though it were a purpose — so the parse they share is written once and the type it yields
+   * is the caller's.
+   */
+  private interface Classification<T> {
+    T of(
+        String code,
+        @Nullable String description,
+        @Nullable String loteKey,
+        @Nullable LocalDate diffusionDate);
   }
 
-  private void readNutClassifications(
-      PublicationId publicationId, Document document, List<String> loteCells) {
+  /**
+   * One vocabulary's table, read the one way both are read: the code cell carries the code and the
+   * list's own wording behind a non-breaking space, the lote is named whether or not the row
+   * yields a classification, and a row with no code yields none.
+   *
+   * <p>Written once because the two tables differ only in where they sit and what their code
+   * column is called. Two copies of this drifted apart the first time a rule changed.
+   */
+  private <T> List<T> readClassifications(
+      PublicationId publicationId,
+      Document document,
+      List<String> loteCells,
+      String container,
+      String codeColumn,
+      Classification<T> classification) {
     Optional<PublishedTable> table =
-        PublishedTable.under(
-            publicationId, document, NUT_TABLE, NUT_CODE, LOTE, DATA_DIFUSION);
+        PublishedTable.under(publicationId, document, container, codeColumn, LOTE, DATA_DIFUSION);
     if (table.isEmpty()) {
-      return;
+      return List.of();
     }
+    List<T> classifications = new ArrayList<>();
     for (PublishedTable.Row row : table.get().rows()) {
       String lote = row.text(LOTE);
       addLoteCell(loteCells, lote);
-      String cell = row.text(NUT_CODE);
+      String cell = row.text(codeColumn);
       String code = PublishedValues.code(cell);
       if (code == null) {
         continue;
       }
-      nutClassifications.add(
-          new PublishedNutClassification(
+      classifications.add(
+          classification.of(
               code,
               PublishedValues.description(cell),
               lote,
               PublishedValues.date(row.text(DATA_DIFUSION))));
     }
+    return classifications;
   }
 
   /**
