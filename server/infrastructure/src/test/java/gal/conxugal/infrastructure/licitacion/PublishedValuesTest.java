@@ -174,6 +174,18 @@ class PublishedValuesTest {
     assertThat(PublishedValues.description("  ES111  ")).isNull();
   }
 
+  /**
+   * The wording is a key to look an entry up by rather than a fact the procedure states, so it is
+   * collapsed like a label and not preserved like an object. Only the first blank run separates
+   * the code, so a wording carrying its own would otherwise be stored in a form no ordinary search
+   * for it could match.
+   */
+  @Test
+  void collapses_the_wording_the_way_every_lookup_key_is_collapsed() {
+    assertThat(PublishedValues.description("ES111 A  Coruña")).isEqualTo("A Coruña");
+    assertThat(PublishedValues.code("ES111 A  Coruña")).isEqualTo("ES111");
+  }
+
   @Test
   void answers_no_code_for_the_cell_that_is_empty_once_trimmed() {
     assertThat(PublishedValues.code("   ")).isNull();

@@ -62,7 +62,7 @@ class CapturedLicitacionRecordTest {
         .extracting(
             PublishedAward::loteKey,
             PublishedAward::resolution,
-            PublishedAward::resolutionDate,
+            PublishedAward::diffusionDate,
             PublishedAward::executionPeriod,
             PublishedAward::awardeeName)
         .containsExactly(
@@ -224,6 +224,24 @@ class CapturedLicitacionRecordTest {
         .extracting(
             PublishedFormalisation::loteKey, PublishedFormalisation::fiscalIdentifier)
         .containsExactly(tuple(null, new FiscalIdentifier("B75928697")));
+  }
+
+  /**
+   * The second real classification shape the repo owns, and the only code in any capture that is
+   * not five characters: {@code ES} is the country-level NUTS entry, published beside a regional
+   * one on the same procedure. Pinned because it is what any future tightening of the code split
+   * towards a fixed width would silently reject.
+   */
+  @Test
+  void reads_the_country_level_entry_the_lotless_record_classifies_itself_with() {
+    LicitacionRecord record = read(LOTLESS);
+
+    assertThat(record.cpvClassifications())
+        .extracting(PublishedCpvClassification::code, PublishedCpvClassification::description)
+        .containsExactly(tuple("79341000", "Servicios de publicidad"));
+    assertThat(record.nutClassifications())
+        .extracting(PublishedNutClassification::code, PublishedNutClassification::description)
+        .containsExactly(tuple("ES113", "Ourense"), tuple("ES", "España"));
   }
 
   /**

@@ -128,7 +128,7 @@ final class LicitacionRecordTables {
     }
     for (PublishedTable.Row row : table.get().rows()) {
       String lote = row.text(LOTE);
-      loteCells.add(lote);
+      addLoteCell(loteCells, lote);
       awards.add(
           new PublishedAward(
               lote,
@@ -158,7 +158,7 @@ final class LicitacionRecordTables {
     }
     for (PublishedTable.Row row : table.get().rows()) {
       String lote = row.text(LOTE);
-      loteCells.add(lote);
+      addLoteCell(loteCells, lote);
       ContratistaCell contratista = ContratistaCell.read(row.text(CONTRATISTA));
       formalisations.add(
           new PublishedFormalisation(
@@ -180,13 +180,13 @@ final class LicitacionRecordTables {
       return;
     }
     for (PublishedTable.Row row : table.get().rows()) {
+      String lote = row.text(LOTE);
+      addLoteCell(loteCells, lote);
       String cell = row.text(CODIGO_CPV);
       String code = PublishedValues.code(cell);
       if (code == null) {
         continue;
       }
-      String lote = row.text(LOTE);
-      loteCells.add(lote);
       cpvClassifications.add(
           new PublishedCpvClassification(
               code,
@@ -205,13 +205,13 @@ final class LicitacionRecordTables {
       return;
     }
     for (PublishedTable.Row row : table.get().rows()) {
+      String lote = row.text(LOTE);
+      addLoteCell(loteCells, lote);
       String cell = row.text(NUT_CODE);
       String code = PublishedValues.code(cell);
       if (code == null) {
         continue;
       }
-      String lote = row.text(LOTE);
-      loteCells.add(lote);
       nutClassifications.add(
           new PublishedNutClassification(
               code,
@@ -238,49 +238,79 @@ final class LicitacionRecordTables {
    */
   private void readLotes(
       PublicationId publicationId, Document document, List<String> loteCells) {
+    // Only the lote column is required. The other two are decoration a lote exists without, and
+    // this is the one table the source publishes on every record of both families — so refusing
+    // over a column it may drop would cost every procedure in the catalogue rather than one.
     Map<String, PublishedLote> decoration = new LinkedHashMap<>();
-    List<String> ownCells = new ArrayList<>();
     Optional<PublishedTable> table =
-        PublishedTable.under(
-            publicationId, document, LOTES_TABLE, LOTE, DESCRICION, VALOR_ESTIMADO);
+        PublishedTable.under(publicationId, document, LOTES_TABLE, LOTE);
     if (table.isPresent()) {
       for (PublishedTable.Row row : table.get().rows()) {
         String cell = row.text(LOTE);
-        Optional<String> key = LoteKey.normalise(cell);
-        if (key.isEmpty()) {
-          continue;
-        }
-        ownCells.add(cell);
-        decoration.putIfAbsent(
-            key.get(),
-            new PublishedLote(
-                cell, row.text(DESCRICION), amountOf(row.text(VALOR_ESTIMADO))));
+        LoteKey.normalise(cell)
+            .ifPresent(
+                key ->
+                    decoration.computeIfAbsent(
+                        key,
+                        ignored ->
+                            new PublishedLote(
+                                cell, row.text(DESCRICION), amountOf(row.text(VALOR_ESTIMADO)))));
       }
     }
 
     Map<String, PublishedLote> named = new LinkedHashMap<>();
-    List<String> everyCell = new ArrayList<>(loteCells);
-    everyCell.addAll(ownCells);
-    for (String cell : everyCell) {
-      Optional<String> key = LoteKey.normalise(cell);
-      if (key.isEmpty()) {
-        continue;
-      }
-      PublishedLote published = decoration.get(key.get());
-      named.putIfAbsent(
-          key.get(),
-          published == null
-              ? new PublishedLote(cell, null, null)
-              : new PublishedLote(cell, published.description(), published.estimatedValue()));
+    for (String cell : loteCells) {
+      LoteKey.normalise(cell)
+          .ifPresent(
+              key ->
+                  named.computeIfAbsent(
+                      key,
+                      ignored -> {
+                        PublishedLote published = decoration.get(key);
+                        return published == null
+                            ? new PublishedLote(cell, null, null)
+                            : new PublishedLote(
+                                cell, published.description(), published.estimatedValue());
+                      }));
     }
+    // The lotes table's own rows last: a lote only it names is still a lote, and one an earlier
+    // table already named keeps that table's spelling.
+    decoration.forEach(named::putIfAbsent);
     lotes.addAll(named.values());
   }
 
   /**
-   * The figure a cell states, with the tax basis dropped. Every award point holds a bare
-   * {@link Money}: no measured row of either table labels its {@code Importe} {@code con IVE} or
-   * {@code sen IVE}, unlike the procedure's own two budgets, so there is no basis to carry and a
-   * component for one would be null on every row the source publishes.
+   * The published lote spelling this row names, where it names one. A row whose cell is absent
+   * names no lote and contributes none — and never a null, so the list stays one every caller can
+   * walk without a branch.
+   *
+   * <p>Called before a row is judged for anything else, so a lote is still named by a row that
+   * yields nothing: a classification whose code cell is empty makes no classification, but the
+   * lote it hangs on is real and something else on the record may hang on it too.
+   */
+  private static void addLoteCell(List<String> loteCells, @Nullable String cell) {
+    if (cell != null) {
+      loteCells.add(cell);
+    }
+  }
+
+  /**
+   * The figure a cell states, with any tax basis it states dropped.
+   *
+   * <p><strong>Dropped because the award point has nowhere to put it</strong>, not because the
+   * source never states one. {@link Money} is what {@code Award}, {@code Formalisation} and
+   * {@code Lote} each hold, and none carries a basis beside it — unlike the procedure's own two
+   * budgets, which do.
+   *
+   * <p>For the two {@code Importe} columns that costs nothing measurable: no measured row of
+   * either table labels its figure {@code con IVE} or {@code sen IVE}. <strong>For the lotes
+   * table's {@code Valor estimado} it is a real gap</strong>, and an unmeasured one — every
+   * captured record's lotes table is header-row-only, so no fixture exercises the column at all,
+   * and the procedure-level {@code Valor estimado} on the same page <em>is</em> measured to vary
+   * its basis between procedures. A lote value published {@code sen IVE} is therefore stored
+   * beside a procedure value that kept its basis, with nothing recording that the two may differ.
+   * Closing it means a basis on the stored lote, which is a change to the award-point model rather
+   * than to this parse.
    */
   private static @Nullable Money amountOf(@Nullable String published) {
     PublishedAmount amount = PublishedValues.amount(published);

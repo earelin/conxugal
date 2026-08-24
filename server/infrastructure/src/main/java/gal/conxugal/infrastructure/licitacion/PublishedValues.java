@@ -165,6 +165,14 @@ final class PublishedValues {
    * {@link #BLANK_RUN} already calls blank, so this splits on the same character class everything
    * else here trims by.
    *
+   * <p><strong>Nothing validates the shape of what comes back, and nothing can.</strong> A CPV
+   * code is eight digits and a NUTS code is two to five letters and digits ({@code ES111},
+   * {@code ES}), and both lists are versioned rather than closed — a rule tight enough to reject
+   * a cell that is wording with no code would reject a real code from a revision this system has
+   * not met, which is the harm storing values as published exists to prevent. So a cell the source
+   * ever published as wording alone would key an entry on its first word. An unseen code costs a
+   * row; a rejected real one costs a procedure.
+   *
    * <p>The description beside it is {@link #description}'s.
    */
   static @Nullable String code(@Nullable String published) {
@@ -177,9 +185,14 @@ final class PublishedValues {
   }
 
   /**
-   * The wording a classification cell carries after its code, or null where it carries none. The
-   * remainder is trimmed at its ends and reduced no further, so its own internal spacing is the
-   * source's.
+   * The wording a classification cell carries after its code, or null where it carries none.
+   *
+   * <p><strong>Collapsed, unlike a published value.</strong> This is the regulated list's own
+   * label for an entry — something to display and to look an entry up by — rather than a fact the
+   * procedure states, so it is reduced the way {@link #label} reduces a key and not the way
+   * {@link #text} preserves an object. The separator the source uses is a non-breaking space, and
+   * a cell writing the wording itself with one would otherwise store a description no ordinary
+   * search for it could match.
    */
   static @Nullable String description(@Nullable String published) {
     String trimmed = text(published);
@@ -187,7 +200,7 @@ final class PublishedValues {
       return null;
     }
     Matcher blank = BLANK_RUN.matcher(trimmed);
-    return blank.find() ? text(trimmed.substring(blank.end())) : null;
+    return blank.find() ? collapse(trimmed.substring(blank.end())) : null;
   }
 
   /**

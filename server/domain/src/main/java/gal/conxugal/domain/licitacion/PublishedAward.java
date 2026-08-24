@@ -24,6 +24,16 @@ import org.jspecify.annotations.Nullable;
  * rather than on the raw cell — which matters: raw, that join agrees on 63 of 158 award rows and
  * normalised on all 158, and a mismatch is what sends a procedure to the outstanding ledger.
  *
+ * <p><strong>The date is the row's {@code Data difusión}, and is named for that.</strong> It is
+ * what {@link Award}'s resolution date is built from, and the two are not the same fact: the date
+ * the resolution was <em>taken</em> is published only inside a tooltip on the resolution
+ * document's link ({@code Documento da resolución con data do 10-07-2024}), as prose rather than
+ * as a cell, and it is not read. On every captured record the two agree to the day, so nothing
+ * measured distinguishes them — which is exactly why this is named for the column it comes from
+ * rather than for the column it feeds. A procedure resolved on one day and diffused on another
+ * would otherwise be stored as resolved on the later one, with the name asserting something the
+ * source never said.
+ *
  * <p>Every value is nullable and null means the source published nothing there, or published
  * something that could not be interpreted — neither is a reason to refuse the row. The execution
  * period is prose the source writes ({@code 12 meses}, {@code 2 meses 7 días}) rather than a
@@ -33,7 +43,8 @@ import org.jspecify.annotations.Nullable;
  *     procedure as a whole
  * @param resolution the published {@code Resolución} cell — the source's own word for what was
  *     decided, such as <em>Adxudicado</em>
- * @param resolutionDate the {@code Data difusión} the row carries
+ * @param diffusionDate the row's {@code Data difusión}, which is what {@link Award}'s resolution
+ *     date is built from
  * @param amount the awarded {@code Importe}
  * @param executionPeriod {@code Prazo de execución}, as published
  * @param awardeeName the published {@code Adxudicatario} — a name only, since this table carries
@@ -43,7 +54,7 @@ import org.jspecify.annotations.Nullable;
 public record PublishedAward(
     @Nullable String loteKey,
     @Nullable String resolution,
-    @Nullable LocalDate resolutionDate,
+    @Nullable LocalDate diffusionDate,
     @Nullable Money amount,
     @Nullable String executionPeriod,
     @Nullable String awardeeName,

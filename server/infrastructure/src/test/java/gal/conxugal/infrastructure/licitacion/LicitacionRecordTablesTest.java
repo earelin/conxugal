@@ -287,7 +287,67 @@ class LicitacionRecordTablesTest {
                             FORMALISATION_HEADER,
                             "<tr><td>10-03-2024</td><td>1</td><td>ACME</td></tr>"))))
         .isInstanceOf(LicitacionRecordUnavailableException.class)
-        .hasMessageContaining("too few");
+        .hasMessageContaining("3 cells");
+  }
+
+  /**
+   * A row wider than its header is refused too, and this is the case worth stating: it does not
+   * fail on its own, it makes every column past the extra cell read its neighbour's value. Left
+   * unrefused, a formalisation row carrying one cell too many stores the amount as the
+   * nationality and the diffusion date as the amount — plausible, silent, and authoritative.
+   */
+  @Test
+  void throws_when_the_formalisation_row_is_wider_than_its_header() {
+    String row =
+        """
+        <tr><td>10-03-2024</td><td>1</td><td>ACME</td><td>ACME TOO</td>
+        <td>España</td><td>1,00 €</td><td>11-03-2024</td></tr>
+        """;
+
+    assertThatThrownBy(
+            () -> read(container("consulta-formalizacion", table(FORMALISATION_HEADER, row))))
+        .isInstanceOf(LicitacionRecordUnavailableException.class)
+        .hasMessageContaining("7 cells");
+  }
+
+  /**
+   * The lotes modal is the one container the source publishes on every record of both families,
+   * so a required column there is checked on every procedure ever imported — and this source is
+   * measured to drop a header conditionally. Both of these are decoration a lote exists without,
+   * so their absence costs the decoration and nothing else.
+   */
+  @Test
+  void reads_the_lotes_table_that_publishes_no_decoration_columns() {
+    LicitacionRecord record =
+        read(
+            awardTable(
+                    awardRow(
+                        "1", "3", "Adxudicado", "ACME, S.L.", "1.000,00 €", "01-02-2024", "3 m"))
+                + container(
+                    "ventanaModalLotes", table("<th>Lote</th>", "<tr><td>1</td></tr>")));
+
+    assertThat(record.lotes())
+        .extracting(
+            PublishedLote::identifier, PublishedLote::description, PublishedLote::estimatedValue)
+        .containsExactly(tuple("1", null, null));
+  }
+
+  /**
+   * A classification whose code cell is empty yields no classification, but the lote it hangs on
+   * is real — something else on the record may hang on it too, and dropping it would lose that.
+   */
+  @Test
+  void keeps_the_lote_named_by_the_classification_row_that_yields_none() {
+    LicitacionRecord record =
+        read(
+            container(
+                "collapseCPV",
+                table(
+                    "<th>código CPV</th><th>Lote</th><th>Data difusión</th>",
+                    "<tr><td>  </td><td>2</td><td>01-02-2024</td></tr>")));
+
+    assertThat(record.cpvClassifications()).isEmpty();
+    assertThat(record.lotes()).extracting(PublishedLote::identifier).containsExactly("2");
   }
 
   /** Nothing may be refused over a column this parse never reads. */
@@ -340,7 +400,7 @@ class LicitacionRecordTablesTest {
 
     assertThat(record.awards())
         .extracting(
-            PublishedAward::amount, PublishedAward::resolutionDate, PublishedAward::awardeeName)
+            PublishedAward::amount, PublishedAward::diffusionDate, PublishedAward::awardeeName)
         .containsExactly(tuple(null, null, "ACME, S.L."));
   }
 

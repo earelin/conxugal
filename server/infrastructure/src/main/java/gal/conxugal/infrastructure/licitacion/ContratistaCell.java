@@ -25,7 +25,26 @@ import org.jspecify.annotations.Nullable;
  * that row is still a valid formalisation, one route to an identifier that did not answer rather
  * than a broken record, and it never reaches the outstanding ledger. A cell holding a single token
  * is a name too: {@code the remainder is the name} presupposes a remainder, and a formalisation
- * carrying an identifier and nobody's name is not something the source publishes.
+ * carrying an identifier and nobody's name is not something the source publishes. The cost of that
+ * last rule is that a cell of nothing but an identifier is held as a name that looks like one,
+ * which is worth knowing wherever awardee names are matched.
+ *
+ * <p><strong>Two shapes are deliberately not handled, both unmeasured.</strong> Naming them is the
+ * point — each fails towards no identifier rather than towards a wrong one, and each would be
+ * cheap to add the day the source is observed publishing it:
+ *
+ * <ul>
+ *   <li><strong>A hyphenated identifier</strong> ({@code A-41111220}) yields no identifier.
+ *       Admitting the hyphen would also admit the {@code TEMP-…} placeholder the source writes
+ *       where it has none — 14 characters and 8 digits, so every other test here passes it — and
+ *       cataloguing an operador under a placeholder pools unrelated suppliers under one identity.
+ *       A real hyphenated identifier merely falls to the next route; the placeholder would not.
+ *   <li><strong>A cell naming several parties</strong> ({@code NAME A<br>NIF A<br>NAME B<br>NIF B})
+ *       would take the last identifier and fold the first party's name and identifier into the
+ *       name. Measured, this table publishes one party per row and a consortium under its own
+ *       single identifier; the multi-party rendering exists elsewhere on the page, in modals this
+ *       parse does not read.
+ * </ul>
  */
 record ContratistaCell(@Nullable String name, @Nullable FiscalIdentifier fiscalIdentifier) {
 
