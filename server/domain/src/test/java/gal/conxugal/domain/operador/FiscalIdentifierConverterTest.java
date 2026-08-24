@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.micronaut.core.convert.ConversionContext;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class FiscalIdentifierConverterTest {
 
@@ -46,19 +48,13 @@ class FiscalIdentifierConverterTest {
 
   /**
    * A placeholder is turned away when it is published, not when it is read: a row the store took
-   * under {@code -} before that rule existed has to come back rather than fail the read that finds
-   * it.
+   * under one before that rule existed has to come back rather than fail the read that finds it.
    */
-  @Test
-  void reads_back_the_column_holding_placeholder_rather_than_refusing_it() {
-    assertThat(converter.convertToEntityValue("-", ConversionContext.DEFAULT))
-        .isEqualTo(new FiscalIdentifier("-"));
-  }
-
-  @Test
-  void reads_back_the_column_holding_temporary_placeholder_rather_than_refusing_it() {
-    assertThat(converter.convertToEntityValue("TEMP-00934", ConversionContext.DEFAULT))
-        .isEqualTo(new FiscalIdentifier("TEMP-00934"));
+  @ParameterizedTest
+  @ValueSource(strings = {"-", "TEMP-00934"})
+  void reads_back_the_column_holding_placeholder_rather_than_refusing_it(String persisted) {
+    assertThat(converter.convertToEntityValue(persisted, ConversionContext.DEFAULT))
+        .isEqualTo(new FiscalIdentifier(persisted));
   }
 
   /**
