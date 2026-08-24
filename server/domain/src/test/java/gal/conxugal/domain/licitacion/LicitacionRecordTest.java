@@ -37,7 +37,7 @@ class LicitacionRecordTest {
             () ->
                 new LicitacionRecord(
                     null, null, null, null, null, null, null, null, null, "Formalizado",
-                    List.of(), List.of(), List.of(), List.of(), List.of()))
+                    List.of(), List.of(), List.of(), List.of(), List.of(), List.of()))
         .isInstanceOf(NullPointerException.class);
   }
 
@@ -48,7 +48,7 @@ class LicitacionRecordTest {
             () ->
                 new LicitacionRecord(
                     PUBLICATION_ID, null, null, null, null, null, null, null, null, null,
-                    List.of(), List.of(), List.of(), List.of(), List.of()))
+                    List.of(), List.of(), List.of(), List.of(), List.of(), List.of()))
         .isInstanceOf(NullPointerException.class);
   }
 
@@ -59,6 +59,7 @@ class LicitacionRecordTest {
 
     assertThat(record.lotes()).isEmpty();
     assertThat(record.awards()).isEmpty();
+    assertThat(record.bidders()).isEmpty();
     assertThat(record.formalisations()).isEmpty();
     assertThat(record.cpvClassifications()).isEmpty();
     assertThat(record.nutClassifications()).isEmpty();
@@ -78,6 +79,7 @@ class LicitacionRecordTest {
         "Formalizado",
         List.of(),
         awards,
+        List.of(),
         List.of(),
         List.of(),
         List.of());
