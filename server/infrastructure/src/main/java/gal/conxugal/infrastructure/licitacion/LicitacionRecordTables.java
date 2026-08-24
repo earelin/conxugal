@@ -260,45 +260,55 @@ final class LicitacionRecordTables {
    */
   private List<PublishedLote> readLotes(
       PublicationId publicationId, Document document, Iterable<String> loteCells) {
-    // Only the lote column is required. The other two are decoration a lote exists without, and
-    // this is the one table the source publishes on every record of both families — so refusing
-    // over a column it may drop would cost every procedure in the catalogue rather than one.
-    Map<String, PublishedLote> decoration = new LinkedHashMap<>();
-    Optional<PublishedTable> table =
-        PublishedTable.under(publicationId, document, LOTES_TABLE, LOTE);
-    if (table.isPresent()) {
-      for (PublishedTable.Row row : table.get().rows()) {
-        String cell = row.text(LOTE);
-        LoteKey.normalise(cell)
-            .ifPresent(
-                key ->
-                    decoration.computeIfAbsent(
-                        key,
-                        ignored ->
-                            new PublishedLote(
-                                cell, row.text(DESCRICION), amountOf(row.text(VALOR_ESTIMADO)))));
-      }
-    }
+    Map<String, PublishedLote> decoration = readLoteDecoration(publicationId, document);
 
     Map<String, PublishedLote> named = new LinkedHashMap<>();
     for (String cell : loteCells) {
-      LoteKey.normalise(cell)
-          .ifPresent(
-              key ->
-                  named.computeIfAbsent(
-                      key,
-                      ignored -> {
-                        PublishedLote published = decoration.get(key);
-                        return published == null
-                            ? new PublishedLote(cell, null, null)
-                            : new PublishedLote(
-                                cell, published.description(), published.estimatedValue());
-                      }));
+      Optional<String> key = LoteKey.normalise(cell);
+      if (key.isEmpty() || named.containsKey(key.get())) {
+        continue;
+      }
+      named.put(key.get(), decorated(cell, decoration.get(key.get())));
     }
     // The lotes table's own rows last: a lote only it names is still a lote, and one an earlier
     // table already named keeps that table's spelling.
     decoration.forEach(named::putIfAbsent);
     return List.copyOf(named.values());
+  }
+
+  /**
+   * What {@code Relación de lotes} says about each lote it names, keyed for the join.
+   *
+   * <p>Only the lote column is required. The other two are decoration a lote exists without, and
+   * this is the one table the source publishes on every record of both families — so refusing over
+   * a column it may drop would cost every procedure in the catalogue rather than one.
+   */
+  private Map<String, PublishedLote> readLoteDecoration(
+      PublicationId publicationId, Document document) {
+    Map<String, PublishedLote> decoration = new LinkedHashMap<>();
+    Optional<PublishedTable> table =
+        PublishedTable.under(publicationId, document, LOTES_TABLE, LOTE);
+    if (table.isEmpty()) {
+      return decoration;
+    }
+    for (PublishedTable.Row row : table.get().rows()) {
+      String cell = row.text(LOTE);
+      Optional<String> key = LoteKey.normalise(cell);
+      if (key.isEmpty() || decoration.containsKey(key.get())) {
+        continue;
+      }
+      decoration.put(
+          key.get(),
+          new PublishedLote(cell, row.text(DESCRICION), amountOf(row.text(VALOR_ESTIMADO))));
+    }
+    return decoration;
+  }
+
+  /** The lote {@code cell} names, carrying whatever the lotes table published about it. */
+  private static PublishedLote decorated(String cell, @Nullable PublishedLote decoration) {
+    return decoration == null
+        ? new PublishedLote(cell, null, null)
+        : new PublishedLote(cell, decoration.description(), decoration.estimatedValue());
   }
 
   /**
