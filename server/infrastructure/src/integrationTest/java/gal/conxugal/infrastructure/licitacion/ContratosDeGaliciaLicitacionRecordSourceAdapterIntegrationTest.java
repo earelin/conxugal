@@ -203,7 +203,14 @@ class ContratosDeGaliciaLicitacionRecordSourceAdapterIntegrationTest
             LicitacionRecord::estimatedValue,
             LicitacionRecord::expediente)
         .containsOnlyNulls();
-    assertThat(record.stateLabel()).isEqualTo("Adxudicado");
+    assertThat(record)
+        .extracting(
+            LicitacionRecord::contractType,
+            LicitacionRecord::procedureType,
+            LicitacionRecord::stateLabel)
+        .containsExactly("Servizos", "Contrato menor", "Adxudicado");
+    assertThat(record.baseBudget())
+        .isEqualTo(new PublishedAmount(new Money(new BigDecimal("3630.00")), VatBasis.INCLUSIVE));
     assertThat(record.obxecto()).isNotNull();
   }
 

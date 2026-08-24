@@ -5,7 +5,9 @@ import gal.conxugal.domain.licitacion.LicitacionRecord;
 import gal.conxugal.domain.licitacion.LicitacionRecordUnavailableException;
 import gal.conxugal.domain.licitacion.PublicationId;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jspecify.annotations.Nullable;
@@ -49,13 +51,14 @@ final class LicitacionRecordDocument {
 
   private final PublicationId publicationId;
   private final Document document;
+  private final Set<String> labels;
   private final Map<String, Element> labelled;
 
-  private LicitacionRecordDocument(
-      PublicationId publicationId, Document document, Map<String, Element> labelled) {
+  private LicitacionRecordDocument(PublicationId publicationId, Document document, Element block) {
     this.publicationId = publicationId;
     this.document = document;
-    this.labelled = labelled;
+    this.labels = labelsOf(block);
+    this.labelled = labelledFields(block);
   }
 
   /**
@@ -73,26 +76,42 @@ final class LicitacionRecordDocument {
           "Response for %s is not a procedure record: no %s block"
               .formatted(publicationId.value(), MAIN_BLOCK));
     }
-    return new LicitacionRecordDocument(publicationId, document, labelledFields(block)).toRecord();
+    return new LicitacionRecordDocument(publicationId, document, block).toRecord();
   }
 
   /**
    * Each label mapped to the value published against it. The first occurrence wins, so a block that
-   * somehow repeated a label reads as the source's first statement of it rather than as its last.
+   * repeated a label reads as the source's first statement of it rather than as its last.
    *
-   * <p>The key is reduced with {@link Whitespace}, not {@link String#strip()}, which leaves a
-   * non-breaking space in place — the page carries dozens of them, and a label ending in one would
-   * key an entry no lookup could reach, reading the field as absent with nothing to say why.
+   * <p>A label the source published with no {@code <dd>} beside it is absent from here and present
+   * in {@link #labelsOf} — it published the field and published nothing in it, which are two
+   * different facts and only the second of them is this map's business.
    */
   private static Map<String, Element> labelledFields(Element block) {
     Map<String, Element> fields = new HashMap<>();
     for (Element term : block.select("dt")) {
       Element value = term.nextElementSibling();
       if (value != null && "dd".equals(value.tagName())) {
-        fields.putIfAbsent(Whitespace.strip(term.wholeText()), value);
+        fields.putIfAbsent(PublishedValues.label(term.wholeText()), value);
       }
     }
     return fields;
+  }
+
+  /**
+   * Every label the block carries, whether or not the source put a value under it.
+   *
+   * <p>Separate from {@link #labelledFields} because the record is refused over a label that is
+   * <em>missing</em>, not over one that is empty. A page emitting {@code <dt>} without its
+   * {@code <dd>} — which this source's templates do, conditionally — has published an absence, and
+   * refusing it would strand a real procedure in the outstanding ledger for ever.
+   */
+  private static Set<String> labelsOf(Element block) {
+    Set<String> labels = new HashSet<>();
+    for (Element term : block.select("dt")) {
+      labels.add(PublishedValues.label(term.wholeText()));
+    }
+    return labels;
   }
 
   private LicitacionRecord toRecord() {
@@ -148,7 +167,7 @@ final class LicitacionRecordDocument {
    * source simply left empty.
    */
   private void requireLabel(String label) {
-    if (!labelled.containsKey(label)) {
+    if (!labels.contains(label)) {
       throw new LicitacionRecordUnavailableException(
           "Record %s publishes no %s".formatted(publicationId.value(), label));
     }

@@ -21,8 +21,19 @@ class LicitacionRecordDocumentTest {
 
   private static final PublicationId PUBLICATION_ID = new PublicationId("822054");
 
+  /**
+   * The state as the page publishes it, behind a paragraph that carries an emphasised value and is
+   * not the state.
+   *
+   * <p><strong>The decoy is the point.</strong> The state is reached by a document-wide scan, so
+   * without one ahead of it a parse that had stopped reading the label at all — taking the first
+   * emphasised value anywhere on the page — would answer correctly here and store a wrong state as
+   * authoritative on a real record. It is the only required field, and it was the only one of the
+   * four without a decoy.
+   */
   private static final String STATE =
       """
+      <p>Órgano de contratación <em>Axencia Turismo de Galicia</em></p>
       <div class="col-md-6 text-right">
         <p>
           Estado do procedemento:
@@ -115,9 +126,12 @@ class LicitacionRecordDocumentTest {
 
   /**
    * The restructuring panel restates both economic labels with a trailing colon, and a lookup
-   * matching loosely would take the panel's copy for the procedure's own figure. The panel sits
-   * outside the procedure's block on the real page, so the container is what separates them; the
-   * decoy is placed first so that removing the container really does fail here.
+   * matching loosely would take the panel's copy for the procedure's own figure.
+   *
+   * <p><strong>Exact matching is what separates them here, not the container.</strong> The trailing
+   * colon makes a different key, so this passes with the container scope removed — the object's
+   * decoy is what covers that. Recorded because the two protections are easy to conflate, and a
+   * comment claiming this test covers both would be worse than no comment.
    */
   @Test
   void does_not_read_the_budget_from_the_restated_label_ending_in_colon() {
@@ -244,6 +258,84 @@ class LicitacionRecordDocumentTest {
         .isInstanceOf(LicitacionRecordUnavailableException.class)
         .hasMessageContaining("822054")
         .hasNoCause();
+  }
+
+  /**
+   * The state is reached by scanning the page rather than by a labelled pair, so its label is the
+   * only thing separating it from any other emphasised value — and the page carries several.
+   */
+  @Test
+  void reads_the_state_from_the_paragraph_that_carries_its_label() {
+    LicitacionRecord record = read(STATE + mainBlock(EVERY_LABEL));
+
+    assertThat(record.stateLabel()).isEqualTo("Formalizado");
+  }
+
+  /**
+   * First occurrence wins, so a repeated label reads as the source's first statement of it. Without
+   * this the map would answer with whichever copy the page happened to end on.
+   */
+  @Test
+  void reads_the_first_value_when_the_block_repeats_the_label() {
+    String repeated =
+        mainBlock("<dt>Obxecto</dt><dd>Primeira</dd><dt>Obxecto</dt><dd>Segunda</dd>");
+
+    LicitacionRecord record = read(STATE + repeated);
+
+    assertThat(record.obxecto()).isEqualTo("Primeira");
+  }
+
+  /**
+   * The label is reduced the way every other published value is. {@code String.strip} leaves a
+   * non-breaking space in place, and the page carries dozens of them — a label padded with one
+   * would key an entry no lookup could reach, reading the field as absent with nothing to say why.
+   */
+  @Test
+  void reads_the_value_when_the_label_is_padded_with_non_breaking_spaces() {
+    String padded =
+        mainBlock("<dt>&nbsp;Obxecto&nbsp;</dt><dd>Mellora</dd>");
+
+    LicitacionRecord record = read(STATE + padded);
+
+    assertThat(record.obxecto()).isEqualTo("Mellora");
+  }
+
+  /**
+   * The markup already wraps this field's <em>value</em> across four lines, so a template that
+   * wrapped its label too is not a hypothetical. A label read as published would key an entry no
+   * lookup reaches, and the budget would be stored absent from a record that published one.
+   */
+  @Test
+  void reads_the_value_when_the_markup_wraps_the_label_across_lines() {
+    String wrapped =
+        mainBlock(
+            """
+            <dt>Obxecto</dt><dd>Mellora</dd>
+            <dt>Orzamento base de
+                licitación</dt><dd>3.378.552,09 con IVE</dd>
+            """);
+
+    LicitacionRecord record = read(STATE + wrapped);
+
+    assertThat(record.baseBudget())
+        .extracting(PublishedAmount::amount)
+        .isEqualTo(new Money(new BigDecimal("3378552.09")));
+  }
+
+  /**
+   * A label the source published with no value under it has published an absence, which is an
+   * ordinary thing to do. Refusing the record over it would strand a real procedure in the
+   * outstanding ledger for ever — and this page's templates do emit a {@code <dt>} conditionally.
+   */
+  @Test
+  void answers_nothing_for_the_label_the_source_left_without_any_value() {
+    String orphan =
+        mainBlock("<dt>Obxecto</dt><dt>Tipo de contrato</dt><dd>Obras</dd>");
+
+    LicitacionRecord record = read(STATE + orphan);
+
+    assertThat(record.obxecto()).isNull();
+    assertThat(record.contractType()).isEqualTo("Obras");
   }
 
   @Test

@@ -44,7 +44,7 @@ final class PublishedValues {
    * {@code sen IVE} are the source stating its own tax basis; the currency mark is present on an
    * awarded amount and absent from the two budgets, and carries nothing either way — every figure
    * this source publishes is in euros and it never says otherwise. That mark is measured to be
-   * {@code €}, published as the entity {@code &#8364;} and decoded by jsoup whatever the page's
+   * {@code €}, published as the entity {@code &amp;#8364;} and decoded by jsoup whatever the page's
    * charset is; no measured row writes the word.
    *
    * <p>A sign is not accepted, because no published figure carries one. A negative amount would
@@ -95,6 +95,21 @@ final class PublishedValues {
     }
     String trimmed = Whitespace.strip(published);
     return trimmed.isEmpty() ? null : trimmed;
+  }
+
+  /**
+   * A label reduced to the form values are looked up by: trimmed at its ends and its internal runs
+   * flattened to one space.
+   *
+   * <p>Flattened, unlike {@link #text}, because a label is a key rather than a published value.
+   * The markup already wraps this page's <em>values</em> across four lines, so a template that
+   * wrapped a label too is not a hypothetical — and a key holding the wrap would be one no lookup
+   * could reach, reading the field as absent from a record that published it, with nothing to say
+   * why.
+   */
+  static String label(String published) {
+    String reduced = collapse(published);
+    return reduced == null ? "" : reduced;
   }
 
   /** The figure {@code published} states, with the tax basis it states beside it. */
