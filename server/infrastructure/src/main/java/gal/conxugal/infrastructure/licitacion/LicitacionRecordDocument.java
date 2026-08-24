@@ -51,14 +51,12 @@ final class LicitacionRecordDocument {
 
   private final PublicationId publicationId;
   private final Document document;
-  private final Set<String> labels;
-  private final Map<String, Element> labelled;
+  private final LabelledBlock fields;
 
   private LicitacionRecordDocument(PublicationId publicationId, Document document, Element block) {
     this.publicationId = publicationId;
     this.document = document;
-    this.labels = labelsOf(block);
-    this.labelled = labelledFields(block);
+    this.fields = new LabelledBlock(block);
   }
 
   /**
@@ -77,41 +75,6 @@ final class LicitacionRecordDocument {
               .formatted(publicationId.value(), MAIN_BLOCK));
     }
     return new LicitacionRecordDocument(publicationId, document, block).toRecord();
-  }
-
-  /**
-   * Each label mapped to the value published against it. The first occurrence wins, so a block that
-   * repeated a label reads as the source's first statement of it rather than as its last.
-   *
-   * <p>A label the source published with no {@code <dd>} beside it is absent from here and present
-   * in {@link #labelsOf} — it published the field and published nothing in it, which are two
-   * different facts and only the second of them is this map's business.
-   */
-  private static Map<String, Element> labelledFields(Element block) {
-    Map<String, Element> fields = new HashMap<>();
-    for (Element term : block.select("dt")) {
-      Element value = term.nextElementSibling();
-      if (value != null && "dd".equals(value.tagName())) {
-        fields.putIfAbsent(PublishedValues.label(term.wholeText()), value);
-      }
-    }
-    return fields;
-  }
-
-  /**
-   * Every label the block carries, whether or not the source put a value under it.
-   *
-   * <p>Separate from {@link #labelledFields} because the record is refused over a label that is
-   * <em>missing</em>, not over one that is empty. A page emitting {@code <dt>} without its
-   * {@code <dd>} — which this source's templates do, conditionally — has published an absence, and
-   * refusing it would strand a real procedure in the outstanding ledger for ever.
-   */
-  private static Set<String> labelsOf(Element block) {
-    Set<String> labels = new HashSet<>();
-    for (Element term : block.select("dt")) {
-      labels.add(PublishedValues.label(term.wholeText()));
-    }
-    return labels;
   }
 
   private LicitacionRecord toRecord() {
@@ -138,7 +101,7 @@ final class LicitacionRecordDocument {
    * genuinely missing from real pages, and the reference is missing from most.
    */
   private @Nullable String valueOf(String label) {
-    return PublishedValues.text(textOf(labelled.get(label)));
+    return PublishedValues.text(textOf(fields.value(label)));
   }
 
   /**
@@ -153,7 +116,7 @@ final class LicitacionRecordDocument {
     Element block = document.selectFirst(REFERENCE_BLOCK);
     return block == null
         ? null
-        : PublishedValues.text(textOf(labelledFields(block).get(REFERENCIA)));
+        : PublishedValues.text(textOf(new LabelledBlock(block).value(REFERENCIA)));
   }
 
   /**
@@ -167,7 +130,7 @@ final class LicitacionRecordDocument {
    * source simply left empty.
    */
   private void requireLabel(String label) {
-    if (!labels.contains(label)) {
+    if (!fields.carries(label)) {
       throw new LicitacionRecordUnavailableException(
           "Record %s publishes no %s".formatted(publicationId.value(), label));
     }
@@ -199,5 +162,45 @@ final class LicitacionRecordDocument {
    */
   private static @Nullable String textOf(@Nullable Element element) {
     return element == null ? null : element.wholeText();
+  }
+
+  /**
+   * The {@code <dt>}/{@code <dd>} pairs of one block, read in a single walk.
+   *
+   * <p>It answers two questions the record needs kept apart: whether the block <em>carries</em> a
+   * label at all, and what value stands <em>under</em> it. The record is refused over a label that
+   * is missing and not over one the source left empty — a page emitting {@code <dt>} without its
+   * {@code <dd>}, which this source's templates do conditionally, has published an absence, and
+   * refusing it would strand a real procedure in the outstanding ledger for ever.
+   *
+   * <p><strong>Both answers are keyed the same way by construction</strong>, which is why they are
+   * one type rather than two walks. Two copies of the keying rule could drift, and a label present
+   * to one question would then be absent to the other.
+   */
+  private static final class LabelledBlock {
+
+    private final Set<String> labels = new HashSet<>();
+    private final Map<String, Element> values = new HashMap<>();
+
+    private LabelledBlock(Element block) {
+      for (Element term : block.select("dt")) {
+        String label = PublishedValues.label(term.wholeText());
+        labels.add(label);
+        Element value = term.nextElementSibling();
+        if (value != null && "dd".equals(value.tagName())) {
+          // First occurrence wins, so a block that repeated a label reads as the source's first
+          // statement of it rather than as its last.
+          values.putIfAbsent(label, value);
+        }
+      }
+    }
+
+    private boolean carries(String label) {
+      return labels.contains(label);
+    }
+
+    private @Nullable Element value(String label) {
+      return values.get(label);
+    }
   }
 }
