@@ -36,9 +36,9 @@ Galicia, publicada en [contratosdegalicia.gal](https://www.contratosdegalicia.ga
 - `ui/` — interface web de busca e análise: SPA en **Vite** + **React** + **React Router**
   + **[Mantine](https://mantine.dev)**. Compílase a activos estáticos que serve o backend
   (ver [`ui/README.md`](ui/README.md)).
-- `docs/` — especificacións (`specs/`), funcionalidades (`features/`) e decisións de
-  arquitectura (`architecture/`, ADRs), seguindo o fluxo de traballo
-  *spec → feature → task*.
+- `docs/` — especificacións (`specs/`), funcionalidades (`features/`), decisións de
+  arquitectura (`architecture/`, ADRs) e deseño visual de referencia (`design/`), seguindo
+  o fluxo de traballo *spec → feature → task*.
 
 ## Requisitos
 

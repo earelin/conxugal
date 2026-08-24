@@ -8,7 +8,7 @@ depends_on: [TASK-0005]
 
 # Frontend acceptance tests for the metrics panel
 
-Governed by [ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md) and [ADR-0009](../../architecture/0009-sse-admin-realtime-metrics.md). Black-box Playwright coverage of the metrics panel delivered by [TASK-0005](TASK-0005-metrics-ui-panel.md), driving the built SPA with the `GET /api/admin/metrics` stream served by WireMock. [FEAT-0004 TASK-0008](../FEAT-0004-administration-area/TASK-0008-frontend-acceptance-tests.md) built the harness and stubbed the stream, but left it unasserted; this closes that gap.
+Governed by [ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md) and [ADR-0009](../../architecture/0009-sse-admin-realtime-metrics.md). Black-box Playwright coverage of the metrics panel delivered by [TASK-0005](TASK-0005-metrics-ui-panel.md), driving the built SPA with the `GET /api/admin/metrics` stream served by WireMock. The administration area's own acceptance work (retired FEAT-0004) built the harness and stubbed the stream, but left it unasserted; this closes that gap.
 
 ## Scope
 - An `acceptance/specs/admin-metrics.spec.ts` covering the journeys an administrator actually has with the panel: samples arriving on their own, the client-side history and its loss on reload, a dropped stream reconnecting, and secrets never reaching the screen.

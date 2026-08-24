@@ -66,8 +66,9 @@ least 2 and nothing measures how many more.)*
   second consortium and a second participation per re-import and leaves the previous bid visible.
 - **Setting the `ute` marker on an operador already catalogued is this task's too**, and no port
   offers it yet. `OperadorRepository` has `findByFiscalId`, `insert`, `promoteName` and
-  `retainName`; none writes the marker, and `StoreContratosMenoresBatch` creates operadores through
-  a constructor that leaves it false. So a UTE holding a real `U…` identifier that a **contrato
+  `retainName`; none writes the marker, and
+  [TASK-0011](TASK-0011-extract-resolve-operador.md)'s `ResolveOperador` — which is what creates an
+  operador for every family now — creates one through a constructor that leaves it false. So a UTE holding a real `U…` identifier that a **contrato
   menor** named first — which the mark's own ordering makes likely, contratos menores importing
   before licitacións — is already in the catalogue unmarked, and the criterion below could not be
   met without a way to set it.

@@ -9,6 +9,12 @@ import java.util.List;
 /**
  * Generates a random initial password meeting the fixed strength policy: at least 16
  * characters, mixing uppercase letters, lowercase letters, digits and symbols.
+ *
+ * <p>The {@link SecureRandom} is owned rather than injected, deliberately. A seeded one
+ * would make the output predictable and so let a test assert an exact string — but that
+ * would only prove the shuffling, not the policy. The policy is asserted over genuinely
+ * generated output instead, which is what makes the tests worth having. Do not add a
+ * constructor parameter for it.
  */
 @Singleton
 public class PasswordGenerator {

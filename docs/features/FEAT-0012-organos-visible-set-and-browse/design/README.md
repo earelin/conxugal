@@ -56,8 +56,8 @@ flowchart LR
 
 The mockups reuse the existing `AppShell` chrome from `ui/src/app/layout/AppLayout.tsx`
 and the theme in `ui/src/app/theme.ts`, and follow the tokens, chrome and status
-semantics documented in
-[FEAT-0004's design README](../../FEAT-0004-administration-area/design/README.md) —
+semantics stated in [the `frontend-design` skill](../../../../.claude/skills/frontend-design/SKILL.md) and rendered by
+[the administration-area mockups](../../../design/administration-area/README.md) —
 `indigo` primary, `md` radius, `gray.0`/white surfaces, green/grey/red status semantics,
 Galician chrome throughout.
 

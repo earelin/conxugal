@@ -73,10 +73,10 @@ element**.
 One shipped endpoint predates this rule and violates it:
 **`POST /api/admin/users/{id}/enabled`** should be `/api/admin/user/{id}/enabled`. It is
 recorded here as the single documented deviation, not a precedent. Correcting it is
-**unowned follow-up work** — no task under
-[FEAT-0004](../features/FEAT-0004-administration-area/README.md) currently carries it, and
-it is a breaking change to a shipped endpoint, so it needs a task of its own before it
-lands. Every other existing path already conforms.
+**unowned follow-up work** — the feature that shipped it
+([SPEC-0003](../specs/SPEC-0003-administration-area.md)) has been retired without correcting
+it, and it is a breaking change to a shipped endpoint, so it needs a task of its own before
+it lands. Every other existing path already conforms.
 
 Like ADR-0006 this is an enforceable convention upheld by review: a path that addresses
 one element through a plural noun is a defect. It is restated in

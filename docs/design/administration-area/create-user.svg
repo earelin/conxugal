@@ -44,8 +44,8 @@
   <rect width="1280" height="840" fill="#101113" opacity="0.55"/>
 
   <!-- ===== modal ===== -->
-  <rect x="550" y="194" width="440" height="420" rx="10" fill="#000000" opacity="0.45" filter="url(#modalShadow)"/>
-  <rect x="550" y="188" width="440" height="420" rx="10" fill="#ffffff"/>
+  <rect x="550" y="194" width="440" height="320" rx="10" fill="#000000" opacity="0.45" filter="url(#modalShadow)"/>
+  <rect x="550" y="188" width="440" height="320" rx="10" fill="#ffffff"/>
 
   <!-- header -->
   <text x="574" y="222" font-size="18" font-weight="600" fill="#212529">Novo usuario</text>
@@ -65,25 +65,10 @@
   <text x="590" y="391" font-size="14" fill="#212529">Usuario</text>
   <path d="M944 383 l6 6 l6 -6" stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- field: password -->
-  <text x="574" y="438" font-size="13" font-weight="600" fill="#212529">Contrasinal inicial<tspan fill="#fa5252"> *</tspan></text>
-  <rect x="574" y="448" width="392" height="42" rx="8" fill="#ffffff" stroke="#4c6ef5" stroke-width="1.5"/>
-  <g fill="#495057">
-    <circle cx="592" cy="469" r="3"/><circle cx="604" cy="469" r="3"/><circle cx="616" cy="469" r="3"/>
-    <circle cx="628" cy="469" r="3"/><circle cx="640" cy="469" r="3"/><circle cx="652" cy="469" r="3"/>
-    <circle cx="664" cy="469" r="3"/><circle cx="676" cy="469" r="3"/><circle cx="688" cy="469" r="3"/>
-    <circle cx="700" cy="469" r="3"/><circle cx="712" cy="469" r="3"/><circle cx="724" cy="469" r="3"/>
-  </g>
-  <g stroke="#868e96" stroke-width="1.5" fill="none">
-    <path d="M938 469 c3 -5 9 -5 12 0 c-3 5 -9 5 -12 0 z"/>
-    <circle cx="944" cy="469" r="2" fill="#868e96" stroke="none"/>
-  </g>
-  <text x="574" y="510" font-size="12" fill="#868e96">Gárdase cifrado; nunca se mostra nin se recupera en claro.</text>
-
   <!-- footer -->
-  <line x1="550" y1="536" x2="990" y2="536" stroke="#f1f3f5"/>
-  <rect x="762" y="552" width="96" height="40" rx="8" fill="#ffffff" stroke="#ced4da"/>
-  <text x="810" y="573" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#495057">Cancelar</text>
-  <rect x="866" y="552" width="124" height="40" rx="8" fill="#4c6ef5"/>
-  <text x="928" y="573" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="600" fill="#ffffff">Crear conta</text>
+  <line x1="550" y1="436" x2="990" y2="436" stroke="#f1f3f5"/>
+  <rect x="762" y="452" width="96" height="40" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="810" y="473" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#495057">Cancelar</text>
+  <rect x="866" y="452" width="124" height="40" rx="8" fill="#4c6ef5"/>
+  <text x="928" y="473" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="600" fill="#ffffff">Crear conta</text>
 </svg>

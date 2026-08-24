@@ -56,8 +56,9 @@ flowchart LR
 
 The mockups reuse the existing `AppShell` chrome (header + collapsible navbar) from
 `ui/src/layout/AppLayout.tsx` and the theme in `ui/src/theme.ts`, and follow the same
-tokens, chrome and status semantics documented in
-[FEAT-0004's design README](../../FEAT-0004-administration-area/design/README.md) —
+tokens, chrome and status semantics stated in
+[the `frontend-design` skill](../../../../.claude/skills/frontend-design/SKILL.md) and rendered by
+[the administration-area mockups](../../../design/administration-area/README.md) —
 `indigo` primary, `md` radius, `gray.0`/white surfaces, green/grey/red status
 semantics, Galician chrome throughout. The navbar's **ADMINISTRACIÓN** section gains an
 **Órganos** entry (a small sitemap glyph) alongside the existing *Panel* and *Usuarios*
