@@ -66,11 +66,11 @@ final class LicitacionRecordTables {
   private static final String DESCRICION = "Descrición";
   private static final String VALOR_ESTIMADO = "Valor estimado";
 
-  private final List<PublishedAward> awards = new ArrayList<>();
-  private final List<PublishedFormalisation> formalisations = new ArrayList<>();
-  private final List<PublishedCpvClassification> cpvClassifications = new ArrayList<>();
-  private final List<PublishedNutClassification> nutClassifications = new ArrayList<>();
-  private final List<PublishedLote> lotes = new ArrayList<>();
+  private final List<PublishedAward> awards;
+  private final List<PublishedFormalisation> formalisations;
+  private final List<PublishedCpvClassification> cpvClassifications;
+  private final List<PublishedNutClassification> nutClassifications;
+  private final List<PublishedLote> lotes;
 
   /**
    * Reads every table {@code document} publishes.
@@ -83,48 +83,48 @@ final class LicitacionRecordTables {
     // that the lote is stored under the spelling the award table used rather than a later one's.
     List<String> loteCells = new ArrayList<>();
 
-    readAwards(publicationId, document, loteCells);
-    readFormalisations(publicationId, document, loteCells);
-    cpvClassifications.addAll(
+    this.awards = readAwards(publicationId, document, loteCells);
+    this.formalisations = readFormalisations(publicationId, document, loteCells);
+    this.cpvClassifications =
         readClassifications(
             publicationId,
             document,
             loteCells,
             CPV_TABLE,
             CODIGO_CPV,
-            PublishedCpvClassification::new));
-    nutClassifications.addAll(
+            PublishedCpvClassification::new);
+    this.nutClassifications =
         readClassifications(
             publicationId,
             document,
             loteCells,
             NUT_TABLE,
             NUT_CODE,
-            PublishedNutClassification::new));
-    readLotes(publicationId, document, loteCells);
+            PublishedNutClassification::new);
+    this.lotes = readLotes(publicationId, document, loteCells);
   }
 
   List<PublishedAward> awards() {
-    return List.copyOf(awards);
+    return awards;
   }
 
   List<PublishedFormalisation> formalisations() {
-    return List.copyOf(formalisations);
+    return formalisations;
   }
 
   List<PublishedCpvClassification> cpvClassifications() {
-    return List.copyOf(cpvClassifications);
+    return cpvClassifications;
   }
 
   List<PublishedNutClassification> nutClassifications() {
-    return List.copyOf(nutClassifications);
+    return nutClassifications;
   }
 
   List<PublishedLote> lotes() {
-    return List.copyOf(lotes);
+    return lotes;
   }
 
-  private void readAwards(
+  private List<PublishedAward> readAwards(
       PublicationId publicationId, Document document, List<String> loteCells) {
     Optional<PublishedTable> table =
         PublishedTable.under(
@@ -139,8 +139,9 @@ final class LicitacionRecordTables {
             DATA_DIFUSION,
             PRAZO);
     if (table.isEmpty()) {
-      return;
+      return List.of();
     }
+    List<PublishedAward> awards = new ArrayList<>();
     for (PublishedTable.Row row : table.get().rows()) {
       String lote = row.text(LOTE);
       addLoteCell(loteCells, lote);
@@ -154,9 +155,10 @@ final class LicitacionRecordTables {
               row.text(ADXUDICATARIO),
               PublishedValues.count(row.text(PARTICIPANTS))));
     }
+    return awards;
   }
 
-  private void readFormalisations(
+  private List<PublishedFormalisation> readFormalisations(
       PublicationId publicationId, Document document, List<String> loteCells) {
     Optional<PublishedTable> table =
         PublishedTable.under(
@@ -169,8 +171,9 @@ final class LicitacionRecordTables {
             NACIONALIDADE,
             IMPORTE);
     if (table.isEmpty()) {
-      return;
+      return List.of();
     }
+    List<PublishedFormalisation> formalisations = new ArrayList<>();
     for (PublishedTable.Row row : table.get().rows()) {
       String lote = row.text(LOTE);
       addLoteCell(loteCells, lote);
@@ -184,6 +187,7 @@ final class LicitacionRecordTables {
               row.text(NACIONALIDADE),
               amountOf(row.text(IMPORTE))));
     }
+    return formalisations;
   }
 
   /**
@@ -254,8 +258,8 @@ final class LicitacionRecordTables {
    * same rule the labelled scalars use for a repeated label, and it keeps the stored identifier
    * the one the awarding table published.
    */
-  private void readLotes(
-      PublicationId publicationId, Document document, List<String> loteCells) {
+  private List<PublishedLote> readLotes(
+      PublicationId publicationId, Document document, Iterable<String> loteCells) {
     // Only the lote column is required. The other two are decoration a lote exists without, and
     // this is the one table the source publishes on every record of both families — so refusing
     // over a column it may drop would cost every procedure in the catalogue rather than one.
@@ -294,7 +298,7 @@ final class LicitacionRecordTables {
     // The lotes table's own rows last: a lote only it names is still a lote, and one an earlier
     // table already named keeps that table's spelling.
     decoration.forEach(named::putIfAbsent);
-    lotes.addAll(named.values());
+    return List.copyOf(named.values());
   }
 
   /**
