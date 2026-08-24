@@ -58,9 +58,7 @@ class LicitacionRecordTablesTest {
   void normalises_the_zero_padded_lote_cell_the_award_table_writes() {
     LicitacionRecord record =
         read(
-            awardTable(
-                awardRow(
-                    "05", "3", "Adxudicado", "ACME, S.L.", "1.000,00 €", "01-02-2024", "3 m")));
+            awardTable(ordinaryAwardOfLote("05")));
 
     assertThat(record.awards()).extracting(PublishedAward::loteKey).containsExactly("5");
   }
@@ -80,9 +78,7 @@ class LicitacionRecordTablesTest {
   void attaches_the_formalisation_to_the_award_whose_lote_cell_is_spelled_otherwise() {
     LicitacionRecord record =
         read(
-            awardTable(
-                    awardRow(
-                        "1", "3", "Adxudicado", "ACME, S.L.", "1.000,00 €", "01-02-2024", "3 m"))
+            awardTable(ordinaryAwardOfLote("1"))
                 + formalisationTable(
                     formalisationRow(
                         "10-03-2024", "01", "ACME, S.L.<br/>B36746584", "España", "1.000,00 €")));
@@ -176,9 +172,7 @@ class LicitacionRecordTablesTest {
   void decorates_the_award_table_lote_with_what_the_lotes_table_publishes() {
     LicitacionRecord record =
         read(
-            awardTable(
-                    awardRow(
-                        "1", "3", "Adxudicado", "ACME, S.L.", "1.000,00 €", "01-02-2024", "3 m"))
+            awardTable(ordinaryAwardOfLote("1"))
                 + lotesTable("<tr><td>1</td><td>Obra civil</td><td>900,00 €</td></tr>"));
 
     assertThat(record.lotes())
@@ -196,9 +190,7 @@ class LicitacionRecordTablesTest {
   void holds_the_lote_spelling_the_award_table_published_rather_than_the_lotes_table_one() {
     LicitacionRecord record =
         read(
-            awardTable(
-                    awardRow(
-                        "05", "3", "Adxudicado", "ACME, S.L.", "1.000,00 €", "01-02-2024", "3 m"))
+            awardTable(ordinaryAwardOfLote("05"))
                 + lotesTable("<tr><td>5</td><td>Obra civil</td><td></td></tr>"));
 
     assertThat(record.lotes())
@@ -320,9 +312,7 @@ class LicitacionRecordTablesTest {
   void reads_the_lotes_table_that_publishes_no_decoration_columns() {
     LicitacionRecord record =
         read(
-            awardTable(
-                    awardRow(
-                        "1", "3", "Adxudicado", "ACME, S.L.", "1.000,00 €", "01-02-2024", "3 m"))
+            awardTable(ordinaryAwardOfLote("1"))
                 + container(
                     "ventanaModalLotes", table("<th>Lote</th>", "<tr><td>1</td></tr>")));
 
@@ -420,6 +410,15 @@ class LicitacionRecordTablesTest {
 
   private static String awardTable(String rows) {
     return container("consulta-resolucion", table(AWARD_HEADER, rows));
+  }
+
+  /**
+   * An award row that is unremarkable in every way but its lote, so a case about lote spelling
+   * shows only its lote and a reader is not left diffing seven positional arguments to find what
+   * the test is actually varying.
+   */
+  private static String ordinaryAwardOfLote(String lote) {
+    return awardRow(lote, "3", "Adxudicado", "ACME, S.L.", "1.000,00 €", "01-02-2024", "3 m");
   }
 
   private static String awardRow(
