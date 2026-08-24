@@ -71,7 +71,7 @@ the `ContratoMenor` / `ContratoMenorId` precedent.
   | publication date | **listing** `publicado` | **nullable** — an uninterpretable date stores null rather than rejecting the row |
   | last-modified date | **listing** `modificado` | what R11's incremental mode will order on |
   | state | **listing** `estado` + `estadoDesc` | **a reference** to `LicitacionState`, required |
-  | expediente | record `Expediente` | free text |
+  | expediente | record `Referencia` | free text, published on a minority of records |
   | object | record `Obxecto` | free text, no length cap |
   | contract type | record `Tipo de contrato` | **a reference** to `LicitacionContractType`, nullable |
   | procedure type | record `Tipo de procedemento` | **a reference** to `LicitacionProcedureType`, nullable |

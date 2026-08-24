@@ -59,6 +59,19 @@
  * aggregate's values are published, which is why the listing is read even when the record is
  * already in hand.
  *
+ * <p><strong>One procedure</strong> enters through
+ * {@link gal.conxugal.domain.licitacion.LicitacionRecordSource}, which answers the
+ * {@link gal.conxugal.domain.licitacion.LicitacionRecord} its published page states — or throws
+ * {@link gal.conxugal.domain.licitacion.LicitacionRecordUnavailableException} rather than hand back
+ * a half-built procedure, which would store as authoritative with nothing ever returning to it.
+ * That is the expensive half of the same two-mechanism retrieval: one call per stored procedure
+ * against the listing's hundred, which is why they are two ports and not one. It answers a source
+ * record rather than a {@link gal.conxugal.domain.licitacion.Licitacion} because the aggregate
+ * needs values only the listing publishes. Its two economic figures arrive as a
+ * {@link gal.conxugal.domain.licitacion.PublishedAmount}, which carries the
+ * {@link gal.conxugal.domain.licitacion.VatBasis} the source labelled each with — measured to vary
+ * between procedures, so it is read rather than assumed.
+ *
  * <p>{@code @NullMarked}: every type, field, parameter and return value in this package is
  * non-null unless explicitly annotated {@link org.jspecify.annotations.Nullable}.
  */

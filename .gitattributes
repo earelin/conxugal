@@ -1,0 +1,5 @@
+# Captured source pages, stored as the source served them. They are ISO-8859-1 and the
+# tests that read them assert byte-for-byte what was published, so no end-of-line
+# normalisation may ever rewrite them.
+server/infrastructure/src/integrationTest/resources/licitacion/*.html -text
+server/wiremock/__files/*.html -text

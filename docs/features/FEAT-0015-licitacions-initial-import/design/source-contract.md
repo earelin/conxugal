@@ -198,23 +198,116 @@ third request" holds.
 
 ### What it carries
 
-Labelled `<dt>`/`<dd>` pairs, verified across several procedures:
+> **Re-measured 2026-08-24** against live captures of procedures 18747, 20000, 822054, 825000 and
+> 828959, plus contratos menores served from the same endpoint. An earlier draft of this section
+> listed nine `<dt>`/`<dd>` pairs including `Expediente` and `Estado do procedemento`. Two of those
+> nine are not labelled pairs, and one of them does not exist under that name at all. This is the
+> corrected shape.
 
-| Label | Example | SPEC-0008 |
+**Seven** labelled `<dt>`/`<dd>` pairs, inside `<dl>` blocks under **`div.infoConcurso`**:
+
+| Label | Example | Present on | SPEC-0008 |
+| --- | --- | --- | --- |
+| `Obxecto` | Actuacións de mellora de infraestruturas… | every record | R7 object |
+| `Tipo de contrato` | Obras | every record | R7 |
+| `Tipo de procedemento` | Abertos | every record | R7 |
+| `Tipo de tramitación` | Ordinaria | every record | R7 |
+| `Nº lotes` | `2` | licitacións only | R7 |
+| `Orzamento base de licitación` | `3.378.552,09 con IVE` | every record | R7 base budget |
+| `Valor estimado` | `2.792.191,81 sen IVE` | licitacións only | R7 estimated value |
+
+The other two R7 values are published outside that list:
+
+| Value | Where | Present on |
 | --- | --- | --- |
-| `Obxecto` | Actuacións de mellora de infraestruturas… | R7 object |
-| `Expediente` | `2024/001` | R7 reference |
-| `Tipo de contrato` | Obras | R7 |
-| `Tipo de procedemento` | Abertos | R7 |
-| `Tipo de tramitación` | Ordinaria | R7 |
-| `Nº lotes` | `2` | R7 |
-| `Orzamento base de licitación` | `3.378.552,09 con IVE` | R7 base budget |
-| `Valor estimado` | `2.792.191,81 sen IVE` | R7 estimated value |
-| `Estado do procedemento` | Formalizado | R7 state |
+| **`Referencia`** — R7's reference | `div.infoReferencia > dl > dt` | **a minority**, 3 of 10 sampled |
+| **`Estado do procedemento`** — R7's state | `<p>Estado do procedemento: <em>Formalizado</em></p>` | every record |
+
+**There is no `Expediente` label anywhere on the record.** The value SPEC-0008 R7 calls the
+reference is published as `Referencia`, in a block of its own. On procedure 822054 the string
+`Expediente 2024/001` does appear — but inside the *object's* free text, where it is prose rather
+than a field, and mining it out would find a date or a lote number as readily as a reference.
+
+#### Three labels repeat, and a fourth nearly does
+
+This is why the container matters and why the label must match exactly:
+
+| Label | Occurrences | The copies |
+| --- | --- | --- |
+| `Obxecto` | **3** | two empty ones in the acordo-marco and sistema-dinámico blocks |
+| `Orzamento base de licitación` | **2** | restated as `Orzamento base de licitación:` under `class="detalleReestructuracion"` |
+| `Valor estimado` | **2** | likewise, with a trailing colon |
+| `Tipo de contrato` | 1 | but `Tipo de contrato(réxime xurídico)` sits beside it and means something else |
+
+Scoping to `div.infoConcurso` removes every duplicate — measured across the captures, that block
+holds each label exactly once and holds none of the copies. Exact equality on the trimmed label
+handles the colon-suffixed restatements and the `(réxime xurídico)` near-miss. A parse doing
+neither answers an empty object for any procedure whose blocks are ordered differently.
+
+#### The VAT basis varies, and is not a per-field constant
 
 The two economic figures **label their own VAT treatment in the published text** (`con IVE` /
-`sen IVE`), which is worth knowing: R7 requires the labelling, and it is a fact the source states
-rather than one the system asserts.
+`sen IVE`) — R7 requires the labelling, and it is a fact the source states rather than one the
+system asserts. **It is not the same statement every time:** 822054 and 828959 publish their base
+budget `con IVE`, and **18747 publishes its `sen IVE`**. A parse that recognised the marker and
+discarded it — on the reasoning that a base budget is always VAT-inclusive — would store that
+procedure's budget under a basis the source contradicts. The marker is read and carried.
+
+`Valor estimado` is also published as `_` on records that state none, which is a placeholder and
+not a figure.
+
+#### The markup breaks a figure across lines
+
+```html
+<dd>
+    3.378.552,09
+
+
+        con IVE
+
+</dd>
+```
+
+So a parse taking `Element.text()`, or splitting on a single space, fails on the record's own base
+budget. `Valor estimado` on the same procedure is written inline (`<dd>2.792.191,81 sen IVE</dd>`),
+so both layouts occur and neither can be assumed.
+
+#### One value carries a double space, and jsoup will eat it
+
+Procedure 822054's object contains `dentro do  programa` — a genuine double space in the published
+text. `Element.text()` collapses internal whitespace runs and normalises newlines, so it silently
+returns something the source did not publish, and every fixture written by hand still passes.
+`wholeText()` plus an end-only trim is required, not merely preferable (SPEC-0008 #44).
+
+#### Dates come in three widths
+
+`DD-MM-YYYY`, `DD-MM-YYYY HH:MM` and `DD-MM-YYYY HH:MM:SS` all occur on one page — 97, 46 and 11
+occurrences respectively across three captures. A formatter accepting only the widest reads none of
+the others. Read with `uuuu` and a strict resolver, so a published `31-02` is refused rather than
+clamped to a day nobody published.
+
+#### The record does publish a diffusion date
+
+`Data de difusión en Contratos Públicos de Galicia: 08-03-2024 08:01` is a labelled pair on the
+record, and equals the listing's `publicado` for the same procedure. FEAT-0015 states that the
+record does not carry the publication date; that is wrong, and recorded here so it is not
+rediscovered. The listing remains the source of record for it, so the aggregate has one origin per
+value rather than two and a precedence rule.
+
+### An unknown identifier answers `200`, not `404`
+
+`licitacion?N=999999999` answers **`200 text/html`** with a ~24 KB error page carrying no
+`div.infoConcurso` and zero `<dt>` elements.
+
+This is load-bearing enough to state on its own, because every adapter written against this source
+so far treats a status of `400` or above as the failure signal, and **here that signal never
+arrives**. Whether a record exists is a question only the parse can answer, and the structural
+check is what answers it: measured over 23 fetched identifiers, all three of `div.infoConcurso`,
+the state paragraph and the `Obxecto` label were present on 18 of 18 real records — licitación and
+contrato menor alike — and `div.infoConcurso` was absent on all 5 error pages.
+
+The status checks are still worth making: they catch the source being down, or the endpoint moving.
+They are simply not what finds a record that is not there.
 
 ### Tables
 
@@ -229,14 +322,19 @@ The record's data tables, each verified on procedure 822054:
 | Bidders (`tr.filaLic_*`) | Lote, **NIF**, Nome |
 
 ```text
-Lote | Part. | Resolución | Adxudicatario                       | Importe          | Prazo
-1    | 10    | Adxudicado | XESTION AMBIENTAL DE CONTRATAS, S.L.| 3.052.743,72 EUR | 12 meses
-2    | 7     | Adxudicado | ESQUEIRO, SL                        |   206.996,66 EUR | 2 meses 7 días
+Lote | Part. | Resolución | Adxudicatario                       | Importe        | Prazo
+1    | 10    | Adxudicado | XESTION AMBIENTAL DE CONTRATAS, S.L.| 3.052.743,72 € | 12 meses
+2    | 7     | Adxudicado | ESQUEIRO, SL                        |   206.996,66 € | 2 meses 7 días
 ```
 
 So SPEC-0008 R8's "one place per thing awarded" is exactly how the source publishes it: **the award
 table is keyed by lote**, and a procedure with no lotes has one row standing for the procedure as a
 whole.
+
+The `Importe` column's currency mark is published as the entity `&#8364;` — a euro sign, not
+the literal `EUR` an earlier draft of this document showed. jsoup decodes it to `€` whatever
+the document's charset is, so the parse sees a real euro sign; a fixture that writes one as a
+literal and encodes it as ISO-8859-1 does not, because ISO-8859-1 cannot represent it.
 
 **`Part.` is the count of bidders for that lote** (10 and 7 above), which is a free cross-check on
 the parsed bidder list — a parse that produced a different count has failed and should say so
