@@ -62,18 +62,29 @@ public class ResolveOperador {
     if (published.isEmpty()) {
       return Optional.empty();
     }
-    FiscalIdentifier fiscalId = published.get();
+    return Optional.of(operadorHolding(published.get(), publishedName, rank));
+  }
+
+  /**
+   * The operador holding this identifier: catalogued now if nothing named it before, and otherwise
+   * the one already held, accounted for against the name this publication carried.
+   *
+   * <p>Wrapping in {@link Optional#of} rather than mapping over one is deliberate — a store
+   * answering null to an insert is a defect worth a thrown exception, not an award quietly recorded
+   * under nobody.
+   */
+  private OperadorEconomico operadorHolding(
+      FiscalIdentifier fiscalId, @Nullable String publishedName, NomeRank rank) {
     Optional<OperadorEconomico> catalogued = operadores.findByFiscalId(fiscalId);
     if (catalogued.isEmpty()) {
-      return Optional.of(
-          operadores.insert(
-              new OperadorEconomico(fiscalId, publishedName == null ? "" : publishedName, rank)));
+      return operadores.insert(
+          new OperadorEconomico(fiscalId, publishedName == null ? "" : publishedName, rank));
     }
     OperadorEconomico incumbent = catalogued.get();
     if (publishedName != null) {
       account(incumbent, publishedName, rank);
     }
-    return Optional.of(incumbent);
+    return incumbent;
   }
 
   /**
