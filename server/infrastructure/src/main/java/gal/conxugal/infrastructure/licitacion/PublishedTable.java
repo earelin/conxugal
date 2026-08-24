@@ -134,6 +134,12 @@ final class PublishedTable {
    * cell's whole text rather than from a child. A table with no header row answers empty, which
    * the caller reads as unreadable: it cannot be read by label, and reading it by index is what
    * this type exists to prevent.
+   *
+   * <p><strong>First occurrence winning is how the index is built, not what a repeat
+   * costs.</strong> A repeated label indexes fewer columns than the header has cells, so a row
+   * fails the width check and the table is refused. That is intended and not a side effect:
+   * a repeated {@code <dt>} still names one value, whereas a repeated column heads two, and there
+   * is no answering which of them a caller asking for that label meant.
    */
   private static Map<String, Integer> headerIndex(Element table) {
     Map<String, Integer> headers = new HashMap<>();
