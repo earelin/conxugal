@@ -71,5 +71,16 @@ Operadores are the stored projection of
   placeholder.* (SPEC-0006 #8)
 - Re-importing the same procedure leaves one participation per published bidder and does not flap
   any operador's name. (SPEC-0008 #17; SPEC-0006 #37)
+- The rank-less path is a **second entry point on `ResolveOperador`**, never a rank engineered to
+  lose. A losing rank does not express *this publication ranks nothing*: it still reaches
+  `retainName`, filing the bid's name among the operador's alternatives, and no port drops a
+  retained name except as a side effect of promoting it — so that shortcut breaks SPEC-0006 #33 and
+  #34 permanently and silently. Forking the lookup-or-insert into this family's importer is the
+  other shortcut, and it is the divergence
+  [TASK-0011](TASK-0011-extract-resolve-operador.md) exists to prevent. (SPEC-0006 #33, #34)
+- The use case calling `ResolveOperador` **opens the transaction** the resolution's writes join, so
+  an operador cannot be created and named while the licitación write that justified it rolls back.
+  The collaborator owns no boundary of its own — that is TASK-0011's design, and it makes the
+  boundary each caller's to supply. (SPEC-0006 #37)
 - Repository ports stubbed with **Mockito**; the catalogue-effect criteria integration-tested
   against PostgreSQL with a real operadores table.

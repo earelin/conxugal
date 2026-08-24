@@ -74,10 +74,11 @@
     <Field name="~(startImport|readImportRun)"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
-  <!-- And for the batch the walk stores through: OperadorRepository declares insert, same as
-       above. -->
+  <!-- And for the awardee derivation every contract family shares: OperadorRepository declares
+       insert, same as above. Only this field — the batch that calls the derivation stores it
+       without tripping the heuristic, which reads no mutator on it. -->
   <Match>
-    <Class name="gal.conxugal.domain.contrato.StoreContratosMenoresBatch"/>
+    <Class name="gal.conxugal.domain.operador.ResolveOperador"/>
     <Field name="operadores"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
