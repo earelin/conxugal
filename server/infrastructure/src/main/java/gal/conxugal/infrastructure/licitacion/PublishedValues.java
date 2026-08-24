@@ -155,6 +155,55 @@ final class PublishedValues {
   }
 
   /**
+   * The regulated-list code a classification cell names: everything up to the first blank run.
+   *
+   * <p><strong>The cell carries the code and its description together.</strong> Measured on
+   * 822054, a CPV cell reads {@code 45000000}, a non-breaking space, then
+   * {@code Trabajos de construcción}, and a NUT cell reads {@code ES111} then {@code A Coruña} —
+   * so a parse taking the whole cell would key the vocabulary on a code-and-wording string, and
+   * one splitting on a plain space would not split at all. The separator is U+00A0, which
+   * {@link #BLANK_RUN} already calls blank, so this splits on the same character class everything
+   * else here trims by.
+   *
+   * <p><strong>Nothing validates the shape of what comes back, and nothing can.</strong> A CPV
+   * code is eight digits and a NUTS code is two to five letters and digits ({@code ES111},
+   * {@code ES}), and both lists are versioned rather than closed — a rule tight enough to reject
+   * a cell that is wording with no code would reject a real code from a revision this system has
+   * not met, which is the harm storing values as published exists to prevent. So a cell the source
+   * ever published as wording alone would key an entry on its first word. An unseen code costs a
+   * row; a rejected real one costs a procedure.
+   *
+   * <p>The description beside it is {@link #description}'s.
+   */
+  static @Nullable String code(@Nullable String published) {
+    String trimmed = text(published);
+    if (trimmed == null) {
+      return null;
+    }
+    Matcher blank = BLANK_RUN.matcher(trimmed);
+    return blank.find() ? trimmed.substring(0, blank.start()) : trimmed;
+  }
+
+  /**
+   * The wording a classification cell carries after its code, or null where it carries none.
+   *
+   * <p><strong>Collapsed, unlike a published value.</strong> This is the regulated list's own
+   * label for an entry — something to display and to look an entry up by — rather than a fact the
+   * procedure states, so it is reduced the way {@link #label} reduces a key and not the way
+   * {@link #text} preserves an object. The separator the source uses is a non-breaking space, and
+   * a cell writing the wording itself with one would otherwise store a description no ordinary
+   * search for it could match.
+   */
+  static @Nullable String description(@Nullable String published) {
+    String trimmed = text(published);
+    if (trimmed == null) {
+      return null;
+    }
+    Matcher blank = BLANK_RUN.matcher(trimmed);
+    return blank.find() ? collapse(trimmed.substring(blank.end())) : null;
+  }
+
+  /**
    * Internal whitespace runs flattened to one space, which {@link #text} deliberately does not do.
    * A number's layout carries no meaning — the markup breaks {@code 3.378.552,09} and its
    * {@code con IVE} across four lines — so the two rules differ because the two kinds of value do.

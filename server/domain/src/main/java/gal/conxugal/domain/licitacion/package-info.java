@@ -72,6 +72,19 @@
  * {@link gal.conxugal.domain.licitacion.VatBasis} the source labelled each with — measured to vary
  * between procedures, so it is read rather than assumed.
  *
+ * <p>That record carries its <strong>published tables</strong> alongside its scalars, one type per
+ * table and each named for what the source states rather than for the row it will become: a
+ * {@link gal.conxugal.domain.licitacion.PublishedAward} per resolution row, a
+ * {@link gal.conxugal.domain.licitacion.PublishedFormalisation} per formalisation row — the
+ * primary route to an awardee's fiscal identifier — a
+ * {@link gal.conxugal.domain.licitacion.PublishedCpvClassification} and a
+ * {@link gal.conxugal.domain.licitacion.PublishedNutClassification} per classification row, and a
+ * {@link gal.conxugal.domain.licitacion.PublishedLote} per lote its tables name. They hold a
+ * {@link gal.conxugal.domain.licitacion.LoteKey} reduction rather than a
+ * {@link gal.conxugal.domain.licitacion.LoteId} because a parse has no identity to refer to — the
+ * store mints one — and they reduce that key themselves rather than trusting a caller to have
+ * done it. A table the record does not publish is an empty list rather than a failure.
+ *
  * <p>{@code @NullMarked}: every type, field, parameter and return value in this package is
  * non-null unless explicitly annotated {@link org.jspecify.annotations.Nullable}.
  */
