@@ -87,8 +87,24 @@ class StoreContratosMenoresBatchTest {
     verifyNoInteractions(operadores);
   }
 
-  // Only emptiness disqualifies an identifier: a foreign VAT number or a malformed NIF is a real
-  // award, and refusing it would discard one.
+  // A published placeholder is not empty, so nothing but this branch keeps it out of the
+  // catalogue: admitted, every dash-published award would pool under one operador holding `-`,
+  // carrying unrelated suppliers under whichever name was published last.
+  @Test
+  void award_whose_fiscal_identifier_is_published_placeholder_is_stored_under_no_operador() {
+    theStoreAcceptsTheBatch();
+
+    store(award(1L, JUNE, "ACME SL", "-"));
+
+    assertThat(upserted)
+        .singleElement()
+        .extracting(ContratoMenor::operadorEconomico)
+        .isNull();
+    verifyNoInteractions(operadores);
+  }
+
+  // Nothing beyond emptiness and the two published placeholder forms disqualifies an identifier:
+  // a foreign VAT number or a malformed NIF is a real award, and refusing it would discard one.
   @Test
   void award_with_an_irregular_but_non_empty_identifier_is_attached_to_an_operador() {
     theStoreCataloguesOnDemand();

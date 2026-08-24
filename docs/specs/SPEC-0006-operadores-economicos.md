@@ -256,8 +256,8 @@ One decision has since been taken:
   placeholder one — while remaining stored and browsable, showing **no awardee at all**, since
   under [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R7 the awardee is held on the
   operador that award did not produce (SPEC-0005 #11). Nothing
-  beyond the emptiness test is validated: the source publishes irregular but genuine
-  identifiers, and rejecting them would discard real awards.
+  beyond emptiness and the two placeholder forms named above is validated: the source publishes
+  irregular but genuine identifiers, and rejecting them would discard real awards.
 - **R6** — Awardees that are **natural persons** and those that are **legal entities** are
   catalogued and reachable identically, and the system does not classify which is which. The
   reason is the no-inference rule of this spec's Scope, not an absence in the source: the kind

@@ -83,6 +83,21 @@ class FiscalIdentifierTest {
     assertThatIllegalArgumentException().isThrownBy(() -> new FiscalIdentifier(""));
   }
 
+  /**
+   * The canonical constructor is deliberately permissive about placeholders: a row persisted
+   * under one before {@link FiscalIdentifier#of} turned them away has to read back rather than
+   * fail the read.
+   */
+  @Test
+  void constructs_the_dash_placeholder_so_stored_row_reads_back() {
+    assertThat(new FiscalIdentifier("-").value()).isEqualTo("-");
+  }
+
+  @Test
+  void constructs_the_temporary_placeholder_so_stored_row_reads_back() {
+    assertThat(new FiscalIdentifier("temp-00934").value()).isEqualTo("TEMP-00934");
+  }
+
   @Test
   void an_absent_published_identifier_is_unusable() {
     assertThat(FiscalIdentifier.of(null)).isEmpty();
@@ -101,6 +116,36 @@ class FiscalIdentifierTest {
   @Test
   void published_blanks_no_narrower_rule_would_strip_are_unusable() {
     assertThat(FiscalIdentifier.of(NON_BREAKING_SPACE + GROUP_SEPARATOR)).isEmpty();
+  }
+
+  @Test
+  void published_lone_dash_is_unusable() {
+    assertThat(FiscalIdentifier.of("-")).isEmpty();
+  }
+
+  // The placeholder test reads the canonical form, so padding cannot smuggle one past it.
+  @Test
+  void padded_lone_dash_is_the_same_placeholder_and_unusable() {
+    assertThat(FiscalIdentifier.of(" - ")).isEmpty();
+  }
+
+  @Test
+  void published_temporary_placeholder_is_unusable() {
+    assertThat(FiscalIdentifier.of("TEMP-00934")).isEmpty();
+  }
+
+  // Upper-casing runs before the test too, so the published case cannot smuggle one past it.
+  @Test
+  void temporary_placeholder_published_in_lower_case_is_unusable() {
+    assertThat(FiscalIdentifier.of("temp-00934")).isEmpty();
+  }
+
+  // The rule rejects the two published placeholder forms and nothing else: an identifier that
+  // merely carries a dash is irregular, not absent, and discarding it would discard real awards.
+  @Test
+  void identifier_merely_carrying_dash_is_usable_and_reduces_like_any_other() {
+    assertThat(FiscalIdentifier.of(" x-1234567z "))
+        .contains(new FiscalIdentifier("X-1234567Z"));
   }
 
   @Test
