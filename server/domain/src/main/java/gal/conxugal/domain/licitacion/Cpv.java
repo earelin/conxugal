@@ -25,11 +25,11 @@ import org.jspecify.annotations.Nullable;
  * create a second row for wording that changed. So the description carries no constraint, exactly
  * as {@link LicitacionState}'s label carries none, and the code is what the system is unique on.
  *
- * <p><strong>The description is nullable, and nothing populates it yet.</strong> The record's CPV
- * table publishes the code alone, so an import stores the code and leaves this null. It is
- * declared here so the official wording has somewhere to go when something needs to display one,
- * rather than a column added later to a table with a row per code per procedure. Null means
- * nobody has supplied one — never that the entry has none.
+ * <p><strong>The description is nullable because the source does not always supply one.</strong>
+ * An earlier reading of this record said the CPV table publishes the code alone; measured on
+ * 822054, it does not — the cell carries the code, a non-breaking space, then Spanish wording
+ * ({@code 45000000} then {@code Trabajos de construcción}), and an import splits the two and
+ * stores both. Null means nobody has supplied one — never that the entry has none.
  *
  * <p><strong>Nothing seeds this table and nothing validates against it.</strong> The list being
  * regulated is not the same as it being closed: CPV is versioned — the 2008 revision retired codes
