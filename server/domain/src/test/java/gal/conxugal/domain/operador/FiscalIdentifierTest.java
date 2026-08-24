@@ -92,14 +92,10 @@ class FiscalIdentifierTest {
   // The canonical constructor is deliberately permissive about placeholders, in both spellings a
   // store may already hold: a row persisted under one before FiscalIdentifier.of turned them away
   // has to read back rather than fail the read that finds it.
-  @Test
-  void constructs_the_dash_placeholder_so_stored_row_reads_back() {
-    assertThat(new FiscalIdentifier("-").value()).isEqualTo("-");
-  }
-
-  @Test
-  void constructs_the_temporary_placeholder_so_stored_row_reads_back() {
-    assertThat(new FiscalIdentifier("TEMP-00934").value()).isEqualTo("TEMP-00934");
+  @ParameterizedTest
+  @ValueSource(strings = {"-", "TEMP-00934"})
+  void constructs_the_placeholder_so_stored_row_reads_back(String persisted) {
+    assertThat(new FiscalIdentifier(persisted).value()).isEqualTo(persisted);
   }
 
   @Test
