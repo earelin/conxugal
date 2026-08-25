@@ -71,8 +71,12 @@ final class LicitadorRow {
   /** The list every name cell wraps its party in, consortium or not. */
   private static final String OUTER_LIST = "ul";
 
-  /** A list's own items, never a nested list's. */
-  private static final String FIRST_ITEM = "> li";
+  /**
+   * A list's own items, never a nested list's. The name is taken from the first of these and the
+   * members from all of them, and the child combinator is what keeps the two readings apart: as a
+   * descendant selector, a consortium's name item would be followed by its own members.
+   */
+  private static final String OWN_ITEMS = "> li";
 
   /** The class {@link PublishedValues} and {@code Whitespace} both call blank. */
   private static final String BLANK = "[\\s\\p{Z}\\x{85}\\x{1C}-\\x{1F}]";
@@ -167,7 +171,7 @@ final class LicitadorRow {
    * but which costs nothing to survive.
    */
   private static @Nullable String nameOf(@Nullable Element cell, @Nullable Element list) {
-    Element first = firstIn(list, FIRST_ITEM);
+    Element first = firstIn(list, OWN_ITEMS);
     if (first == null) {
       return cell == null ? null : PublishedValues.text(cell.wholeText());
     }
@@ -186,7 +190,7 @@ final class LicitadorRow {
    */
   private static List<PublishedConsortiumMember> membersOf(Element memberList) {
     List<PublishedConsortiumMember> members = new ArrayList<>();
-    for (Element entry : memberList.select("> li")) {
+    for (Element entry : memberList.select(OWN_ITEMS)) {
       members.add(memberOf(PublishedValues.text(entry.wholeText())));
     }
     return members;
