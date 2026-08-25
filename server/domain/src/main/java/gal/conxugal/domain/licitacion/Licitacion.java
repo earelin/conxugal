@@ -30,8 +30,8 @@ import org.jspecify.annotations.Nullable;
  * the published identifier wherever a rank is built from one, never to compare it as text — text
  * would order {@code "9"} above {@code "10"} and corrupt the tie-break for the family whose ranks
  * are already stored. Both families draw from one publication id space, so the parsed values are
- * comparable. Nothing builds such a rank yet; the rule is recorded so the first thing that does
- * inherits it rather than deciding it again.
+ * comparable. {@link PublicationId#asNumber()} is that parse, and an identifier it cannot read a
+ * number out of ranks nothing rather than ranking as text.
  *
  * <p>Only three things are required: the source identifier, the convening Órgano, and the state.
  * Every other value is nullable, and null means <em>the source published nothing there</em> — a

@@ -83,6 +83,15 @@
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
 
+  <!-- And for the awardee resolution above it, which asks the same port the question the shared
+       derivation cannot: which operadores a published name reaches. Only that field — the two
+       collaborators beside it are read as immutable and a genuine leak of either would report. -->
+  <Match>
+    <Class name="gal.conxugal.domain.licitacion.StoreLicitacionAwards"/>
+    <Field name="operadores"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+
   <!-- Micronaut Serde's generated (de)serializers. The @Generated match above cannot reach them:
        they carry javax.annotation.processing.Generated, which is SOURCE-retention and so absent
        from the bytecode SpotBugs reads, unlike Micronaut's own CLASS-retention annotation. -->

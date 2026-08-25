@@ -68,6 +68,25 @@ public class ResolveOperador {
   }
 
   /**
+   * The same resolution for a caller that already holds the identifier as a value rather than as a
+   * published cell — a licitación's formalisation and its bidder rows both do, the parse having
+   * asked {@link FiscalIdentifier#of} the usability question at the edge. It answers an operador
+   * rather than an optional one for exactly that reason: the branch this type exists to make
+   * unmissable has already been taken, and re-offering it here would have every such caller write
+   * a second, unreachable one.
+   *
+   * @param fiscalId the party's identifier, already reduced
+   * @param publishedName the name as published, or null where the source carried none
+   * @param rank which publication these values were taken from
+   */
+  public OperadorEconomico resolve(
+      FiscalIdentifier fiscalId, @Nullable String publishedName, NomeRank rank) {
+    Objects.requireNonNull(fiscalId, "fiscalId must not be null");
+    Objects.requireNonNull(rank, "rank must not be null");
+    return operadorHolding(fiscalId, publishedName, rank);
+  }
+
+  /**
    * The operador this publication names, catalogued now under the name it published if nothing
    * named that identifier before — and otherwise <strong>left exactly as it stands</strong>.
    * Nothing is promoted, nothing is retained and no rank advances: this publication says who bid,

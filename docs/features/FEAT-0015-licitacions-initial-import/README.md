@@ -843,6 +843,15 @@ where exactly one catalogued operador matches the published name, and records th
 so it stays distinguishable and reversible. Measured ambiguity is 1 name in 268, and that one is a
 source typo.
 
+**The link and the path are a biconditional, and `Award` enforces it.** An award names an operador
+exactly when a route reached one, so neither a null operador beside `PUBLISHED_BY_FORMALISATION`
+nor an operador beside `UNRESOLVED` can be constructed. The case worth checking before asserting it
+is a published identifier that resolves to nobody the catalogue holds — and there is no such case:
+SPEC-0006 R3's resolution *catalogues* an identifier nothing named before rather than failing to
+find it, so every route that answers at all answers with an operador. Path C, the one route that
+can decline, declines by reaching no operador and leaving the path `UNRESOLVED`, which is the same
+statement from the other side.
+
 **Path H is a supported outcome, not a failure.** R16 and R25 already say a licitación may show an
 award and name nobody, and R25 refuses to make a resolvable awardee a condition of visibility. So
 an unresolved awardee costs a link, never a procedure.

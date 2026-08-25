@@ -33,6 +33,16 @@ import org.jspecify.annotations.Nullable;
  * which it was. It is never null: {@code UNRESOLVED} is the value for an award nothing resolved,
  * so the absence of a link is stated rather than inferred from a null.
  *
+ * <p><strong>The two are a biconditional, and it is enforced here.</strong> An award names an
+ * operador exactly when a route reached one — so neither a null operador beside
+ * {@code PUBLISHED_BY_FORMALISATION} nor an operador beside {@code UNRESOLVED} can be built. The
+ * case worth checking before asserting it is a published identifier that resolves to nobody the
+ * catalogue holds, and there is no such case: SPEC-0006 R3's resolution catalogues an identifier
+ * nothing named before rather than failing to find it, so every route that answers at all answers
+ * with an operador. The one route that can decline — a catalogue match on the name — declines by
+ * reaching no operador and leaving the path {@code UNRESOLVED}, which is the same statement from
+ * the other side.
+ *
  * <p>{@code resolution} is the published {@code Resolución} cell — the source's own word for what
  * was decided, such as <em>Adxudicado</em> — and is a different thing from the resolution
  * <em>path</em> beside it, which is this system's record of how the awardee was reached. The
@@ -65,6 +75,13 @@ public record Award(
   public Award {
     Objects.requireNonNull(licitacionId, "licitacionId must not be null");
     Objects.requireNonNull(awardeeResolutionPath, "awardeeResolutionPath must not be null");
+    boolean namesNobody = operadorEconomicoId == null;
+    boolean noRouteAnswered = awardeeResolutionPath == AwardeeResolutionPath.UNRESOLVED;
+    if (namesNobody != noRouteAnswered) {
+      throw new IllegalArgumentException(
+          "an award names an operador exactly when a route reached one: %s named %s"
+              .formatted(awardeeResolutionPath, operadorEconomicoId));
+    }
     resolution = PublishedText.orNullWhenBlank(resolution);
     executionPeriod = PublishedText.orNullWhenBlank(executionPeriod);
     awardeeName = PublishedText.orNullWhenBlank(awardeeName);

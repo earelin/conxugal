@@ -6,9 +6,7 @@ import gal.conxugal.domain.operador.ResolveOperador;
 import io.micronaut.transaction.annotation.Transactional;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -107,53 +105,5 @@ public class StoreLicitacionBidders {
     }
     return Objects.requireNonNull(
         party.get().id(), "a catalogued operador must carry an identity");
-  }
-
-  /**
-   * The points a procedure was bid at: its lotes by the one form everything compares a lote cell
-   * on, and the procedure itself for a row that names no lote.
-   *
-   * <p>The stored spelling is reduced here rather than trusted to match a bidder row's, because the
-   * two source tables spell one lote differently — {@code 05} against {@code 5} was measured within
-   * a single record.
-   */
-  private record AwardPoints(LicitacionId licitacionId, Map<String, LoteId> byKey) {
-
-    AwardPoints {
-      byKey = Map.copyOf(byKey);
-    }
-
-    static AwardPoints of(LicitacionId licitacionId, Iterable<Lote> lotes) {
-      Map<String, LoteId> byKey = new HashMap<>();
-      for (Lote lote : lotes) {
-        LoteId id =
-            Objects.requireNonNull(
-                lote.id(), "a stored lote must carry an identity: " + lote.identifier());
-        LoteKey.normalise(lote.identifier()).ifPresent(key -> byKey.put(key, id));
-      }
-      return new AwardPoints(licitacionId, byKey);
-    }
-
-    /**
-     * The point {@code loteKey} names: a lote, or the procedure as a whole where the row named no
-     * lote.
-     *
-     * <p>A row naming a lote the procedure has not stored fails the procedure rather than being
-     * filed somewhere plausible: keying it to the procedure would collide with every other such bid
-     * on the same natural key, and skipping it would lose a published bidder silently. The record
-     * parse takes the same view of a bidder count that disagrees with the award table's.
-     */
-    @Nullable LoteId at(@Nullable String loteKey) {
-      if (loteKey == null) {
-        return null;
-      }
-      LoteId awardPoint = byKey.get(loteKey);
-      if (awardPoint == null) {
-        throw new IllegalArgumentException(
-            "bidder names lote %s, which procedure %s has not stored"
-                .formatted(loteKey, licitacionId.value()));
-      }
-      return awardPoint;
-    }
   }
 }
