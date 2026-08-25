@@ -253,6 +253,34 @@ only once a session exists. Their styling hand-copies the Mantine palette from
 `ui/src/app/theme.ts` and drifts silently — see the `frontend-design` skill before
 changing either.
 
+
+## The runtime-metrics stream
+
+`GET /api/admin/metrics` streams detailed runtime samples to an administrator over SSE
+(ADR-0009); the figures are read straight off the platform with no metrics library
+(ADR-0025). The contract — sample shape, the two anti-buffering response headers and why
+each is required — lives in `docs/api/openapi.yaml` under `streamMetrics`. Four things about
+it are easy to get wrong:
+
+- **Concurrent streams are deliberately uncapped.** ADR-0009 lists "must be capped and closed
+  cleanly" among its cons; only the closing half is built, and that is a decision rather than
+  an omission — the endpoint is `@Secured("ADMIN")` and each dashboard opens one stream, so the
+  ceiling is already the number of administrators. A configurable maximum would be a moving
+  part with no evidence behind it. Read the ADR's wording as a risk to keep in view; if
+  concurrent streams ever become real pressure, the cap is its own small, measured task.
+- **The cadence is the server's alone.** `conxugal.metrics.stream` in `application.yml` sets
+  the sample (5 s) and heartbeat (15 s) intervals. The contract exposes no parameter for
+  either, so letting a client choose is a contract change, not a config one.
+- **`HttpRequestCounterFilter` is ordered ahead of `SECURITY` on purpose** — see its javadoc.
+  Reordering it silently stops counting every `401` and `403`
+  (`RuntimeMetricsControllerIntegrationTest#security_denied_subscription_is_still_counted`).
+  Its totals are in-memory and process-lifetime, so they reset on restart and a second replica
+  would report its own.
+- **A sample that fails to assemble is dropped, not fatal to the stream** — an administrator's
+  session must survive a transient MXBean or pool failure. Distinct from a metric the platform
+  never reports, which degrades to an absent value inside the sample.
+
 <!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->
 <!-- distilled-from: FEAT-0003 @ 73cf32f -->
 <!-- distilled-from: FEAT-0004 @ 7402d8a -->
+<!-- distilled-from: FEAT-0005 @ 525bdaa -->

@@ -212,5 +212,29 @@ so a bundling failure there is caught locally or not at all.
   `es-toolkit` itself, never from `es-toolkit/compat` — that subpath only exists to match
   lodash's exact (looser) behaviour for projects migrating off it, which doesn't apply here.
 
+- **Server-pushed data** (`features/administration/monitoring/metrics/`): the admin
+  metrics panel is the app's only SSE consumer. `useMetricsStream` opens a plain
+  `EventSource` on `/api/admin/metrics` — the session cookie rides along, so there is no
+  credential handling here (ADR-0009) — and leans entirely on the browser's native
+  reconnection: the only states are `connecting`, `live` and `reconnecting`, and there is
+  deliberately **no error state**, because a dropped stream is already retrying. A drop
+  after the first sample keeps the last values on screen, dimmed and captioned stale,
+  rather than emptying the panel. The effect returns `source.close()`, which is what stops
+  a stream when the administrator navigates away. The rolling history lives in component
+  state only and is capped (250 samples; `VITE_METRICS_HISTORY_LIMIT` lowers it to 10 under
+  Vitest so buffer-eviction tests stay fast) — never `localStorage`, a cookie or a server
+  call, because SPEC-0003 R20 requires a reload to start it empty.
+- **The metrics panel is code-split for weight, not just for routing**
+  (`monitoring/DashboardPage.tsx`): its sparklines are `@mantine/charts`, which pulls in
+  recharts, and only an `ADMIN` reaching the dashboard can ever see them — so `MetricsPanel`
+  is a `React.lazy` behind its own `Suspense`, keeping the chart library out of the eager
+  entry chunk every visitor downloads. This is also why `main.tsx` does not import
+  `@mantine/charts/styles.css` while `.storybook/preview.tsx` does. The sparklines
+  themselves are `inert aria-hidden`: recharts' `accessibilityLayer` is on by default and
+  Mantine's `Sparkline` exposes no prop to turn it off, so without `inert` each one becomes
+  an unlabelled, focusable `role="application"` tab stop. The value rendered above a
+  sparkline is the accessible source of truth.
+
 <!-- distilled-from: FEAT-0001 @ 3f17cc0 -->
 <!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->
+<!-- distilled-from: FEAT-0005 @ 525bdaa -->
