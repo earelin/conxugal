@@ -205,10 +205,10 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
   void subscribing_to_the_stream_is_counted_like_any_other_request(RequestSpecification spec)
       throws InterruptedException {
     when(runtimeMetricsSource.currentSample()).thenReturn(sample(1));
-    // AuthenticationTestSupport#loginAs issues one POST /login and follows no redirect, so the
-    // subscription below is the only request between this snapshot and the assertion. Give that
-    // helper a second round trip and the exact delta here is what tells you.
     String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+    // Taken after the login because AuthenticationTestSupport#loginAs issues one POST /login and
+    // follows no redirect, leaving the subscription below as the only request this delta can see.
+    // Give that helper a second round trip and the exact count here is what tells you.
     RuntimeMetrics.Http before = httpRequestCounter.snapshot();
 
     StreamCollector collector = openStream(sessionCookie);
