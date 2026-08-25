@@ -10,7 +10,12 @@ import { createQueryClient } from '../../../shared/lib/queryClient';
 import { strings } from '../../../shared/lib/strings';
 import type { Organo, Termo } from '../organos';
 import { OrganosPage } from '../OrganosPage';
-import type { ImportRun, ImportRunState } from './contratosMenores';
+import type {
+  ImportRun,
+  ImportRunOrgano,
+  ImportRunOrganoState,
+  ImportRunState,
+} from './contratosMenores';
 
 const BASE_URL = 'http://localhost:3000';
 const IMPORT_PATH = '/api/admin/contratos-menores/import';
@@ -37,7 +42,16 @@ const innovacion: Organo = {
   importState: 'NEVER_STARTED',
 };
 
-const CATALOGUE = [sergas, innovacion];
+const portos: Organo = {
+  id: 'o-3',
+  name: 'Portos de Galicia',
+  active: true,
+  termoId: null,
+  importable: true,
+  importState: 'INCOMPLETE',
+};
+
+const CATALOGUE = [sergas, innovacion, portos];
 
 function mockCatalogue() {
   return nock(BASE_URL).get('/api/admin/organos').reply(200, CATALOGUE);
@@ -67,6 +81,35 @@ function mockRefusedTrigger(type: string) {
     );
 }
 
+/** One coverage row, of the shipped single family unless a case says otherwise. */
+function covered(
+  organoId: string,
+  state: ImportRunOrganoState,
+  overrides: Partial<ImportRunOrgano> = {},
+): ImportRunOrgano {
+  return {
+    organoId,
+    family: 'CONTRATOS_MENORES',
+    state,
+    added: 0,
+    refreshed: 0,
+    failureReason: null,
+    ...overrides,
+  };
+}
+
+/** The same Órgano in both families, the shape a run covering both produces. */
+function bothFamilies(
+  organoId: string,
+  contratosMenores: ImportRunOrganoState,
+  licitacions: ImportRunOrganoState,
+): ImportRunOrgano[] {
+  return [
+    covered(organoId, contratosMenores),
+    covered(organoId, licitacions, { family: 'LICITACIONS' }),
+  ];
+}
+
 function run(state: ImportRunState, overrides: Partial<ImportRun> = {}): ImportRun {
   return {
     id: RUN_ID,
@@ -77,8 +120,8 @@ function run(state: ImportRunState, overrides: Partial<ImportRun> = {}): ImportR
     added: 18402,
     refreshed: 96,
     coveredOrganos: [
-      { organoId: sergas.id, state: 'SUCCEEDED', added: 18402, refreshed: 96, failureReason: null },
-      { organoId: innovacion.id, state: 'SUCCEEDED', added: 0, refreshed: 0, failureReason: null },
+      covered(sergas.id, 'SUCCEEDED', { added: 18402, refreshed: 96 }),
+      covered(innovacion.id, 'SUCCEEDED'),
     ],
     ...overrides,
   };
@@ -203,20 +246,8 @@ describe('the contratos menores import', () => {
     mockRun(
       run('PARTIALLY_SUCCEEDED', {
         coveredOrganos: [
-          {
-            organoId: sergas.id,
-            state: 'SUCCEEDED',
-            added: 18402,
-            refreshed: 96,
-            failureReason: null,
-          },
-          {
-            organoId: innovacion.id,
-            state: 'FAILED',
-            added: 0,
-            refreshed: 0,
-            failureReason: 'a fonte non respondeu',
-          },
+          covered(sergas.id, 'SUCCEEDED', { added: 18402, refreshed: 96 }),
+          covered(innovacion.id, 'FAILED', { failureReason: 'a fonte non respondeu' }),
         ],
       }),
     );
@@ -229,6 +260,41 @@ describe('the contratos menores import', () => {
     expect(screen.queryByText(copy.run.failedTitle)).not.toBeInTheDocument();
   });
 
+  it('counts the Órganos of a two-family run, and lists one that failed in both once', async () => {
+    const user = userEvent.setup();
+    await renderLoadedSection();
+
+    mockTrigger();
+    mockRun(
+      run('PARTIALLY_SUCCEEDED', {
+        importer: 'AMBAS_FAMILIAS',
+        coveredOrganos: [
+          ...bothFamilies(sergas.id, 'SUCCEEDED', 'SUCCEEDED'),
+          ...bothFamilies(innovacion.id, 'SUCCEEDED', 'SUCCEEDED'),
+          covered(portos.id, 'FAILED', { failureReason: 'a fonte non respondeu' }),
+          covered(portos.id, 'FAILED', {
+            family: 'LICITACIONS',
+            failureReason: 'o rexistro non se puido ler',
+          }),
+        ],
+      }),
+    );
+
+    await trigger(user);
+
+    expect(await screen.findByText(copy.run.partialTitle)).toBeInTheDocument();
+    // Three Órganos in six rows: two completed both their families, one neither.
+    expect(
+      screen.getByText(
+        `${copy.run.completedOf(2, 3)} · 18 402 ${copy.run.added.plural} · 96 ${copy.run.refreshed.plural}`,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(copy.run.failedOrganos(1))).toBeInTheDocument();
+    expect(
+      screen.getByText(`${portos.name} · a fonte non respondeu · o rexistro non se puido ler`),
+    ).toBeInTheDocument();
+  });
+
   it('reports a run in which nothing could be imported as the failure it is', async () => {
     const user = userEvent.setup();
     await renderLoadedSection();
@@ -238,15 +304,7 @@ describe('the contratos menores import', () => {
       run('FAILED', {
         added: 0,
         refreshed: 0,
-        coveredOrganos: [
-          {
-            organoId: sergas.id,
-            state: 'FAILED',
-            added: 0,
-            refreshed: 0,
-            failureReason: 'a fonte non respondeu',
-          },
-        ],
+        coveredOrganos: [covered(sergas.id, 'FAILED', { failureReason: 'a fonte non respondeu' })],
       }),
     );
 
@@ -336,7 +394,7 @@ describe('the contratos menores import', () => {
       .reply(200, { runId: null, refusal: 'IMPORT_ALREADY_RUNNING' });
     nock(BASE_URL)
       .get('/api/admin/organos')
-      .reply(200, [sergas, { ...innovacion, importable: true }]);
+      .reply(200, [sergas, { ...innovacion, importable: true }, portos]);
 
     await user.click(screen.getByRole('switch', { name: `${copy.markLabel}: ${innovacion.name}` }));
     await user.click(await screen.findByRole('button', { name: copy.mark.submit }));

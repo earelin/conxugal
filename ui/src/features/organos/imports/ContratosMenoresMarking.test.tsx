@@ -10,6 +10,7 @@ import { createQueryClient } from '../../../shared/lib/queryClient';
 import { strings } from '../../../shared/lib/strings';
 import type { ContratosMenoresImportState, Organo, Termo } from '../organos';
 import { OrganosPage } from '../OrganosPage';
+import type { ImportRun } from './contratosMenores';
 
 const BASE_URL = 'http://localhost:3000';
 const RUN_ID = '0196f3d2-0c4a-7b1e-9f3a-8d2c5e7a1b40';
@@ -75,20 +76,28 @@ function mockMark(organo: Organo) {
 }
 
 function mockRun() {
-  return nock(BASE_URL)
-    .get(`/api/admin/import-run/${RUN_ID}`)
-    .reply(200, {
-      id: RUN_ID,
-      importer: 'CONTRATOS_MENORES',
-      state: 'IN_PROGRESS',
-      startedAt: '2026-08-13T06:14:02Z',
-      finishedAt: null,
-      added: 0,
-      refreshed: 0,
-      coveredOrganos: [
-        { organoId: 'o-2', state: 'PENDING', added: 0, refreshed: 0, failureReason: null },
-      ],
-    });
+  // Annotated rather than left a bare literal: nock checks nothing, so the
+  // compiler is the only thing that will notice when the contract next moves.
+  const body: ImportRun = {
+    id: RUN_ID,
+    importer: 'CONTRATOS_MENORES',
+    state: 'IN_PROGRESS',
+    startedAt: '2026-08-13T06:14:02Z',
+    finishedAt: null,
+    added: 0,
+    refreshed: 0,
+    coveredOrganos: [
+      {
+        organoId: 'o-2',
+        family: 'CONTRATOS_MENORES',
+        state: 'PENDING',
+        added: 0,
+        refreshed: 0,
+        failureReason: null,
+      },
+    ],
+  };
+  return nock(BASE_URL).get(`/api/admin/import-run/${RUN_ID}`).reply(200, body);
 }
 
 function renderOrganosPage() {

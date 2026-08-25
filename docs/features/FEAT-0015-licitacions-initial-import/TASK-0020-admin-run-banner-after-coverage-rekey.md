@@ -2,7 +2,7 @@
 feat: FEAT-0015
 domain: frontend
 adrs: [0004, 0015, 0018]
-status: todo
+status: done
 depends_on: [TASK-0001]
 ---
 
@@ -47,8 +47,10 @@ feature-based layout. No route, no new API call, no new component.
   a licitacións run makes imprecise. Left alone deliberately: a per-family breakdown is a design
   decision with no mockup, not a rename. If the summed figure proves confusing in use, that is a
   browsing-side question with real usage behind it.
-- **`ui/wiremock/mappings/contratos-menores.json`** — the run stub gains `family` on every coverage
-  entry. It is the shared local API stub
+- **`ui/wiremock/mappings/contratos-menores.json`** — the run stub carries `family` on every
+  coverage entry. **Task 1 already shipped it**, so nothing is edited here; what this task adds is
+  the type that makes the stub's shape the one the SPA requires rather than one it ignores. It is
+  the shared local API stub
   ([ADR-0018](../../architecture/0018-frontend-acceptance-tests-against-a-stubbed-api.md)), so
   **dev and preview** read it and a stub answering the old shape would show developers a contract
   the server no longer serves.
