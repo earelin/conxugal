@@ -278,10 +278,7 @@ final class LicitacionRecordTables {
       PublicationId publicationId,
       Iterable<PublishedAward> awards,
       Iterable<PublishedBidder> bidders) {
-    Map<String, Integer> published = new HashMap<>();
-    for (PublishedBidder bidder : bidders) {
-      published.merge(bidder.loteKey(), 1, Integer::sum);
-    }
+    Map<String, Integer> published = biddersPerLote(bidders);
     for (PublishedAward award : awards) {
       Integer stated = award.bidderCount();
       Integer parsed = published.get(award.loteKey());
@@ -292,6 +289,21 @@ final class LicitacionRecordTables {
           "Record %s states %d participants for %s and publishes %d bidder rows"
               .formatted(publicationId.value(), stated, awardPoint(award.loteKey()), parsed));
     }
+  }
+
+  /**
+   * How many rows the bidder table published for each award point it named.
+   *
+   * <p>Keyed on the same reduction the awards are, so the procedure-wide bucket the bidder table
+   * writes {@code -} for is the one the award table writes {@code _} for. That key is null, which
+   * is why this is a map that admits one rather than a lookup that cannot.
+   */
+  private static Map<String, Integer> biddersPerLote(Iterable<PublishedBidder> bidders) {
+    Map<String, Integer> perLote = new HashMap<>();
+    for (PublishedBidder bidder : bidders) {
+      perLote.merge(bidder.loteKey(), 1, Integer::sum);
+    }
+    return perLote;
   }
 
   /** How a refusal names the award point, so a lotless procedure reads as a sentence. */
