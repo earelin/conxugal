@@ -824,14 +824,23 @@ the order matters because only the last one infers:
 
 ```mermaid
 flowchart TD
-  A[Award row: Adxudicatario text] --> B{Formalisation for this lote?}
-  B -- yes --> C[Path A: take the identifier it publishes]
-  B -- no --> D{Awardee matches a bidder row?}
+  A[Award row: Adxudicatario text] --> Z{Awardee is a consortium bidder row?}
+  Z -- yes --> H[Award stored, names nobody]
+  Z -- no --> B{Formalisation for this lote publishes an identifier?}
+  B -- yes --> Y{Does it name the same party as the resolution?}
+  Y -- yes --> C[Path A: take the identifier it publishes]
+  Y -- no --> D{Awardee matches one bidder row?}
+  B -- no --> D
   D -- yes --> E[Path B: take the identifier that bidder published]
-  D -- no --> F{Unique match in the operadores catalogue?}
+  D -- no or ambiguous --> F{Unique match in the operadores catalogue?}
   F -- yes --> G[Path C: link, marked name-derived]
-  F -- no or ambiguous --> H[Award stored, names nobody]
+  F -- no or ambiguous --> H
 ```
+
+The consortium test comes first, and before path A rather than after it: the formalisation is one
+of the two places a consortium's own identifier is published, so routing there would decide
+*identified* on half the evidence — which is the judgement
+[task 13](TASK-0013-consortia-and-their-membership.md) owns.
 
 **Paths A and B are not inference.** The formalisation publishes the contratista's identifier
 beside its name, per lote, and the bidder list publishes every bidder's. Both are reading the
@@ -841,7 +850,18 @@ on a formalised procedure.
 **Path C is the only inferring step**, and it is bounded: it never creates an operador, links only
 where exactly one catalogued operador matches the published name, and records the link as derived
 so it stays distinguishable and reversible. Measured ambiguity is 1 name in 268, and that one is a
-source typo.
+source typo. It also **ranks no name** — the link is inferred, and a retained name is never dropped
+except by being promoted, so letting a derived link move an operador's displayed spelling would
+write a guess into the catalogue that no later import could take back.
+
+**Path C's query is deliberately unindexed, and here is what says when that stops being right.**
+The match folds both sides in SQL, so no index serves it and it scans; the expression is
+`IMMUTABLE`, so the remedy is one expression index over exactly the expression
+`JdbcOperadorRepository` already writes, with no migration to the shape of anything. The trigger is
+a measurement rather than a feeling, and the numbers to take it against are already known: SERGAS
+alone is 16 798 procedures, roughly a third of award rows reach path C, and the catalogue is fed by
+a contratos menores family sized in the hundreds of thousands. **Time the first real Órgano import
+and add the index if the scan shows** — rather than discovering it as a run that stopped advancing.
 
 **The link and the path are a biconditional, and `Award` enforces it.** An award names an operador
 exactly when a route reached one, so neither a null operador beside `PUBLISHED_BY_FORMALISATION`

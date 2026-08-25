@@ -1,5 +1,6 @@
 package gal.conxugal.domain.licitacion;
 
+import gal.conxugal.domain.operador.FiscalIdentifier;
 import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.OperadorId;
 import gal.conxugal.domain.operador.ResolveOperador;
@@ -8,7 +9,6 @@ import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -96,14 +96,18 @@ public class StoreLicitacionBidders {
    * The operador this bid names, or null where its published identifier was unusable. Because a
    * participation holds no name, such a bid is recorded as the participation of no catalogue entry
    * rather than as a name with nothing behind it.
+   *
+   * <p>The unusable case is answered here rather than by the collaborator, which requires an
+   * identifier: {@link PublishedBidder.SingleFirm} holds null for exactly that case, having already
+   * asked {@link FiscalIdentifier#of} at the parse, and the compiler will not let this method
+   * forget to look.
    */
   private @Nullable OperadorId partyOf(PublishedBidder.SingleFirm firm) {
-    Optional<OperadorEconomico> party =
-        resolveOperador.resolveWithoutRanking(firm.fiscalIdentifier(), firm.name());
-    if (party.isEmpty()) {
+    FiscalIdentifier published = firm.fiscalIdentifier();
+    if (published == null) {
       return null;
     }
-    return Objects.requireNonNull(
-        party.get().id(), "a catalogued operador must carry an identity");
+    OperadorEconomico party = resolveOperador.resolveWithoutRanking(published, firm.name());
+    return Objects.requireNonNull(party.id(), "a catalogued operador must carry an identity");
   }
 }

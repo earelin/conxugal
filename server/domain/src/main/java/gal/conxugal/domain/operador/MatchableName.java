@@ -19,6 +19,15 @@ import org.jspecify.annotations.Nullable;
  * double space all disappear by the same rule instead of by an enumeration that the next unseen
  * character escapes.
  *
+ * <p><strong>It over-folds a letter no decomposition reaches, and that is worth knowing because
+ * one caller infers on the result.</strong> {@code Ø}, {@code Ł}, {@code Æ} and {@code ß} have no
+ * canonical decomposition, so they are dropped rather than mapped — {@code ØSTERGAARD} folds to the
+ * same key as {@code STERGAARD}. Both halves of the comparison drop them identically, so nothing
+ * silently fails to match; what is at stake is a catalogue match that <em>succeeds</em> on a name
+ * distinguished only by such a letter. Vanishingly rare among the names this source publishes, and
+ * mapping them would mean a table of characters — the very thing this fold avoids in order to stay
+ * expressible in SQL. Recorded rather than engineered around.
+ *
  * <p><strong>A name that folds to nothing matches nothing.</strong> A cell of punctuation, or one
  * written in a script this fold keeps no character of, reduces to the empty key — and two such
  * names are not evidence that they name the same party, so {@link #of} answers nothing rather than

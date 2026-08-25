@@ -157,14 +157,12 @@ class LicitacionAwardeeDerivationIntegrationTest implements TestPropertyProvider
     store(List.of(), List.of(award(null, EQUINSE)), List.of(), List.of());
 
     assertThat(operadorTable()).hasNumberOfRows(0);
+    assertThat(awardTable()).hasNumberOfRows(1);
     assertThat(awardTable())
         .row(0)
             .value("operador_economico_id").isNull()
             .value("awardee_name").isEqualTo(EQUINSE)
             .value("awardee_resolution_path").isEqualTo("UNRESOLVED")
-            .value("withdrawn").isFalse();
-    assertThat(licitacionTable())
-        .row(0)
             .value("withdrawn").isFalse();
   }
 
@@ -205,9 +203,11 @@ class LicitacionAwardeeDerivationIntegrationTest implements TestPropertyProvider
 
     store(awardPoints, published, formalisations, List.of());
 
+    assertThat(operadorTable()).hasNumberOfRows(1);
     assertThat(operadorTable())
         .row(0)
             .value("name").isEqualTo(EQUINSE);
+    assertThat(nomeAlternativoTable()).hasNumberOfRows(1);
     assertThat(nomeAlternativoTable())
         .row(0)
             .value("name").isEqualTo(EQUINSE_SPELLED_OUT);
@@ -251,11 +251,37 @@ class LicitacionAwardeeDerivationIntegrationTest implements TestPropertyProvider
         .singleElement()
         .extracting(Award::awardeeResolutionPath)
         .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION);
+    assertThat(operadorTable()).hasNumberOfRows(1);
     assertThat(operadorTable())
         .row(0)
             .value("name").isEqualTo(EQUINSE)
             .value("name_rank_date").isNull()
             .value("name_rank_source_id").isEqualTo(Long.MIN_VALUE);
+  }
+
+  // The other half of the same rule, and the half a rank engineered to lose would break silently:
+  // an operador a contract already named keeps that name and that rank, and the award's own
+  // spelling does not reach the retained set either.
+  @Test
+  void procedure_with_no_number_advances_no_name_of_an_operador_already_catalogued()
+      throws Exception {
+    operadores.insert(
+        new OperadorEconomico(EQUINSE_ID, EQUINSE, new NomeRank(PUBLISHED_ON, 2001090L)));
+    Licitacion unnumbered = licitacionPublishedAs(new PublicationId("LIC-2026/0042"));
+
+    storeAwards.store(
+        unnumbered,
+        List.of(),
+        List.of(award(null, EQUINSE_SPELLED_OUT)),
+        List.of(formalisation(null, EQUINSE_SPELLED_OUT, EQUINSE_ID)),
+        List.of());
+
+    assertThat(operadorTable()).hasNumberOfRows(1);
+    assertThat(operadorTable())
+        .row(0)
+            .value("name").isEqualTo(EQUINSE)
+            .value("name_rank_source_id").isEqualTo(2001090L);
+    assertThat(nomeAlternativoTable()).hasNumberOfRows(0);
   }
 
   private List<Award> store(
@@ -324,10 +350,6 @@ class LicitacionAwardeeDerivationIntegrationTest implements TestPropertyProvider
 
   private static Table awardTable() {
     return table("licitacion_award", "awardee_name");
-  }
-
-  private static Table licitacionTable() {
-    return table("licitacion", "publication_id");
   }
 
   // Off the container rather than the injected DataSource: with no ambient transaction every write

@@ -10,7 +10,6 @@ import gal.conxugal.domain.operador.ResolveOperador;
 import io.micronaut.transaction.annotation.Transactional;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -108,6 +107,8 @@ public class StoreLicitacionAwards {
     Objects.requireNonNull(licitacion, "licitacion must not be null");
     Objects.requireNonNull(lotes, "lotes must not be null");
     Objects.requireNonNull(published, "published must not be null");
+    Objects.requireNonNull(formalisations, "formalisations must not be null");
+    Objects.requireNonNull(bidders, "bidders must not be null");
     LicitacionId licitacionId =
         Objects.requireNonNull(
             licitacion.id(), "the procedure must be stored before its awards are");
@@ -151,13 +152,18 @@ public class StoreLicitacionAwards {
     if (awardee.isPresent() && routes.bidsAsConsortium(awardee.get())) {
       return Awardee.nobody();
     }
-    FiscalIdentifier formalised = routes.formalisedIdentifierFor(row, awardee.orElse(null));
+    Contratista formalised = routes.contratistaFor(row, awardee.orElse(null));
     if (formalised != null) {
-      return awarded(formalised, row, routes, AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION);
+      return awarded(
+          formalised.fiscalId(),
+          nameOf(row, formalised),
+          routes,
+          AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION);
     }
     FiscalIdentifier bid = awardee.map(routes::bidIdentifierFor).orElse(null);
     if (bid != null) {
-      return awarded(bid, row, routes, AwardeeResolutionPath.PUBLISHED_BY_BIDDER);
+      return awarded(
+          bid, row.awardeeName(), routes, AwardeeResolutionPath.PUBLISHED_BY_BIDDER);
     }
     OperadorId catalogued = awardee.flatMap(this::uniqueCatalogueMatch).orElse(null);
     if (catalogued != null) {
@@ -167,24 +173,36 @@ public class StoreLicitacionAwards {
   }
 
   /**
-   * The award as attributed by one of the two published routes: the operador that identifier names,
-   * catalogued now if nothing named it before, accounted for against <strong>the award's</strong>
-   * published name.
+   * The name path A catalogues its operador under: <strong>the award's</strong> where the
+   * resolution published one, and the formalisation's where it did not.
    *
-   * <p>The award's name and not the formalisation's, even where path A supplied the identifier. The
-   * resolution states who was awarded; where the two publications disagree about the party this
-   * route is not taken at all, and where they agree the award is still the contract R4 selects a
-   * displayed name from.
+   * <p>The award's first, because the resolution states who was awarded — and where the two
+   * publications name different parties this route is not taken at all, so the two can only differ
+   * here by the award's being absent. Falling back matters more than it looks: an operador nothing
+   * named before would otherwise be catalogued under the <em>empty</em> name, at this procedure's
+   * own rank rather than at {@link NomeRank#unranked()} — so it would display as nothing until a
+   * later contract strictly outranked it, and the promotion that finally displaced it would file
+   * the empty string among the names the operador has borne.
+   */
+  private static @Nullable String nameOf(PublishedAward row, Contratista formalised) {
+    return row.awardeeName() == null ? formalised.name() : row.awardeeName();
+  }
+
+  /**
+   * The award as attributed by one of the two published routes: the operador that identifier names,
+   * catalogued now if nothing named it before, accounted for against the name that publication
+   * carried.
    */
   private Awardee awarded(
-      FiscalIdentifier fiscalId, PublishedAward row, Routes routes, AwardeeResolutionPath path) {
+      FiscalIdentifier fiscalId,
+      @Nullable String publishedName,
+      Routes routes,
+      AwardeeResolutionPath path) {
     NomeRank rank = routes.rank();
     OperadorEconomico operador =
         rank == null
-            ? resolveOperador
-                .resolveWithoutRanking(fiscalId, row.awardeeName())
-                .orElseThrow(() -> new IllegalStateException("a published identifier names nobody"))
-            : resolveOperador.resolve(fiscalId, row.awardeeName(), rank);
+            ? resolveOperador.resolveWithoutRanking(fiscalId, publishedName)
+            : resolveOperador.resolve(fiscalId, publishedName, rank);
     return new Awardee(
         Objects.requireNonNull(operador.id(), "a catalogued operador must carry an identity"),
         path);
@@ -222,6 +240,12 @@ public class StoreLicitacionAwards {
     }
     return new NomeRank(licitacion.publicationDate(), publicationId.getAsLong());
   }
+
+  /**
+   * What one formalisation row offers path A: the identifier its {@code Contratista} cell carried,
+   * and the name published beside it in the same cell.
+   */
+  private record Contratista(FiscalIdentifier fiscalId, @Nullable String name) {}
 
   /** Which operador an award reached, and by which route. */
   private record Awardee(@Nullable OperadorId operadorId, AwardeeResolutionPath path) {
@@ -264,9 +288,9 @@ public class StoreLicitacionAwards {
     }
 
     /**
-     * The identifier the formalisation of this award's own award point published, or null where
-     * there is no such row, where its {@code Contratista} cell yielded no identifier, or where it
-     * named a different party than the resolution did.
+     * The contratista the formalisation of this award's own award point published, or null where
+     * there is no such row, where its {@code Contratista} cell yielded no identifier, or where
+     * every such row named a different party than the resolution did.
      *
      * <p><strong>A different party means the award's name governs and this route is not
      * taken.</strong> The resolution states who was awarded; a formalisation naming someone else is
@@ -274,49 +298,64 @@ public class StoreLicitacionAwards {
      * operador the source never awarded it to. Two names are only compared where the source
      * published both — one it did not publish is not a disagreement.
      *
+     * <p><strong>Every row for the award point is read, not just the first.</strong> Nothing
+     * guarantees the parse emits one formalisation per award point, and a row that publishes no
+     * identifier — or names another party — is a route that did not answer rather than evidence
+     * against the row beside it. Stopping at the first would demote a published route to a derived
+     * one on the strength of a row the store, which upserts these on the award point, would not
+     * even have kept.
+     *
      * <p>The join is on the <strong>reduced</strong> lote key, which both published records have
      * already applied: raw, a formalisation writing {@code 01} would miss an award row writing
      * {@code 1} and silently demote a published route to a derived one.
      */
-    @Nullable FiscalIdentifier formalisedIdentifierFor(
-        PublishedAward row, @Nullable MatchableName awardee) {
+    @Nullable Contratista contratistaFor(PublishedAward row, @Nullable MatchableName awardee) {
       for (PublishedFormalisation formalisation : formalisations) {
-        if (!Objects.equals(formalisation.loteKey(), row.loteKey())) {
+        FiscalIdentifier published = formalisation.fiscalIdentifier();
+        if (published == null || !Objects.equals(formalisation.loteKey(), row.loteKey())) {
           continue;
         }
         MatchableName contratista = MatchableName.of(formalisation.contratistaName()).orElse(null);
         boolean namesAnotherParty =
             awardee != null && contratista != null && !awardee.equals(contratista);
-        return namesAnotherParty ? null : formalisation.fiscalIdentifier();
+        if (!namesAnotherParty) {
+          return new Contratista(published, formalisation.contratistaName());
+        }
       }
       return null;
     }
 
     /**
      * The identifier the one bidder of this name published, or null where no bidder row carries
-     * that name, where none of those that do published a usable identifier, or where they published
-     * two.
+     * that name, where the row that does published none, or where the rows that do disagree.
      *
      * <p><strong>Scoped to the procedure rather than to the award point.</strong> This is the
      * catalogue match narrowed to one record, and a firm that bid on one lote and was awarded
      * another is the same firm publishing the same identifier — while a name that reaches two
      * parties is no more usable here than it would be against the catalogue.
      *
-     * <p><strong>The uniqueness is over the identifiers those rows published, not over the
-     * rows.</strong> One firm bidding at two award points publishes two rows and one party, which
-     * is the ordinary shape of a procedure with lotes; a row that published no identifier names no
-     * party at all and so weighs nothing either way.
+     * <p><strong>Two bidders of one name decline, and a row publishing no identifier is one of
+     * them.</strong> An identifier-less row is still a party the source published under that name,
+     * so it is exactly the ambiguity this route exists to refuse — taking the other row's
+     * identifier would attribute the award to a party that may not be the awardee, and mark it
+     * <em>published</em> rather than derived. What does <em>not</em> make an ambiguity is one firm
+     * bidding at two award points: two rows, one identifier, one party, and the ordinary shape of a
+     * procedure with lotes.
      */
     @Nullable FiscalIdentifier bidIdentifierFor(MatchableName awardee) {
-      Set<FiscalIdentifier> published = new HashSet<>();
+      FiscalIdentifier only = null;
       for (PublishedBidder bidder : bidders) {
-        if (bidder instanceof PublishedBidder.SingleFirm firm
-            && firm.fiscalIdentifier() != null
-            && awardee.equals(MatchableName.of(firm.name()).orElse(null))) {
-          published.add(firm.fiscalIdentifier());
+        if (!(bidder instanceof PublishedBidder.SingleFirm firm)
+            || !awardee.equals(MatchableName.of(firm.name()).orElse(null))) {
+          continue;
         }
+        FiscalIdentifier published = firm.fiscalIdentifier();
+        if (published == null || (only != null && !only.equals(published))) {
+          return null;
+        }
+        only = published;
       }
-      return published.size() == 1 ? published.iterator().next() : null;
+      return only;
     }
   }
 }

@@ -174,6 +174,31 @@ class StoreLicitacionAwardsTest {
             });
   }
 
+  // An identifier-less row is still a party the source published under that name, so it is the
+  // ambiguity B exists to refuse — taking the other row's identifier would attribute the award to a
+  // party that may not be the awardee, and mark it published rather than derived.
+  @Test
+  void second_bidder_of_the_same_name_publishing_no_identifier_declines_path_bid() {
+    theStoreAcceptsEveryAward();
+    theCatalogueHoldsNobodyNamed();
+
+    List<Award> stored =
+        store(
+            List.of(),
+            List.of(award(null, EQUINSE)),
+            List.of(),
+            List.of(singleFirm(null, EQUINSE, EQUINSE_ID), singleFirm(null, EQUINSE, null)));
+
+    assertThat(stored)
+        .singleElement()
+        .satisfies(
+            award -> {
+              assertThat(award.operadorEconomicoId()).isNull();
+              assertThat(award.awardeeResolutionPath())
+                  .isEqualTo(AwardeeResolutionPath.UNRESOLVED);
+            });
+  }
+
   // One firm bidding at two award points is two rows and one party, which is the ordinary shape of
   // a procedure with lotes — so the uniqueness is over what those rows published, not over them.
   @Test
@@ -193,6 +218,45 @@ class StoreLicitacionAwardsTest {
         .singleElement()
         .extracting(Award::awardeeResolutionPath)
         .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_BIDDER);
+  }
+
+  // The contratista's name where the resolution published none: without the fallback the operador
+  // would be catalogued as the empty string, at this procedure's own rank — displayed as nothing
+  // until a later contract outranked it, and then filed among the names it has borne.
+  @Test
+  void formalisation_supplies_the_name_where_the_award_row_published_none() {
+    theStoreCataloguesOnDemand();
+
+    store(
+        List.of(),
+        List.of(award(null, null)),
+        List.of(formalisation(null, EQUINSE, EQUINSE_ID)),
+        List.of());
+
+    assertThat(catalogued(EQUINSE_ID).name()).isEqualTo(EQUINSE);
+  }
+
+  // Nothing guarantees the parse emits one formalisation per award point, and the store upserts
+  // them on it — so a row that answers nothing is not evidence against the row beside it.
+  @Test
+  void second_formalisation_of_one_award_point_answers_where_the_first_published_no_identifier() {
+    theStoreCataloguesOnDemand();
+
+    List<Award> stored =
+        store(
+            List.of(),
+            List.of(award(null, EQUINSE)),
+            List.of(formalisation(null, EQUINSE, null), formalisation(null, EQUINSE, EQUINSE_ID)),
+            List.of());
+
+    assertThat(stored)
+        .singleElement()
+        .satisfies(
+            award -> {
+              assertThat(award.operadorEconomicoId()).isEqualTo(catalogued(EQUINSE_ID).id());
+              assertThat(award.awardeeResolutionPath())
+                  .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION);
+            });
   }
 
   @Test

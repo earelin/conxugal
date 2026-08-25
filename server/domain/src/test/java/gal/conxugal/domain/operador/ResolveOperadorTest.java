@@ -1,6 +1,7 @@
 package gal.conxugal.domain.operador;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
@@ -206,10 +207,9 @@ class ResolveOperadorTest {
   void bid_naming_an_operador_nothing_named_before_catalogues_it_behind_every_contract() {
     nothingIsCatalogued();
 
-    Optional<OperadorEconomico> resolved = resolveWithoutRanking(ACME_ID, "ACME SL");
+    OperadorEconomico resolved = resolveWithoutRanking(ACME_ID, "ACME SL");
 
     assertThat(resolved)
-        .get()
         .satisfies(
             operador -> {
               assertThat(operador.fiscalId()).isEqualTo(ACME_ID);
@@ -226,11 +226,9 @@ class ResolveOperadorTest {
   void bid_naming_catalogued_operador_neither_promotes_nor_retains() {
     catalogued("ACME SL", MARCH, 1L);
 
-    Optional<OperadorEconomico> resolved =
-        resolveWithoutRanking(ACME_ID, "Acme Sociedade Limitada");
+    OperadorEconomico resolved = resolveWithoutRanking(ACME_ID, "Acme Sociedade Limitada");
 
     assertThat(resolved)
-        .get()
         .extracting(OperadorEconomico::id)
         .isEqualTo(INCUMBENT_ID);
     verify(operadores, never()).promoteName(any(), any(), any());
@@ -239,12 +237,13 @@ class ResolveOperadorTest {
   }
 
   // Reached from the other end than resolve's: the licitacións parse runs FiscalIdentifier.of at
-  // the cell, so a caller holding nothing usable holds null by the time it arrives here.
+  // the cell, so a caller holding nothing usable holds null and answers for that itself rather
+  // than being offered a branch here it could never reach. What that caller does with it is
+  // StoreLicitacionBidders' own test — that the bid stores naming nobody.
   @Test
-  void bid_whose_identifier_is_unusable_yields_no_operador() {
-    Optional<OperadorEconomico> resolved = resolveWithoutRanking(null, "ACME SL");
-
-    assertThat(resolved).isEmpty();
+  void requires_an_identifier_rather_than_offering_the_unusable_branch_twice() {
+    assertThatNullPointerException()
+        .isThrownBy(() -> resolveWithoutRanking(null, "ACME SL"));
     verifyNoInteractions(operadores);
   }
 
@@ -252,9 +251,9 @@ class ResolveOperadorTest {
   void bid_that_carried_no_name_catalogues_the_operador_under_the_empty_name() {
     nothingIsCatalogued();
 
-    Optional<OperadorEconomico> resolved = resolveWithoutRanking(ACME_ID, null);
+    OperadorEconomico resolved = resolveWithoutRanking(ACME_ID, null);
 
-    assertThat(resolved).get().extracting(OperadorEconomico::name).isEqualTo("");
+    assertThat(resolved).extracting(OperadorEconomico::name).isEqualTo("");
   }
 
   // The back door onto the retained set, closed. The bid's name is displaced by the first contract
@@ -304,7 +303,7 @@ class ResolveOperadorTest {
         .resolve(publishedFiscalId, publishedName, new NomeRank(date, sourceId));
   }
 
-  private Optional<OperadorEconomico> resolveWithoutRanking(
+  private OperadorEconomico resolveWithoutRanking(
       @Nullable FiscalIdentifier fiscalId, @Nullable String publishedName) {
     return new ResolveOperador(operadores).resolveWithoutRanking(fiscalId, publishedName);
   }
