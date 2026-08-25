@@ -73,6 +73,10 @@ function byOrgano(run: ImportRun): ImportRunOrgano[][] {
   return Object.values(groupBy(run.coveredOrganos, (organo) => organo.organoId));
 }
 
+function organosCovered(run: ImportRun): number {
+  return byOrgano(run).length;
+}
+
 function completedOf(run: ImportRun): string {
   const organos = byOrgano(run);
   // Every family has to have succeeded: a mixed Órgano is not completed, which
@@ -134,7 +138,7 @@ export function describeRun(run: ImportRun, nameOf: (organoId: string) => string
         ...base,
         tone: 'progress',
         title: copy.run.inProgressTitle,
-        counts: counted(byOrgano(run).length, copy.run.scopeCount),
+        counts: counted(organosCovered(run), copy.run.scopeCount),
         note: copy.trigger.guardHeld,
       };
     case 'SUCCEEDED':
@@ -142,7 +146,7 @@ export function describeRun(run: ImportRun, nameOf: (organoId: string) => string
         ...base,
         tone: 'success',
         title: copy.run.succeededTitle,
-        counts: `${counted(byOrgano(run).length, copy.run.coveredCount)} · ${contractCounts(run)}`,
+        counts: `${counted(organosCovered(run), copy.run.coveredCount)} · ${contractCounts(run)}`,
         note: copy.run.succeededNote,
       };
     case 'PARTIALLY_SUCCEEDED':
