@@ -53,10 +53,13 @@ the `ContratoMenor` / `ContratoMenorId` precedent.
   SPEC-0006 R4's tie-break on *"the higher contract identifier"* is affected — it compares a
   licitación's identifier against a contrato menor's `long`, and `NomeRank` holds a `long`. That
   comparison is no longer free, and lexicographic order is not numeric order (`"9"` sorts above
-  `"10"`). Nothing in this feature feeds an operador name from a licitación yet;
-  [TASK-0012](TASK-0012-resolve-the-awardee.md) is the first that will, and
-  [TASK-0021](TASK-0021-nome-rank-gains-a-lote-component.md) is already reworking `NomeRank`, so
-  the resolution belongs there and is recorded in both.
+  `"10"`).
+
+  **Settled by [TASK-0021](TASK-0021-settle-the-licitacion-contract-identity-rank.md): the parse,
+  which is the cost this bullet accepted.** `NomeRank.sourceId` stays a `long` and a licitación
+  parses its `PublicationId` when it ranks — never compares it as text, which would corrupt the
+  shipped contratos menores tie-break. The accessor lands with the first caller,
+  [TASK-0012](TASK-0012-resolve-the-awardee.md).
 - **Its converter carries one interface, not two.** The dual `AttributeConverter` +
   `TypeConverter` shape exists because a database-*generated* id is read back through the core
   conversion service; a publication identifier is supplied by the source and never generated, so

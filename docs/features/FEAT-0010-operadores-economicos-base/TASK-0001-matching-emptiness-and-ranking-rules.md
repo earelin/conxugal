@@ -82,6 +82,11 @@ undercount is worse than an error".
   *most recently published*, made total and deterministic rather than "some tie-break". It ranks
   **names only**: the identifier is canonical and identical from every contract, so there is
   nothing about it to rank.
+
+  *Since amended.* The pair is total and deterministic for contratos menores, whose contracts are
+  one per publication. R4 as it now stands admits a family that makes several contracts per
+  publication and ties in this pair; see
+  [FEAT-0015 TASK-0021](../FEAT-0015-licitacions-initial-import/TASK-0021-settle-the-licitacion-contract-identity-rank.md).
 - No I/O, no bean, no annotation: these are functions over values, and they are what the rest of
   the feature is tested against.
 
