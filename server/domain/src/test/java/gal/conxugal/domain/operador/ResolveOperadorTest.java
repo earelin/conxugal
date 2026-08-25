@@ -257,6 +257,33 @@ class ResolveOperadorTest {
     assertThat(resolved).get().extracting(OperadorEconomico::name).isEqualTo("");
   }
 
+  // The back door onto the retained set, closed. The bid's name is displaced by the first contract
+  // to name the operador, and a promotion ordinarily files the name it displaced — but R15 retains
+  // what an operador's *contracts* published, and this one no contract did.
+  @Test
+  void contract_displacing_the_name_only_bid_published_promotes_and_files_nothing() {
+    when(operadores.findByFiscalId(ACME_ID))
+        .thenReturn(Optional.of(incumbent("ACME SL", NomeRank.unranked())));
+
+    resolve("B12345678", "Acme Sociedade Limitada", JUNE, 2L);
+
+    verify(operadores).promoteName(INCUMBENT_ID, "Acme Sociedade Limitada", new NomeRank(JUNE, 2L));
+    verify(operadores, never()).retainName(any());
+  }
+
+  // The rule reads the sentinel and nothing else, so a name a contract really published is still
+  // filed when it is displaced — which is the case that would break if the guard were widened.
+  @Test
+  void contract_displacing_the_name_another_contract_published_still_files_it() {
+    catalogued("Primeira SL", MARCH, 1L);
+
+    resolve("B12345678", "Segunda SL", JUNE, 2L);
+
+    assertThat(theNameRetained())
+        .usingRecursiveComparison()
+        .isEqualTo(new NomeAlternativo(INCUMBENT_ID, "Primeira SL", new NomeRank(MARCH, 1L)));
+  }
+
   /**
    * The one name the store was asked to retain. Captured rather than matched, because a retained
    * name is distinct by its spelling alone — an expected value would match whatever rank the call

@@ -43,6 +43,10 @@ public record NomeRank(@Nullable LocalDate date, long sourceId)
    * created it supplies none, and the alternative — passing that publication's own rank — would let
    * a bid decide the displayed name, which is what {@link ResolveOperador} refuses. The first
    * contract to name such an operador therefore outranks it and supplies the name it displays.
+   *
+   * <p>It is also read back as a <em>fact about the row</em>: a displayed name standing at this
+   * rank is one no publication ranked, so the promotion that displaces it files nothing. Nothing
+   * else writes this value, which is what lets it carry that meaning without a column of its own.
    */
   public static NomeRank unranked() {
     return new NomeRank(null, Long.MIN_VALUE);

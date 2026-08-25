@@ -15,6 +15,7 @@ import gal.conxugal.domain.operador.FiscalIdentifier;
 import gal.conxugal.domain.operador.NomeRank;
 import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.OperadorRepository;
+import gal.conxugal.domain.operador.ResolveOperador;
 import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
 import io.micronaut.core.annotation.NonNull;
@@ -72,6 +73,7 @@ class LicitacionBiddersDerivationIntegrationTest implements TestPropertyProvider
   private static final FiscalIdentifier EQUINSE_ID = new FiscalIdentifier("A41111220");
   private static final String EQUINSE = "EQUINSE, S.A.";
   private static final LocalDate JANUARY = LocalDate.of(2019, 1, 10);
+  private static final NomeRank CONTRACT_RANK = new NomeRank(JANUARY, 2001090L);
 
   /**
    * Every row's physical location, which PostgreSQL moves whenever a row is rewritten. It is what
@@ -95,6 +97,9 @@ class LicitacionBiddersDerivationIntegrationTest implements TestPropertyProvider
 
   @Inject
   StoreLicitacionBidders storeBidders;
+
+  @Inject
+  ResolveOperador resolveOperador;
 
   @Inject
   LoteRepository lotes;
@@ -197,6 +202,25 @@ class LicitacionBiddersDerivationIntegrationTest implements TestPropertyProvider
     assertThat(operadorTable()).hasNumberOfRows(1);
     assertThat(participationTable()).hasNumberOfRows(2);
     assertThat(storedParties()).containsExactlyInAnyOrder(operadorIdOf(EQUINSE_ID), null);
+  }
+
+  // The other half of the same rule, end to end: the bid's name goes when the first contract to
+  // name the operador displaces it, rather than being filed among the alternatives R15 fills from
+  // that operador's contracts.
+  @Test
+  void contract_displacing_the_name_only_the_bid_published_leaves_no_retained_name()
+      throws Exception {
+    storeBidders.store(licitacionId, List.of(), List.of(singleFirm(EQUINSE, EQUINSE_ID)));
+
+    resolveOperador.resolve(EQUINSE_ID.value(), "Equinse Sociedade Anónima", CONTRACT_RANK);
+
+    Table catalogue = operadorTable();
+    assertThat(catalogue).hasNumberOfRows(1);
+    assertThat(catalogue)
+        .row(0)
+            .value("name").isEqualTo("Equinse Sociedade Anónima")
+            .value("name_rank_source_id").isEqualTo(2001090L);
+    assertThat(nomeAlternativoTable()).hasNumberOfRows(0);
   }
 
   private List<Lote> storedLotes(String... identifiers) {

@@ -79,10 +79,10 @@ public class ResolveOperador {
    * and catalogue nothing. It is catalogued at {@link NomeRank#unranked()}, so the first contract
    * to name that operador takes the display from it.
    *
-   * <p><strong>The name such a row was created under is retained when a contract later displaces
-   * it</strong>, because a promotion files the name it displaced. That is the store's rule rather
-   * than this publication's contribution, and tracking which publication a displaced name came from
-   * would cost a column for nothing a reader could see.
+   * <p><strong>The name such a row was created under never joins the retained set</strong>, not
+   * even when a contract later displaces it. {@link #account} reads the sentinel rank off the row
+   * and declines to file the name it displaced, so a bid cannot reach the alternatives by the back
+   * door either.
    *
    * <p>The identifier arrives already reduced, so a caller holding nothing usable holds null —
    * which is the same answer {@link #resolve} reaches through {@link FiscalIdentifier#of}, from the
@@ -140,11 +140,20 @@ public class ResolveOperador {
    * it displaced is retained beside the operador, or it is retained itself. One name moves into the
    * retained set every time, so <em>no retained name equals the displayed one</em> holds after
    * every publication — except when the name already displayed is republished, which advances the
-   * rank and retains nothing, there being no second name to file.
+   * rank and retains nothing, there being no second name to file, and except when the name being
+   * displaced is one no publication ranked.
    *
    * <p><strong>Promoting comes first.</strong> Retaining the displaced name before the promotion
    * would ask the store to file a name that is still the displayed one, which it declines — losing
    * the name silently.
+   *
+   * <p><strong>A displaced name that stood at {@link NomeRank#unranked()} is not filed.</strong>
+   * That rank is only ever written by {@link #resolveWithoutRanking}, so it says the displayed name
+   * came from a publication that ranks nothing — a bid — and R15 retains what an operador's
+   * <em>contracts</em> published. Filing it would put a bid's name among the alternatives by the
+   * back door, which is the outcome the second entry point exists to prevent, and would leave a
+   * retained name carrying a rank no publication produced. Nothing is tracked to know this: the
+   * sentinel rank on the row <em>is</em> the fact, which is why it costs no column.
    */
   private void account(OperadorEconomico incumbent, String publishedName, NomeRank rank) {
     OperadorId id =
@@ -152,7 +161,7 @@ public class ResolveOperador {
     boolean renaming = !incumbent.name().equals(publishedName);
     if (rank.outranks(incumbent.nameRank())) {
       operadores.promoteName(id, publishedName, rank);
-      if (renaming) {
+      if (renaming && !NomeRank.unranked().equals(incumbent.nameRank())) {
         operadores.retainName(new NomeAlternativo(id, incumbent.name(), incumbent.nameRank()));
       }
     } else if (renaming) {
