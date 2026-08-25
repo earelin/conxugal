@@ -23,15 +23,7 @@ public final class ApplicationDatabase {
 
   /** Removes the account with exactly this email, if the instance still holds one. */
   public static void deleteAccount(String email) {
-    requireDatastoreOfTheInstanceUnderTest();
-    try (Connection connection = DriverManager.getConnection(URL, USERNAME, CREDENTIAL);
-        PreparedStatement statement =
-            connection.prepareStatement("DELETE FROM users WHERE email = ?")) {
-      statement.setString(1, email);
-      statement.executeUpdate();
-    } catch (SQLException e) {
-      throw new IllegalStateException("Could not delete the account %s".formatted(email), e);
-    }
+    updateAccount("DELETE FROM users WHERE email = ?", email, "delete");
   }
 
   /**
@@ -41,14 +33,23 @@ public final class ApplicationDatabase {
    * here instead of leaving every later run locked out.
    */
   public static void enableAccount(String email) {
+    updateAccount("UPDATE users SET enabled = TRUE WHERE email = ?", email, "enable");
+  }
+
+  /**
+   * Private, and every caller hands it a literal: SpotBugs reads a statement built from a
+   * parameter of a reachable method as an injection and fails the build, which is why the two
+   * writes above name their own SQL rather than a caller naming it for them.
+   */
+  private static void updateAccount(String sql, String email, String attempted) {
     requireDatastoreOfTheInstanceUnderTest();
     try (Connection connection = DriverManager.getConnection(URL, USERNAME, CREDENTIAL);
-        PreparedStatement statement =
-            connection.prepareStatement("UPDATE users SET enabled = TRUE WHERE email = ?")) {
+        PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, email);
       statement.executeUpdate();
     } catch (SQLException e) {
-      throw new IllegalStateException("Could not enable the account %s".formatted(email), e);
+      throw new IllegalStateException(
+          "Could not %s the account %s".formatted(attempted, email), e);
     }
   }
 
