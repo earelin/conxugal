@@ -75,6 +75,18 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
   @Test
   void user_role_is_forbidden(RequestSpecification spec) {
     String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.normalUser());
+
+    given(spec)
+        .header(HttpHeaders.COOKIE, sessionCookie)
+    .when()
+        .get("/api/admin/metrics")
+    .then()
+        .statusCode(HttpStatus.FORBIDDEN.getCode());
+  }
+
+  @Test
+  void security_denied_subscription_is_still_counted(RequestSpecification spec) {
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.normalUser());
     RuntimeMetrics.Http before = httpRequestCounter.snapshot();
 
     given(spec)
