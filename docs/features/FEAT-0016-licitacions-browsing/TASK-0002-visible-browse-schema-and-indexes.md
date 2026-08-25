@@ -62,7 +62,7 @@ share one sequence — settled at merge time rather than fixed here.
   ❗ **It goes here because V19 may not be edited.** Its checksum is recorded in every
   `flyway_schema_history` that has applied it, and V17's header refuses the same edit for the same
   reason. This is V17's own shape: a later migration records what an earlier comment can no longer
-  say. [TASK-0008](TASK-0008-correct-the-two-v19-comments.md) carries the other correction and states
+  say. [TASK-0003](TASK-0003-paged-ordered-counted-reads.md) carries the other correction, on `Award.java`, and states
   the whole argument.
 
   ❗ **Do not delete V19's middle clause along with the false one.** The comment reads "*never ordered,
@@ -107,9 +107,19 @@ introduce one to make an ordering indexable.
   test and force whoever made it to revisit the feature's argument rather than silently invalidating
   it. (SPEC-0008 #34)
 - A withdrawn licitación is **absent from the index**: an `EXPLAIN` of the browse predicate over a
-  fixture whose rows are all withdrawn touches no heap. (SPEC-0008 #18 read half)
+  fixture whose rows are all withdrawn touches no heap. (SPEC-0008 #16 read half, #18 read half)
 - Two `licitacion_state` labels differing only by an accent order as Galician rather than as bytes —
   `Órgano`-style accented labels sort among their unaccented neighbours, not after `Z`.
   (SPEC-0008 #33)
-- The migration sets a `lock_timeout` and **fails** rather than blocking when a conflicting lock is
-  held, asserted the way V16's is.
+- ❗ **`LicitacionMigrationIntegrationTest` is updated, and it is not optional.** It pins
+  `licitacion`'s exact column set (`:79`) and the exact index set (`:300`, `:315`) with
+  `containsExactlyInAnyOrder`, the latter under a comment reading *"the browsing feature measures its
+  own reads and adds what they ask for"* — which is this task. Both assertions go red on
+  `publication_year` and on the new index. They are **extended, not relaxed**: the point of pinning
+  the sets is that a later migration cannot add to them unnoticed, and this task is the *noticing*.
+- The migration **sets a `lock_timeout`**, so a deploy meeting a conflicting lock fails fast rather
+  than closing the service for as long as the blocking transaction runs. It is a property of the SQL
+  rather than of a test — nothing in the shipped suite asserts V16's, and manufacturing a competing
+  `ACCESS EXCLUSIVE` lock inside Testcontainers to assert this one would test PostgreSQL. **Reviewed
+  by reading the migration**, and stated here so its absence from the test list is a decision rather
+  than an omission.

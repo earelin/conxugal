@@ -41,7 +41,8 @@ upserts an aggregate, so that reason does not carry.
   `LIMIT`/`OFFSET`, and joined to:
   - `licitacion_state`, for the code and label the row carries;
   - a **`LEFT JOIN LATERAL` over `licitacion_award`** (non-withdrawn) answering the awarded sum, the
-    count of **awarded lotes**, and the **distinct non-null** awardee operador ids;
+    count of **lotes whose award carries an amount**, and the **distinct non-null** awardee operador
+    ids;
   - a **`LEFT JOIN LATERAL` over `licitacion_lote`** (non-withdrawn) answering the stored lote count;
   - `operador_economico`, joined **only when there is exactly one** awardee id, for that operador's
     name and its nullable fiscal identifier.
@@ -67,8 +68,15 @@ upserts an aggregate, so that reason does not carry.
   - the **amount** — `COALESCE(sum of non-withdrawn award amounts, base_budget)` — with basis
     `AWARDED` when **at least one award carries an amount**, `BUDGET` when none does and a budget is
     published, and `UNSTATED` when neither;
-  - **`partial`** — true when the basis is `AWARDED` and **fewer lotes are awarded than the procedure
-    has**, where *has* is `GREATEST(stored non-withdrawn lotes, licitacion.lote_count)`.
+  - **`partial`** — true when the basis is `AWARDED` and **fewer lotes carry an awarded amount than
+    the procedure has**, where *has* is `GREATEST(stored non-withdrawn lotes, licitacion.lote_count)`.
+
+    ❗ **The numerator counts lotes whose award carries an amount, not lotes with an award row.**
+    `licitacion_award.amount` is nullable, so the two differ: three lotes, one awarded 100 € and two
+    with no published `Importe`, is *three of three* by rows — **not partial**, stating 100 € as the
+    whole procedure — and *one of three* by amounts, which is partial. The second is the reading, for
+    the same bias toward marking the denominator has. An implementation testing
+    `EXISTS (SELECT 1 FROM licitacion_award …)` passes every other criterion in this task.
 
     ❗ **Both counts are needed, and an earlier draft of this feature used only the first.** FEAT-0015
     **synthesises a lote row from the award table** — its TASK-0009: *"A procedure whose `Relación de
@@ -90,6 +98,27 @@ upserts an aggregate, so that reason does not carry.
 - **A `Page<VisibleLicitacion>`** assembled from the content and the count, per
   [ADR-0022](../../architecture/0022-paged-collection-contract-from-micronaut-data.md), read
   `@Transactional(readOnly = true)`.
+- **One javadoc correction, on `Award.java`.** V19's comment on `awardee_name` says *"an award no
+  route resolves still names somebody, and **that is what a reader is shown**"*. SPEC-0008 says the
+  opposite in three places — R25 (*"shows an award and names nobody"*), #20, and #24 (*"no per-row
+  name at all, for any party"*) — and R20 adds that an unresolvable party is *"simply not counted
+  among the awardees the row states"*.
+
+  The column stays and its first clause is right: FEAT-0015's path C re-resolves an awardee by
+  matching the published name on every restatement, which is what closes the historical tail when an
+  old *adxudicado* procedure formalises. Only the claim about **display** is wrong — it is a
+  **resolution input, never a rendering value**, and **no statement in this task selects it**.
+
+  ❗ **It goes on `Award.java`, not in V19.** That migration's checksum is recorded in every
+  `flyway_schema_history` that has applied it, and `V17`'s own header refuses the same edit for the
+  same reason: *"editing an applied migration to correct a count fails validation on every such
+  database"*. The javadoc names V19's comment as superseded on the display claim so a reader who
+  finds the SQL first is sent here. The companion correction — that `publication_id` is ordered now —
+  rides in [TASK-0002](TASK-0002-visible-browse-schema-and-indexes.md)'s migration header, on the same
+  rule.
+
+  It lands here rather than in a task of its own because the statements below are what falsify the
+  comment, and the assertion that enforces it is one of this task's criteria.
 
 **Out of scope:** the facets ([TASK-0004](TASK-0004-year-cpv-and-state-facets.md)), the semi-join
 ([TASK-0006](TASK-0006-licitacions-in-the-visible-set.md)), the use cases and every HTTP concern.
@@ -121,9 +150,16 @@ Integration-tested against PostgreSQL (Testcontainers), seeding one Órgano-year
   exists for, and the one a stored-lotes-only rule marks wrongly as complete; (SPEC-0008 #35)
 - one with a **null `lote_count`** and two stored lotes, one awarded — **partial** on the stored count
   alone; (SPEC-0008 #35)
+- ❗ one with **three lotes, one award of 100 € and two award rows carrying no `Importe`** —
+  **partial**, stating 100 €. This is the fixture that separates counting amount-bearing awards from
+  counting award rows, and without it the row-counting implementation passes; (SPEC-0008 #35)
+- one **lotless** procedure whose single award row carries **no amount** — basis `BUDGET`, **not**
+  partial, and never rendered as *awarded, and nothing*; (SPEC-0008 #35)
+- one whose state row carries **no label**, and one whose awardee operador holds **no `fiscal_id`** —
+  both read back and projected without a null-pointer or a dropped row; (SPEC-0008 #33)
 - one **withdrawn** procedure, one with a **withdrawn award**, one with a **withdrawn lote** and one
   with a **withdrawn CPV** — absent, or excluded from the aggregate, in **every** statement including
-  the count; (SPEC-0008 #18 read half)
+  the count; (SPEC-0008 #16 read half — a lote, award or CPV a restatement dropped; #18 read half — a removed licitación)
 - one with **no publication date** — absent from every page and every count. (SPEC-0008 #36)
 
 And:
@@ -154,5 +190,5 @@ And:
   reintroduce the mechanism the design deleted. Asserted by the adapter having no method that takes a
   column or property name.
 - **`awardee_name` appears in none of these statements** — the assertion
-  [TASK-0008](TASK-0008-correct-the-two-v19-comments.md)'s correction 2 rests on, so a later author
+  the `Award.java` javadoc correction above rests on, so a later author
   cannot quietly render a name for a party nothing resolved. (SPEC-0008 #24)

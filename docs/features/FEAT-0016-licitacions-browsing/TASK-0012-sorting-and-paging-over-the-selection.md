@@ -3,7 +3,7 @@ feat: FEAT-0016
 domain: frontend
 adrs: [0003, 0004, 0015, 0018, 0022]
 status: todo
-depends_on: [TASK-0011, TASK-0012]
+depends_on: [TASK-0010, TASK-0011]
 ---
 
 # Sorting and paging over the whole selection
@@ -68,9 +68,23 @@ fifth ordering.
   next, last and a chosen page — with **none repeated and none skipped**, and the two ends **disabled,
   not hidden**, at the two ends. (SPEC-0008 #28)
 - **Choosing a sort puts the reader on page 1**, through
-  [TASK-0010](TASK-0010-year-chooser-and-section-state.md)'s module — asserted as *the control writes
+  [TASK-0009](TASK-0009-year-chooser-and-section-state.md)'s module — asserted as *the control writes
   through the module*, since the rule itself is proved there. Moving between **pages** writes neither
   the sort nor either filter. (SPEC-0008 #34 re-page half)
+- ❗ **The table renders the server's order, unaltered.** Given a page whose rows arrive in an order
+  the client did not choose, the table draws them in **that** order and applies no sort of its own.
+
+  This is the live defect nothing else in the feature catches: a table that re-sorts the rows it holds
+  looks correct on page 1 of every ordering and is wrong on every page after it, because the server
+  ordered the whole selection and the client only ever holds fifty rows of it. *That the whole
+  selection is ordered and counted is [TASK-0003](TASK-0003-paged-ordered-counted-reads.md)'s; that
+  the client does not undo it is this task's, and it is the half the feature's own task list assigns
+  here.* (SPEC-0008 #34 whole-selection half)
+- **A row whose amount is `UNSTATED` is drawn wherever the server put it** — the client neither lifts
+  it nor sinks it. The `NULLS LAST` placement is the statement's; not fighting it is the table's.
+  (SPEC-0008 #35 sort half)
+- **The count shown is the envelope's `totalItems`**, unchanged as the reader pages — never the length
+  of the rows in hand, which is the page size on every page but the last. (SPEC-0008 #28)
 - A **shared URL** carrying a year, both filters, a sort and a page reproduces exactly that view, and
   the browser's back button walks the paging history. (SPEC-0008 #34)
 - A **page beyond the last** clamps to the last page rather than erroring, and the count shown is the

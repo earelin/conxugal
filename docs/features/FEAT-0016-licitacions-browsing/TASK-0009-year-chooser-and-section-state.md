@@ -3,7 +3,7 @@ feat: FEAT-0016
 domain: frontend
 adrs: [0003, 0004, 0015, 0018]
 status: todo
-depends_on: [TASK-0007, TASK-0009]
+depends_on: [TASK-0007, TASK-0008]
 ---
 
 # The selection module, the year chooser, and what the section says about itself
@@ -12,9 +12,9 @@ R22's mandatory year scoping and R26's two statements, rendered — and, underne
 every later control writes the selection through**.
 
 The section's three facts come from the outlet context
-[TASK-0009](TASK-0009-licitacions-section-slice-and-route.md) narrows; **this task fetches none of
+[TASK-0008](TASK-0008-licitacions-section-slice-and-route.md) narrows; **this task fetches none of
 them**. What it does fetch is nothing at all: the list read lands with
-[TASK-0011](TASK-0011-the-licitacion-row.md).
+[TASK-0010](TASK-0010-the-licitacion-row.md).
 
 ## Scope
 
@@ -33,17 +33,27 @@ them**. What it does fetch is nothing at all: the list read lands with
   from a *move* (`?year=2019`);
 - `locationWith` / `locationFor` / `choose`, preserving the hash.
 
-**It lands here, with the first control that writes through it**, which is FEAT-0011's own ordering —
-that feature landed its whole selection with the year chooser, before the row and before paging. An
-earlier draft of this feature deferred it to
-[TASK-0013](TASK-0013-sorting-and-paging-over-the-selection.md) while tasks 10 and 12 both wrote
-through it, which left the module owned by nobody and #34's re-page half claimed by three tasks and
-observable at none of their landing points.
+**It lands here, with the first control that writes through it.** An earlier draft of this feature
+deferred it to [TASK-0012](TASK-0012-sorting-and-paging-over-the-selection.md) while tasks 9 and 11
+both wrote through it, which left the module owned by nobody and #34's re-page half claimed by three
+tasks and observable at none of their landing points.
 
-❗ **A stale or malformed `year` in the URL is this module's to answer**, and nothing downstream will:
-the endpoint **400s** on one. An unparseable or absent year falls back to the section's default —
-the most recent year the summary offers — by `replace`, so a shared link that has gone stale lands the
-reader somewhere real rather than on an error.
+*(A second draft justified the move as "FEAT-0011's own ordering — that feature landed its whole
+selection with the year chooser". It did not: commit `80861a3` added `selection.ts` and
+`selectionUrl.ts` in that feature's **TASK-0011**, the row task. The ownership hole above stands on
+its own; the precedent claim was wrong and is withdrawn.)*
+
+❗ **A malformed or a stale `year` in the URL is this module's to answer**, and the two differ:
+
+- **malformed** — `abc`, `0x7e8`, five digits, empty — would be a **400** at the endpoint, so the
+  module never lets it get there and falls back to the section's default by `replace`;
+- **stale but well-formed** — a real year the Órgano no longer offers — answers an **empty page with
+  true totals of zero**, not an error. The module still redirects to the default, because a chooser
+  displaying a year absent from its own option list is a worse outcome than a correction the reader
+  can undo with the back button.
+
+An earlier draft said the endpoint "400s" on both, which the README contradicts in a paragraph written
+to settle exactly this. The behaviour specified here was right; its stated reason was not.
 
 **It is not a copy of the contratos menores module.** That one carries a year, a sort and a page; this
 one carries two filters as well, and its sort names different keys. The parsers are the same *shape*
@@ -77,9 +87,9 @@ the opposite of contratos menores, whose newest-first walk made the default year
 first batch. The *partial* statement is what tells a reader the list is still filling; the copy should
 not imply the newest year is present.
 
-**Out of scope:** the row and the list read ([TASK-0011](TASK-0011-the-licitacion-row.md)), the CPV and
-state filter **controls** ([TASK-0012](TASK-0012-cpv-and-state-filters.md)), and the sorts and the
-paging control ([TASK-0013](TASK-0013-sorting-and-paging-over-the-selection.md)) — all three of which
+**Out of scope:** the row and the list read ([TASK-0010](TASK-0010-the-licitacion-row.md)), the CPV and
+state filter **controls** ([TASK-0011](TASK-0011-cpv-and-state-filters.md)), and the sorts and the
+paging control ([TASK-0012](TASK-0012-sorting-and-paging-over-the-selection.md)) — all three of which
 write through the module built here rather than adding to it.
 
 ## Acceptance criteria

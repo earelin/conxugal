@@ -76,23 +76,36 @@ the contratos menores section or its port.
 
 ## Acceptance criteria
 
-- An Órgano with **no visible licitación** — none stored, all withdrawn, or all undated — yields
-  **no section**, and therefore **no `partial` and no `updating`**. All three cases are
-  indistinguishable to a reader.
-  ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #36, #37)
-- An Órgano with visible licitacións and **no** `licitacion_import_state` row reads **`partial`**,
-  which is what an Órgano marked before this family existed is. (SPEC-0008 #37)
-- One at `INCOMPLETE` reads `partial`; one at `COMPLETE` does not. Its **contratos menores** state is
-  not read and does not affect either flag — asserted with the two families in opposite states, which
-  is R4's requirement that neither is read as the other's. (SPEC-0008 #5 read half — *neither family's completion is read as the other's*; #37)
-- An Órgano that is **unmarked**, and one that is **inactive**, each read `updating` false while
-  keeping their years and their section. An Órgano unmarked mid-import reads **both** `partial` and
-  not-`updating`. (SPEC-0008 #6 display half, #37)
+**Unit tests over stubbed ports.** *Which* licitacións are visible is
+[TASK-0003](TASK-0003-paged-ordered-counted-reads.md)'s and *which* years a store holds is
+[TASK-0004](TASK-0004-year-cpv-and-state-facets.md)'s, both proved against PostgreSQL. What is
+assertable here is the **composition**: what these use cases do with the answers they are given, and
+what they refuse to do.
+
+- A port answering **an empty year list** yields **no section** — and therefore no `partial` and no
+  `updating` at all, rather than a section with flags and no years.
+  ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #37)
+- A port answering years, with **no `licitacion_import_state` row**, reads **`partial`** — the state
+  an Órgano marked before this family existed is in. One at `INCOMPLETE` reads `partial`; one at
+  `COMPLETE` does not. (SPEC-0008 #37)
+- **The contratos menores state is never consulted.** Asserted by the collaborator not being invoked,
+  with the two families' stubs set to opposite states — the only place this is observable, since a
+  section that ignored one family's state and a section that read both would return the same value on
+  most fixtures. (SPEC-0008 #5 read half — *neither family's completion is read as the other's*)
+- `updating` is `eligibleForImport()` and nothing else: an **unmarked** Órgano and an **inactive** one
+  both read false while keeping their section, and one unmarked mid-import reads **both** `partial`
+  and not-`updating`. (SPEC-0008 #6 derivation half)
 - `LicitacionsSection` **refuses** an empty year list, so *the section exists* and *it offers years*
   cannot disagree. (SPEC-0008 #32)
-- The years answered are newest first, and the **first** is the year the section opens on.
-  (SPEC-0008 #32)
+- **The years are passed through in the order the port gave them**, unsorted and unreversed — the
+  ordering is the facet read's (TASK-0004) and this use case must not impose a second one that could
+  disagree with it. (SPEC-0008 #32)
 - `ListLicitacions` and `OfferLicitacionFilters` both raise `OrganoNotFoundException` for an unknown
   Órgano id — the existing exception, not a new one.
-- `ListLicitacions` applies **no** default year, sort or direction, and clamps **no** page. Unit
-  tests stub the port and assert the arguments reach it unchanged.
+- ❗ **`DescribeLicitacionsSection` answers `Optional.empty()` for an unknown Órgano rather than
+  raising**, matching the shipped `DescribeContratosMenoresSection`. The two behaviours are
+  deliberately different: a *list* read names an Órgano the caller asserted exists, while the section
+  read is asked *whether there is anything here* and "no" is a real answer. Stated because the
+  divergence looks like an oversight.
+- `ListLicitacions` applies **no** default year, sort or direction, and clamps **no** page — asserted
+  on the arguments reaching the stubbed port unchanged.

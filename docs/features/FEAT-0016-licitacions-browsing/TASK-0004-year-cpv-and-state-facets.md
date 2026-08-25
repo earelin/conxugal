@@ -14,8 +14,11 @@ never be the reason a list is empty.
 
 ## Scope
 
-- **`YearFacet`s** — the distinct publication years an Órgano has **visible** licitacións in,
-  **newest first**. Read before a year is chosen, so it is scoped to the Órgano rather than to a
+- **The year facets** — the distinct publication years an Órgano has **visible** licitacións in,
+  **newest first**, answered as `List<YearSelection>` exactly as the shipped contratos menores port
+  does. **No wrapper type of its own**: an earlier draft named a `YearFacet` and declared it nowhere,
+  and a record wrapping one `YearSelection` would earn nothing.
+  Read before a year is chosen, so it is scoped to the Órgano rather than to a
   selection, and it is what
   [TASK-0005](TASK-0005-the-licitacions-read-use-cases.md) derives the section's very existence from.
 
@@ -42,17 +45,34 @@ never be the reason a list is empty.
   label. The filter is applied by code, the facet is keyed by code, and the label is what is read
   rather than what is matched. The ordering picks up `COLLATE "galician"` from the column once
   [TASK-0002](TASK-0002-visible-browse-schema-and-indexes.md)'s migration lands.
+- **The two facet port methods, and the types they return** — `CpvFacet` (a code and a **nullable**
+  description), `StateFacet` (a code and a **nullable** label) and `LicitacionFilterOptions` holding
+  the two lists. They are **declared and implemented here, in one task**, which is FEAT-0011's own
+  rule for its second port method: *"Unlike task 3's, it is declared and implemented here in one task,
+  so nothing has to wait."*
 
-**It adds nothing to the port.** `VisibleLicitacionRepository` and the facet types are declared whole
-by [TASK-0001](TASK-0001-selection-value-types-and-read-ports.md); this task **implements** the two
-methods that answer them. An earlier draft split the declaration between the two tasks, which left the
-interface uncompilable at TASK-0001's own landing point and hid a cycle `depends_on:` cannot express.
+  ❗ **Declaring them in [TASK-0001](TASK-0001-selection-value-types-and-read-ports.md) instead would
+  break TASK-0003.** Micronaut Data's annotation processor must implement every abstract method a
+  `@JdbcRepository` inherits, so a facet method declared upstream with its statement deferred here
+  would fail annotation processing on that task's adapter. A port nothing implements yet has no such
+  problem — which is why the paged method can be declared early and these two cannot.
 
-❗ **Two of the three columns these reads select are nullable**, and a fixture with fully populated
-vocabularies would never reveal it: `licitacion_state.label` is `TEXT` with no `NOT NULL`, and
-`cpv.description` likewise — V19 says of the latter that nothing populates it yet, which **these reads
-falsify** ([TASK-0008](TASK-0008-correct-the-two-v19-comments.md) carries that correction). A facet
-whose label or description is absent is answered under its **code**, and the ordering places it last.
+❗ **Both vocabulary columns these reads select are nullable**, and a fixture with fully populated
+vocabularies would never reveal it: `licitacion_state.label` is `TEXT` with no `NOT NULL` (`V19:20`),
+and `cpv.description` likewise (`V19:61`). A facet whose label or description is absent is answered
+under its **code**.
+
+**No correction is owed for either**, and an earlier draft of this task claimed one was.
+`LicitacionState` and `Cpv` both already document their nullability, `Cpv` at length and for a better
+reason than this task could give — *"measured on 822054, it does not [publish the code alone]"*. And a
+*read* cannot falsify a claim about *writes*: V19's note that nothing populates the description
+concerns the import, not this.
+
+⚠️ **What is genuinely unsettled is whether anything populates it.** `Cpv`'s javadoc says an import
+"splits the two and stores both", while FEAT-0015's `TASK-0005` says the CPV upsert *"must not write
+the description"*. Until that is settled, **`CpvFacet.description` may be null for every row in
+production** — so the control that renders it must work from the code alone
+([TASK-0011](TASK-0011-cpv-and-state-filters.md)), and this task must not assume otherwise.
 
 **Facets are a function of the Órgano and the year alone**, not of the other filter in effect. R23's
 preceding sentence uses *the year's selection* to mean the year's rows before narrowing —
@@ -78,7 +98,7 @@ years, several CPV codes and several states:
   licitación with **no publication date** contributes **no year** — in particular no null offered as
   one. ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #32, #36)
 - An Órgano all of whose licitacións are withdrawn, or all of which are undated, yields **no years at
-  all**, which is what makes it indistinguishable from one holding none. (SPEC-0008 #36, #37)
+  all**, which is what makes it indistinguishable from one holding none. (SPEC-0008 #32)
 - The CPV facets are exactly the codes the year's visible licitacións carry — **including** one
   carried only against a procedure that has lotes, and one carried only on a lote — and exclude every
   code carried solely by a withdrawn classification, a withdrawn licitación, an undated one, or a
@@ -94,7 +114,7 @@ years, several CPV codes and several states:
   rather than after `Z`. *(A design choice of this feature's — **no criterion**: #33 governs which
   values are offered, never their order.)*
 - A state whose **label** the source never published, and a CPV whose **description** it never
-  published, are both returned — under their codes, ordered last — rather than dropped or rendered as
+  published, are both returned — under their codes — rather than dropped or rendered as
   blanks. ❗ The case a fully populated fixture never reaches. (SPEC-0008 #33)
 - The facets are unaffected by the **other** filter being set — asserted in both directions.
 

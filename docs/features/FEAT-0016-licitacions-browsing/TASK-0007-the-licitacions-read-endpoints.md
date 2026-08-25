@@ -57,20 +57,22 @@ reads is the accented Galician, in `strings.ts`.
 
   **No field states the awarding Órgano** (#28) — every row belongs to the Órgano already open — and
   **no `expediente`, `estimatedValue`, type or `loteCount`**, which are R21's page.
-- **The publication base URL, promoted to one family-neutral property**, with a **path template per
-  family**. ❗ Neither template may reuse `micronaut.http.services.contratosdegalicia.url`: that is the
-  *import client's* base URL and `server/docker-compose.yml` overrides it to the WireMock stub, so
-  every public link would render as `http://contratosdegalicia:8080/...` in dev, preview and e2e. The
-  link a user follows and the host the importer scrapes are two facts that happen to coincide in
-  production, and they get two properties.
+- **`ContratosMenoresPublicationConfiguration` is promoted whole**, renamed for the two families it
+  now serves, gaining `urlOf(PublicationId)` beside its existing `urlOf(long)`.
 
-  **What they do not get is two base URLs**, which an earlier draft of this task proposed.
-  `ContratosMenoresPublicationConfiguration` already defaults to `https://www.contratosdegalicia.gal`
-  and composes `"%s/contrato-menor?N=%d"`, while FEAT-0015's source contract records the licitación
-  page as `%s/licitacion?N={id}` — same host, same shape, differing only in the path segment and the
-  id's type. Two properties that must always agree, with nothing keeping them in step, is the defect
-  the `YearSelection` promotion is made to avoid. So the host is promoted and each family keeps its
-  own template.
+  ❗ It may not reuse `micronaut.http.services.contratosdegalicia.url`: that is the *import client's*
+  base URL and `server/docker-compose.yml:56` overrides it to the WireMock stub, so every public link
+  would render as `http://contratosdegalicia:8080/...` in dev, preview and e2e. The link a user
+  follows and the host the importer scrapes are two facts that coincide in production, and they get
+  two properties.
+
+  **One configuration, one template — not one base URL and a template per family**, which two earlier
+  drafts of this task proposed in turn. The second rested on the premise that the contratos menores
+  configuration composes `"%s/contrato-menor?N=%d"`; **the shipped line is
+  `"%s/licitacion?N=%d"`**, there is no `contrato-menor` segment anywhere in the repository, and
+  FEAT-0015's measured source contract records that the two families share one address space *and*
+  this template. Two families, one string, differing only in `%d` against `%s` — so a per-family
+  template would ship two values that must always agree with nothing keeping them in step.
 - **The `licitacions` entry on the Órgano member read.** `OrganoFamilies` gains a property and
   `FamiliesResponse` a second `@Nullable` component, carrying the route segment and the
   `LicitacionsSummary` — years, `partial`, `updating`. `OrganoController` gains one injected use case
@@ -87,14 +89,31 @@ reads is the accented Galician, in `strings.ts`.
 ## Acceptance criteria
 
 `@MicronautTest` integration tests with RestAssured, on
-`ContratosMenoresControllerIntegrationTest`'s precedent:
+`ContratosMenoresControllerIntegrationTest`'s precedent — with the use cases **mocked**, since the
+`application` module's test suite has no datasource.
+
+**So these criteria are about the wire and nothing else**: what the operation accepts, what it
+refuses, what it hands the domain, and what shape comes back. *Which rows a selection contains* is
+[TASK-0003](TASK-0003-paged-ordered-counted-reads.md)'s and *which codes are offered* is
+[TASK-0004](TASK-0004-year-cpv-and-state-facets.md)'s, both proved against PostgreSQL; re-asserting
+them through a mock proves only the mock.
 
 - An **unauthenticated** request to either endpoint is denied; an authenticated `USER` and an
   authenticated `ADMIN` both succeed, and neither can modify anything.
   ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #2, #45)
-- The response is ADR-0022's envelope — `items`, `page`, `size`, `totalItems`, `totalPages` — with
-  the **1-based** `page` the request carried, and paging first/previous/next/last over a seeded year
-  yields exactly `totalItems` rows with none repeated and none skipped. (SPEC-0008 #28)
+- The response is ADR-0022's envelope — `items`, `page`, `size`, `totalItems`, `totalPages` — mapped
+  from the `Page` the use case returns, with the **1-based** `page` the request carried. The mapping
+  is the assertion: a `Page` at 0-based index 2 comes back as `page: 3`. *(Exhaustive paging over a
+  real selection is [TASK-0003](TASK-0003-paged-ordered-counted-reads.md)'s.)* (SPEC-0008 #28)
+- ❗ **The defaults reach the domain.** A request stating no `sort`, `page` or `size` invokes the use
+  case with `PUBLICATION_DATE`, `DESC`, page 1 and size 50 — asserted on the arguments the mock
+  received, since a default applied nowhere and a default applied twice look identical in the response.
+  (SPEC-0008 #30)
+- **Each of the four `sort` spellings reaches the domain as its own (key, direction) pair**, so no two
+  orderings collapse into one on the wire. (SPEC-0008 #34)
+- **`year`, `cpv` and `state` reach the domain as given** — the year parsed, the state as an integer
+  code, the CPV unaltered — and an **absent** `cpv` or `state` reaches it as absent rather than as an
+  empty string. (SPEC-0008 #33)
 - A request with **no `year`**, or a malformed one, is **400** — not an all-years list and not a
   default applied server-side. (SPEC-0008 #32)
 - A `sort` naming another property, or a direction that is not `asc`/`desc` — including the longer
@@ -104,26 +123,35 @@ reads is the accented Galician, in `strings.ts`.
   SPEC-0005 #28. See the README's candidate-criteria table.*)
 - A `cpv` or `state` naming something the year does not contain is **not** an error: an empty page
   with `totalItems` of **0**. Reachable from a stale shared link. (SPEC-0008 #33)
-- **`filtros` answers `{cpvs, states}` with each state carrying its `code` and its `label`**, and a
-  request for a year holding codes **101 and 102** returns **two** entries though both are labelled
-  *Histórico*. A state whose label the source never published is returned with a **null label** and
-  its code. ❗ This is the criterion the task's own bolded warning is about: without it a label-keyed
-  implementation passes everything else here. (SPEC-0008 #33)
-- **Filtering by `state=101` does not return a licitación in state 102**, asserted through the
-  endpoint rather than only at the repository — the wire is where the code-versus-label choice is
-  actually made. (SPEC-0008 #33)
+- ❗ **`filtros` publishes the state's `code`, and the code is what the list operation's `state`
+  parameter takes.** A `LicitacionFilterOptions` holding codes **101 and 102**, both labelled
+  *Histórico*, serialises as **two** entries with distinct `code`s; and `?state=102` reaches the domain
+  as the code `102`, not as a label and not as a list index. This is the criterion the task's bolded
+  warning is about: without it a label-keyed implementation passes everything else here.
+  (SPEC-0008 #33)
+- **`filtros` accepts `year` and refuses everything else** — a `cpv`, a `state`, a `sort` or a `page`
+  on that operation is **400**, since it takes none of them. (SPEC-0008 #33)
+- A state whose label the domain answered as **null** serialises with a null label and its code, and a
+  CPV with a null description likewise — neither is dropped and neither becomes an empty string.
+  (SPEC-0008 #33)
 - An unknown Órgano id is **404** carrying the **existing**
   `urn:conxugal:problem-type:organo-not-found`, from both endpoints.
-- A row whose procedure has exactly one awardee carries `awardees.count` of 1 and a `sole` with its
-  `id`, `name` and `fiscalId`; one whose lotes went to several carries the count and **no** `sole`;
-  one whose award resolved to nobody carries a count of **0**. In no case does any response carry a
-  per-row awardee name. (SPEC-0008 #20, #24, #29)
-- A row's `amount.basis` is `BUDGET` for an unawarded procedure, `AWARDED` for an awarded one,
-  `partial` true for a partly awarded one, and `UNSTATED` with a null `value` for one with neither —
-  and `value` is **never** absent unless the basis is `UNSTATED`. (SPEC-0008 #35)
+- **The row DTO is a faithful projection of `VisibleLicitacion`.** Given a domain row with one
+  awardee, `awardees.count` is 1 and `sole` carries `id`, `name` and `fiscalId`; given one with three,
+  the count is 3 and `sole` is **absent**; given one with none, the count is **0**. Given a `sole`
+  whose operador holds no identifier, `fiscalId` is **null and the awardee is still present**. In no
+  case does any response carry a per-row awardee name. (SPEC-0008 #20, #24, #29)
+- `amount` serialises the `StatedAmount` it was given — `basis`, `partial`, and a `value` that is
+  **absent only** when the basis is `UNSTATED`. The controller computes none of them. (SPEC-0008 #35)
+- **No response carries an `organo` key on a row** (#28), and none carries `expediente`,
+  `estimatedValue`, a type or `loteCount` — asserted against the serialised body, so a later field
+  cannot be added without meeting R21's boundary. (SPEC-0008 #28)
+- Both operations carry **[ADR-0012](../../architecture/0012-rate-limit-http-contract.md)'s three
+  `RateLimit-*` headers** and its shared 429 shape.
 - `sourceUrl` is absolute and addresses the publication at the official source. Overriding the
-  **shared base URL** moves **both** families' links; overriding the import client's URL moves
-  **neither**. Both directions asserted, since the second is the trap. (SPEC-0008 #28)
+  **promoted configuration's base URL** moves **both** families' links; overriding the import client's
+  URL moves **neither**. Both directions asserted, since the second is the trap. The contratos menores
+  link is **byte-for-byte what it was** before the promotion. (SPEC-0008 #28)
 - `GET /api/organo/{id}` carries a `licitacions` entry for an Órgano with visible licitacións, and
   **omits it entirely** for one without — with the `contratosMenores` entry unaffected in both
   directions, and an Órgano holding only licitacións returning a families map with one entry.

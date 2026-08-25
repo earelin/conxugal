@@ -21,18 +21,14 @@ its own.
 > which is `status: todo`. `scripts/` today holds `actions-lint.sh`, `contract-test.sh`,
 > `docs-lint.sh` and `openapi-lint.sh`, and there is no measurements directory.
 >
-> So **the size of this task depends on a status field**, which is stated here rather than left as a
-> conditional inside it:
+> **So this task waits on FEAT-0011's TASK-0012, which is unblocked today.** An earlier draft made the
+> task's own size conditional on that status field — build the harness if it has not landed, extend it
+> if it has — which is two tasks' work behind one flag, with a commit message as the scope control.
 >
-> - **if FEAT-0011's TASK-0012 has landed**, this task adds this family's reads to the existing script
->   and a second file beside its recording place;
-> - **if it has not**, this task **builds the shared harness** — the concurrency driver, the timing
->   report, the recording convention — for both families, and FEAT-0011's task then adds its own reads.
->
-> Either way there is **one** harness. A second script would drift from the first and produce numbers
-> nobody could line up, and comparability across the four specs is the entire reason R32 borrows
-> SPEC-0005 R24's reference environment rather than fixing one of its own. Whoever picks this up says
-> in the commit which branch they took.
+> There must be **one** harness: a second script would drift from the first and produce numbers nobody
+> could line up, and comparability across the four specs is the entire reason R32 borrows SPEC-0005
+> R24's reference environment rather than fixing one of its own. So the harness is built **there**,
+> once, and extended **here**. That task needs nothing this feature has not already shipped.
 
 ## Scope
 
@@ -85,9 +81,14 @@ behind it.
   session, **discovers** the Órgano holding the most licitacións and its busiest year, and drives
   every read listed above.
   ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #43, three of its four reads)
-- It reports per-read median and p95 under **ten concurrent readers**, and fails loudly when a
-  precondition is unmet — no session, no database access, no Órgano with licitacións — rather than recording a number
-  taken under the wrong conditions. (SPEC-0008 #43, three of its four reads)
+- It reports per-read median and p95 under **ten concurrent readers**, and **fails loudly on a missing
+  precondition** — no session, no database access, no deployment reachable — rather than recording a
+  number taken under the wrong conditions. (SPEC-0008 #43, three of its four reads)
+- ❗ **An empty dataset is a recorded outcome, not a failure.** Nothing writes a licitación row until
+  FEAT-0015's remaining tasks land, so a run today finds **no Órgano holding any** — and the two
+  criteria must not contradict each other about it. The script records *"no licitacións stored on this
+  date"* and exits successfully; only a broken *precondition* fails it. That is what makes *acceptance
+  is that it runs against whatever production holds* satisfiable on the day it lands.
 - The measurement file records the timings **with the volume they were taken at**, names the
   deployment and the date, carries the undated-licitación census, and states the licitación-page read
   as **outstanding** pending the R21 feature. (SPEC-0008 #43, three of its four reads)

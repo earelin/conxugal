@@ -14,7 +14,7 @@ The frontend slice this family's section lives in, mounted as a **child route** 
 feature add its own tab without touching either".
 
 This task builds the seam and an empty section. The chooser, the row, the filters and the paging are
-tasks 10 to 13.
+tasks 9 to 12.
 
 ## Scope
 
@@ -24,6 +24,13 @@ tasks 10 to 13.
   exports **only** the section component.
 - **One child route**, `/organo/:id/licitacions`, declared in `app/router.tsx` with the same lazy
   `section()` helper the contratos menores child uses.
+- ❗ **`loadOrganoPage()` becomes wrong and is fixed here.** `app/router.tsx:33` unconditionally warms
+  the **contratos menores** chunk on every Órgano page, justified by a comment about avoiding four
+  sequential hops. Once a second family exists, opening a **licitacións-only** Órgano downloads a
+  chunk it can never use *and still* pays the full hop — reintroducing the exact defect that comment
+  prevents, for the family this feature exists to serve. The warm becomes conditional on what the
+  member read says the Órgano holds, or warms both; either way `app/router.tsx` is already in this
+  task's scope.
 - **One `FAMILIES` entry** in `ui/src/features/organo/families.ts` — key `licitacions`, path
   `licitacions`, and the accented Galician label. That file's own comment already says *"A new family
   adds an entry here and a child route in `app/router.tsx`"*, so this is the whole of it.
@@ -45,17 +52,17 @@ tasks 10 to 13.
 land in parallel with the whole backend. An earlier draft also gave it the read hooks for the two
 endpoints, which made it wait on [TASK-0007](TASK-0007-the-licitacions-read-endpoints.md) and serialised
 every frontend task behind the entire server. The reads land with the controls that consume them —
-the list read with [TASK-0011](TASK-0011-the-licitacion-row.md), the filter options with
-[TASK-0012](TASK-0012-cpv-and-state-filters.md) — so nothing here fetches anything.
+the list read with [TASK-0010](TASK-0010-the-licitacion-row.md), the filter options with
+[TASK-0011](TASK-0011-cpv-and-state-filters.md) — so nothing here fetches anything.
 
 **It reads the Órgano nowhere.** The name is rendered by the page above it and the summary arrives as
 context, so this slice's own requests are for licitacións alone.
 
 **Out of scope:** the year chooser and the section's statements
-([TASK-0010](TASK-0010-year-chooser-and-section-state.md)), the row
-([TASK-0011](TASK-0011-the-licitacion-row.md)), the filters
-([TASK-0012](TASK-0012-cpv-and-state-filters.md)), sorting and paging
-([TASK-0013](TASK-0013-sorting-and-paging-over-the-selection.md)), and **any change to
+([TASK-0009](TASK-0009-year-chooser-and-section-state.md)), the row
+([TASK-0010](TASK-0010-the-licitacion-row.md)), the filters
+([TASK-0011](TASK-0011-cpv-and-state-filters.md)), sorting and paging
+([TASK-0012](TASK-0012-sorting-and-paging-over-the-selection.md)), and **any change to
 `features/contratos-menores` or to FEAT-0013's page** beyond the one registry entry.
 
 ## Acceptance criteria
@@ -70,19 +77,34 @@ context, so this slice's own requests are for licitacións alone.
 - An Órgano the server reports **no** `licitacions` entry for draws no licitacións tab and never
   mounts this section. (SPEC-0008 #37)
 - Navigating to `/organo/:id/licitacions` mounts the section; navigating away and back remounts it
-  with whatever the URL carries. *(No criterion — mounting is a precondition for #32, which [TASK-0010](TASK-0010-year-chooser-and-section-state.md) claims.)*
-- An **unauthenticated** visitor navigating to the route is sent to login. (SPEC-0008 #2, #45)
+  with whatever the URL carries. *(No criterion — mounting is a precondition for #32, which [TASK-0009](TASK-0009-year-chooser-and-section-state.md) claims.)*
+- The route declares an **`errorElement`**, so a failed read inside the section does not blank the
+  Órgano page above it.
+- *(An unauthenticated visitor is denied by the endpoint and by the shell's existing route guard —
+  [TASK-0007](TASK-0007-the-licitacions-read-endpoints.md)'s and FEAT-0013's respectively. This slice
+  adds no guard of its own and can prove neither, so it claims neither #2 nor #45.)*
 - `eslint-plugin-boundaries` fails the build if this slice imports `features/contratos-menores` or
   `features/organo`, or if either imports this one — asserted by the lint run, not by convention.
-- ❗ **Four shipped tests use `licitacions` as their stand-in for *a family this build does not
-  know*, and all four invert here.** `families.test.ts` asserts `familiesHeld({ licitacions })` is
-  `[]`; `OrganoPage.test.tsx` asserts no tab bar for such a member; `app/organoSection.test.tsx`
-  asserts `/organo/o-1/licitacions` renders the not-found page; and `organoHarness.tsx` and
-  `FamilyTabs.stories.tsx` hard-code a fake `licitacions` family.
+- ❗ **`licitacions` is currently the codebase's stand-in for *a family this build does not know*, and
+  the `FAMILIES` entry makes it a family this build knows.** Two kinds of site are affected and they
+  take **opposite** remedies:
 
-  Each is **re-pointed at a different unknown key** so it goes on testing what it was written to test
-  — that an unrecognised family draws no tab and routes nowhere — rather than being deleted or
-  inverted to assert the opposite. This is an expected, bounded edit outside the feature's *nothing in
-  contratos menores is touched* rule, and the README's seams section names it; a task author who
-  treats it as a violation will stop for no reason.
+  **Three assertions invert**, and are re-pointed at a *different* unknown key so each goes on testing
+  what it was written to test:
+
+  - `families.test.ts` — `familiesHeld({ licitacions: summary })` is `[]`;
+  - `OrganoPage.test.tsx` — no tab bar for a member holding only that key;
+  - `app/organoSection.test.tsx` — `/organo/o-1/licitacions` renders the shell's not-found page.
+
+  **Two fixtures do not invert — they graduate.** `organoHarness.tsx`'s `licitacions` and
+  `FamilyTabs.stories.tsx`'s both exist to stand for *"the next family to be built"*, in their own
+  words. That family now exists, so they become the real `FAMILIES[1]` rather than a second fake key.
+  `FamilyTabs.test.tsx` consumes the harness symbol and follows it.
+
+  ❗ **One `licitacions` site in `OrganoPage.test.tsx` must NOT be re-pointed** — the one asserting the
+  redirect target — or the test stops covering the two-family case it was written for.
+
+  This is an expected, bounded edit outside the feature's *nothing in contratos menores is touched*
+  rule; the README's seams section names it, and a task author who treats it as a violation will stop
+  for no reason.
 - Every **contratos menores** component and acceptance test passes unchanged.

@@ -3,7 +3,7 @@ feat: FEAT-0016
 domain: frontend
 adrs: [0003, 0004, 0015, 0018]
 status: todo
-depends_on: [TASK-0009, TASK-0010]
+depends_on: [TASK-0008, TASK-0009]
 ---
 
 # The licitación row, and the read behind it
@@ -22,10 +22,15 @@ fetches the rows**, which nothing before this task performs.
   FEAT-0011's counterpart task is titled *the contract row, **and the read behind it*** for this
   reason: a row component with no read is a component nobody can see, and an earlier draft of this
   feature left the read unowned between three tasks.
-- **Its WireMock mapping**, in `ui/wiremock/mappings/`, added here rather than with the paging task.
-  ❗ Without it the section renders its **error state** in dev, preview and every e2e run from the
-  moment [TASK-0009](TASK-0009-licitacions-section-slice-and-route.md)'s route exists — the shared stub
+- **Its WireMock mappings**, in `ui/wiremock/mappings/`, added here rather than with the paging task.
+  ❗ Without them the section renders its **error state** in dev, preview and every e2e run from the
+  moment [TASK-0008](TASK-0008-licitacions-section-slice-and-route.md)'s route exists — the shared stub
   is what those three environments read, and a route with no mapping is a 404 to the SPA.
+
+  ❗ **`organo.json` needs new fixtures too, and nothing else claims them.** Its five Órganos carry
+  `contratosMenores` **only** — there is no two-family Órgano and no licitacións-only one, which are
+  exactly the two this task's and TASK-0008's criteria turn on. Adding them is additive: every
+  existing Órgano keeps its shape, so the shipped contratos menores specs are untouched.
 - **The columns** — the publication identifier, the publication date, the object, the **state**, the
   **amount**, and the **awardee or the count of them** — plus a link to the publication at the
   official source.
@@ -54,7 +59,7 @@ fetches the rows**, which nothing before this task performs.
 - **The state**, shown as the source's own label. ❗ Two states may share one label — codes 101 and
   102 are both *Histórico* — so the row must not treat the label as an identity, and the filter
   control that pairs with it works on the code
-  ([TASK-0012](TASK-0012-cpv-and-state-filters.md)). ❗ **And the label may be absent**:
+  ([TASK-0011](TASK-0011-cpv-and-state-filters.md)). ❗ **And the label may be absent**:
   `licitacion_state.label` is nullable, so a state the source published without one is shown by its
   **code** rather than as a blank cell.
 - **The awardee, or how many.** A row whose procedure has **exactly one** awardee names it — under the
@@ -65,7 +70,8 @@ fetches the rows**, which nothing before this task performs.
   ❗ **A row whose award resolved to nobody names nobody.** The count is zero, and no name is rendered
   from any source. This family holds **no per-row name at all** (#24), and the published
   `awardee_name` is a resolution input the API does not send — see
-  [TASK-0008](TASK-0008-correct-the-two-v19-comments.md).
+  [TASK-0003](TASK-0003-paged-ordered-counted-reads.md), which corrects V19's comment claiming
+  otherwise.
 
   ❗ **An awardee may hold no fiscal identifier.** An unidentified consortium is an operador like any
   other and "offers a route like any other — what it lacks is a fiscal identifier to show beside its
@@ -89,15 +95,22 @@ an operador, which SPEC-0006's read feature owns.
 - **No row renders any name for a party the API did not resolve** — asserted against a stub whose
   award carries a count of zero, so the assertion fails if a later change reaches for a published
   name. (SPEC-0008 #24)
-- An **awarded** licitación with no lotes states its awarded amount; one with lotes states the **sum
-  of those awarded so far**, **marked as covering part of the procedure** while any lote is still
-  undecided; one with **nothing** awarded states its **base budget, labelled as a budget**; and one
-  with neither states no figure rather than a zero. (SPEC-0008 #35)
-- Wherever the base budget is shown it is labelled **VAT-inclusive**. #8 governs the budget and the
-  estimated value, of which only the budget reaches a row; that a budget and an awarded amount are
-  never one figure is R24's, and is asserted above. (SPEC-0008 #8 budget half)
-- A licitación **not yet awarded** — open for offers, pending award, or suspended by appeal — is shown,
-  stating its state and naming no awardee. (SPEC-0008 #36)
+- ❗ **The row renders the `basis` it was given and computes nothing.** Given `AWARDED` it states the
+  value; given `AWARDED` with `partial` it states the value **marked as covering part of the
+  procedure**; given `BUDGET` it states the value **labelled as a budget**; given `UNSTATED` it states
+  **no figure** — not a zero, not an em dash standing in for one.
+
+  *Which* figure a procedure gets, and *whether* it is partial, is
+  [TASK-0003](TASK-0003-paged-ordered-counted-reads.md)'s aggregate arithmetic, proved against
+  PostgreSQL. A stub makes any of it true by construction, so what is assertable here is that the
+  three cases render differently and that the row invents none of them. (SPEC-0008 #35)
+- Wherever the base budget is shown it is labelled **VAT-inclusive**. #8's other half — an estimated
+  value labelled VAT-exclusive — never reaches a row and is the R21 feature's.
+  (SPEC-0008 #8 budget half)
+- A row carrying a **state and no awardee** renders its state and names nobody — the shape an
+  undecided procedure arrives in. *(That such a procedure is **shown at all** is the visibility
+  predicate's, proved in TASK-0003; a stub cannot withhold what it was asked to return.)*
+  (SPEC-0008 #36 display half)
 - Each row offers a route to the corresponding publication **at the official source**, with an
   accessible name identifying which licitación it opens, and **no row names the awarding Órgano**.
   (SPEC-0008 #28)
@@ -106,7 +119,8 @@ an operador, which SPEC-0006's read feature owns.
   wraps; an absent one is shown as absent. *(R33's display rule. **No criterion** — SPEC-0008 has no
   analogue of SPEC-0005 #40, and #44 is wholly storage. See the README's candidate-criteria table.)*
 - A state whose **label the source never published** is shown by its **code**, not as an empty cell.
-  (SPEC-0008 #33)
+  *(A rendering choice of this feature's — **no criterion**: #33 governs which values are offered as
+  filters, not how a row draws one.)*
 - The section **renders rows** for an Órgano holding licitacións and no contratos menores, end to end
   against the stub — which is the half of #26 the visible-set bean cannot prove.
   (SPEC-0008 #26 viewable half)

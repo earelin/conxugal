@@ -3,7 +3,7 @@ feat: FEAT-0016
 domain: frontend
 adrs: [0003, 0004, 0015, 0018]
 status: todo
-depends_on: [TASK-0011]
+depends_on: [TASK-0010]
 ---
 
 # The CPV and state filters
@@ -20,7 +20,12 @@ where that lands.
 
 - **Two `Select` controls**, both optional and both clearable, reading their options from the
   filter-options endpoint [TASK-0007](TASK-0007-the-licitacions-read-endpoints.md) publishes — one
-  read per year, not per interaction.
+  read per year, not per interaction — **and its WireMock mapping**, which no other task claims.
+
+  ❗ **A CPV option may carry no description**, since `cpv.description` is nullable and it is unsettled
+  whether the import populates it at all ([TASK-0004](TASK-0004-year-cpv-and-state-facets.md)). The
+  control must read as an option list of **codes**, with the description as an adornment where one
+  exists — not a list of descriptions that degrades to blanks.
 - **The state control works on the code and reads the label.** ❗ Two states may share one label —
   codes 101 and 102 are both *Histórico* — so the option's **value is the code** and the label is only
   what is displayed. A control keyed on the label would merge two states the source distinguishes, and
@@ -31,9 +36,9 @@ where that lands.
 - **Both apply to the whole year's selection**, not to the page displayed — which is a property of the
   server read and a rule this task must not undermine by filtering client-side over a page in hand.
 - **Applying or clearing either returns the reader to the first page**, through the same
-  selection helper the year chooser and the sorts write through, so *any change to the selection drops
+  selection module the year chooser and the sorts write through, so *any change to the selection drops
   the page* stays one rule in one place
-  ([TASK-0013](TASK-0013-sorting-and-paging-over-the-selection.md)).
+  ([TASK-0009](TASK-0009-year-chooser-and-section-state.md) owns it).
 - **The options are a function of the year alone**, not of the other filter in effect. The feature
   README records the reading and its residual: with both filters chosen an empty list is reachable,
   and R23's promise strictly holds one filter at a time. The controls must therefore **stay populated
@@ -66,7 +71,7 @@ prove the stub. What can go wrong **here** is what the control sends and what it
 - A state the read returned with **no label** is offered under its **code** rather than as a blank
   entry. (SPEC-0008 #33)
 - **Applying or clearing either filter puts the reader on page 1** — through
-  [TASK-0010](TASK-0010-year-chooser-and-section-state.md)'s module, so what is asserted here is that
+  [TASK-0009](TASK-0009-year-chooser-and-section-state.md)'s module, so what is asserted here is that
   the control writes through it rather than around it. Changing the year leaves neither control
   disabled nor holding a stale option list. (SPEC-0008 #34 re-page half)
 - Narrowing re-reads with the filter **on the wire**, so the count and the first page are the server's
