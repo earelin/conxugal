@@ -1,7 +1,7 @@
 ---
 feat: FEAT-0016
 domain: frontend
-adrs: [0004, 0015, 0022]
+adrs: [0003, 0004, 0015, 0018, 0022]
 status: todo
 depends_on: [TASK-0011, TASK-0012]
 ---
@@ -52,22 +52,25 @@ fifth ordering.
 
 ## Acceptance criteria
 
-- The list pages through **exactly** the number of licitacións the selection states — first, previous,
-  next, last and a chosen page — with **none repeated and none skipped**, and the two ends disabled at
-  the two ends rather than hidden.
-  ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #28)
-- The list is ordered by **publication date descending with the publication identifier descending as
-  tie-break** by default, so two procedures published on the same date have a determinate order; and
-  **every ordering R23 offers is likewise total**, with paging over any of them repeating and skipping
-  nothing. (SPEC-0008 #30)
-- **Sorting and counting apply to the whole year's selection**: the first page after sorting by amount
-  descending holds the **highest-amount licitación of the year**, not merely of the page previously
-  displayed. (SPEC-0008 #34)
-- **A sort by amount places each row by the figure it states** — an unawarded row by its budget, an
-  awarded one by its award — and a row that states no figure is placed last in **both** directions.
-  (SPEC-0008 #35)
-- **Applying or clearing any part of the selection returns the reader to the first page**; moving
-  between pages changes neither the count, the page total nor the ordering. (SPEC-0008 #34)
+**The orderings themselves are the server's** and are proved against PostgreSQL by
+[TASK-0003](TASK-0003-paged-ordered-counted-reads.md); what is asserted here is what the client
+**sends**, **renders** and **remembers**.
+
+- ❗ **The sort control offers exactly four entries and can express nothing else** — publication date
+  and amount, ascending and descending — sending the API's own spelling (`amount,desc`) verbatim. It
+  is **one control**, not sortable column headers: R23 fixes a closed set, and a header affordance
+  would suggest a dynamic sort the design forecloses on two of six columns. This is the task's
+  headline scope item and had no criterion in an earlier draft.
+  ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #34)
+- The section requests the **default ordering** when the URL states none, and the URL is authoritative
+  when it states one — a shared link is read back by the same parser that wrote it. (SPEC-0008 #30)
+- The list pages through **exactly** the number of licitacións the envelope states — first, previous,
+  next, last and a chosen page — with **none repeated and none skipped**, and the two ends **disabled,
+  not hidden**, at the two ends. (SPEC-0008 #28)
+- **Choosing a sort puts the reader on page 1**, through
+  [TASK-0010](TASK-0010-year-chooser-and-section-state.md)'s module — asserted as *the control writes
+  through the module*, since the rule itself is proved there. Moving between **pages** writes neither
+  the sort nor either filter. (SPEC-0008 #34 re-page half)
 - A **shared URL** carrying a year, both filters, a sort and a page reproduces exactly that view, and
   the browser's back button walks the paging history. (SPEC-0008 #34)
 - A **page beyond the last** clamps to the last page rather than erroring, and the count shown is the

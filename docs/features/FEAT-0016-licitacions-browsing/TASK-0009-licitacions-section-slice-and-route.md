@@ -1,9 +1,9 @@
 ---
 feat: FEAT-0016
 domain: frontend
-adrs: [0003, 0004, 0015]
+adrs: [0003, 0004, 0015, 0018]
 status: todo
-depends_on: [TASK-0007]
+depends_on: []
 ---
 
 # The licitacións slice, its route, and its place in the family tabs
@@ -40,9 +40,13 @@ tasks 10 to 13.
   [TASK-0007](TASK-0007-the-licitacions-read-endpoints.md) declares. `shared/entities/organo.ts`
   types the entry as `unknown` on purpose and **stays that way**: only the owning slice may narrow it,
   and `shared/` deliberately does not know the shape.
-- **The read hooks and types** for the two endpoints, keyed on the selection so a held page can never
-  survive a change of year, filter or ordering — the `placeholderData` key-prefix comparison
-  `features/contratos-menores/contracts.ts` already uses.
+
+**It is the seam and nothing else**, and that is what lets it carry **no `depends_on` at all** and
+land in parallel with the whole backend. An earlier draft also gave it the read hooks for the two
+endpoints, which made it wait on [TASK-0007](TASK-0007-the-licitacions-read-endpoints.md) and serialised
+every frontend task behind the entire server. The reads land with the controls that consume them —
+the list read with [TASK-0011](TASK-0011-the-licitacion-row.md), the filter options with
+[TASK-0012](TASK-0012-cpv-and-state-filters.md) — so nothing here fetches anything.
 
 **It reads the Órgano nowhere.** The name is rendered by the page above it and the summary arrives as
 context, so this slice's own requests are for licitacións alone.
@@ -62,12 +66,23 @@ context, so this slice's own requests are for licitacións alone.
   ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #27)
 - An Órgano with visible contracts of **only one** family shows **only** that family's tab, and the
   absent one causes no error — asserted in both directions, including an Órgano holding licitacións
-  and no contratos menores, which is the case that has never existed before. (SPEC-0008 #26, #27)
+  and no contratos menores, which is the case that has never existed before. (SPEC-0008 #27)
 - An Órgano the server reports **no** `licitacions` entry for draws no licitacións tab and never
   mounts this section. (SPEC-0008 #37)
 - Navigating to `/organo/:id/licitacions` mounts the section; navigating away and back remounts it
-  with the selection the URL carries. (SPEC-0008 #32)
+  with whatever the URL carries. *(No criterion — mounting is a precondition for #32, which [TASK-0010](TASK-0010-year-chooser-and-section-state.md) claims.)*
 - An **unauthenticated** visitor navigating to the route is sent to login. (SPEC-0008 #2, #45)
 - `eslint-plugin-boundaries` fails the build if this slice imports `features/contratos-menores` or
   `features/organo`, or if either imports this one — asserted by the lint run, not by convention.
-- Existing `organo-page` and `contratos-menores` component and acceptance tests pass **unchanged**.
+- ❗ **Four shipped tests use `licitacions` as their stand-in for *a family this build does not
+  know*, and all four invert here.** `families.test.ts` asserts `familiesHeld({ licitacions })` is
+  `[]`; `OrganoPage.test.tsx` asserts no tab bar for such a member; `app/organoSection.test.tsx`
+  asserts `/organo/o-1/licitacions` renders the not-found page; and `organoHarness.tsx` and
+  `FamilyTabs.stories.tsx` hard-code a fake `licitacions` family.
+
+  Each is **re-pointed at a different unknown key** so it goes on testing what it was written to test
+  — that an unrecognised family draws no tab and routes nowhere — rather than being deleted or
+  inverted to assert the opposite. This is an expected, bounded edit outside the feature's *nothing in
+  contratos menores is touched* rule, and the README's seams section names it; a task author who
+  treats it as a violation will stop for no reason.
+- Every **contratos menores** component and acceptance test passes unchanged.

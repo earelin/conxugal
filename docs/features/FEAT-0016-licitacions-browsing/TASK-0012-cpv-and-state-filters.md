@@ -1,7 +1,7 @@
 ---
 feat: FEAT-0016
 domain: frontend
-adrs: [0004, 0015]
+adrs: [0003, 0004, 0015, 0018]
 status: todo
 depends_on: [TASK-0011]
 ---
@@ -45,23 +45,33 @@ which **no control appears**; any filter R23 does not name; and the server reads
 
 ## Acceptance criteria
 
-- Filtering a year by a **CPV code** returns exactly the licitacións of that year carrying it —
-  including one that carries it on **any** of its lotes, and one that carries it against the
-  **procedure as a whole while having lotes**. A procedure carrying the code on three lotes appears
-  **once**.
-  ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #10, #33)
-- Filtering by **state** returns exactly the licitacións in it, and filtering by code **101** does not
-  return one in code **102** although both are labelled *Histórico*. (SPEC-0008 #33)
-- **Only codes and states the year's selection actually contains are offered**, and choosing any
-  single offered value yields a non-empty list — the property R23 attaches to the rule, asserted
-  rather than assumed. (SPEC-0008 #33)
-- The states offered are **the source's own**, with no set fixed in the client: a stub introducing an
-  unseen state renders it without a code change. (SPEC-0008 #33)
-- Narrowing applies to the **whole** year's selection: the count shown after filtering is the filtered
-  year's count, and the first page holds the filtered year's first row rather than a subset of the
-  page previously displayed. (SPEC-0008 #34)
-- **Applying or clearing either filter returns the reader to the first page**, and changing the year
-  clears neither control's availability nor leaves a stale option list. (SPEC-0008 #34)
+**These are the client's obligations.** *Which* rows a filter returns is proved against PostgreSQL by
+[TASK-0003](TASK-0003-paged-ordered-counted-reads.md) and
+[TASK-0004](TASK-0004-year-cpv-and-state-facets.md); asserting it again against a stub would only
+prove the stub. What can go wrong **here** is what the control sends and what it offers.
+
+- ❗ **The state option's *value* is the code and its *label* is only displayed.** Choosing the entry
+  labelled *Histórico* that carries code **102** puts `state=102` on the wire — not `102`'s label, not
+  the first entry sharing that label, and not an index into the list. Two entries labelled *Histórico*
+  are two distinct choices that send two distinct values.
+
+  This is the one thing this task can get wrong that nothing else would catch: a label-keyed control
+  passes every other criterion here, and the defect surfaces only as *the wrong rows*, which a reader
+  has no way to attribute. ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #33)
+- The **CPV** option's value is the published code, sent unaltered — not the description, and not a
+  normalised form. (SPEC-0008 #33)
+- **Only the codes and states the filter-options read returned are offered** — the control adds
+  nothing, hides nothing, and fixes no vocabulary of its own, so a stub introducing an unseen state
+  renders it without a code change. (SPEC-0008 #33)
+- A state the read returned with **no label** is offered under its **code** rather than as a blank
+  entry. (SPEC-0008 #33)
+- **Applying or clearing either filter puts the reader on page 1** — through
+  [TASK-0010](TASK-0010-year-chooser-and-section-state.md)'s module, so what is asserted here is that
+  the control writes through it rather than around it. Changing the year leaves neither control
+  disabled nor holding a stale option list. (SPEC-0008 #34 re-page half)
+- Narrowing re-reads with the filter **on the wire**, so the count and the first page are the server's
+  answer for the narrowed selection and **nothing is filtered client-side** over a page already in
+  hand. Asserted on the request the stub receives. (SPEC-0008 #34)
 - With **both** filters chosen and no rows matching, the list is empty, the count reads zero, and both
   controls remain populated and clearable — the reader can always undo the choice that emptied it.
   (SPEC-0008 #33)

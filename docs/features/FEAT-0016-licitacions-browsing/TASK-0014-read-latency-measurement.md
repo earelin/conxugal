@@ -3,7 +3,7 @@ feat: FEAT-0016
 domain: devops
 adrs: []
 status: todo
-depends_on: [TASK-0007, TASK-0011]
+depends_on: [TASK-0007]
 ---
 
 # The R32 read-latency measurement
@@ -14,15 +14,25 @@ and conditions** — the production deployment, ten concurrent readers — so th
 numbers stay comparable, which is the reason R32 borrows that environment rather than fixing one of
 its own.
 
-**It extends [FEAT-0011](../FEAT-0011-contratos-menores-browsing/README.md)'s harness rather than
-adding a second one.** `scripts/measure-read-latency.sh` already drives a family's browse reads under
-concurrency and records into `docs/measurements/`; a second script would drift from it and produce
-numbers nobody could line up. Comparability is the whole point.
-
-> **It depends on FEAT-0011's own
+> ❗ **The harness this task would extend does not exist yet, and an earlier draft wrote as though it
+> did.** `scripts/measure-read-latency.sh` and `docs/measurements/` are
+> [FEAT-0011](../FEAT-0011-contratos-menores-browsing/README.md)'s
 > [TASK-0012](../FEAT-0011-contratos-menores-browsing/TASK-0012-read-latency-measurement-harness.md),
-> which is `todo`.** If that task has not landed when this one is picked up, this task builds the
-> harness for both families rather than forking one — and says so in its commit.
+> which is `status: todo`. `scripts/` today holds `actions-lint.sh`, `contract-test.sh`,
+> `docs-lint.sh` and `openapi-lint.sh`, and there is no measurements directory.
+>
+> So **the size of this task depends on a status field**, which is stated here rather than left as a
+> conditional inside it:
+>
+> - **if FEAT-0011's TASK-0012 has landed**, this task adds this family's reads to the existing script
+>   and a second file beside its recording place;
+> - **if it has not**, this task **builds the shared harness** — the concurrency driver, the timing
+>   report, the recording convention — for both families, and FEAT-0011's task then adds its own reads.
+>
+> Either way there is **one** harness. A second script would drift from the first and produce numbers
+> nobody could line up, and comparability across the four specs is the entire reason R32 borrows
+> SPEC-0005 R24's reference environment rather than fixing one of its own. Whoever picks this up says
+> in the commit which branch they took.
 
 ## Scope
 
@@ -55,6 +65,13 @@ numbers nobody could line up. Comparability is the whole point.
   publishes its dates in one fixed form" — this is the one query that will say whether it is, and it
   belongs here because this is the task already pointed at production data.
 
+  ❗ **It is a database query, not an API call, and so is the Órgano discovery above.** No read this
+  feature builds exposes a withheld licitación — that is the point of withholding — and none exposes
+  *which Órgano holds the most*, only whether a given one holds any. So the script needs **direct
+  database access** to the deployment alongside its authenticated session, which is a precondition it
+  must state and check rather than discover. R25's administrator surface, which would make the census
+  an API call, is **unowned** (#36).
+
 **It sets no latency budget and must not.** R32's obligation is to **measure and record**; a threshold
 is set only by revising the requirement, exactly as SPEC-0005 R24 says of its own.
 
@@ -67,13 +84,13 @@ behind it.
 - The script runs against a deployed instance, given its base URL and an authenticated reader's
   session, **discovers** the Órgano holding the most licitacións and its busiest year, and drives
   every read listed above.
-  ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #43)
+  ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #43, three of its four reads)
 - It reports per-read median and p95 under **ten concurrent readers**, and fails loudly when a
-  precondition is unmet — no session, no Órgano with licitacións — rather than recording a number
-  taken under the wrong conditions. (SPEC-0008 #43)
+  precondition is unmet — no session, no database access, no Órgano with licitacións — rather than recording a number
+  taken under the wrong conditions. (SPEC-0008 #43, three of its four reads)
 - The measurement file records the timings **with the volume they were taken at**, names the
   deployment and the date, carries the undated-licitación census, and states the licitación-page read
-  as **outstanding** pending the R21 feature. (SPEC-0008 #43)
+  as **outstanding** pending the R21 feature. (SPEC-0008 #43, three of its four reads)
 - Running it twice **appends** rather than overwrites, so two runs are comparable.
 - **Acceptance is that it runs and records against whatever production holds on the day it lands** —
   which is what makes this a task at all. R32's fuller conditions need FEAT-0015's remaining tasks and

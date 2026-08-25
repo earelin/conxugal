@@ -3,7 +3,7 @@ feat: FEAT-0016
 domain: backend
 adrs: [0005, 0006, 0010, 0012, 0016, 0020, 0021, 0022]
 status: todo
-depends_on: [TASK-0005, TASK-0006]
+depends_on: [TASK-0005]
 ---
 
 # The two read endpoints, and this family's entry on the Órgano page
@@ -57,12 +57,20 @@ reads is the accented Galician, in `strings.ts`.
 
   **No field states the awarding Órgano** (#28) — every row belongs to the Órgano already open — and
   **no `expediente`, `estimatedValue`, type or `loteCount`**, which are R21's page.
-- **This family's publication URL property.** ❗ It must **not** reuse
-  `micronaut.http.services.contratosdegalicia.url`: that is the *import client's* base URL and
-  `server/docker-compose.yml` overrides it to the WireMock stub, so every public link would render as
-  `http://contratosdegalicia:8080/...` in dev, preview and e2e. FEAT-0011 met this and solved it with
-  a separate property; this family gets its own, on the same reasoning — the link a user follows and
-  the host the importer scrapes are two facts that happen to coincide in production.
+- **The publication base URL, promoted to one family-neutral property**, with a **path template per
+  family**. ❗ Neither template may reuse `micronaut.http.services.contratosdegalicia.url`: that is the
+  *import client's* base URL and `server/docker-compose.yml` overrides it to the WireMock stub, so
+  every public link would render as `http://contratosdegalicia:8080/...` in dev, preview and e2e. The
+  link a user follows and the host the importer scrapes are two facts that happen to coincide in
+  production, and they get two properties.
+
+  **What they do not get is two base URLs**, which an earlier draft of this task proposed.
+  `ContratosMenoresPublicationConfiguration` already defaults to `https://www.contratosdegalicia.gal`
+  and composes `"%s/contrato-menor?N=%d"`, while FEAT-0015's source contract records the licitación
+  page as `%s/licitacion?N={id}` — same host, same shape, differing only in the path segment and the
+  id's type. Two properties that must always agree, with nothing keeping them in step, is the defect
+  the `YearSelection` promotion is made to avoid. So the host is promoted and each family keeps its
+  own template.
 - **The `licitacions` entry on the Órgano member read.** `OrganoFamilies` gains a property and
   `FamiliesResponse` a second `@Nullable` component, carrying the route segment and the
   `LicitacionsSummary` — years, `partial`, `updating`. `OrganoController` gains one injected use case
@@ -92,9 +100,18 @@ reads is the accented Galician, in `strings.ts`.
 - A `sort` naming another property, or a direction that is not `asc`/`desc` — including the longer
   spelling the framework would silently accept as ascending — is **400**. A `page` below 1 or a
   `size` outside 1–100 is **400**. An **unknown parameter** is 400. Parameterised over the table, on
-  the shipped `selection_is_refused` precedent. (SPEC-0008 #34)
+  the shipped `selection_is_refused` precedent. (*No criterion — SPEC-0008 has no analogue of
+  SPEC-0005 #28. See the README's candidate-criteria table.*)
 - A `cpv` or `state` naming something the year does not contain is **not** an error: an empty page
   with `totalItems` of **0**. Reachable from a stale shared link. (SPEC-0008 #33)
+- **`filtros` answers `{cpvs, states}` with each state carrying its `code` and its `label`**, and a
+  request for a year holding codes **101 and 102** returns **two** entries though both are labelled
+  *Histórico*. A state whose label the source never published is returned with a **null label** and
+  its code. ❗ This is the criterion the task's own bolded warning is about: without it a label-keyed
+  implementation passes everything else here. (SPEC-0008 #33)
+- **Filtering by `state=101` does not return a licitación in state 102**, asserted through the
+  endpoint rather than only at the repository — the wire is where the code-versus-label choice is
+  actually made. (SPEC-0008 #33)
 - An unknown Órgano id is **404** carrying the **existing**
   `urn:conxugal:problem-type:organo-not-found`, from both endpoints.
 - A row whose procedure has exactly one awardee carries `awardees.count` of 1 and a `sole` with its
@@ -104,9 +121,9 @@ reads is the accented Galician, in `strings.ts`.
 - A row's `amount.basis` is `BUDGET` for an unawarded procedure, `AWARDED` for an awarded one,
   `partial` true for a partly awarded one, and `UNSTATED` with a null `value` for one with neither —
   and `value` is **never** absent unless the basis is `UNSTATED`. (SPEC-0008 #35)
-- `sourceUrl` is absolute, addresses the publication at the official source, and is composed from
-  **this family's own property** — asserted by overriding that property alone and observing the link
-  change while the import client's base URL is untouched. (SPEC-0008 #28)
+- `sourceUrl` is absolute and addresses the publication at the official source. Overriding the
+  **shared base URL** moves **both** families' links; overriding the import client's URL moves
+  **neither**. Both directions asserted, since the second is the trap. (SPEC-0008 #28)
 - `GET /api/organo/{id}` carries a `licitacions` entry for an Órgano with visible licitacións, and
   **omits it entirely** for one without — with the `contratosMenores` entry unaffected in both
   directions, and an Órgano holding only licitacións returning a families map with one entry.

@@ -42,8 +42,17 @@ never be the reason a list is empty.
   label. The filter is applied by code, the facet is keyed by code, and the label is what is read
   rather than what is matched. The ordering picks up `COLLATE "galician"` from the column once
   [TASK-0002](TASK-0002-visible-browse-schema-and-indexes.md)'s migration lands.
-- **`LicitacionFilterOptions`**, holding the CPV and state lists together, and the two port methods
-  answering them.
+
+**It adds nothing to the port.** `VisibleLicitacionRepository` and the facet types are declared whole
+by [TASK-0001](TASK-0001-selection-value-types-and-read-ports.md); this task **implements** the two
+methods that answer them. An earlier draft split the declaration between the two tasks, which left the
+interface uncompilable at TASK-0001's own landing point and hid a cycle `depends_on:` cannot express.
+
+❗ **Two of the three columns these reads select are nullable**, and a fixture with fully populated
+vocabularies would never reveal it: `licitacion_state.label` is `TEXT` with no `NOT NULL`, and
+`cpv.description` likewise — V19 says of the latter that nothing populates it yet, which **these reads
+falsify** ([TASK-0008](TASK-0008-correct-the-two-v19-comments.md) carries that correction). A facet
+whose label or description is absent is answered under its **code**, and the ordering places it last.
 
 **Facets are a function of the Órgano and the year alone**, not of the other filter in effect. R23's
 preceding sentence uses *the year's selection* to mean the year's rows before narrowing —
@@ -82,6 +91,16 @@ years, several CPV codes and several states:
   and neither absorbs the other. This is the assertion that fails if the `GROUP BY` drops the code.
   (SPEC-0008 #33)
 - State labels differing only by an accent order as Galician, among their unaccented neighbours
-  rather than after `Z`. (SPEC-0008 #33)
-- The facets are unaffected by the **other** filter being set — asserted in both directions, so the
-  year-only reading is a test rather than a comment. (SPEC-0008 #33)
+  rather than after `Z`. *(A design choice of this feature's — **no criterion**: #33 governs which
+  values are offered, never their order.)*
+- A state whose **label** the source never published, and a CPV whose **description** it never
+  published, are both returned — under their codes, ordered last — rather than dropped or rendered as
+  blanks. ❗ The case a fully populated fixture never reaches. (SPEC-0008 #33)
+- The facets are unaffected by the **other** filter being set — asserted in both directions.
+
+  > ⚠️ **This freezes a reading R23 does not settle.** "*Only codes and states the year's selection
+  > actually contains*" is ambiguous between *the year's rows before narrowing* and *as currently
+  > narrowed*; the feature argues the first from R23's preceding sentence, and this test makes it
+  > binding. **The clean fix is to amend R23** to say which it means, rather than leaving a later
+  > reader to find a test asserting the opposite of their reading. Raised in the README's
+  > candidate-criteria section.

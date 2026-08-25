@@ -81,13 +81,13 @@ the contratos menores section or its port.
   indistinguishable to a reader.
   ([SPEC-0008](../../specs/SPEC-0008-import-browse-licitacions.md) #36, #37)
 - An Órgano with visible licitacións and **no** `licitacion_import_state` row reads **`partial`**,
-  which is what an Órgano marked before this family existed is. (SPEC-0008 #5 read half, #37)
+  which is what an Órgano marked before this family existed is. (SPEC-0008 #37)
 - One at `INCOMPLETE` reads `partial`; one at `COMPLETE` does not. Its **contratos menores** state is
   not read and does not affect either flag — asserted with the two families in opposite states, which
-  is R4's requirement that neither is read as the other's. (SPEC-0008 #5, #37)
+  is R4's requirement that neither is read as the other's. (SPEC-0008 #5 read half — *neither family's completion is read as the other's*; #37)
 - An Órgano that is **unmarked**, and one that is **inactive**, each read `updating` false while
   keeping their years and their section. An Órgano unmarked mid-import reads **both** `partial` and
-  not-`updating`. (SPEC-0008 #6, #37)
+  not-`updating`. (SPEC-0008 #6 display half, #37)
 - `LicitacionsSection` **refuses** an empty year list, so *the section exists* and *it offers years*
   cannot disagree. (SPEC-0008 #32)
 - The years answered are newest first, and the **first** is the year the section opens on.

@@ -90,8 +90,31 @@ expensive to catch later.
 
 | # | Where | What it says | Why it is now false |
 | --- | --- | --- | --- |
-| 1 | `V19`, on `licitacion.publication_id` | the column "is matched on and **never ordered**, summed or incremented — so text gives up nothing here" | SPEC-0008 #30 makes it the tie-break of **every** ordering this feature offers |
+| 1 | `V19`, on `licitacion.publication_id` | the column "is matched on and **never ordered**, summed or incremented" | SPEC-0008 #30 makes it the tie-break of **every** ordering this feature offers |
 | 2 | `V19`, on `licitacion_award.awardee_name` | "an award no route resolves still names somebody, and **that is what a reader is shown**" | SPEC-0008 says the opposite in three places |
+
+> ❗ **Neither correction edits V19**, and this is not a stylistic choice. `V17`'s own header
+> refuses exactly that, in shipped SQL: *"That comment is left as written: its checksum is recorded
+> in every `flyway_schema_history` that has run it, and **editing an applied migration to correct a
+> count fails validation on every such database**."* FEAT-0014's TASK-0001 re-argues it and adds the
+> reason no test catches the mistake — *a Testcontainer always migrates from empty and so records
+> the checksum it then validates*, so CI stays green while every developer's database breaks at
+> boot.
+>
+> An earlier draft of this feature proposed editing V19 and cited FEAT-0015's TASK-0019 as
+> precedent. That precedent does not reach the case: TASK-0019 corrected a **README**, which carries
+> no checksum. So each correction lands where it can be read **and** changed:
+>
+> - **correction 1 goes in the new migration's header** — the one
+>   [TASK-0002](TASK-0002-visible-browse-schema-and-indexes.md) is already writing, and whose index
+>   is literally the fact that falsifies *never ordered*. That is V17's own shape: a later migration
+>   records what an earlier comment can no longer say;
+> - **correction 2 goes on `Award.java`'s javadoc**, which today says nothing about `awardeeName`
+>   while already stating the surrounding rules. It is a Java file, so it can simply be corrected.
+>
+> Editing V19 anyway remains possible — commit `6a6b129` did it for V9 and paid openly, recording
+> that "a database that already applied V9 needs a `flyway repair`" — so this is a decision rather
+> than a prohibition. It is taken the cheap way because nothing here needs the expensive one.
 
 **Correction 2 is the load-bearing one.** R25 states that where an award's party could not be
 resolved "the licitación shows an award and **names nobody**"; #20 repeats it; and #24 is
@@ -218,8 +241,23 @@ FEAT-0013's code:
 
 **Nothing in `features/contratos-menores`, `rest/contratosmenores` or `domain/contrato` is edited** —
 save the one deliberate promotion named under *Reused, promoted, duplicated*, which is a package move
-rather than a behaviour change. A task that finds itself changing a contratos menores file has
-misread the design, and a reviewer should treat that as the signal.
+rather than a behaviour change. A task that finds itself changing a contratos menores **feature** file
+has misread the design, and a reviewer should treat that as the signal.
+
+**Two bounded, expected edits fall outside that rule, and both would otherwise stop an implementer
+who took it literally:**
+
+- **`licitacions` is currently the codebase's stand-in for *a family this build does not know*.**
+  `ui/src/features/organo/families.test.ts` asserts `familiesHeld({ licitacions: summary })` is `[]`;
+  `OrganoPage.test.tsx` asserts no tab bar for such a member; `app/organoSection.test.tsx` asserts
+  `/organo/o-1/licitacions` renders the not-found page; and `organoHarness.tsx` and
+  `FamilyTabs.stories.tsx` hard-code a fake `licitacions` family. **All of them invert the moment the
+  `FAMILIES` entry lands**, which is correct and is [TASK-0009](TASK-0009-licitacions-section-slice-and-route.md)'s
+  to do. Those tests need a *different* unknown key to keep testing what they were written to test.
+- **`JdbcContratoMenorVisibleOrganosIntegrationTest` injects `OrganosWithVisibleContracts`
+  singularly.** A second bean makes that a `NonUniqueBeanException`, so
+  [TASK-0006](TASK-0006-licitacions-in-the-visible-set.md) must qualify the injection point. The
+  production path is unaffected — `ListVisibleOrganos` already injects the `List`.
 
 ### Visible is one predicate, and it is shorter than SPEC-0005's
 
@@ -261,11 +299,19 @@ told, in one sentence, what the system does and does not show them."
 > procedure with no award, one with an award naming nobody, and one with neither, and asserts all
 > three appear.
 
-**The same predicate appears in six statements** — the page, the count, the year facets, the CPV
-facets, the state facets and the visible-Órganos semi-join — and it is written once and shared
-textually, on FEAT-0011's rule and for its reason: a conjunct omitted from the `countQuery` alone
-produces a total that disagrees with the pages beneath it, which ADR-0022 names as *the* defect an
-explicit query produces.
+**The predicate is shared textually by the page, the count and the two per-year facet reads**, on
+FEAT-0011's rule and for its reason: a conjunct omitted from the `countQuery` alone produces a total
+that disagrees with the pages beneath it, which ADR-0022 names as *the* defect an explicit query
+produces.
+
+**Two reads cannot share it, and both are called out rather than assumed.** The **year facets** have
+no year to test, so they carry `publication_year IS NOT NULL` in its place; and the
+**visible-Órganos semi-join** has neither a year nor a selection, so it spells the date test itself.
+`JdbcContratoMenorRepository`'s javadoc records the same asymmetry for its own semi-join, which
+likewise does not share `VISIBLE_WHERE`. So it is four statements sharing one string and two
+spelling a variant — and the variants are where a conjunct goes missing unnoticed, which is why they
+are named here and tested in [TASK-0004](TASK-0004-year-cpv-and-state-facets.md) and
+[TASK-0006](TASK-0006-licitacions-in-the-visible-set.md) rather than left to inherit.
 
 ### The amount a row states is an aggregate, and it is computed on read
 
@@ -329,11 +375,33 @@ Three details a task author must get exactly right, each measured rather than re
   published `Importe` is a real award that states no figure — the column is nullable, and 0 of 119
   measured rows carried a VAT marker — and treating the row's existence as the test renders "awarded,
   and nothing";
-- **`partial` counts stored, non-withdrawn lotes, never `licitacion.lote_count`.** That column is the
-  source's own count and V19's comment carries the counterexample: on procedure 822054 it said `2`
-  while the lotes table was empty and the award table named both. A lote's existence comes from the
-  award table, so the stored count is the truthful one. `partial` also implies `AWARDED` — a procedure
-  with lotes and nothing awarded at all states its budget, and is not "partly" anything;
+- **`partial` needs both the stored lotes and `licitacion.lote_count`, and an earlier draft of this
+  section got that exactly backwards.** It said the marker counts stored lotes and *never*
+  `lote_count`, on the grounds that "a lote's existence comes from the award table, so the stored
+  count is the truthful one". The second half is true and the conclusion does not follow from it.
+
+  FEAT-0015's TASK-0009 **synthesises a lote row from the award table**: *"A procedure whose
+  `Relación de lotes` is empty but whose award table names lotes 1 and 2 yields two lotes."* So a
+  lote gets a stored row only if it is **awarded**, or if `Relación de lotes` lists it. Where that
+  table is empty — the case procedure 822054 exists to show is reachable — stored lotes and awarded
+  lotes are **the same set**, and `stored > awarded` can never be true. A genuinely part-awarded
+  procedure would then state its awarded sum with **no partial marker at all**, which fails R24
+  silently and in the direction that overstates how much has been awarded.
+
+  `lote_count` is the only signal that an undecided lote exists when the lotes table is thin. So the
+  denominator is **`GREATEST(stored non-withdrawn lotes, lote_count)`** — the stored count where the
+  source listed its lotes, `lote_count` where it did not. On 822054 the two agree at 2 and the row is
+  correctly not partial.
+
+  **The residual is stated because it is real**: `lote_count` is itself published and can be absent
+  or wrong, so the marker is best-effort and biased toward marking rather than not — an unmarked row
+  claims completeness, and a wrongly marked one only says a lote may be outstanding. **How often the
+  lotes table is thin is unmeasured**: 822054 is a sample of one, and FEAT-0015's contract measured
+  lote *prevalence*, not lote-table completeness. If the marker turns out to fire on most lotted
+  procedures, that measurement is the thing to take before trusting either count.
+
+  `partial` also implies `AWARDED` — a procedure with lotes and nothing awarded at all states its
+  budget, and is not "partly" anything;
 - **a procedure-wide award on a procedure that has lotes** — `lote_id IS NULL` where lotes exist —
   counts toward the sum and **not** toward the awarded-lote count. That is why the two are different
   expressions over one table rather than one.
@@ -447,7 +515,9 @@ with the enum — `JdbcContratoMenorRepository`'s `ORDERABLE_COLUMNS` and `order
 by two enums, and nothing else can reach the statement.
 
 It is recorded as a note on ADR-0022 rather than only here, because two other specs cite that record
-and a reader of it should find both readings.
+and a reader of it should find both readings. **[TASK-0001](TASK-0001-selection-value-types-and-read-ports.md)
+writes that note**, with the departure it describes — an earlier draft left the sentence standing with
+no task behind it, which is how a stated deliverable becomes nobody's.
 
 ### Indexes: one new index, and an honest *no* for the amount orderings
 
@@ -506,10 +576,18 @@ import is by R31's own description "the longest sustained stream of outbound req
 produces" — a deploy landing during one would close the service for as long as that import takes.
 Failing fast is the better of the two bad outcomes.
 
-`licitacion_organo_id_idx` is **kept**. V16 dropped its counterpart because two partial indexes plus a
-whole `(organo_id)` covered everything; here the new index is partial, so it cannot answer a read of
-an Órgano's licitacións *whole*. Nothing needs one today, and at this table's size the write cost of
-keeping it is nil — so keeping it is the cheaper of the two mistakes.
+`licitacion_organo_id_idx` is **kept**, and an earlier draft of this paragraph described V16's
+history backwards. V16 **created** `contrato_menor_organo_id_idx` — a *whole* index on `organo_id`,
+deliberately, because the import's completion count reads an Órgano's contracts including the
+anomalies the partial indexes exclude — and **dropped** the older
+`contrato_menor_organo_id_publication_date_idx`, whose date column served nobody. So the precedent is
+*keep a whole index when something counts the table whole*, not *drop it when the partial ones
+arrive*.
+
+Nothing counts licitacións by Órgano today — FEAT-0015's walk resumes by cursor offset and matches by
+`publication_id` — so this family has no read that needs one. It is kept anyway because at this
+table's size the write cost is nil, and because dropping an index nothing has yet asked for is the
+more expensive mistake of the two.
 
 ### The facets: only what the selection contains, and the state by its code
 
@@ -529,6 +607,16 @@ for its reason: choosing one can then never be the reason a list is empty."
   constraint on the label. The filter is applied by code, the facet is keyed by code, and the label is
   what is read rather than what is matched. R23 says the states offered "are the source's own", so
   nothing here fixes a vocabulary.
+
+  ❗ **And the label may be absent.** `licitacion_state.label` is `TEXT` with no `NOT NULL`, and
+  `LicitacionState`'s own javadoc says null means the source published nothing there — so *"the state
+  is never absent because `state_id` is `NOT NULL`"*, which an earlier draft of the row table
+  asserted, is a non-sequitur: a `NOT NULL` foreign key guarantees a **row**, not a **label**. Three
+  things follow, none of which a fixture written with labelled states would reveal: the row type must
+  accept a null label, the published schema must not mark it required, and this ordering needs a
+  stated `NULLS` position. **A state with no label is offered under its code** — which is the value
+  the filter uses anyway — and sorts last. The same holds for `cpv.description`, which V19 leaves
+  nullable on the same reasoning.
 
 **Facets are a function of the Órgano and the year alone**, not of the other filter in effect. R23's
 preceding sentence uses *the year's selection* to mean the year's rows before narrowing — "narrowing,
@@ -673,7 +761,7 @@ that was valid this morning an error this afternoon.
 | `publicationId` | the source's own identifier, as published — text |
 | `publicationDate` | **never absent**: R25 withholds a licitación without one |
 | `obxecto` | as published; may be absent |
-| `state` | the source's own `code` **and** `label` — never absent, since `licitacion.state_id` is `NOT NULL` |
+| `state` | the source's own `code`, **never absent** since `licitacion.state_id` is `NOT NULL`, and its `label`, **which may be** — see below |
 | `amount` | the figure R24 decides, its `basis` (`AWARDED`, `BUDGET` or `UNSTATED`) and its `partial` marker. The **value** may be absent, when and only when the basis is `UNSTATED` |
 | `awardees` | a `count`, and `sole` present exactly when the count is 1 — that operador's `id`, its R4-selected `name` and its **nullable** `fiscalId` |
 | `sourceUrl` | absolute link to the publication at the official source |
@@ -682,13 +770,22 @@ that was valid this morning an error this afternoon.
   open.
 - **No `expediente`, no `estimatedValue`, no types and no `loteCount`.** R21's page holds them, and a
   row that carried them would be a detail view drawn as a table.
-- **`sourceUrl` is composed on the server**, from `publicationId`, through **a configuration property
-  of this family's own**. ❗ It must not reuse `micronaut.http.services.contratosdegalicia.url`: that
-  is the *import client's* base URL and `server/docker-compose.yml` overrides it to the WireMock stub,
-  so every public link would render as `http://contratosdegalicia:8080/...` in dev, preview and e2e.
-  FEAT-0011 met this and solved it with a separate property; a second family meets it fresh and gets
-  its own — the two families share one publication-id space, but the link is composed from a property
-  rather than derived from theirs.
+- **`sourceUrl` is composed on the server**, from `publicationId`. ❗ It must not reuse
+  `micronaut.http.services.contratosdegalicia.url`: that is the *import client's* base URL and
+  `server/docker-compose.yml` overrides it to the WireMock stub, so every public link would render as
+  `http://contratosdegalicia:8080/...` in dev, preview and e2e. The link a user follows and the host
+  the importer scrapes are two facts that happen to coincide in production, and they get two
+  properties.
+
+  **What they do not get is two *base URLs*.** An earlier draft gave this family a configuration of
+  its own outright. But `ContratosMenoresPublicationConfiguration` already defaults to
+  `https://www.contratosdegalicia.gal` and composes `"%s/contrato-menor?N=%d"`, while FEAT-0015's
+  source contract records the licitación page as `%s/licitacion?N={id}` — **same host, same shape,
+  differing only in the path segment and the id's type**. Shipping two properties that must always
+  agree, with nothing keeping them in step, is the defect the `YearSelection` promotion two sections
+  above is made to avoid. So the **base URL is promoted to one family-neutral property** and each
+  family keeps its own path template. The ❗ above is unchanged: it is still the trap, and it is why
+  neither template may reach for the import client's URL.
 - **`awardees.sole.id` ships now**, which diverges from `ContratoMenorResponse`'s deliberate omission
   of the operador identity on the grounds that "nothing consumes one until that feature builds the
   operador route". The reason to diverge is concrete: R20 says an **unidentified consortium** "offers
@@ -755,21 +852,24 @@ nothing can be rendered until there is something to read.
    two optional narrowings), `LicitacionSortKey` with its four constant `ORDER BY` clauses,
    `AmountBasis` and `StatedAmount` with its invariants, `Awardees` with the *sole present exactly at
    count 1* invariant, `VisibleLicitacion`, and the `VisibleLicitacionRepository` port. **Promotes
-   `YearSelection`** and its converter to a shared domain package, which is the one edit this feature
-   makes to a shipped contratos menores file. *(SPEC-0008 #24 no-per-row-name half, #29, #35)*
+   `YearSelection`** and its converter to a shared, `@NullMarked` domain package — the one edit this
+   feature makes to a shipped contratos menores file — and **writes the ADR-0022 note** the ordering
+   departure owes. The port declares **all three** of its methods here, with their return types, so
+   nothing downstream has to add one back.
+   *(SPEC-0008 #20 unresolved-party half, #24 no-per-row-name half, #29, #35)*
 2. **The visible-browse schema** *(backend)*: `V22` — the `publication_year` stored generated column,
    the partial browse index, `licitacion_state.label COLLATE "galician"`, and the `lock_timeout`. With
    an `EXPLAIN`-asserting integration test on `ContratoMenorVisibleBrowseSchemaIntegrationTest`'s
    precedent, proving both date orderings take the index with **no sort node** and that the count and
    the year facets are index-only. It also proves the honest negative: the amount orderings **do**
-   carry a sort node, so the design's claim is recorded as a test rather than as prose.
-   *(SPEC-0008 #30, #43)*
-3. **The paged, ordered, counted read** *(backend)*: the six statements built around one predicate —
-   the page with its two laterals, the count that joins nothing, and the visible-Órganos semi-join.
-   Seeds a procedure with no award, one whose award names nobody, one with several lotes to one
-   operador, one with lotes to several, one partly awarded, and one withdrawn at each of the four
-   levels. *Depends on tasks 1 and 2, and on FEAT-0015's TASK-0014 for rows to read.*
-   *(SPEC-0008 #10, #20 stored half, #28, #29, #30, #34, #35, #36 shown half)*
+   carry a sort node, so the design's claim is recorded as a test rather than as prose. It also
+   carries **correction 1**, in its own header. *(SPEC-0008 #18 read half, #30)*
+3. **The paged, ordered, counted read** *(backend)*: the page with its two laterals and the count that
+   joins nothing, both built from one predicate string. Seeds a procedure with no award, one whose
+   award names nobody, one with several lotes to one operador, one with lotes to several, one partly
+   awarded, and one withdrawn at each of the four levels.
+   *Depends on tasks 1 and 2, and on FEAT-0015's TASK-0014 for rows to read.*
+   *(SPEC-0008 #10, #18 read half, #20 visible half, #28, #29 row half, #30, #34, #35, #36 shown half)*
 4. **The facets** *(backend)*: the year, CPV and state facet reads, each scoped to what the selection
    contains, the state grouped on code **and** label, and the year facets carrying their own
    `IS NOT NULL`. *Depends on tasks 2 and 3.* *(SPEC-0008 #32, #33)*
@@ -777,42 +877,54 @@ nothing can be rendered until there is something to read.
    `DescribeLicitacionsSection` — the last deriving `partial` from the import state's three-state fact
    and `updating` from the catalogue row, and returning nothing at all for an Órgano with no visible
    licitación. *Depends on tasks 3 and 4.* *(SPEC-0008 #32, #37)*
-6. **This family in the visible set** *(backend)*: the second `OrganosWithVisibleContracts` bean, so
-   an Órgano publishing licitacións and no contratos menores becomes reachable on the strength of this
-   family alone. *Depends on task 3.* *(SPEC-0008 #26)*
+6. **This family in the visible set** *(backend)*: the second `OrganosWithVisibleContracts` bean —
+   with its own date test, since it has no year to scope by — so an Órgano publishing licitacións and
+   no contratos menores becomes reachable on the strength of this family alone. **Qualifies the
+   singular injection point** in `JdbcContratoMenorVisibleOrganosIntegrationTest`, which a second bean
+   would otherwise break. *Depends on task 2.* *(SPEC-0008 #26 reachability half)*
 7. **The two endpoints** *(backend)*: authored in `openapi.yaml` first — the paged list, the filter
    options, the `licitacions` property on `OrganoFamilies`, and the `LicitacionsFamily`,
    `LicitacionsSummary`, `LicitacionsPage` and `Licitacion` schemas — plus the controllers, the
-   parameter refusals and this family's publication-URL property. *Depends on tasks 5 and 6.*
-   *(SPEC-0008 #2, #27, #28, #45)*
-8. **The two comment corrections** *(backend)*: V19's *never ordered* on `publication_id`, and
-   `awardee_name`'s claim about display. Documentation-only against shipped SQL, landing with the
-   reads that falsify them. *Depends on tasks 1 and 3.*
+   parameter refusals, and the **promotion of the publication base URL** to one family-neutral
+   property with a path template per family. *Depends on task 5.*
+   *(SPEC-0008 #2, #26 viewable half, #27, #28, #33 wire half, #45)*
+8. **The two corrections** *(backend)*: correction 2, on `Award.java`'s javadoc — correction 1 rides
+   in task 2's migration header, because **neither may edit V19**, whose checksum is recorded in every
+   database that has applied it. *Depends on tasks 2 and 3.* *(SPEC-0008 #24)*
 9. **The section slice and its route** *(frontend)*: `features/licitacions`, its child route in
    `app/router.tsx`, its `FAMILIES` entry, its `strings` namespace, and the narrowing of the outlet
-   context to the schema task 7 declares. *Depends on task 7 and on FEAT-0013's TASK-0002.*
-   *(SPEC-0008 #27)*
-10. **The year chooser and the section's state** *(frontend)*: only years the Órgano has visible
-    licitacións in, opening on the most recent, offering nothing but years; and R26's *partial* and
-    *no longer updated* statements. *Depends on task 9.* *(SPEC-0008 #32, #37)*
-11. **The licitación row** *(frontend)*: the state, the amount with its basis and partial markers and
-    its VAT label, the awardee **or the count**, the link to the source, and **no name on an award
-    that resolved to nobody**. *Depends on tasks 9 and 10.*
-    *(SPEC-0008 #8, #20 display half, #28, #29 names-or-counts half, #35, #36 display half, #44)*
+   context. **Inverts the four shipped tests that use `licitacions` as their unknown-family
+   stand-in.** *Depends on FEAT-0013's TASK-0002.* *(SPEC-0008 #26 viewable half, #27)*
+10. **The year chooser, the selection module and the section's state** *(frontend)*: the licitacións
+    `selection.ts` and `selectionUrl.ts` — the parsers, the *any write to the selection drops the
+    page* rule, and the respelling correction — land **here**, with the first control that writes
+    through them, on FEAT-0011's precedent; then the chooser offering only years the Órgano has
+    visible licitacións in, opening on the most recent and offering nothing but years; and R26's
+    *partial* and *no longer updated* statements. *Depends on tasks 7 and 9.*
+    *(SPEC-0008 #6 display half, #32, #34 re-page half, #37)*
+11. **The licitación row, and the read behind it** *(frontend)*: the paged read and its loading and
+    error states, then the state, the amount with its basis and partial markers and its VAT label, the
+    awardee **or the count**, the link to the source, and **no name on an award that resolved to
+    nobody**. Owns its WireMock mapping, or the section renders its error state from the moment the
+    route exists. *Depends on tasks 9 and 10.*
+    *(SPEC-0008 #8 budget half, #20 display half, #26 viewable half, #28, #29 row half, #35, #36
+    display half, and R33's display rule, which has no criterion)*
 12. **The CPV and state filters** *(frontend)*: offering only what the year holds, applied to the
     whole selection, returning the reader to the first page. *Depends on task 11.*
     *(SPEC-0008 #33, #34)*
-13. **Sorting and paging over the selection** *(frontend)*: the four orderings, `shared/ui/Pagination`
-    taken unchanged, all of it in the URL query string in the API's own spelling, and the single rule
-    that any change to the selection drops the page. *Depends on tasks 11 and 12.*
-    *(SPEC-0008 #28, #30, #34)*
-14. **The R32 measurement** *(devops)*: **extends** `scripts/measure-read-latency.sh` and its
-    recording place rather than adding a second harness, and is taken on **the Órgano holding the most
-    licitacións** — R32 is explicit that *"the largest Órgano" no longer denotes* now two families
-    exist, and a measurement on the wrong one would describe neither family's worst case. It adds the
-    read with no contratos menores counterpart: **a year's selection narrowed by CPV**. R32's other
-    new read, a licitación's page with its lotes and bidders, is named as the next feature's.
-    *Depends on tasks 7 and 11.* *(SPEC-0008 #43)*
+13. **Sorting and paging over the selection** *(frontend)*: the four orderings as one control, and
+    `shared/ui/Pagination` wired to the list **unchanged**, both writing through task 10's selection
+    module. *Depends on tasks 11 and 12.* *(SPEC-0008 #28, #30 display half, #34, #35 sort half)*
+14. **The R32 measurement** *(devops)*: the measurement of the reads R32 names, taken on **the Órgano
+    holding the most licitacións** — R32 is explicit that *"the largest Órgano" no longer denotes* now
+    two families exist, and a measurement on the wrong one would describe neither family's worst case.
+    It adds the read with no contratos menores counterpart: **a year's selection narrowed by CPV**.
+
+    ❗ **The harness it says it extends does not exist yet.** `scripts/measure-read-latency.sh` and
+    `docs/measurements/` are FEAT-0011's TASK-0012, which is `status: todo`. So this task **builds the
+    shared harness if that one has not landed, and extends it if it has** — named here, beside the
+    FEAT-0015 dependency box, rather than left as a conditional inside the task.
+    *Depends on tasks 7 and 11.* *(SPEC-0008 #43, three of its four reads)*
 
 **Criteria this feature deliberately leaves incomplete**, so that no task claims what it cannot prove:
 
@@ -831,22 +943,49 @@ nothing can be rendered until there is something to read.
 - **#43 is met by the measurement existing and being recorded**, not by a number: R32 fixes no budget
   and one is set only by revising it. Task 14 delivers the method and the recording place; taking the
   measurement waits on production holding a loaded Órgano.
+
+  **And #43 is deliberately under-served, which is a consequence of the R21 deferral rather than a
+  gap.** It names four reads; task 14 drives three. The fourth — *a single licitación's page with its
+  lotes and bidders* — has nothing to measure until R21's page exists, so it is recorded as an
+  outstanding row in the measurement file rather than quietly dropped from the criterion.
 - **Every import criterion** — #1, #3, #4, #7, #9, #11–#17, #19, #38–#42, #46 — belongs to FEAT-0015,
   its incremental successor, or the curation feature. This feature writes nothing.
 
-  **Five criteria are split rather than owned**, and they are named individually so that no half falls
-  between two features the way SPEC-0005 #7 once did — cited by both and claimed by neither:
+  **Eight criteria are split rather than owned**, and they are named individually so that no half
+  falls between two features the way SPEC-0005 #7 once did — cited by both and claimed by neither.
+  **This table is the complete list**; a criterion claimed in part by a task here and in part
+  elsewhere and *not* in this table is a defect in the table:
 
-  | Criterion | The half FEAT-0015 or the curation feature owns | The half claimed here |
+  | Criterion | The half owned elsewhere | The half claimed here |
   | --- | --- | --- |
-  | **#5** | the mode a run takes for each family | an Órgano with no licitacións state row reads **partial**, and neither family's state is read as the other's (task 5) |
-  | **#6** | unmarking retains the licitacións and retrieves nothing further | the section **says it is no longer being updated** (task 10) |
-  | **#18** | the administrator's removal act, and the restore | a removed licitación **appears in no list and no count** (tasks 2, 3) |
-  | **#20** | such a licitación is **stored** | it **stays visible** and **names nobody** (tasks 3, 11) |
-  | **#36** | an undecided procedure is imported and stored | it is **shown**, and an undated one is shown to no reader (tasks 3, 11) |
+  | **#5** | the mode a run takes for each family, per Órgano (FEAT-0015) | **neither family's completion is read as the other's**, on the section read (task 5) |
+  | **#6** | unmarking retains the licitacións and retrieves nothing further (FEAT-0015) | the section **says it is no longer being updated** (task 10) |
+  | **#18** | the administrator's removal act, and the restore (curation) | a removed licitación **appears in no list and no count** (tasks 2, 3) |
+  | **#20** | such a licitación is **stored** (FEAT-0015) | it **stays visible** and **names nobody** (tasks 3, 11) |
+  | **#24** | the awardee's history row and its amount (SPEC-0006) | this family holds **no per-row name at all** (tasks 3, 11) |
+  | **#26** | reachable from the tree and by name search (task 6 — the visible set) | *and its licitacións are viewable* (tasks 7, 9–11) |
+  | **#29** | the page reached from a multi-awardee row **names them all** (the R21 feature) | a row **names one, or states how many** (tasks 3, 11) |
+  | **#36** | an undecided procedure is imported and stored (FEAT-0015); the administrator's view of undated ones (**unowned**) | it is **shown**, and an undated one is shown to no reader (tasks 3, 11) |
 
-  **#44 is split the same way**: FEAT-0015 owns the storage half — trimmed text, numeric amounts,
-  interpreted dates, the state as published — and task 11 owns only *shown exactly as stored*.
+  **#44 is not split, and an earlier draft said it was.** It is wholly a storage criterion — trimmed
+  text, numeric amounts, interpreted dates, the state as published — and SPEC-0008 has **no display
+  analogue** of [SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) #40 (*"every
+  value **displayed** exactly as stored"*). Task 11 states the display rule from **R33** directly and
+  cites no criterion for it. Appending one to SPEC-0008 is the clean fix, and that spec's own note
+  says criteria are appended rather than inserted — it is raised below rather than borrowed here.
+
+**Three rules this feature holds have no criterion to claim**, and they are named so that a reader
+does not mistake a missing citation for a missing rule. Each is a **candidate criterion for
+SPEC-0008**, appended in that spec's own manner rather than invented here:
+
+| Rule | Cited in an earlier draft as | Why that was wrong |
+| --- | --- | --- |
+| a `sort` naming another property, or another direction, is **refused** | #34 | #34 is about narrowing, sorting and counting applying to the whole selection. SPEC-0008 has no analogue of SPEC-0005 #28 |
+| values are **displayed** exactly as stored | #44 | #44 is wholly storage; see above |
+| facet lists are ordered legibly (Galician labels, CPV by code) | #33 | #33 governs **which** values are offered, never their order. This is a design choice of this feature's |
+
+All three are stated in the design and tested by their tasks; what they lack is a spec number, which
+is a gap in SPEC-0008 rather than in the tasks.
 
 ## Edge cases
 

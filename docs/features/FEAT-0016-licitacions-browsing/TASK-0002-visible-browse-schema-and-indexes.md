@@ -3,7 +3,7 @@ feat: FEAT-0016
 domain: backend
 adrs: [0008]
 status: todo
-depends_on: []
+depends_on: [TASK-0001]
 ---
 
 # The visible-browse schema: a year column, one index, and the collation V19 deferred
@@ -54,12 +54,34 @@ share one sequence — settled at merge time rather than fixed here.
   instantaneous and the risk is **what it might queue behind**. Flyway runs at boot, and this
   family's initial import is the longest sustained outbound stream the system produces (R31) — a
   deploy landing during one would close the service for as long as that import takes.
+- **Correction 1**, in this migration's header: `licitacion.publication_id` **is ordered now**, by
+  every read a reader can reach, where V19's own comment says it never is — and this index is the fact
+  that makes it so. It records the reading taken (lexicographic, not numeric, among identifiers of
+  differing digit count) and its bound.
+
+  ❗ **It goes here because V19 may not be edited.** Its checksum is recorded in every
+  `flyway_schema_history` that has applied it, and V17's header refuses the same edit for the same
+  reason. This is V17's own shape: a later migration records what an earlier comment can no longer
+  say. [TASK-0008](TASK-0008-correct-the-two-v19-comments.md) carries the other correction and states
+  the whole argument.
+
+  ❗ **Do not delete V19's middle clause along with the false one.** The comment reads "*never ordered,
+  summed or incremented -- **the walk resumes by the order the listing endpoint applies at the
+  source** -- so text gives up nothing here*". The emphasised clause is the comment's actual reason
+  and is **still true**; only *never ordered* has been overtaken. Nothing in V19 changes, but the
+  header written here must not imply the whole comment is wrong.
 
 **Out of scope:** any statement that uses the index — [TASK-0003](TASK-0003-paged-ordered-counted-reads.md)
-and TASK-0004 own those — and **dropping `licitacion_organo_id_idx`**, which is kept: V16 could drop
-its counterpart because two partial indexes plus a whole `(organo_id)` covered everything, while this
-index is partial and cannot answer a read of an Órgano's licitacións *whole*. Nothing needs one today
-and the write cost at this size is nil, so keeping it is the cheaper mistake.
+and TASK-0004 own those — and **dropping `licitacion_organo_id_idx`**, which is kept.
+
+**V16's history reads the other way round from what an earlier draft of this task said.** It
+**created** `contrato_menor_organo_id_idx` — a *whole* index on `organo_id`, deliberately, because the
+import's completion count reads an Órgano's contracts including the anomalies the partial indexes
+exclude — and **dropped** the older `contrato_menor_organo_id_publication_date_idx`, whose date column
+served nobody. So the precedent is *keep a whole index when something counts the table whole*, not
+*drop it once the partial ones arrive*. Nothing counts licitacións by Órgano today, so this family has
+no such read; the index is kept because at this size the write cost is nil and dropping one nothing
+has asked for is the more expensive mistake.
 
 **No column for the amount, and none for the awardee count.** Both are aggregates over other tables,
 so neither can be a generated column at all, and a trigger-maintained one would have to be kept in

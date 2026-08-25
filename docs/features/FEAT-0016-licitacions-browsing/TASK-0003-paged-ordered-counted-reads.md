@@ -67,10 +67,20 @@ upserts an aggregate, so that reason does not carry.
   - the **amount** — `COALESCE(sum of non-withdrawn award amounts, base_budget)` — with basis
     `AWARDED` when **at least one award carries an amount**, `BUDGET` when none does and a budget is
     published, and `UNSTATED` when neither;
-  - **`partial`** — true when the basis is `AWARDED`, the procedure has stored non-withdrawn lotes,
-    and **fewer of them are awarded than it holds**. ❗ Computed from stored lotes, **never from
-    `licitacion.lote_count`**, which is the source's own count: on 822054 it said `2` while the lotes
-    table was empty and the award table named both;
+  - **`partial`** — true when the basis is `AWARDED` and **fewer lotes are awarded than the procedure
+    has**, where *has* is `GREATEST(stored non-withdrawn lotes, licitacion.lote_count)`.
+
+    ❗ **Both counts are needed, and an earlier draft of this feature used only the first.** FEAT-0015
+    **synthesises a lote row from the award table** — its TASK-0009: *"A procedure whose `Relación de
+    lotes` is empty but whose award table names lotes 1 and 2 yields two lotes."* So where that table
+    is empty, stored lotes and awarded lotes are the **same set** and `stored > awarded` can never be
+    true — a genuinely part-awarded procedure would state its awarded sum with no marker, failing R24
+    silently and in the direction that overstates completeness. `lote_count` is the only signal an
+    undecided lote exists when the lotes table is thin.
+
+    It is best-effort and **biased toward marking**: `lote_count` is itself published and may be
+    absent or wrong, and an unmarked row claims completeness while a wrongly marked one only says a
+    lote may be outstanding. How often the lotes table is thin is **unmeasured**;
   - the **awardees** — the count of distinct non-null awardee operador ids, and that operador when
     the count is 1. The null-exclusion is R20 word for word, and a procedure whose only award resolved
     to nobody states **zero**.
@@ -102,8 +112,15 @@ Integration-tested against PostgreSQL (Testcontainers), seeding one Órgano-year
   (SPEC-0008 #29)
 - one **partly awarded** — three lotes, two awarded — stating the sum of the two, `partial` true;
   (SPEC-0008 #35)
-- one whose `lote_count` says `2` while **no** lote row exists and two procedure-wide awards do —
-  **not** marked partial, proving the marker reads stored lotes; (SPEC-0008 #35)
+- one whose `Relación de lotes` was empty, so it holds **two** lote rows synthesised from its award
+  table, both awarded, with `lote_count` of `2` — **not** partial, since nothing is outstanding. This
+  is procedure 822054's actual shape; (SPEC-0008 #35)
+- one whose `Relación de lotes` was empty, holding **two** synthesised lote rows both awarded, but
+  whose `lote_count` says **3** — **partial**, because the third lote exists at the source and has no
+  award row to be synthesised from. ❗ This is the case the `GREATEST(stored, lote_count)` denominator
+  exists for, and the one a stored-lotes-only rule marks wrongly as complete; (SPEC-0008 #35)
+- one with a **null `lote_count`** and two stored lotes, one awarded — **partial** on the stored count
+  alone; (SPEC-0008 #35)
 - one **withdrawn** procedure, one with a **withdrawn award**, one with a **withdrawn lote** and one
   with a **withdrawn CPV** — absent, or excluded from the aggregate, in **every** statement including
   the count; (SPEC-0008 #18 read half)
@@ -128,6 +145,14 @@ And:
   though both are labelled *Histórico*. (SPEC-0008 #33)
 - A page beyond the last is **empty and carries the selection's true total**, rather than an error or
   a clamped page. (SPEC-0008 #28)
-- The read **refuses any `ORDER BY` clause `LicitacionSortKey` could not have produced**, deriving
-  that set from the enum itself — a second line of defence, since these are native statements and a
-  property name would be interpolated verbatim.
+- **The statement accepts an ordering only as a `LicitacionSortKey` and a direction**, never as text
+  and never as a `Sort`. There is nothing to validate and **no allow-list is built**: an earlier draft
+  of this criterion asked for `JdbcContratoMenorRepository`'s `ORDERABLE_COLUMNS` defence, which
+  exists to guard a `Sort` that might arrive from the wrong place — and
+  [TASK-0001](TASK-0001-selection-value-types-and-read-ports.md) removes that object entirely. Four
+  literals chosen by two enums cannot carry an injection payload, and re-adding a guard would
+  reintroduce the mechanism the design deleted. Asserted by the adapter having no method that takes a
+  column or property name.
+- **`awardee_name` appears in none of these statements** — the assertion
+  [TASK-0008](TASK-0008-correct-the-two-v19-comments.md)'s correction 2 rests on, so a later author
+  cannot quietly render a name for a party nothing resolved. (SPEC-0008 #24)
