@@ -38,14 +38,7 @@ class AdminUserAdministrationTest {
 
   @Test
   void admin_creates_account_and_the_new_user_signs_in_with_the_generated_password() {
-    Response created =
-        ApplicationSession.authenticatedAs(adminSession)
-            .body(
-                """
-                {"email":"%s","role":"USER"}\
-                """.formatted(newAccountEmail))
-        .when()
-            .post("/api/admin/users");
+    Response created = requestAccount("USER");
 
     created.then()
         .statusCode(201);
@@ -82,14 +75,7 @@ class AdminUserAdministrationTest {
 
     // A different role from the original, so an account quietly overwritten rather than left
     // alone shows up in the listing below instead of reading exactly like a refusal that worked.
-    Response refused =
-        ApplicationSession.authenticatedAs(adminSession)
-            .body(
-                """
-                {"email":"%s","role":"ADMIN"}\
-                """.formatted(newAccountEmail))
-        .when()
-            .post("/api/admin/users");
+    Response refused = requestAccount("ADMIN");
 
     refused.then()
         .statusCode(409);
@@ -175,15 +161,19 @@ class AdminUserAdministrationTest {
     assertThat(recoveredProfile.jsonPath().getString("email")).isEqualTo(newAccountEmail);
   }
 
+  /** The creation this scenario's account is made by, refused to it, or repeated against. */
+  private Response requestAccount(String role) {
+    return ApplicationSession.authenticatedAs(adminSession)
+        .body(
+            """
+            {"email":"%s","role":"%s"}\
+            """.formatted(newAccountEmail, role))
+    .when()
+        .post("/api/admin/users");
+  }
+
   private Response createAccount() {
-    Response created =
-        ApplicationSession.authenticatedAs(adminSession)
-            .body(
-                """
-                {"email":"%s","role":"USER"}\
-                """.formatted(newAccountEmail))
-        .when()
-            .post("/api/admin/users");
+    Response created = requestAccount("USER");
     created.then()
         .statusCode(201);
     return created;
