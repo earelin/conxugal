@@ -1,5 +1,6 @@
 package gal.conxugal.domain.operador;
 
+import gal.conxugal.commons.text.Whitespace;
 import io.micronaut.core.convert.ConversionContext;
 import io.micronaut.core.convert.TypeConverter;
 import io.micronaut.data.model.runtime.convert.AttributeConverter;
@@ -12,16 +13,27 @@ import org.jspecify.annotations.Nullable;
  * value is already canonical — and rebuilding on the way in reduces a column written before this
  * type existed, or by hand, rather than trusting it.
  *
- * <p>Two interfaces, for the two paths this value now travels. The attribute half covers it as a
- * property of the operador row. The {@code TypeConverter} half covers it as a column selected onto
- * a projection: a projection's component inherits a converter only where the aggregate it is
- * projected from carries a property of the same name and type, and the identifier a contract's row
- * shows is joined in from the operador rather than held on the contract — so it arrives as bare
- * text and is converted through the core conversion service instead.
+ * <p>Two interfaces. The attribute half covers the identifier as a property of the operador row,
+ * and is the one every read of that row goes through. The {@code TypeConverter} half offers the
+ * same rebuild to the core conversion service, for a column that reaches a caller as bare text:
+ * a projection's component inherits a converter only where the aggregate it is projected from
+ * carries a property of the same name and type, and the identifier a contract's row shows is
+ * joined in from the operador rather than held on the contract.
  *
- * <p>That half answers nothing at all for a value it cannot canonicalise, rather than throwing
- * from inside a conversion: {@link FiscalIdentifier#of} already decides which published values are
- * usable, and this defers to it rather than deciding again.
+ * <p><b>Nothing reaches that half today.</b> The browse projection Micronaut Data could not map
+ * is assembled by hand in its adapter instead, and no other caller asks the conversion service for
+ * this type. It is kept because the conversion is the same one and registering it costs nothing —
+ * but a reader should not take its presence as evidence of a path.
+ *
+ * <p><b>Both halves rebuild through the canonical constructor, and neither through
+ * {@link FiscalIdentifier#of}.</b> Everything arriving here has already been stored, so the
+ * question is what the column holds and not whether a source should have published it — and
+ * {@code of} turns away published placeholders, which is the opposite of what a value already in
+ * the column needs. Routing a read through it would make a row the store accepted unreadable.
+ *
+ * <p>The {@code TypeConverter} half still answers nothing at all for a column it cannot
+ * canonicalise, rather than throwing from inside a conversion; only an empty column can reach
+ * that branch, since no other value fails to canonicalise.
  */
 @Singleton
 public class FiscalIdentifierConverter
@@ -42,7 +54,10 @@ public class FiscalIdentifierConverter
 
   @Override
   public Optional<FiscalIdentifier> convert(
-      String object, Class<FiscalIdentifier> targetType, ConversionContext context) {
-    return FiscalIdentifier.of(object);
+      @Nullable String object, Class<FiscalIdentifier> targetType, ConversionContext context) {
+    if (object == null || Whitespace.isBlank(object)) {
+      return Optional.empty();
+    }
+    return Optional.of(new FiscalIdentifier(object));
   }
 }

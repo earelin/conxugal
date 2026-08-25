@@ -31,6 +31,9 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
@@ -59,11 +62,21 @@ class StoreContratosMenoresBatchTest {
   private final List<OperadorEconomico> created = new ArrayList<>();
   private final Map<FiscalIdentifier, OperadorEconomico> catalogue = new LinkedHashMap<>();
 
-  @Test
-  void award_whose_fiscal_identifier_is_absent_is_stored_under_no_operador() {
+  /**
+   * Absent, blank and a published placeholder are three reasons an identifier is unusable and
+   * <em>one</em> behaviour here: the derivation answers nothing, so the contract is stored
+   * recording no awardee at all. Which reason applies is settled before this class is reached and
+   * is pinned where it is decided, in {@code FiscalIdentifierTest} — what this asserts is that
+   * none of them reaches the catalogue, because each is a way of arriving at the shared "unknown"
+   * row that would pool unrelated awards under one identity.
+   */
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(strings = {"   ", "-"})
+  void award_whose_fiscal_identifier_is_unusable_is_stored_under_no_operador(String publishedId) {
     theStoreAcceptsTheBatch();
 
-    store(award(1L, JUNE, "ACME SL", null));
+    store(award(1L, JUNE, "ACME SL", publishedId));
 
     assertThat(upserted)
         .singleElement()
@@ -72,23 +85,24 @@ class StoreContratosMenoresBatchTest {
     verifyNoInteractions(operadores);
   }
 
-  // Whitespace-only is the same branch as absent, and it is the branch that would otherwise
-  // catalogue an operador nobody named — the shared "unknown" row that pools unrelated awards.
+  // Pooling is what the placeholder rule exists to stop, and it takes two awards to show: the
+  // failure was never one contract holding `-`, it was every contract holding it becoming one
+  // operador, so the two-award case is asserted rather than inferred from the one-award one.
   @Test
-  void award_whose_fiscal_identifier_is_only_whitespace_is_stored_under_no_operador() {
+  void two_awards_sharing_placeholder_are_attached_to_no_operador_and_never_to_each_other() {
     theStoreAcceptsTheBatch();
 
-    store(award(1L, JUNE, "ACME SL", "   "));
+    store(award(1L, JUNE, "ACME SL", "-"), award(2L, JUNE, "OUTRA SL", "-"));
 
     assertThat(upserted)
-        .singleElement()
+        .hasSize(2)
         .extracting(ContratoMenor::operadorEconomico)
-        .isNull();
+        .containsOnlyNulls();
     verifyNoInteractions(operadores);
   }
 
-  // Only emptiness disqualifies an identifier: a foreign VAT number or a malformed NIF is a real
-  // award, and refusing it would discard one.
+  // Nothing beyond emptiness and the two published placeholder forms disqualifies an identifier:
+  // a foreign VAT number or a malformed NIF is a real award, and refusing it would discard one.
   @Test
   void award_with_an_irregular_but_non_empty_identifier_is_attached_to_an_operador() {
     theStoreCataloguesOnDemand();

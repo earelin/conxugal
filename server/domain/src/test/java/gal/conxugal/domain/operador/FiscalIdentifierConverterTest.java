@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.micronaut.core.convert.ConversionContext;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class FiscalIdentifierConverterTest {
 
@@ -45,14 +47,32 @@ class FiscalIdentifierConverterTest {
   }
 
   /**
-   * The path a browse row travels: the identifier is joined in from the operador rather than held
-   * on the contract, so a projection reads it as bare text and rebuilds it through the core
-   * conversion service instead of through the attribute half above.
+   * A placeholder is turned away when it is published, not when it is read: a row the store took
+   * under one before that rule existed has to come back rather than fail the read that finds it.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"-", "TEMP-00934"})
+  void reads_back_the_column_holding_placeholder_rather_than_refusing_it(String persisted) {
+    assertThat(converter.convertToEntityValue(persisted, ConversionContext.DEFAULT))
+        .isEqualTo(new FiscalIdentifier(persisted));
+  }
+
+  /**
+   * The rebuild the core conversion service is offered, for a column that reaches a caller as bare
+   * text. Nothing asks for it today, so what it is pinned against is the attribute half beside it:
+   * both rebuild through the canonical constructor, and a column one accepts the other cannot
+   * refuse.
    */
   @Test
-  void converts_the_joined_column_into_the_canonical_identifier() {
+  void converts_the_bare_column_into_the_canonical_identifier() {
     assertThat(converter.convert(" b12345678 ", FiscalIdentifier.class, ConversionContext.DEFAULT))
         .contains(new FiscalIdentifier("B12345678"));
+  }
+
+  @Test
+  void converts_the_bare_column_holding_placeholder_rather_than_refusing_it() {
+    assertThat(converter.convert("-", FiscalIdentifier.class, ConversionContext.DEFAULT))
+        .contains(new FiscalIdentifier("-"));
   }
 
   @Test
