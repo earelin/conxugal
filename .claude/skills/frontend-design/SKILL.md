@@ -24,10 +24,9 @@ where a mockup disagrees with it or with a shipped screen, the mockup is stale.
 
 Never hardcode what these modules already own:
 
-- **`ui/src/app/theme.ts`** — the Mantine theme: `primaryColor: 'indigo'`,
-  `defaultRadius: 'md'`, the system font stack, headings at weight 600. Use theme
-  tokens (`c="dimmed"`, `radius="md"`, colour names like `green`, `red`), not literal
-  hex. If a token is missing, add it to the theme rather than inlining a value.
+- **`ui/src/app/theme.ts`** — the Mantine theme (15 lines; read it). Use theme tokens
+  (`c="dimmed"`, `radius="md"`, colour names like `green`, `red`), never literal hex. If a
+  token is missing, add it to the theme rather than inlining a value.
 - **`ui/src/shared/lib/strings.ts`** — all user-facing copy, in **Galician**. Add new
   copy here under a per-screen key; never write literal user-facing text in a
   component.
@@ -39,20 +38,21 @@ Never hardcode what these modules already own:
 
 ## Design tokens
 
-| Role | Token | Notes |
-| --- | --- | --- |
-| Primary | `indigo` (`indigo.6` `#4c6ef5`) | filled primary buttons, active nav, avatars |
-| Active nav bg / soft accent | `indigo.0` `#edf2ff` with `indigo.8`/`indigo.9` text | Mantine `light` variant |
-| Radius | `md` (8px) | cards, inputs, buttons, modals — from `defaultRadius` |
-| Page background | `gray.0` `#f8f9fa` | surfaces are white |
-| Border | `gray.3` `#dee2e6`; hairlines `gray.1` `#f1f3f5` | card borders vs. in-card dividers |
-| Body text | `gray.9` `#212529` | headings weight 600 |
-| Dimmed text | `gray.6` `#868e96` | subtitles, captions, table headers, meta |
-| Healthy / enabled | `green` (`#40c057` dot, `#ebfbee`/`#2b8a3e` badge) | |
-| Disabled / inert | `gray` badge | disabled ≠ error; render neutral, never red |
-| Required / destructive | `red` `#fa5252` | required-field `*`, destructive emphasis, a crossed alert threshold |
-| Stale but not broken | `yellow` (`#fff9db`/`#e67700` badge) | live data still reconnecting, or a warning band — Mantine stock, no theme change |
-| Chart line / stale chart line | `indigo.6` at `fillOpacity={0.4}`, `indigo.2` `#bac8ff` when stale | sparkline and its dimmed state — one colour, not a separate fill token |
+Mantine's stock palette supplies the values; what this table fixes is **which role gets which
+token** — that mapping is the design language, and it is not derivable from the theme file.
+
+| Role | Token |
+| --- | --- |
+| Primary — filled buttons, active nav, avatars | `indigo.6` |
+| Soft accent / active nav background | `indigo.0` with `indigo.8`/`indigo.9` text (Mantine `light` variant) |
+| Page background / surfaces | `gray.0` page, white surfaces |
+| Card border / in-card divider | `gray.3` border, `gray.1` hairline |
+| Body text / dimmed text | `gray.9` (headings weight 600) / `gray.6` |
+| Healthy, enabled | `green` |
+| Disabled, inert | `gray` — never red; inert is not an error |
+| Required, destructive, a crossed alert threshold | `red` |
+| Stale but not broken — reconnecting, or a warning band | `yellow` (Mantine stock, no theme change) |
+| Chart line, and its stale state | `indigo.6` at `fillOpacity={0.4}`; `indigo.2` when stale |
 
 Rule of thumb: **reach for a Mantine prop before a style**. `c="dimmed"`, `fw={600}`,
 `gap="sm"`, `mt="md"`, `radius="md"`, `withBorder` — not inline `style={{...}}` or raw
@@ -207,13 +207,12 @@ followed by dimmed `Text size="sm"`. Keep captions to one line where possible.
   keep the last known values on screen, dim them, and caption when they arrived
   ("Última mostra ás 12:45:07 · hai 18 s"). Grey would read as inert and red as broken; the
   data is neither. Carry the meaning in the badge's **text** as well as its colour.
-- **Banded severity thresholds are a UI affordance, and their cut-offs are a judgement
-  call — write them down where they live.** The HTTP error rate is the one in service today:
-  `normal` under 1 % (green), `elevated` 1–5 % (yellow), `high` at or above 5 % (red), in
-  `metricsFormat.ts#errorRateSeverity` and pinned by `metricsFormat.test.ts`. **No spec
-  requires those numbers** — they exist so a 100 % error rate is not badged a healthy
-  "NORMAL", and they are changeable without a spec change. Never badge a computed rate
-  unconditionally green; band it or show no badge at all.
+- **Band a rate whose health isn't obvious from the number** (SPEC-0003 R22) — never badge a
+  computed rate unconditionally green, or a 100 % error rate reads as "NORMAL". The spec asks
+  for normal-vs-concerning; **the cut-offs are this file's call, not the spec's.** The HTTP
+  error rate is the one in service: `normal` under 1 % (green), `elevated` 1–5 % (yellow),
+  `high` at or above 5 % (red), in `metricsFormat.ts#errorRateSeverity`, pinned by
+  `metricsFormat.test.ts`. Move them here, not in a spec amendment.
 - **Error *pages* are not red either.** The 403 and 5xx pages render their glyph, code
   and actions in calm **indigo** — a denied route or a transient fault is a system state,
   not something the reader broke. The one exception is the login form's generic failure
