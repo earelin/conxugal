@@ -1,7 +1,9 @@
 package gal.conxugal.acceptance;
 
+import static gal.conxugal.acceptance.support.AdminAccounts.field;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import gal.conxugal.acceptance.support.AdminAccounts;
 import gal.conxugal.acceptance.support.ApplicationDatabase;
 import gal.conxugal.acceptance.support.ApplicationSession;
 import io.restassured.path.json.JsonPath;
@@ -188,22 +190,10 @@ class AdminUserAdministrationTest {
   }
 
   private Response setEnabled(String accountId, boolean enabled) {
-    return ApplicationSession.authenticatedAs(adminSession)
-        .body(
-            """
-            {"enabled":%s}\
-            """.formatted(enabled))
-    .when()
-        .post("/api/admin/users/%s/enabled".formatted(accountId));
+    return AdminAccounts.setEnabled(adminSession, accountId, enabled);
   }
 
   private Response listAccounts() {
-    return ApplicationSession.authenticatedAs(adminSession)
-        .when()
-            .get("/api/admin/users");
-  }
-
-  private static String field(String email, String name) {
-    return "find { it.email == '%s' }.%s".formatted(email, name);
+    return AdminAccounts.listedBy(adminSession);
   }
 }

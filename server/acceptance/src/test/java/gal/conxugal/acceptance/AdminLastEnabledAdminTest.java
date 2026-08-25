@@ -1,7 +1,9 @@
 package gal.conxugal.acceptance;
 
+import static gal.conxugal.acceptance.support.AdminAccounts.field;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import gal.conxugal.acceptance.support.AdminAccounts;
 import gal.conxugal.acceptance.support.ApplicationDatabase;
 import gal.conxugal.acceptance.support.ApplicationSession;
 import io.restassured.path.json.JsonPath;
@@ -46,7 +48,7 @@ class AdminLastEnabledAdminTest {
 
   @Test
   void disabling_the_only_enabled_administrator_is_refused_and_the_area_stays_administrable() {
-    JsonPath listing = listAccounts().jsonPath();
+    JsonPath listing = AdminAccounts.listedBy(adminSession).jsonPath();
     List<String> enabledAdmins =
         listing.getList("findAll { it.role == 'ADMIN' && it.enabled }.email", String.class);
     // Asserted rather than assumed: with a second enabled administrator the refusal below would
@@ -61,14 +63,7 @@ class AdminLastEnabledAdminTest {
         .containsExactly(ApplicationSession.ADMIN_EMAIL);
     String administratorId = listing.getString(field(ApplicationSession.ADMIN_EMAIL, "id"));
 
-    Response refused =
-        ApplicationSession.authenticatedAs(adminSession)
-            .body(
-                """
-                {"enabled":false}\
-                """)
-        .when()
-            .post("/api/admin/users/%s/enabled".formatted(administratorId));
+    Response refused = AdminAccounts.setEnabled(adminSession, administratorId, false);
 
     refused.then()
         .statusCode(409);
@@ -76,7 +71,7 @@ class AdminLastEnabledAdminTest {
     // otherwise read as this guard holding.
     assertThat(refused.jsonPath().getString("type"))
         .isEqualTo("urn:conxugal:problem-type:last-enabled-admin");
-    JsonPath afterTheRefusal = listAccounts().jsonPath();
+    JsonPath afterTheRefusal = AdminAccounts.listedBy(adminSession).jsonPath();
     assertThat(afterTheRefusal.getBoolean(field(ApplicationSession.ADMIN_EMAIL, "enabled")))
         .isTrue();
 
@@ -89,15 +84,5 @@ class AdminLastEnabledAdminTest {
         .get("/api/admin/users")
     .then()
         .statusCode(200);
-  }
-
-  private Response listAccounts() {
-    return ApplicationSession.authenticatedAs(adminSession)
-        .when()
-            .get("/api/admin/users");
-  }
-
-  private static String field(String email, String name) {
-    return "find { it.email == '%s' }.%s".formatted(email, name);
   }
 }
