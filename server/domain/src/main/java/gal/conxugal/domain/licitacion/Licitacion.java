@@ -24,10 +24,12 @@ import org.jspecify.annotations.Nullable;
  * and keeps the published value out of six of them. See {@link PublicationId} for what it wraps
  * and why.
  *
- * <p>One consequence is worth naming rather than discovering: {@code SPEC-0006} R4's cross-family
- * tie-break on "the higher contract identifier" compares a licitación's against a contrato menor's
- * {@code long}, which is a comparison these two types no longer make for free. The task that first
- * feeds an operador name from a licitación owns that.
+ * <p>One consequence is worth naming rather than discovering: the operador name rank breaks a tie
+ * on the higher contract identifier, and comparing a licitación's against a contrato menor's
+ * {@code long} is not a comparison these two types make for free. It is settled by <em>parsing</em>
+ * the published identifier where a rank is built, never by comparing it as text — text would order
+ * {@code "9"} above {@code "10"} and corrupt the tie-break for the family whose ranks are already
+ * stored. Both families draw from one publication id space, so the parsed values are comparable.
  *
  * <p>Only three things are required: the source identifier, the convening Órgano, and the state.
  * Every other value is nullable, and null means <em>the source published nothing there</em> — a

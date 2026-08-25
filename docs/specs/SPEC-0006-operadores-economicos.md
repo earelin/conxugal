@@ -114,6 +114,12 @@ is what its awards are made per, and its comparable date is the **publication** 
 the award date, because a procedure can be published long before — or without ever — being
 decided.
 
+**The two halves of that identity are not used in the same places, and R4 takes only one of
+them.** The lote is what makes a procedure's several awards distinct contracts, so R9 rows the
+history by it and an operador awarded two lotes of one procedure holds two rows. R4's name
+tie-break, by contrast, ranks on the **publication identifier alone**: the lote is not carried
+into the rank, and R4 states what follows for the awards that consequently tie.
+
 **Two further facts are optional, and a family that can supply them may.** They are optional
 because contratos menores cannot supply either: the source publishes neither for that family.
 
@@ -226,8 +232,10 @@ One decision has since been taken:
   attached to each other.
 - **R4** — The same identifier is published under **varying names**, and an operador is shown
   under the **name** taken from its **most recently published** contract — ties broken by taking
-  the **higher** contract identifier, so the choice is deterministic and not merely "some
-  tie-break". Name variation never produces a second operador.
+  the **higher** contract identifier, so the choice is deterministic wherever the identifier
+  separates the two contracts, and not merely "some tie-break". Name variation never produces a
+  second operador. The one case the identifier does not separate is named below rather than left
+  to be discovered.
 
   **The rule covers the name only.** R3 holds one canonical fiscal identifier per operador, so
   there is no identifier spelling to choose between; what a contract published in a different
@@ -241,6 +249,24 @@ One decision has since been taken:
   contracts are undated is still shown under exactly one deterministic name, and one
   undated contract never displaces a dated one. This keeps R4 total: every operador has a
   name, whatever its contracts' dates look like.
+
+  **The tie-break ranks on the publication identifier alone**, which a family making several
+  awards per publication can therefore hold two contracts under. Licitacións are such a family:
+  a procedure's awards are made per lote, so two lotes of one procedure awarded to the same
+  operador share a publication date *and* a publication identifier, and where the two award rows
+  publish the awardee's name differently there is nothing here to separate them. **The name is
+  then settled by whichever of the two the import accounts for first.** That is stable across
+  re-imports so long as the source publishes a procedure's awards in a stable order, but it is
+  **not derivable from the two contracts' values alone**, and this requirement does not claim
+  it is.
+
+  **What the case costs is which spelling displays, and nothing else.** Both candidates are
+  names of one operador — R3 makes the fiscal identifier the identity and this leaves it
+  untouched — so no operador is split or merged, no history row moves, and no count or total
+  changes. Closing it would mean carrying the lote into the rank, making the rank a triple in a
+  store two families already populate; that is not judged worth a cosmetic difference between
+  two spellings the source itself published for one firm. It is recorded here so that a display
+  that looks arbitrary is a known consequence rather than a suspected defect.
 - **R5** — An identifier is **unusable** when it is absent, empty once surrounding whitespace
   is ignored, or a **published placeholder** — a value the source emits in place of an
   identifier it does not have. Two forms are known and named so the test is decidable rather
@@ -828,7 +854,10 @@ One decision has since been taken:
 36. **(R15)** Ordering an operador's principal name against its alternatives by publication date,
     then by higher contract identifier, with undated contracts last, puts the **principal name
     first** — the retained data and R4 agree by construction, including when the top two names
-    share a date and when every name comes from an undated contract.
+    share a date and when every name comes from an undated contract. Where the top two share a
+    date **and** a contract identifier, which only a family awarding several contracts per
+    publication can produce (R4), the pair is settled by which was accounted for first rather
+    than by construction; the principal still sorts first, and a re-import does not swap them.
 37. **(R15)** Re-importing contracts the system already holds leaves the retained names, their
     dates and their contract identifiers **unchanged** — the retention is idempotent, as the
     catalogue it belongs to is.

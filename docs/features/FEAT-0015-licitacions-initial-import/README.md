@@ -792,16 +792,14 @@ than assumed — `licitacion?N=822054` returns the licitación and `licitacion?N
 contrato menor, from the same address space and with no prefix distinguishing them. So `NomeRank`
 needs no family discriminator and R4's ordering stays total across families.
 
-**The lote is the half that id space does not settle**, and it is the one that bites. SPEC-0006
-records this family's contract identity as *a publication identifier **together with a lote***,
-while `NomeRank` is `(date, sourceId)` over a single `BIGINT`. Two lotes of one procedure awarded to
-the same operador under two published spellings therefore tie **exactly** — same date, same
-publication identifier — so `outranks` answers false in both directions and the displayed name falls
-to whichever row was written last. SPEC-0006 #36 asserts that choice is deterministic *by
-construction*, so this is a defect rather than an untidiness. Task 11 settles what a licitación award
-supplies as its rank identity; the plain answer is that the lote joins the tuple, but it is a change
-to a shipped type that contratos menores also rank on, which is why it is a task's decision and not
-an aside here.
+**The lote is the half that id space does not settle.** SPEC-0006 records this family's contract
+identity as *a publication identifier **together with a lote***, while `NomeRank` is
+`(date, sourceId)` over a single `BIGINT`. Two lotes of one procedure awarded to the same operador
+under two published spellings therefore tie **exactly** — same date, same publication identifier —
+so `outranks` answers false in both directions and the displayed name is settled by whichever the
+import accounts for first. **The rank does not gain the lote**; *The name rank keeps its pair*
+below says why, and SPEC-0006 R4 and #36 are amended to say so rather than leaving the criterion
+asserting a determinism the code does not have.
 
 **R16's unusable-identifier rule holds for three of the four party kinds, and not for the fourth.**
 A single-firm bidder, an awardee and a UTE **member** whose identifier is unusable yield no
@@ -913,33 +911,52 @@ opposite orders can resolve differently, and an award that matched nothing is no
 something restates the procedure. That is accepted rather than engineered around: re-resolution is
 the convergence mechanism, and it arrives with the incremental feature.
 
-### The name-rank identity gains a lote
+### The name rank keeps its pair
 
 SPEC-0006 R4 breaks a name tie by "the higher contract identifier", and `NomeRank` is
 `(date, sourceId)` over one `BIGINT`. That is total for contratos menores and **not** for this
 family: SPEC-0006 records a licitación's contract identity as *publication identifier **together
 with a lote***, so two lotes of one procedure awarded to the same operador under two spellings tie
-exactly — same date, same identifier — `outranks` answers false both ways, and the displayed name
-falls to whichever row was written last. SPEC-0006 #36 asserts that choice is deterministic *by
-construction*.
+exactly — same date, same identifier — `outranks` answers false both ways, and the name that stays
+displayed is whichever the import accounted for first.
 
-**So the rank tuple gains a lote**, and this feature settles it rather than leaving it to a task,
-because `NomeRank` is a shipped type the contratos menores path also ranks on. Contratos menores
-supply a constant for the new component — they have no lotes and never will — so their ordering is
-unchanged, and the tuple stays total for both families. The alternative, a per-family
-discriminator, was rejected: the two families share one publication id space (measured), so there
-is nothing for a discriminator to disambiguate except the lote itself.
+**The rank does not gain the lote, and SPEC-0006 is amended rather than worked around.** R4 now
+says the tie-break ranks on the publication identifier alone and states what becomes of the pair it
+cannot separate; #36 stops asserting that such a pair is settled by construction. The lote is
+untouched everywhere else — it is still parsed, still stored on the lote, the award and the
+participation, and still what R9 rows an operador's history by, which is the reason it is part of
+the contract identity at all.
 
-**And the identifier component itself now needs an answer.** Task 3 holds a licitación's
-publication identifier as **text**, so that a source which stopped minting numeric identifiers
-costs a parse rather than a migration and a re-import; `NomeRank.sourceId` is a `long`, which a
-text identifier no longer fits. The naive fix is worse than the problem — compared as text, `"9"`
-outranks `"10"`, silently corrupting the tie-break for the shipped contratos menores family whose
-ranks are already populated. Task 21 owns both widenings, since they land on the same
-`@Embeddable` and the same migration, and it owes a comparison that is numeric where both
-identifiers are numeric and total where one is not. Nothing in this feature feeds an operador name
-from a licitación before task 12, which depends on task 21, so no code meets the gap in the
-meantime.
+**Three things have to hold at once for the case to be reachable**, and the third is the one that
+makes it rare: the procedure has lotes, the same operador is awarded two of them, *and* the two
+award rows spell its name differently. Two rows spelling it identically leave nothing to choose
+between. The one two-lote capture held here — 822054 — awarded its lotes to two different firms.
+
+**And what it costs is which spelling displays.** R3 makes the fiscal identifier the operador's
+identity and this leaves it untouched, so nothing is split or merged, no history row moves, and no
+count or total changes: the worst outcome is a firm shown under one of its own published spellings
+rather than the other. Against that, carrying the lote into the rank is a migration over two
+shipped, populated tables, both hand-written SQL row-value comparisons in `JdbcOperadorRepository`
+re-indexed, and every construction site of a record the contratos menores tests build in dozens of
+places. The trade is not worth it, and a per-family discriminator was never the alternative anyway:
+the two families share one publication id space (measured), so there is nothing to disambiguate
+except the lote itself.
+
+**If it ever proves to matter, `ResolveOperador` is the single place that changes.** Ordering on
+`(date, sourceId, name)` settles the pair by value instead of by arrival, needs no column and no
+migration, and leaves contratos menores provably unaffected — they never tie on `(date, sourceId)`
+to begin with. It is recorded as the cheap way back, not as work this feature takes.
+
+**The identifier component is settled here too.** Task 3 holds a licitación's publication
+identifier as **text**, so that a source which stopped minting numeric identifiers costs a parse
+rather than a migration and a re-import; `NomeRank.sourceId` is a `long`, which a text identifier
+does not fit. Comparing them **as text** is worse than the problem — `"9"` would outrank `"10"`,
+silently corrupting the tie-break for the shipped contratos menores family whose ranks are already
+populated. **So `sourceId` stays a `long` and the parse happens at the edge**, which is exactly the
+cost task 3 signed up for when it chose text: the source is measured to mint integers (18 700 →
+829 000) and both families draw from one id space, so a licitación's identifier compares against a
+contrato menor's numerically and no family discriminator is needed. The accessor arrives with its
+first caller, task 12; nothing feeds an operador name from a licitación before then.
 
 ### Consortia: detected by structure, catalogued either way
 
@@ -1158,13 +1175,14 @@ one branch off it, at the same depth as 18.
     WireMock stub dev and preview read — with `importRunOutcome.test.ts` and
     `ContratosMenoresImport.test.tsx`. **Lands with task 1 or immediately after**, since until it
     does the banner miscounts on trunk. *Depends on 1.* *(SPEC-0008 #38 display half)*
-21. **`NomeRank` gains a lote component** — SPEC-0006 R4's tie-break is *"the higher contract
-    identifier"*, and a licitación's contract identity is a publication identifier **together with
-    a lote**, so two lotes of one procedure awarded to the same operador under two spellings tie
-    exactly and the displayed name falls to whichever row was written last — which SPEC-0006 #36
-    forbids by construction. A migration on **two shipped, populated tables**, the backfilled
-    constant contratos menores supply, and the **two SQL row-value comparisons** in
-    `JdbcOperadorRepository` that duplicate the rule. *Depends on 11.* *(SPEC-0006 #36)*
+21. **Settle the licitación contract identity in the name rank** — and settle it by **amending
+    SPEC-0006 rather than widening `NomeRank`**. R4's tie-break ranks on the publication
+    identifier alone, so two lotes of one procedure awarded to the same operador under two
+    spellings tie and the displayed name is whichever was accounted for first; R4 and #36 are
+    amended to say so, since the cost is which spelling displays and the fix is a migration over
+    two shipped, populated tables. The identifier half is settled with it: `sourceId` stays a
+    `long` and a licitación parses its publication identifier at the edge. **Documentation only —
+    no schema, no SQL and no `NomeRank` change.** *Depends on 11.* *(SPEC-0006 #36)*
 22. **Resolve the bidders** — every single-firm bidder resolved from its published identifier
     through task 11's collaborator and stored on its participation, holding **no name of its own**
     (R18). Consortium rows are still routed past it by task 10's classification — task 13

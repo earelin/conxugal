@@ -205,6 +205,14 @@ claims an acceptance criterion whose surface another spec still contradicts:
   consortium an operador like any other; and **R18**, **R33** and a new **#46** settle how an
   awardee's identifier is reached.
 
+  **A third amendment followed the second**, and it subtracts where the others added. This
+  family's contract identity is two parts — a publication identifier and a lote — and SPEC-0006
+  ranks names on the first alone: its **R4** now says so, and states what becomes of two lotes of
+  one procedure awarded to the same operador under differing spellings, while its **#36** stops
+  claiming that such a pair is settled by construction. Nothing about the **history** changes —
+  the lote is still part of the identity R9 rows an operador's awards by, which is the reason it
+  is part of the identity at all.
+
   Criteria #20, #21 and #24 below are consequently **stated here and proved there**, on the
   device [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) uses for the same situation:
   the surfaces belong to that spec, the import and storage half belongs to this one.
@@ -605,8 +613,15 @@ One decision remains outside this spec:
     then by lote. A procedure with no lotes is identified by its publication identifier alone,
     which is the ordinary case; the lote joins it only where one exists, and the order is total
     either way. The lote is part of it at all because a procedure awarding five lotes to five
-    operadores would otherwise offer one identifier for five distinct history rows — which
-    SPEC-0006 R4's tie-break and R9's rows both need to tell apart;
+    operadores would otherwise offer one identifier for five distinct history rows, which
+    SPEC-0006 R9 needs to tell apart.
+
+    **SPEC-0006 R4's name tie-break takes only the publication identifier**, not the lote, so the
+    two halves of this identity part company there: five awards of one procedure are five history
+    rows and one rank. R4 as amended states what follows — where two lotes of one procedure are
+    awarded to the same operador under differing published spellings, the displayed name is
+    settled by whichever the import accounts for first — and why the case is accepted rather
+    than closed;
   - **an explicit, non-destructive, reversible removal rule** — R15;
   - **a family name** — *licitacións*.
 

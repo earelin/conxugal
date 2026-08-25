@@ -25,9 +25,11 @@ strict win so a replayed batch cannot make a name flap, promote-before-retain so
 not silently dropped. A divergent second copy is a realistic defect, not a theoretical one, and it
 would show up as an operador displaying different names depending on which family last touched it.
 
-**This was one task with two other changes and is now three.** Giving `NomeRank` a lote component is
-[TASK-0021](TASK-0021-nome-rank-gains-a-lote-component.md) — a migration on two shipped, populated
-tables, which has no business hiding inside a refactor — and resolving the licitacións bidders is
+**This was one task with two other changes and is now three.** What a licitación award supplies as
+its rank identity is
+[TASK-0021](TASK-0021-settle-the-licitacion-contract-identity-rank.md) — which has no business
+hiding inside a refactor, and which settled it by amending SPEC-0006 rather than by widening
+`NomeRank` — and resolving the licitacións bidders is
 [TASK-0022](TASK-0022-resolve-the-bidders.md), which is the only one of the three that needs
 anything from this feature.
 
@@ -45,7 +47,8 @@ anything from this feature.
   and a `NomeRank` — rather than a `ContratoMenorSourceEntry`, so a second family can call it
   without borrowing the first family's row type.
 
-**Out of scope:** the `NomeRank` tuple (TASK-0021), any licitacións bidder or awardee
+**Out of scope:** what a licitación supplies as its rank identity (TASK-0021), any licitacións
+bidder or awardee
 (TASK-0022, [TASK-0012](TASK-0012-resolve-the-awardee.md)), and any change to what
 `FiscalIdentifier.of` accepts
 ([TASK-0019](TASK-0019-widen-fiscal-identifier-to-reject-placeholders.md) owns that).

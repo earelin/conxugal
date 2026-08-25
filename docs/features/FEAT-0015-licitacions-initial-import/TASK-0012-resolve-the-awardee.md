@@ -73,9 +73,15 @@ are different populations and are not summed against each other.)*
   already say a licitación may show an award and name nobody, and R25 refuses to make a resolvable
   awardee a condition of visibility. An unresolved awardee costs a link, never a procedure — and
   never the Órgano's walk.
-- **The resolved award supplies its rank** through TASK-0011's collaborator, with the lote component
-  [TASK-0021](TASK-0021-nome-rank-gains-a-lote-component.md) added — this is the caller that needs
-  it, and two lotes of one procedure awarded to the same operador is the tie it exists to break.
+- **The resolved award supplies its rank** through TASK-0011's collaborator, as
+  `(publication date, publication identifier)`. The identifier is the procedure's `PublicationId`
+  **parsed to a `long`** — the answer
+  [TASK-0021](TASK-0021-settle-the-licitacion-contract-identity-rank.md) settled, and this is the
+  caller that first needs it, so the accessor lands here rather than there. Both families draw from
+  one publication id space, so it compares against a contrato menor's `sourceId` numerically.
+- **The rank carries no lote**, so two lotes of one procedure awarded to the same operador tie and
+  the first accounted for supplies the name. That is SPEC-0006 R4 as amended, not a defect of this
+  task; TASK-0021 records the case and the cheap way back.
 - The resolution path is written on the award, which is what
   [TASK-0014](TASK-0014-reconciling-a-restated-procedure.md) reads to let a published identifier
   supersede a derived one.
@@ -116,9 +122,13 @@ convergence mechanism, and it arrives with the incremental feature.
 - Matching folds case, accents and punctuation — `Xestión Ambiental de Contratas, S.L.` matches
   `XESTION AMBIENTAL DE CONTRATAS SL` — and **the stored award still holds the name exactly as
   published**, accents and punctuation intact. (SPEC-0008 #44)
-- Two lotes of one procedure awarded to the same operador under two spellings resolve
-  **deterministically**: the same name displays whichever order the two are stored in. Before the
-  lote joins the rank tuple this fails, which is why TASK-0021 precedes it. (SPEC-0006 #36)
+- Two lotes of one procedure awarded to the same operador under two spellings leave the operador
+  displayed under the spelling accounted for **first**, and a re-import does not swap them. This is
+  the case SPEC-0006 R4 admits rather than closes, asserted here so the behaviour is pinned rather
+  than incidental. (SPEC-0006 #36)
+- A procedure whose publication identifier is not a number **is not ranked** — no operador name
+  advances from it — rather than ranked as text, which would make `"9"` outrank `"10"` and corrupt
+  the contratos menores tie-break. (SPEC-0006 #36)
 - Every award carries a resolution path, including the unresolved one. (SPEC-0008 #46)
 - The use case calling `ResolveOperador` **opens the transaction** the resolution's writes join, so
   an operador cannot be created and named while the award write that justified it rolls back. The
