@@ -115,9 +115,8 @@ final class LicitadorRow {
    */
   static PublishedBidder read(
       @Nullable String loteCell, @Nullable String nifCell, @Nullable Element nomeCell) {
-    Element list = firstIn(nomeCell, OUTER_LIST);
-    Element memberList = firstIn(list, NESTED_LIST);
-    String name = nameOf(nomeCell, list);
+    Element memberList = firstIn(firstIn(nomeCell, OUTER_LIST), NESTED_LIST);
+    String name = nameOf(nomeCell);
     if (memberList == null) {
       // Held exactly as published. FiscalIdentifier's own rule is that nothing beyond emptiness
       // disqualifies one, because the source publishes irregular but genuine identifiers and
@@ -170,8 +169,8 @@ final class LicitadorRow {
    * <p>A cell publishing no list at all falls back to the whole cell, which no captured row does
    * but which costs nothing to survive.
    */
-  private static @Nullable String nameOf(@Nullable Element cell, @Nullable Element list) {
-    Element first = firstIn(list, OWN_ITEMS);
+  private static @Nullable String nameOf(@Nullable Element cell) {
+    Element first = firstIn(firstIn(cell, OUTER_LIST), OWN_ITEMS);
     if (first == null) {
       return cell == null ? null : PublishedValues.text(cell.wholeText());
     }
