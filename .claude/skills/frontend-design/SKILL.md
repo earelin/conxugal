@@ -52,7 +52,7 @@ Never hardcode what these modules already own:
 | Disabled / inert | `gray` badge | disabled ≠ error; render neutral, never red |
 | Required / destructive | `red` `#fa5252` | required-field `*`, destructive emphasis, a crossed alert threshold |
 | Stale but not broken | `yellow` (`#fff9db`/`#e67700` badge) | live data still reconnecting, or a warning band — Mantine stock, no theme change |
-| Chart fill / secondary line | `indigo.0` `#edf2ff` fill, `indigo.2` `#bac8ff` line | sparkline area and its dimmed (stale) state |
+| Chart line / stale chart line | `indigo.6` at `fillOpacity={0.4}`, `indigo.2` `#bac8ff` when stale | sparkline and its dimmed state — one colour, not a separate fill token |
 
 Rule of thumb: **reach for a Mantine prop before a style**. `c="dimmed"`, `fw={600}`,
 `gap="sm"`, `mt="md"`, `radius="md"`, `withBorder` — not inline `style={{...}}` or raw
@@ -143,8 +143,9 @@ divider then a dimmed caption for context. See `dashboard.svg`.
 
 ### Sparklines & segmented bars
 A **sparkline** under a stat card's value shows where that figure has been. One series only,
-so it carries **no legend and no axes** — the card's label already names the data. Draw it as
-a 2 px `indigo.6` line over an `indigo.0` fill on a `gray.1` baseline hairline, dimmed to
+so it carries **no legend and no axes** — the card's label already names the data. Draw it with
+`strokeWidth={2}`, `color="indigo.6"` and `fillOpacity={0.4}` (the area is that same colour at
+low opacity, not a separate fill token), over a `gray.1` baseline hairline; swap the colour to
 `indigo.2` while the data is stale. Pad a partly-filled buffer to its full width rather than
 stretching a few points across the box: a short line *is* how "still filling up" reads.
 

@@ -15,7 +15,8 @@ spec-driven workflow (`SPEC → FEAT → TASK`). This module implements
   `npx playwright install chromium`. `api:down` stops the stub it leaves running.
 - `npm run build` type-checks with **TypeScript 7** (`tsc -b`) before bundling; `npm run tsc7`
   reaches that compiler directly.
-- Vitest and Playwright both take a path or `-t <name pattern>` to narrow a run.
+- Both runners take a file path to narrow a run, but the title filter differs: Vitest is
+  `-t <pattern>`, Playwright is `-g <pattern>`. Playwright also takes `file.spec.ts:42`.
 
 ## Before committing
 
