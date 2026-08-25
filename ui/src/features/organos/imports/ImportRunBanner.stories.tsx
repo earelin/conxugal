@@ -24,9 +24,17 @@ function run(state: ImportRunState, overrides: Partial<ImportRun> = {}): ImportR
     added: 1_284,
     refreshed: 96,
     coveredOrganos: [
-      { organoId: sergas.id, state: 'SUCCEEDED', added: 900, refreshed: 60, failureReason: null },
+      {
+        organoId: sergas.id,
+        family: 'CONTRATOS_MENORES',
+        state: 'SUCCEEDED',
+        added: 900,
+        refreshed: 60,
+        failureReason: null,
+      },
       {
         organoId: innovacion.id,
+        family: 'CONTRATOS_MENORES',
         state: 'SUCCEEDED',
         added: 384,
         refreshed: 36,
@@ -105,6 +113,7 @@ export const PartiallySucceeded: Story = {
         coveredOrganos: [
           {
             organoId: sergas.id,
+            family: 'CONTRATOS_MENORES',
             state: 'SUCCEEDED',
             added: 900,
             refreshed: 60,
@@ -112,10 +121,63 @@ export const PartiallySucceeded: Story = {
           },
           {
             organoId: cunqueiro.id,
+            family: 'CONTRATOS_MENORES',
             state: 'FAILED',
             added: 0,
             refreshed: 0,
             failureReason: 'Upstream timeout',
+          },
+        ],
+      }),
+    ),
+  },
+};
+
+/**
+ * A run a mark asked for, which covers each Órgano in both families and so holds
+ * two rows per Órgano. Every figure here counts Órganos rather than rows: two
+ * covered, not four — and the one that failed in both families is listed once,
+ * carrying both reasons.
+ */
+export const BothFamilies: Story = {
+  args: {
+    run: settled(
+      run('PARTIALLY_SUCCEEDED', {
+        importer: 'AMBAS_FAMILIAS',
+        added: 900,
+        refreshed: 60,
+        coveredOrganos: [
+          {
+            organoId: sergas.id,
+            family: 'CONTRATOS_MENORES',
+            state: 'SUCCEEDED',
+            added: 900,
+            refreshed: 60,
+            failureReason: null,
+          },
+          {
+            organoId: sergas.id,
+            family: 'LICITACIONS',
+            state: 'SUCCEEDED',
+            added: 0,
+            refreshed: 0,
+            failureReason: null,
+          },
+          {
+            organoId: cunqueiro.id,
+            family: 'CONTRATOS_MENORES',
+            state: 'FAILED',
+            added: 0,
+            refreshed: 0,
+            failureReason: 'Upstream timeout',
+          },
+          {
+            organoId: cunqueiro.id,
+            family: 'LICITACIONS',
+            state: 'FAILED',
+            added: 0,
+            refreshed: 0,
+            failureReason: 'The record could not be read',
           },
         ],
       }),
@@ -133,6 +195,7 @@ export const Failed: Story = {
         coveredOrganos: [
           {
             organoId: sergas.id,
+            family: 'CONTRATOS_MENORES',
             state: 'FAILED',
             added: 0,
             refreshed: 0,

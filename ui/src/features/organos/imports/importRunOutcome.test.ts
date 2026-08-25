@@ -14,22 +14,35 @@ const copy = strings.admin.organos.contratosMenores;
 
 const SERGAS = 'aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa';
 const INNOVACION = 'bbbbbbbb-bbbb-7bbb-8bbb-bbbbbbbbbbbb';
+const PORTOS = 'eeeeeeee-eeee-7eee-8eee-eeeeeeeeeeee';
 
 const NAMES: Record<string, string> = {
   [SERGAS]: 'Servizo Galego de Saúde',
   [INNOVACION]: 'Axencia Galega de Innovación',
+  [PORTOS]: 'Portos de Galicia',
 };
 
 function nameOf(organoId: string): string {
   return NAMES[organoId] ?? organoId;
 }
 
+/** The shipped case by default: a run asked for one family covers each Órgano once. */
 function covered(
   organoId: string,
   state: ImportRunOrganoState,
   failureReason: string | null = null,
+  family: ImportRunOrgano['family'] = 'CONTRATOS_MENORES',
 ): ImportRunOrgano {
-  return { organoId, state, added: 0, refreshed: 0, failureReason };
+  return { organoId, family, state, added: 0, refreshed: 0, failureReason };
+}
+
+/** The same Órgano in both families, which is what a mark now asks for. */
+function bothFamilies(
+  organoId: string,
+  contratosMenores: ImportRunOrganoState,
+  licitacions: ImportRunOrganoState,
+): ImportRunOrgano[] {
+  return [covered(organoId, contratosMenores), covered(organoId, licitacions, null, 'LICITACIONS')];
 }
 
 function run(state: ImportRunState, overrides: Partial<ImportRun> = {}): ImportRun {
@@ -132,6 +145,57 @@ describe('describeRun', () => {
         line: 'cccccccc-cccc-7ccc-8ccc-cccccccccccc',
       },
     ]);
+  });
+
+  it('counts the Órganos a two-family run covered, not the rows it holds for them', () => {
+    const both = run('SUCCEEDED', {
+      importer: 'AMBAS_FAMILIAS',
+      coveredOrganos: [
+        ...bothFamilies(SERGAS, 'SUCCEEDED', 'SUCCEEDED'),
+        ...bothFamilies(INNOVACION, 'SUCCEEDED', 'SUCCEEDED'),
+        ...bothFamilies(PORTOS, 'SUCCEEDED', 'SUCCEEDED'),
+      ],
+    });
+
+    // Three Órganos, six rows. Six would be plausible enough to survive a glance.
+    expect(describeRun(both, nameOf).counts).toContain(`3 ${copy.run.coveredCount.plural}`);
+  });
+
+  it('counts an Órgano that failed in one of its two families as not completed', () => {
+    const mixed = run('PARTIALLY_SUCCEEDED', {
+      importer: 'AMBAS_FAMILIAS',
+      coveredOrganos: bothFamilies(SERGAS, 'SUCCEEDED', 'FAILED'),
+    });
+
+    expect(describeRun(mixed, nameOf).counts).toContain(copy.run.completedOf(0, 1));
+  });
+
+  it('lists an Órgano that failed in both families once, carrying both reasons', () => {
+    const failed = run('FAILED', {
+      importer: 'AMBAS_FAMILIAS',
+      coveredOrganos: [
+        covered(SERGAS, 'FAILED', 'a fonte non respondeu'),
+        covered(SERGAS, 'FAILED', 'o rexistro non se puido ler', 'LICITACIONS'),
+      ],
+    });
+
+    const report = describeRun(failed, nameOf);
+
+    // One Órgano failed, so the title above the list has to say one.
+    expect(report.failuresTitle).toBe(copy.run.failedOrganos(1));
+    expect(report.failures).toEqual([
+      {
+        organoId: SERGAS,
+        line: 'Servizo Galego de Saúde · a fonte non respondeu · o rexistro non se puido ler',
+      },
+    ]);
+  });
+
+  it('reads a run triggered for both families by its verdict, not by what it imported', () => {
+    const both = run('SUCCEEDED', { importer: 'AMBAS_FAMILIAS' });
+
+    expect(describeRun(both, nameOf).title).toBe(copy.run.succeededTitle);
+    expect(describeRun(both, nameOf).tone).toBe('success');
   });
 
   it('reports a verdict it does not know instead of dressing it as a failure', () => {

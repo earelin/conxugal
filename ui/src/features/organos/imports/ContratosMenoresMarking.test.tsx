@@ -86,7 +86,14 @@ function mockRun() {
       added: 0,
       refreshed: 0,
       coveredOrganos: [
-        { organoId: 'o-2', state: 'PENDING', added: 0, refreshed: 0, failureReason: null },
+        {
+          organoId: 'o-2',
+          family: 'CONTRATOS_MENORES',
+          state: 'PENDING',
+          added: 0,
+          refreshed: 0,
+          failureReason: null,
+        },
       ],
     });
 }
