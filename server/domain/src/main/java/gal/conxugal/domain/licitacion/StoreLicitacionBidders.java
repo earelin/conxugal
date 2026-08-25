@@ -72,8 +72,13 @@ public class StoreLicitacionBidders {
     AwardPoints awardPoints = AwardPoints.of(licitacionId, lotes);
     List<Participation> stored = new ArrayList<>(bidders.size());
     for (PublishedBidder bidder : bidders) {
-      if (bidder instanceof PublishedBidder.SingleFirm firm) {
-        stored.add(participations.upsert(bidOf(firm, awardPoints)));
+      switch (bidder) {
+        case PublishedBidder.SingleFirm firm ->
+            stored.add(participations.upsert(bidOf(firm, awardPoints)));
+        // Routed past, not overlooked: cataloguing a consortium and writing its bid belong
+        // together, because its identifier may come from the formalisation rather than this row.
+        case PublishedBidder.Consortium consortium -> {
+        }
       }
     }
     return List.copyOf(stored);
