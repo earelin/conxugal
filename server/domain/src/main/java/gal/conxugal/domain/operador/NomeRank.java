@@ -16,6 +16,13 @@ import org.jspecify.annotations.Nullable;
  * the retained ones carry this same pair, and {@link #outranks} is the one comparison that orders
  * both — so the name an operador displays and the names it has retained beside it cannot disagree
  * about which should be showing.
+ *
+ * <p><strong>The pair separates two contracts of a family that publishes one contract per
+ * publication, and not every family is one.</strong> Where a family makes several contracts per
+ * publication — awards made per lote — two of them carry the same date and the same source
+ * identifier, and this pair cannot tell them apart. {@link #outranks} answers false in both
+ * directions for such a pair, so neither displaces the other and the name already on display
+ * stays; the consequence is accepted deliberately and the operadores specification records why.
  */
 @Embeddable
 public record NomeRank(@Nullable LocalDate date, long sourceId)
@@ -51,8 +58,11 @@ public record NomeRank(@Nullable LocalDate date, long sourceId)
    * publication date, and behind every dated rank when it has no date of its own.
    *
    * <p>Taking both values is what makes the choice <b>total</b> — an operador all of whose
-   * contracts are undated still has exactly one name — and <b>deterministic</b>: two imports over
-   * the same data reach the same answer whatever order the contracts arrive in.
+   * contracts are undated still has exactly one name — and <b>deterministic wherever the pair
+   * separates the two contracts</b>: two imports over such data reach the same answer whatever
+   * order the contracts arrive in. Two contracts of one publication share both values, so this
+   * answers false both ways for them and the name already displayed stays; that case is settled
+   * by arrival rather than by the values, and is accepted rather than closed.
    *
    * <p>A strict win: a rank does not outrank itself, so re-reading a contract already held
    * changes nothing and a replayed batch cannot make a name flap.

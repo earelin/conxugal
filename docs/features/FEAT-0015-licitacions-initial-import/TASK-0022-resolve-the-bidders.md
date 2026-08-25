@@ -3,7 +3,7 @@ feat: FEAT-0015
 domain: backend
 adrs: [0002, 0023]
 status: todo
-depends_on: [TASK-0006, TASK-0010, TASK-0011, TASK-0021]
+depends_on: [TASK-0006, TASK-0010, TASK-0011]
 ---
 
 # Resolve the bidders
@@ -46,7 +46,7 @@ Operadores are the stored projection of
   a change subtracts"* unsettled, so a principal name won by a now-withdrawn bid would never be
   recomputed. Widening R4 to admit bids is a spec amendment, and this feature does not take it.
 - The **awarded** bidder's rank contribution is [TASK-0012](TASK-0012-resolve-the-awardee.md)'s,
-  where there is a contract to rank from and a lote to rank it by.
+  where there is a contract to rank from.
 
 **Out of scope:** the awardee (TASK-0012), consortia (TASK-0013), and any change to
 `FiscalIdentifier` ([TASK-0019](TASK-0019-widen-fiscal-identifier-to-reject-placeholders.md)).
