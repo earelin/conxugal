@@ -69,11 +69,11 @@ public class StoreLicitacionBidders {
     Objects.requireNonNull(licitacionId, "licitacionId must not be null");
     Objects.requireNonNull(lotes, "lotes must not be null");
     Objects.requireNonNull(bidders, "bidders must not be null");
-    Map<String, LoteId> awardPoints = awardPointsOf(lotes);
+    AwardPoints awardPoints = AwardPoints.of(licitacionId, lotes);
     List<Participation> stored = new ArrayList<>(bidders.size());
     for (PublishedBidder bidder : bidders) {
       if (bidder instanceof PublishedBidder.SingleFirm firm) {
-        stored.add(participations.upsert(bidOf(firm, licitacionId, awardPoints)));
+        stored.add(participations.upsert(bidOf(firm, awardPoints)));
       }
     }
     return List.copyOf(stored);
@@ -84,12 +84,9 @@ public class StoreLicitacionBidders {
    * identifier was unusable resolves to nobody and is stored naming nobody: the bid is a fact the
    * source published, and dropping it would lose a bidder R16 requires to be shown.
    */
-  private Participation bidOf(
-      PublishedBidder.SingleFirm firm,
-      LicitacionId licitacionId,
-      Map<String, LoteId> awardPoints) {
+  private Participation bidOf(PublishedBidder.SingleFirm firm, AwardPoints awardPoints) {
     return new Participation(
-        licitacionId, awardPointOf(firm, licitacionId, awardPoints), partyOf(firm), false);
+        awardPoints.licitacionId(), awardPoints.at(firm.loteKey()), partyOf(firm), false);
   }
 
   /**
@@ -108,41 +105,50 @@ public class StoreLicitacionBidders {
   }
 
   /**
-   * The lote this bid was made at, or null where the row named the procedure as a whole.
+   * The points a procedure was bid at: its lotes by the one form everything compares a lote cell
+   * on, and the procedure itself for a row that names no lote.
    *
-   * <p>A row naming a lote the procedure has not stored fails the procedure rather than being
-   * filed somewhere plausible: keying it to the procedure would collide with every other such bid
-   * on the same natural key, and skipping it would lose a published bidder silently. The record
-   * parse takes the same view of a bidder count that disagrees with the award table's.
+   * <p>The stored spelling is reduced here rather than trusted to match a bidder row's, because the
+   * two source tables spell one lote differently — {@code 05} against {@code 5} was measured within
+   * a single record.
    */
-  private static @Nullable LoteId awardPointOf(
-      PublishedBidder firm, LicitacionId licitacionId, Map<String, LoteId> awardPoints) {
-    String loteKey = firm.loteKey();
-    if (loteKey == null) {
-      return null;
-    }
-    LoteId awardPoint = awardPoints.get(loteKey);
-    if (awardPoint == null) {
-      throw new IllegalArgumentException(
-          "bidder names lote %s, which procedure %s has not stored"
-              .formatted(loteKey, licitacionId.value()));
-    }
-    return awardPoint;
-  }
+  private record AwardPoints(LicitacionId licitacionId, Map<String, LoteId> byKey) {
 
-  /**
-   * The procedure's lotes by the one form everything compares on. The stored spelling is reduced
-   * here rather than trusted to match a bidder row's, because the two source tables spell one lote
-   * differently — {@code 05} against {@code 5} was measured within a single record.
-   */
-  private static Map<String, LoteId> awardPointsOf(Iterable<Lote> lotes) {
-    Map<String, LoteId> awardPoints = new HashMap<>();
-    for (Lote lote : lotes) {
-      LoteId id =
-          Objects.requireNonNull(
-              lote.id(), "a stored lote must carry an identity: " + lote.identifier());
-      LoteKey.normalise(lote.identifier()).ifPresent(key -> awardPoints.put(key, id));
+    AwardPoints {
+      byKey = Map.copyOf(byKey);
     }
-    return awardPoints;
+
+    static AwardPoints of(LicitacionId licitacionId, Iterable<Lote> lotes) {
+      Map<String, LoteId> byKey = new HashMap<>();
+      for (Lote lote : lotes) {
+        LoteId id =
+            Objects.requireNonNull(
+                lote.id(), "a stored lote must carry an identity: " + lote.identifier());
+        LoteKey.normalise(lote.identifier()).ifPresent(key -> byKey.put(key, id));
+      }
+      return new AwardPoints(licitacionId, byKey);
+    }
+
+    /**
+     * The point {@code loteKey} names: a lote, or the procedure as a whole where the row named no
+     * lote.
+     *
+     * <p>A row naming a lote the procedure has not stored fails the procedure rather than being
+     * filed somewhere plausible: keying it to the procedure would collide with every other such bid
+     * on the same natural key, and skipping it would lose a published bidder silently. The record
+     * parse takes the same view of a bidder count that disagrees with the award table's.
+     */
+    @Nullable LoteId at(@Nullable String loteKey) {
+      if (loteKey == null) {
+        return null;
+      }
+      LoteId awardPoint = byKey.get(loteKey);
+      if (awardPoint == null) {
+        throw new IllegalArgumentException(
+            "bidder names lote %s, which procedure %s has not stored"
+                .formatted(loteKey, licitacionId.value()));
+      }
+      return awardPoint;
+    }
   }
 }
