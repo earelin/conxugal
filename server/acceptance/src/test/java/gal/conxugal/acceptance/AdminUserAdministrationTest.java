@@ -1,7 +1,9 @@
 package gal.conxugal.acceptance;
 
+import static gal.conxugal.acceptance.support.AdminAccounts.field;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import gal.conxugal.acceptance.support.AdminAccounts;
 import gal.conxugal.acceptance.support.ApplicationDatabase;
 import gal.conxugal.acceptance.support.ApplicationSession;
 import io.restassured.path.json.JsonPath;
@@ -36,14 +38,7 @@ class AdminUserAdministrationTest {
 
   @Test
   void admin_creates_account_and_the_new_user_signs_in_with_the_generated_password() {
-    Response created =
-        ApplicationSession.authenticatedAs(adminSession)
-            .body(
-                """
-                {"email":"%s","role":"USER"}\
-                """.formatted(newAccountEmail))
-        .when()
-            .post("/api/admin/users");
+    Response created = requestAccount("USER");
 
     created.then()
         .statusCode(201);
@@ -65,6 +60,47 @@ class AdminUserAdministrationTest {
     assertThat(profile.jsonPath().getString("email")).isEqualTo(newAccountEmail);
     assertThat(profile.jsonPath().getString("role")).isEqualTo("USER");
     assertThat(profile.jsonPath().getString("lastLoginAt")).isNotBlank();
+  }
+
+  @Test
+  void creating_an_account_with_an_existing_email_is_refused_and_the_original_is_unchanged() {
+    Response original = createAccount();
+    String originalId = original.jsonPath().getString("id");
+    String originalPassword = original.jsonPath().getString("initialPassword");
+    // Read back from the listing rather than reused from the creation response: that response
+    // carries the clock's nanoseconds, while every later read carries what the datastore kept,
+    // rounded to microseconds. Comparing the two would fail on the rounding, not on a change.
+    String originalCreatedAt =
+        listAccounts().jsonPath().getString(field(newAccountEmail, "createdAt"));
+
+    // A different role from the original, so an account quietly overwritten rather than left
+    // alone shows up in the listing below instead of reading exactly like a refusal that worked.
+    Response refused = requestAccount("ADMIN");
+
+    refused.then()
+        .statusCode(409);
+    // The problem type, not only the status: a conflict raised for any other reason would
+    // otherwise read as the uniqueness rule holding.
+    assertThat(refused.jsonPath().getString("type"))
+        .isEqualTo("urn:conxugal:problem-type:duplicate-email");
+    JsonPath listing = listAccounts().jsonPath();
+    assertThat(listing.getList("findAll { it.email == '%s' }".formatted(newAccountEmail)))
+        .hasSize(1);
+    assertThat(listing.getString(field(newAccountEmail, "id"))).isEqualTo(originalId);
+    assertThat(listing.getString(field(newAccountEmail, "role"))).isEqualTo("USER");
+    assertThat(listing.getString(field(newAccountEmail, "createdAt")))
+        .isEqualTo(originalCreatedAt);
+
+    // The row surviving is only half of it: a refusal that had rotated the credential would
+    // leave the listing identical and still have locked the account's holder out.
+    String sessionOfTheUntouchedAccount =
+        ApplicationSession.logInOrFail(newAccountEmail, originalPassword);
+
+    ApplicationSession.authenticatedAs(sessionOfTheUntouchedAccount)
+    .when()
+        .get("/api/me")
+    .then()
+        .statusCode(200);
   }
 
   @Test
@@ -125,37 +161,29 @@ class AdminUserAdministrationTest {
     assertThat(recoveredProfile.jsonPath().getString("email")).isEqualTo(newAccountEmail);
   }
 
+  /** The creation this scenario's account is made by, refused to it, or repeated against. */
+  private Response requestAccount(String role) {
+    return ApplicationSession.authenticatedAs(adminSession)
+        .body(
+            """
+            {"email":"%s","role":"%s"}\
+            """.formatted(newAccountEmail, role))
+    .when()
+        .post("/api/admin/users");
+  }
+
   private Response createAccount() {
-    Response created =
-        ApplicationSession.authenticatedAs(adminSession)
-            .body(
-                """
-                {"email":"%s","role":"USER"}\
-                """.formatted(newAccountEmail))
-        .when()
-            .post("/api/admin/users");
+    Response created = requestAccount("USER");
     created.then()
         .statusCode(201);
     return created;
   }
 
   private Response setEnabled(String accountId, boolean enabled) {
-    return ApplicationSession.authenticatedAs(adminSession)
-        .body(
-            """
-            {"enabled":%s}\
-            """.formatted(enabled))
-    .when()
-        .post("/api/admin/users/%s/enabled".formatted(accountId));
+    return AdminAccounts.setEnabled(adminSession, accountId, enabled);
   }
 
   private Response listAccounts() {
-    return ApplicationSession.authenticatedAs(adminSession)
-        .when()
-            .get("/api/admin/users");
-  }
-
-  private static String field(String email, String name) {
-    return "find { it.email == '%s' }.%s".formatted(email, name);
+    return AdminAccounts.listedBy(adminSession);
   }
 }

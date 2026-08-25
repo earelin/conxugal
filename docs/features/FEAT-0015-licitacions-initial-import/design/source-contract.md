@@ -584,12 +584,13 @@ either. So a parser that takes the consortium branch **structurally, before reso
 identifier**, never hands a placeholder to
 [SPEC-0006](../../../specs/SPEC-0006-operadores-economicos.md) R3's identity rule at all.
 
-That matters because R5 defines an identifier as unusable only when it is "absent, or empty once
-surrounding whitespace is ignored", and `FiscalIdentifier.of` implements exactly that — so
-`of("-")` returns a present value and `of("TEMP-00934")` likewise. Reached through the ordinary
-bidder path, those would catalogue **one** operador holding the fiscal identifier `-`, carrying the
-bids of dozens of unrelated consortia. Reached through the structural branch, they are never
-offered to it.
+That mattered because R5 then defined an identifier as unusable only when it was "absent, or empty
+once surrounding whitespace is ignored", and `FiscalIdentifier.of` implemented exactly that — so
+`of("-")` returned a present value and `of("TEMP-00934")` likewise. Reached through the ordinary
+bidder path, those would have catalogued **one** operador holding the fiscal identifier `-`,
+carrying the bids of dozens of unrelated consortia. Reached through the structural branch, they are
+never offered to it. *(Amendment 4 has since widened R5, and task 19 widened the factory to match;
+the measurement above is what motivated both.)*
 
 So the SPEC-0006 R5 widening remains worth making as a guard against a row the sample did not
 contain, but it is **not** what makes this family safe — the structural branch is, and it is this

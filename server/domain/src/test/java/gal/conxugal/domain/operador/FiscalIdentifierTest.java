@@ -7,11 +7,17 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import java.util.HashSet;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class FiscalIdentifierTest {
 
   private static final String NON_BREAKING_SPACE = "\u00a0";
   private static final String GROUP_SEPARATOR = "\u001d";
+  private static final String EN_DASH = "\u2013"; // –
+  private static final String EM_DASH = "\u2014"; // —
+  private static final String NON_BREAKING_HYPHEN = "\u2011"; // ‑
+  private static final String MINUS_SIGN = "\u2212"; // −
 
   @Test
   void identifiers_differing_only_in_padding_and_case_are_one_identifier() {
@@ -83,6 +89,15 @@ class FiscalIdentifierTest {
     assertThatIllegalArgumentException().isThrownBy(() -> new FiscalIdentifier(""));
   }
 
+  // The canonical constructor is deliberately permissive about placeholders, in both spellings a
+  // store may already hold: a row persisted under one before FiscalIdentifier.of turned them away
+  // has to read back rather than fail the read that finds it.
+  @ParameterizedTest
+  @ValueSource(strings = {"-", "TEMP-00934"})
+  void constructs_the_placeholder_so_stored_row_reads_back(String persisted) {
+    assertThat(new FiscalIdentifier(persisted).value()).isEqualTo(persisted);
+  }
+
   @Test
   void an_absent_published_identifier_is_unusable() {
     assertThat(FiscalIdentifier.of(null)).isEmpty();
@@ -101,6 +116,32 @@ class FiscalIdentifierTest {
   @Test
   void published_blanks_no_narrower_rule_would_strip_are_unusable() {
     assertThat(FiscalIdentifier.of(NON_BREAKING_SPACE + GROUP_SEPARATOR)).isEmpty();
+  }
+
+  // Every spelling of a lone dash is the same placeholder. The rule reads the canonical form, so
+  // padding and case cannot smuggle one past it, and a dash the source spells typographically has
+  // to count as one too or the pooling this refuses returns under another spelling. The record
+  // page is ISO-8859-1 and cannot carry one; the listing is JSON and is under no such limit.
+  @ParameterizedTest
+  @ValueSource(strings = {"-", " - ", EN_DASH, EM_DASH, NON_BREAKING_HYPHEN, MINUS_SIGN})
+  void published_lone_dash_is_unusable_however_it_is_spelled(String published) {
+    assertThat(FiscalIdentifier.of(published)).isEmpty();
+  }
+
+  // Likewise the temporary form, whose dash is subject to the same spellings and whose letters
+  // reach the rule already upper-cased.
+  @ParameterizedTest
+  @ValueSource(strings = {"TEMP-00934", "temp-00934", "TEMP" + EN_DASH + "00934"})
+  void published_temporary_placeholder_is_unusable_however_it_is_spelled(String published) {
+    assertThat(FiscalIdentifier.of(published)).isEmpty();
+  }
+
+  // The rule rejects the two published placeholder forms and nothing else: an identifier that
+  // merely carries a dash is irregular, not absent, and discarding it would discard real awards.
+  @Test
+  void identifier_merely_carrying_dash_is_usable_and_reduces_like_any_other() {
+    assertThat(FiscalIdentifier.of(" x-1234567z "))
+        .contains(new FiscalIdentifier("X-1234567Z"));
   }
 
   @Test

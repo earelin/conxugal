@@ -163,22 +163,21 @@ flowchart LR
   that the published **letter case is retained nowhere** and an operador published as `b12345678`
   shows as `B12345678`: a deliberate exception to R13, which states it, taken because case is the
   one difference R3 rules meaningless for identity.
-- An identifier that is **absent, or empty once trimmed**, is *unusable* (R5): the contract is
-  stored and gets **no operador** — never a placeholder, never a shared "unknown" row that would
-  silently pool unrelated awards.
-
-  > **R5 has since been widened** and this feature's implementation has not caught up. A
-  > **published placeholder** — a lone dash, a `TEMP-…` value — is now unusable too, because the
-  > licitacións family meets them and, under the emptiness-only test, every dash-published contract
-  > would pool under one operador holding the fiscal identifier `-` — exactly the shared "unknown"
-  > row this bullet refuses. `FiscalIdentifier.of` still implements emptiness only;
-  > [FEAT-0015](../FEAT-0015-licitacions-initial-import/README.md) task 19 widens it, since that is
-  > the feature that meets the case, and the factory is shared by both families. Its `operador_economico_id` stays null, and because the schema is
-  normalised that contract records **no awardee name either**, which the R5 branch did not cost
-  when the contract carried its own.
+- An identifier that is **absent, empty once trimmed, or a published placeholder** — a lone dash,
+  a `TEMP-…` value — is *unusable* (R5): the contract is stored and gets **no operador** — never a
+  placeholder, never a shared "unknown" row that would silently pool unrelated awards. Its
+  `operador_economico_id` stays null, and because the schema is normalised that contract records
+  **no awardee name either**, which the R5 branch did not cost when the contract carried its own.
   Nothing beyond emptiness **and the two published placeholder forms named above** is validated:
   the source publishes irregular but genuine identifiers, and rejecting those would discard real
   awards.
+
+  The placeholder limb arrived after this feature shipped, with FEAT-0015's amendment 4, because
+  the licitacións family is what meets those values. Under the emptiness-only test every
+  dash-published contract would have pooled under one operador holding the fiscal identifier `-`
+  — exactly the shared "unknown" row this bullet refuses. `FiscalIdentifier.of` is the factory
+  both families call, so widening it covered this one too;
+  [FEAT-0015](../FEAT-0015-licitacions-initial-import/README.md) task 19 carried the change.
 
   **This branch is expected never to be taken.** Every contract the source publishes names its
   awardee with a NIF/CIF, which is why the mapping is unambiguous in the first place; SPEC-0005
@@ -322,7 +321,8 @@ dependencies**, and 2 and 3 are the ones FEAT-0009 waits on, so 2 can be taken f
    case canonicalise to one value; identifiers differing in internal spacing, punctuation or any
    character do not.
    Needed by task 4, not by tasks 2 or 3. *(SPEC-0006 #3 matching half, #4, #7, #9 — the last
-   only as R5 read before amendment 4 widened it; FEAT-0015 task 19 carries the widening.)*
+   only as R5 read before amendment 4 widened it; FEAT-0015 task 19 carried the widening, so #9
+   holds as amended.)*
 2. **`OperadorEconomico` domain model + repository port** — the aggregate (`OperadorId` identity,
    canonical fiscal identifier, published name, and the rank the name was taken from), the
    `NomeAlternativo` it holds many of (the published name plus the rank it was last seen at), and
@@ -343,7 +343,8 @@ dependencies**, and 2 and 3 are the ones FEAT-0009 waits on, so 2 can be taken f
    name the contract published**, and repoint the reference when a re-import changes a contract's
    published identifier. *Depends on FEAT-0009's single-Órgano import task.* *(SPEC-0006 #2, #6
    storage half, #7, #8 no-operador half, #9, #14 moves-and-creates half, #33, #34, #37 — #8 and #9
-   only as R5 read before amendment 4; FEAT-0015 task 19 carries the widening.)*
+   only as R5 read before amendment 4; FEAT-0015 task 19 carried the widening, so both hold as
+   amended.)*
 
 **Criteria this feature deliberately leaves incomplete**, so no task claims what it cannot prove:
 every *displayed* and *reachable* half — criteria #1, #5, #6's display, #8's list appearance,

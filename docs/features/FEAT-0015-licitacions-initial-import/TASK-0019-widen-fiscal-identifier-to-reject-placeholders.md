@@ -2,7 +2,7 @@
 feat: FEAT-0015
 domain: backend
 adrs: [0023]
-status: todo
+status: done
 depends_on: []
 ---
 
@@ -55,6 +55,14 @@ the catalogue.
 - **A contrato menor whose published identifier is `-` now yields no operador** where it previously
   yielded one. Behaviour change on a shipped path, and the intended one: the alternative is a shared
   identity pooling unrelated suppliers.
+
+  **It also leaves the browse list.** A contract with no operador is *incomplete* under
+  [SPEC-0005](../../specs/SPEC-0005-import-browse-contratos-menores.md) R28, so it is withheld
+  from every reader and from the counts rather than rendered with an empty awardee — the browse
+  query already tests `operador_economico_id IS NOT NULL`. Nothing in the query changes; what
+  changes is who lands in it. SPEC-0006 #8 claimed such a contract *appears in its Órgano's list
+  showing no awardee*, contradicting the SPEC-0005 criterion it cited; that is qualified with this
+  task rather than left to be read as a promise the code never kept.
 - **The three residual paragraphs in FEAT-0010's README** are corrected with it. The R5 note itself
   already carries the widening — it landed with the amendment — so what is left is: the trailing
   sentence *"Nothing beyond emptiness is validated"* (line 179), and the two unqualified sequencing
