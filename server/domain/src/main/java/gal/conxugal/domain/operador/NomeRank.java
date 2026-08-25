@@ -21,8 +21,8 @@ import org.jspecify.annotations.Nullable;
  * publication, and not every family is one.</strong> Where a family makes several contracts per
  * publication — awards made per lote — two of them carry the same date and the same source
  * identifier, and this pair cannot tell them apart. {@link #outranks} answers false in both
- * directions for such a pair, which leaves whichever name is already displayed displayed; the
- * consequence is accepted deliberately and the operadores specification records why.
+ * directions for such a pair, so neither displaces the other and the name already on display
+ * stays; the consequence is accepted deliberately and the operadores specification records why.
  */
 @Embeddable
 public record NomeRank(@Nullable LocalDate date, long sourceId)
