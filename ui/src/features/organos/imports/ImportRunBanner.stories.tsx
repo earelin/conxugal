@@ -4,7 +4,12 @@ import { fn } from 'storybook/test';
 
 import { ProblemError } from '../../../shared/lib/httpClient';
 import { cunqueiro, innovacion, ORGANOS, sergas } from '../storyFixtures';
-import type { ImportRun, ImportRunState } from './contratosMenores';
+import type {
+  ImportRun,
+  ImportRunOrgano,
+  ImportRunOrganoState,
+  ImportRunState,
+} from './contratosMenores';
 import { ImportRunBanner } from './ImportRunBanner';
 
 const STARTED_AT = '2026-08-23T07:15:00Z';
@@ -13,6 +18,23 @@ const FINISHED_AT = '2026-08-23T09:02:00Z';
 // read, so a pinned date would drift into "Consultado hai 720 h" within a month
 // and the just-now branch would never be seen again.
 const READ_AT = Date.now() - 4 * 60_000;
+
+/** One coverage row, of the shipped single family unless a story says otherwise. */
+function covered(
+  organoId: string,
+  state: ImportRunOrganoState,
+  overrides: Partial<ImportRunOrgano> = {},
+): ImportRunOrgano {
+  return {
+    organoId,
+    family: 'CONTRATOS_MENORES',
+    state,
+    added: 0,
+    refreshed: 0,
+    failureReason: null,
+    ...overrides,
+  };
+}
 
 function run(state: ImportRunState, overrides: Partial<ImportRun> = {}): ImportRun {
   return {
@@ -24,14 +46,8 @@ function run(state: ImportRunState, overrides: Partial<ImportRun> = {}): ImportR
     added: 1_284,
     refreshed: 96,
     coveredOrganos: [
-      { organoId: sergas.id, state: 'SUCCEEDED', added: 900, refreshed: 60, failureReason: null },
-      {
-        organoId: innovacion.id,
-        state: 'SUCCEEDED',
-        added: 384,
-        refreshed: 36,
-        failureReason: null,
-      },
+      covered(sergas.id, 'SUCCEEDED', { added: 900, refreshed: 60 }),
+      covered(innovacion.id, 'SUCCEEDED', { added: 384, refreshed: 36 }),
     ],
     ...overrides,
   };
@@ -103,20 +119,35 @@ export const PartiallySucceeded: Story = {
         added: 900,
         refreshed: 60,
         coveredOrganos: [
-          {
-            organoId: sergas.id,
-            state: 'SUCCEEDED',
-            added: 900,
-            refreshed: 60,
-            failureReason: null,
-          },
-          {
-            organoId: cunqueiro.id,
-            state: 'FAILED',
-            added: 0,
-            refreshed: 0,
-            failureReason: 'Upstream timeout',
-          },
+          covered(sergas.id, 'SUCCEEDED', { added: 900, refreshed: 60 }),
+          covered(cunqueiro.id, 'FAILED', { failureReason: 'Upstream timeout' }),
+        ],
+      }),
+    ),
+  },
+};
+
+/**
+ * A run covering each Órgano in both families, and so holding two rows per
+ * Órgano. Every figure here counts Órganos rather than rows: two covered, not
+ * four — and the one that failed in both families is listed once, carrying both
+ * reasons.
+ */
+export const BothFamilies: Story = {
+  args: {
+    run: settled(
+      run('PARTIALLY_SUCCEEDED', {
+        importer: 'AMBAS_FAMILIAS',
+        added: 900,
+        refreshed: 60,
+        coveredOrganos: [
+          covered(sergas.id, 'SUCCEEDED', { added: 900, refreshed: 60 }),
+          covered(sergas.id, 'SUCCEEDED', { family: 'LICITACIONS' }),
+          covered(cunqueiro.id, 'FAILED', { failureReason: 'Upstream timeout' }),
+          covered(cunqueiro.id, 'FAILED', {
+            family: 'LICITACIONS',
+            failureReason: 'The record could not be read',
+          }),
         ],
       }),
     ),
@@ -130,15 +161,7 @@ export const Failed: Story = {
       run('FAILED', {
         added: 0,
         refreshed: 0,
-        coveredOrganos: [
-          {
-            organoId: sergas.id,
-            state: 'FAILED',
-            added: 0,
-            refreshed: 0,
-            failureReason: 'Upstream unavailable',
-          },
-        ],
+        coveredOrganos: [covered(sergas.id, 'FAILED', { failureReason: 'Upstream unavailable' })],
       }),
     ),
   },

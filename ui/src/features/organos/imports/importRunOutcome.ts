@@ -1,8 +1,10 @@
+import { groupBy, uniq } from 'es-toolkit';
+
 import { formatDateTime } from '../../../shared/lib/date';
 import { isProblemType } from '../../../shared/lib/httpError';
 import { counted } from '../../../shared/lib/plural';
 import { strings } from '../../../shared/lib/strings';
-import type { ImportRefusalKind, ImportRun } from './contratosMenores';
+import type { ImportRefusalKind, ImportRun, ImportRunOrgano } from './contratosMenores';
 
 const copy = strings.admin.organos.contratosMenores;
 
@@ -61,21 +63,51 @@ function contractCounts(run: ImportRun): string {
   return `${counted(run.added, copy.run.added)} · ${counted(run.refreshed, copy.run.refreshed)}`;
 }
 
+/**
+ * The coverage as one entry per Órgano rather than per row. A run covering an
+ * Órgano in both families holds two rows for it, and every figure this banner
+ * shows is a count of Órganos — so counting the array itself would say six for
+ * three.
+ */
+function byOrgano(run: ImportRun): ImportRunOrgano[][] {
+  return Object.values(groupBy(run.coveredOrganos, (organo) => organo.organoId));
+}
+
+function organosCovered(run: ImportRun): number {
+  return byOrgano(run).length;
+}
+
 function completedOf(run: ImportRun): string {
-  const completed = run.coveredOrganos.filter((organo) => organo.state === 'SUCCEEDED').length;
-  return copy.run.completedOf(completed, run.coveredOrganos.length);
+  const organos = byOrgano(run);
+  // Every family has to have succeeded: a mixed Órgano is not completed, which
+  // is the rule the run's own PARTIALLY_SUCCEEDED verdict follows.
+  const completed = organos.filter((rows) =>
+    rows.every((organo) => organo.state === 'SUCCEEDED'),
+  ).length;
+  return copy.run.completedOf(completed, organos.length);
+}
+
+/**
+ * One Órgano's failure, however many families it failed in. The reasons are
+ * deduplicated because both families read the same source through the same
+ * failure mapping — one outage gives them the identical reason, and the line
+ * names no family to tell the two halves apart.
+ */
+function failureLine(name: string, rows: ImportRunOrgano[]): string {
+  return [name, ...uniq(rows.flatMap((organo) => organo.failureReason ?? []))].join(' · ');
 }
 
 function failureLines(run: ImportRun, nameOf: (organoId: string) => string): RunFailure[] {
-  return run.coveredOrganos
-    .filter((organo) => organo.state === 'FAILED')
-    .map((organo) => {
-      const name = nameOf(organo.organoId);
-      return {
-        organoId: organo.organoId,
-        line: organo.failureReason === null ? name : `${name} · ${organo.failureReason}`,
-      };
-    });
+  const failed = groupBy(
+    run.coveredOrganos.filter((organo) => organo.state === 'FAILED'),
+    (organo) => organo.organoId,
+  );
+  // One entry per Órgano, not per family: the title above this list counts the
+  // entries, and an Órgano that failed in both families is still one Órgano.
+  return Object.entries(failed).map(([organoId, rows]) => ({
+    organoId,
+    line: failureLine(nameOf(organoId), rows),
+  }));
 }
 
 function timing(run: ImportRun): string {
@@ -110,7 +142,7 @@ export function describeRun(run: ImportRun, nameOf: (organoId: string) => string
         ...base,
         tone: 'progress',
         title: copy.run.inProgressTitle,
-        counts: counted(run.coveredOrganos.length, copy.run.scopeCount),
+        counts: counted(organosCovered(run), copy.run.scopeCount),
         note: copy.trigger.guardHeld,
       };
     case 'SUCCEEDED':
@@ -118,7 +150,7 @@ export function describeRun(run: ImportRun, nameOf: (organoId: string) => string
         ...base,
         tone: 'success',
         title: copy.run.succeededTitle,
-        counts: `${counted(run.coveredOrganos.length, copy.run.coveredCount)} · ${contractCounts(run)}`,
+        counts: `${counted(organosCovered(run), copy.run.coveredCount)} · ${contractCounts(run)}`,
         note: copy.run.succeededNote,
       };
     case 'PARTIALLY_SUCCEEDED':

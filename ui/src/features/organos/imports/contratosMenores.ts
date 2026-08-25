@@ -34,6 +34,11 @@ export type ImportRunOrganoState =
 
 export interface ImportRunOrgano {
   organoId: string;
+  /**
+   * An Órgano's two families are loaded and fare separately, so a run covering
+   * both carries one row of each.
+   */
+  family: 'CONTRATOS_MENORES' | 'LICITACIONS';
   state: ImportRunOrganoState;
   added: number;
   refreshed: number;
@@ -42,14 +47,18 @@ export interface ImportRunOrgano {
 
 export interface ImportRun {
   id: string;
-  importer: 'ORGANOS' | 'CONTRATOS_MENORES';
+  /** What was triggered, not a summary of what the run covered. */
+  importer: 'ORGANOS' | 'CONTRATOS_MENORES' | 'LICITACIONS' | 'AMBAS_FAMILIAS';
   state: ImportRunState;
   startedAt: string;
   /** Null while a run is going, and for an abandoned one, which never ended. */
   finishedAt: string | null;
   added: number;
   refreshed: number;
-  /** Enumerated when the run was claimed, not as the run reached them. */
+  /**
+   * Enumerated when the run was claimed, not as the run reached them, and one
+   * entry per family — so an Órgano covered in both appears twice.
+   */
   coveredOrganos: ImportRunOrgano[];
 }
 
