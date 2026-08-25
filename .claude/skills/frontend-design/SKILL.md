@@ -24,10 +24,9 @@ where a mockup disagrees with it or with a shipped screen, the mockup is stale.
 
 Never hardcode what these modules already own:
 
-- **`ui/src/app/theme.ts`** — the Mantine theme: `primaryColor: 'indigo'`,
-  `defaultRadius: 'md'`, the system font stack, headings at weight 600. Use theme
-  tokens (`c="dimmed"`, `radius="md"`, colour names like `green`, `red`), not literal
-  hex. If a token is missing, add it to the theme rather than inlining a value.
+- **`ui/src/app/theme.ts`** — the Mantine theme (15 lines; read it). Use theme tokens
+  (`c="dimmed"`, `radius="md"`, colour names like `green`, `red`), never literal hex. If a
+  token is missing, add it to the theme rather than inlining a value.
 - **`ui/src/shared/lib/strings.ts`** — all user-facing copy, in **Galician**. Add new
   copy here under a per-screen key; never write literal user-facing text in a
   component.
@@ -39,18 +38,21 @@ Never hardcode what these modules already own:
 
 ## Design tokens
 
-| Role | Token | Notes |
-| --- | --- | --- |
-| Primary | `indigo` (`indigo.6` `#4c6ef5`) | filled primary buttons, active nav, avatars |
-| Active nav bg / soft accent | `indigo.0` `#edf2ff` with `indigo.8`/`indigo.9` text | Mantine `light` variant |
-| Radius | `md` (8px) | cards, inputs, buttons, modals — from `defaultRadius` |
-| Page background | `gray.0` `#f8f9fa` | surfaces are white |
-| Border | `gray.3` `#dee2e6`; hairlines `gray.1` `#f1f3f5` | card borders vs. in-card dividers |
-| Body text | `gray.9` `#212529` | headings weight 600 |
-| Dimmed text | `gray.6` `#868e96` | subtitles, captions, table headers, meta |
-| Healthy / enabled | `green` (`#40c057` dot, `#ebfbee`/`#2b8a3e` badge) | |
-| Disabled / inert | `gray` badge | disabled ≠ error; render neutral, never red |
-| Required / destructive | `red` `#fa5252` | required-field `*`, destructive emphasis only |
+Mantine's stock palette supplies the values; what this table fixes is **which role gets which
+token** — that mapping is the design language, and it is not derivable from the theme file.
+
+| Role | Token |
+| --- | --- |
+| Primary — filled buttons, active nav, avatars | `indigo.6` |
+| Soft accent / active nav background | `indigo.0` with `indigo.8`/`indigo.9` text (Mantine `light` variant) |
+| Page background / surfaces | `gray.0` page, white surfaces |
+| Card border / in-card divider | `gray.3` border, `gray.1` hairline |
+| Body text / dimmed text | `gray.9` (headings weight 600) / `gray.6` |
+| Healthy, enabled | `green` |
+| Disabled, inert | `gray` — never red; inert is not an error |
+| Required, destructive, a crossed alert threshold | `red` |
+| Stale but not broken — reconnecting, or a warning band | `yellow` (Mantine stock, no theme change) |
+| Chart line, and its stale state | `indigo.6` at `fillOpacity={0.4}`; `indigo.2` when stale |
 
 Rule of thumb: **reach for a Mantine prop before a style**. `c="dimmed"`, `fw={600}`,
 `gap="sm"`, `mt="md"`, `radius="md"`, `withBorder` — not inline `style={{...}}` or raw
@@ -139,6 +141,23 @@ An uppercase dimmed **label** (letter-spaced, ~11px, `fw={600}`), a large value 
 optional leading **status dot** (`green`/`gray`), and a `Badge` on the right. A hairline
 divider then a dimmed caption for context. See `dashboard.svg`.
 
+### Sparklines & segmented bars
+A **sparkline** under a stat card's value shows where that figure has been. One series only,
+so it carries **no legend and no axes** — the card's label already names the data. Draw it with
+`strokeWidth={2}`, `color="indigo.6"` and `fillOpacity={0.4}` (the area is that same colour at
+low opacity, not a separate fill token), over a `gray.1` baseline hairline; swap the colour to
+`indigo.2` while the data is stale. Pad a partly-filled buffer to its full width rather than
+stretching a few points across the box: a short line *is* how "still filling up" reads.
+
+A sparkline is **decorative** — the number above it is the accessible source of truth — so mark
+it `inert aria-hidden`, or recharts' `accessibilityLayer` leaves an unlabelled focusable
+`role="application"` tab stop. Lazy-load anything importing `@mantine/charts`; it drags in
+recharts.
+
+A **segmented bar** (a pool, a quota) leaves a 2 px surface-coloured gap between segments so
+adjacent fills stay distinguishable, and names each segment in a legend — never colour alone.
+Keep each legend swatch the exact token of the segment it stands for.
+
 ### Tables
 Mantine `Table` on a bordered card. Column headers are **uppercase, dimmed,
 letter-spaced** labels on a `gray.0` header row. Rows separated by `gray.1` hairlines.
@@ -180,7 +199,20 @@ followed by dimmed `Text size="sm"`. Keep captions to one line where possible.
 ## Status & semantics
 
 - **Healthy/enabled → green; disabled/inert → grey; destructive/required → red.** Do
-  not use red for merely-inactive state.
+  not use red for merely-inactive state. Red also marks a **measured value that has crossed
+  an alert threshold** — a fault the reader should act on, which is not the same as an inert
+  one.
+- **Live data that has gone stale is `yellow`, not red or grey.** A stream that dropped is
+  reconnecting on its own, so the panel is **never** hidden or replaced by an error state:
+  keep the last known values on screen, dim them, and caption when they arrived
+  ("Última mostra ás 12:45:07 · hai 18 s"). Grey would read as inert and red as broken; the
+  data is neither. Carry the meaning in the badge's **text** as well as its colour.
+- **Band a rate whose health isn't obvious from the number** (SPEC-0003 R22) — never badge a
+  computed rate unconditionally green, or a 100 % error rate reads as "NORMAL". The spec asks
+  for normal-vs-concerning; **the cut-offs are this file's call, not the spec's.** The HTTP
+  error rate is the one in service: `normal` under 1 % (green), `elevated` 1–5 % (yellow),
+  `high` at or above 5 % (red), in `metricsFormat.ts#errorRateSeverity`, pinned by
+  `metricsFormat.test.ts`. Move them here, not in a spec amendment.
 - **Error *pages* are not red either.** The 403 and 5xx pages render their glyph, code
   and actions in calm **indigo** — a denied route or a transient fault is a system state,
   not something the reader broke. The one exception is the login form's generic failure
@@ -206,10 +238,13 @@ followed by dimmed `Text size="sm"`. Keep captions to one line where possible.
 - [ ] New user-facing text added to `strings.ts` (Galician), not inlined.
 - [ ] Colours/spacing/radius via theme tokens & Mantine props — no stray hex or ad-hoc CSS.
 - [ ] Icons from `@tabler/icons-react`; a `ui/` screen sits inside the existing `AppShell`.
-- [ ] Status colours follow the semantics (green/grey/red) above.
+- [ ] Status colours follow the semantics (green/grey/yellow/red) above; a computed
+      rate is banded, never badged unconditionally green.
+- [ ] A decorative chart is `inert aria-hidden`, with its value readable above it.
 - [ ] Inactive records are dimmed, not removed; blocked actions disabled with a reason, not hidden.
 - [ ] Icon-only controls have `aria-label`; layout stays within the viewport at `sm`.
 - [ ] From `ui/`: `npm run lint`, `npm run build`, `npm run test` pass.
 
 <!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->
 <!-- distilled-from: FEAT-0004 @ 7402d8a -->
+<!-- distilled-from: FEAT-0005 @ 525bdaa -->

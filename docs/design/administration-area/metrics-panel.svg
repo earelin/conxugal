@@ -62,7 +62,7 @@
   </g>
   <text x="52" y="280" font-size="14" fill="#495057">Usuarios</text>
 
-  <!-- ===== main: page scaffold (FEAT-0004 dashboard, unchanged) ===== -->
+  <!-- ===== main: page scaffold (status dashboard, unchanged) ===== -->
   <text x="284" y="112" font-size="26" font-weight="700" fill="#212529">Panel do sistema</text>
   <text x="284" y="138" font-size="14" fill="#868e96">Estado operativo do sistema no momento da consulta.</text>
 
@@ -122,7 +122,7 @@
   </g>
   <text x="328" y="648" font-size="12" fill="#868e96">A información de estado nunca inclúe credenciais nin cadeas de conexión.</text>
 
-  <!-- ===== METRICS SECTION (FEAT-0005) ===== -->
+  <!-- ===== METRICS SECTION ===== -->
   <!-- section header -->
   <text x="284" y="708" font-size="18" font-weight="600" fill="#212529">Métricas en tempo real</text>
   <text x="284" y="730" font-size="13" fill="#868e96">Mostras en directo do proceso en execución. Actualízanse soas; non se gardan no servidor.</text>

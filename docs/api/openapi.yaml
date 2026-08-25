@@ -259,6 +259,20 @@ paths:
             An open event stream. Each `message` event carries one `RuntimeMetrics` sample as JSON
             in its `data` field; heartbeat comments keep the connection alive.
           headers:
+            Cache-Control:
+              description: >-
+                Always `no-cache`. A cache that served a stored copy of a stream would replay
+                figures the instance has already moved past.
+              schema:
+                type: string
+                enum: [no-cache]
+            X-Accel-Buffering:
+              description: >-
+                Always `no`. A reverse proxy that buffers the response holds every sample back
+                until the body ends, which for a stream the instance never closes is never.
+              schema:
+                type: string
+                enum: ["no"]
             RateLimit-Limit:
               $ref: "#/components/headers/RateLimitLimit"
             RateLimit-Remaining:

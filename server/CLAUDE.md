@@ -9,69 +9,18 @@ REST) and `docs/architecture/0002-hexagonal-architecture.md` (the module split b
 
 ## Commands
 
-Run from `server/` (Gradle wrapper; Java 25 toolchain is pinned in the root
-`build.gradle.kts` and auto-provisioned by Gradle if not installed):
+Run from `server/`; `./gradlew tasks` lists them all and the build files carry the wiring.
+Two things are not discoverable from either:
 
-- `./gradlew build` — compile, run all tests (`check`) and assemble all three modules
-- `./gradlew test` — run all tests without assembling
-- `./gradlew :application:test` — run tests in a single module (`:domain:test`,
-  `:infrastructure:test` likewise)
-- `./gradlew test --tests "<FullyQualifiedTestName>"` — run a single test class (works
-  across all modules; scope to one with e.g. `:application:test --tests ...`)
-- `./gradlew run` — run the application (`application` module; embedded Netty server on
-  port 8080, see `application/src/main/resources/application.yml`)
-- `./gradlew :infrastructure:integrationTest` — run `infrastructure`'s integration
-  tests (adapters against a real PostgreSQL, started disposably via Testcontainers —
-  needs a Docker daemon). Defined as a
-  [JVM Test Suite](https://docs.gradle.org/current/userguide/jvm_test_suite_plugin.html)
-  (`infrastructure/src/integrationTest`) that is deliberately **not** added to `check`,
-  same as `application`'s and `acceptance` (see below).
-- `./gradlew :application:integrationTest` — run `application`'s in-process Micronaut
-  integration tests: full embedded-server HTTP round-trips (session auth, CSRF, idle
-  timeout) against the real `@Controller`/security wiring rather than mocks. Also a
-  JVM Test Suite (`application/src/integrationTest`), deliberately **not** added to
-  `check` — unlike `infrastructure`'s, it needs no Docker daemon, just a JVM.
-- `./gradlew :architecture:test` — run the ArchUnit rules that enforce the hexagonal
-  dependency direction, `domain`'s transport/persistence-code purity, and the `/api/`
-  URL prefix (see below). Static bytecode analysis only, no Docker/running instance
-  needed, so it's part of `check`/`build` like `domain`'s and `infrastructure`'s tests.
-- `./gradlew :domain:jacocoTestReport` / `:application:jacocoTestReport` /
-  `:infrastructure:jacocoTestReport` — JaCoCo code coverage report for that module
-  (`<module>/build/reports/jacoco/test/html/index.html`). For `application` and
-  `infrastructure`, this runs **both** `test` and `integrationTest` and merges their
-  coverage into one report; `domain` has no `integrationTest` suite, so it's unit-test
-  coverage only. Not part of `check`/`build` — same opt-in treatment as
-  `integrationTest` itself, so it doesn't force a Docker-dependent
-  `infrastructure:integrationTest` run into the normal build.
-- `./gradlew jacocoAggregatedReport` — combines coverage from `domain`, `application`
-  and `infrastructure` (including their `integrationTest` suites where present) into
-  one server-wide report (`build/reports/jacoco/jacocoAggregatedReport/html/index.html`).
-- `./gradlew :domain:pitest` (likewise `:application:`, `:infrastructure:`, `:commons:`)
-  — PIT mutation testing for that module (`<module>/build/reports/pitest/index.html`),
-  wired via the shared `gal.conxugal.java-conventions` plugin so it's available
-  everywhere, scoped to that module's own package and its unit `test` source set only
-  (not `integrationTest`). Manually-invoked only — not part of `check`/`build`, same
-  opt-in treatment as `integrationTest`/`jacocoTestReport`. `architecture`/`acceptance`
-  also carry the task but have no `main` sources to mutate, so it's a no-op there.
-
-## Fast feedback while iterating
-
-`./gradlew build`/`test` never runs an `integrationTest` suite (each is deliberately
-kept out of `check`, see above) — running only `test` after touching a controller or
-an adapter gives a false green. Pick the narrowest command(s) that actually exercise
-what changed:
-
-| What changed | Run for feedback |
-| --- | --- |
-| `domain/src/main/java/**` (entities, ports, use cases) | `./gradlew :domain:test` |
-| `infrastructure/src/main/java/**` — a class implementing a `domain` port (an adapter: repository, encoder, client, …) | `./gradlew :infrastructure:test :infrastructure:integrationTest` — the unit suite alone doesn't touch the real dependency the adapter drives |
-| `infrastructure/src/main/resources/db/migration/**` (schema/migrations) | `./gradlew :infrastructure:integrationTest` |
-| `application/src/main/java/**` (REST endpoints, security config, wiring) | `./gradlew :application:test :application:integrationTest` — the unit suite alone doesn't boot a real embedded server/security filter chain |
-| `application/src/integrationTest/java/**` | `./gradlew :application:integrationTest` |
-| `acceptance/src/test/java/**` | Needs a running instance first (see below); then `./gradlew acceptance` |
-| Package layout or module dependencies anywhere under `domain`/`application`/`infrastructure` | `./gradlew :architecture:test` |
-| Any `build.gradle.kts`, `gradle/libs.versions.toml`, or `settings.gradle.kts` | `./gradlew build` (full multi-module build) |
-| Before committing, regardless of scope | `./gradlew build` (see below) |
+- **`build`/`check` deliberately exclude every `integrationTest` suite**, `acceptance`,
+  `jacoco*Report` and `pitest`. Running only `test` after touching a controller or an adapter
+  is a false green — `:infrastructure:integrationTest` (needs a Docker daemon, Testcontainers
+  starts PostgreSQL) and `:application:integrationTest` (JVM only, boots a real embedded
+  server and security chain) have to be asked for by name.
+- **Pick the narrowest suite that exercises what changed**: `domain` → `:domain:test`;
+  an adapter or a migration → `:infrastructure:integrationTest`; a controller, security
+  config or wiring → `:application:test :application:integrationTest`; package layout or
+  module dependencies → `:architecture:test`; any Gradle file → a full `./gradlew build`.
 
 ## Migrations share one version sequence
 
@@ -92,11 +41,8 @@ volume wipe.
 
 ## Before committing
 
-Run `./gradlew build` from `server/` and fix any failures before committing changes
-to this module. `build` never exercises either `integrationTest` suite (see above), so
-also run `./gradlew :infrastructure:integrationTest` if the change touched an
-`infrastructure` adapter, and `./gradlew :application:integrationTest` if it touched
-`application`'s controllers, security config, or its `src/integrationTest`.
+Run `./gradlew build`, plus whichever `integrationTest` suite the change touched — see
+Commands above for why `build` alone is not enough.
 
 ## Architecture
 
@@ -253,6 +199,31 @@ only once a session exists. Their styling hand-copies the Mantine palette from
 `ui/src/app/theme.ts` and drifts silently — see the `frontend-design` skill before
 changing either.
 
+
+## The runtime-metrics stream
+
+`GET /api/admin/metrics` streams detailed runtime samples to an administrator over SSE
+(ADR-0009); the figures are read straight off the platform with no metrics library
+(ADR-0025). The contract — sample shape, the two anti-buffering response headers and why
+each is required — lives in `docs/api/openapi.yaml` under `streamMetrics`. Four things about
+it are easy to get wrong:
+
+- **Concurrent streams are deliberately uncapped.** ADR-0009 lists "must be capped and closed
+  cleanly" among its cons; only the closing half is built, and that is a decision rather than
+  an omission — the endpoint is `@Secured("ADMIN")` and each dashboard opens one stream, so the
+  ceiling is already the number of administrators. A configurable maximum would be a moving
+  part with no evidence behind it. Read the ADR's wording as a risk to keep in view; if
+  concurrent streams ever become real pressure, the cap is its own small, measured task.
+- **The cadence is the server's alone.** `conxugal.metrics.stream` in `application.yml` sets
+  the sample (5 s) and heartbeat (15 s) intervals. The contract exposes no parameter for
+  either, so letting a client choose is a contract change, not a config one.
+- **`HttpRequestCounterFilter` is ordered ahead of `SECURITY` on purpose** (its javadoc says
+  why); reordering it silently stops counting every `401` and `403`. Its totals are in-memory
+  and process-lifetime, so a second replica would report its own.
+- **A sample that fails to assemble is dropped, not fatal to the stream** — distinct from a
+  metric the platform never reports, which degrades to an absent value inside the sample.
+
 <!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->
 <!-- distilled-from: FEAT-0003 @ 73cf32f -->
 <!-- distilled-from: FEAT-0004 @ 7402d8a -->
+<!-- distilled-from: FEAT-0005 @ 525bdaa -->
