@@ -68,6 +68,12 @@ final class LicitadorRow {
    */
   private static final String NESTED_LIST = "> ul, > li > ul";
 
+  /** The list every name cell wraps its party in, consortium or not. */
+  private static final String OUTER_LIST = "ul";
+
+  /** A list's own items, never a nested list's. */
+  private static final String FIRST_ITEM = "> li";
+
   /** The class {@link PublishedValues} and {@code Whitespace} both call blank. */
   private static final String BLANK = "[\\s\\p{Z}\\x{85}\\x{1C}-\\x{1F}]";
 
@@ -105,8 +111,8 @@ final class LicitadorRow {
    */
   static PublishedBidder read(
       @Nullable String loteCell, @Nullable String nifCell, @Nullable Element nomeCell) {
-    Element list = nomeCell == null ? null : nomeCell.selectFirst("ul");
-    Element memberList = list == null ? null : list.selectFirst(NESTED_LIST);
+    Element list = firstIn(nomeCell, OUTER_LIST);
+    Element memberList = firstIn(list, NESTED_LIST);
     String name = nameOf(nomeCell, list);
     if (memberList == null) {
       // Held exactly as published. FiscalIdentifier's own rule is that nothing beyond emptiness
@@ -161,7 +167,7 @@ final class LicitadorRow {
    * but which costs nothing to survive.
    */
   private static @Nullable String nameOf(@Nullable Element cell, @Nullable Element list) {
-    Element first = list == null ? null : list.selectFirst("> li");
+    Element first = firstIn(list, FIRST_ITEM);
     if (first == null) {
       return cell == null ? null : PublishedValues.text(cell.wholeText());
     }
@@ -184,6 +190,15 @@ final class LicitadorRow {
       members.add(memberOf(PublishedValues.text(entry.wholeText())));
     }
     return members;
+  }
+
+  /**
+   * The first match for {@code selector} within {@code parent}, or nothing where there is no parent
+   * to look in. Every step of this parse walks a cell the source may not have published, so without
+   * it each one carries its own null branch and the shape of the walk is lost among them.
+   */
+  private static @Nullable Element firstIn(@Nullable Element parent, String selector) {
+    return parent == null ? null : parent.selectFirst(selector);
   }
 
   private static PublishedConsortiumMember memberOf(@Nullable String entry) {
