@@ -11,7 +11,9 @@ import org.jspecify.annotations.Nullable;
  * identical to {@link Cpv} and separate from it because the two map two tables and one mapped
  * entity cannot map both; see that record for the reasoning in full, which holds here unchanged —
  * matched on the code and never on the description, unseeded because the list is versioned rather
- * than closed, and held once because thousands of procedures cite the same entry.
+ * than closed, held once because thousands of procedures cite the same entry, and carrying a
+ * description the record's own table publishes beside the code ({@code ES111} then
+ * {@code A Coruña}).
  *
  * <p>The one difference is what a mismatch would cost. A CPV names what is bought and a NUTS names
  * where, so a row filed under the wrong vocabulary is not a visible error but a procedure

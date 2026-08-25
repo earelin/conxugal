@@ -41,9 +41,10 @@ public class ResolveOperador {
 
   /**
    * The operador this publication names, or nothing when its published identifier is unusable —
-   * absent, or empty once surrounding whitespace is ignored. Nothing is catalogued for such a
-   * publication: never a placeholder, and never a shared <em>unknown</em> row that would pool
-   * unrelated parties under one identity.
+   * absent, empty once surrounding whitespace is ignored, or one of the placeholder forms
+   * {@link FiscalIdentifier#of} turns away. Nothing is catalogued for such a publication: never a
+   * placeholder, and never a shared <em>unknown</em> row that would pool unrelated parties under
+   * one identity.
    *
    * <p>A publication that carried <b>no name</b> contributes none: it is catalogued under the empty
    * name if nothing named its identifier before, because an operador has to be displayed as

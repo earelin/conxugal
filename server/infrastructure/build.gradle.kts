@@ -43,10 +43,19 @@ micronaut {
     }
 }
 
+// The pages this source really served, byte for byte. Both suites read them — the unit tests
+// parse them off the classpath, the integration test serves the same bytes through WireMock — so
+// they sit outside both source sets rather than one borrowing from the other's resources.
+val capturedSource = layout.projectDirectory.dir("src/capturedSource")
+
 testing {
     suites {
         register<JvmTestSuite>("integrationTest") {
             useJUnitJupiter(libs.versions.junit.get())
+
+            sources {
+                resources.srcDir(capturedSource)
+            }
 
             dependencies {
                 implementation(project())
@@ -96,6 +105,9 @@ val generateVersionProperties = tasks.register("generateVersionProperties") {
 sourceSets {
     main {
         resources.srcDir(files(generatedVersionDir).builtBy(generateVersionProperties))
+    }
+    test {
+        resources.srcDir(capturedSource)
     }
 }
 

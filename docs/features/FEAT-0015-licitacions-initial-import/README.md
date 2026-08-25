@@ -229,16 +229,17 @@ yield, not a reason to skip the step, and R25 already accepts an award that name
 
 ### 4. SPEC-0006 R5 should treat a published placeholder as unusable — defensively
 
-[SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) R5 makes an identifier unusable only
-when it is "absent, or empty once surrounding whitespace is ignored", and says "nothing beyond the
-emptiness test is validated". Its criterion **#9** makes the consequence normative: "a contract
+[SPEC-0006](../../specs/SPEC-0006-operadores-economicos.md) R5 made an identifier unusable only
+when it was "absent, or empty once surrounding whitespace is ignored", and said "nothing beyond the
+emptiness test is validated". Its criterion **#9** made the consequence normative: "a contract
 published with an irregular but non-empty identifier **is** attached to an operador."
 
-`-` is not empty, and neither is `TEMP-00934`. `FiscalIdentifier.of` implements R5 exactly, so
-`of("-")` returns a present value. Reached through the ordinary bidder path, that would catalogue
-**one** operador holding the fiscal identifier `-`, carrying the bids of dozens of unrelated
-consortia under whichever name was published last, and every `TEMP-` value would become exactly the
-"invented or placeholder" operador R5 exists to forbid. Both failures are silent.
+`-` is not empty, and neither is `TEMP-00934`. `FiscalIdentifier.of` implemented R5 exactly, so
+`of("-")` returned a present value. Reached through the ordinary bidder path, that would have
+catalogued **one** operador holding the fiscal identifier `-`, carrying the bids of dozens of
+unrelated consortia under whichever name was published last, and every `TEMP-` value would have
+become exactly the "invented or placeholder" operador R5 exists to forbid. Both failures were
+silent.
 
 **Amendment 1's structural branch closes that path**, because every measured `-` and `TEMP-` sat on a consortium row and
 the structural branch never offers one to R3. So this is **a guard, not a blocker**: 578 of 578

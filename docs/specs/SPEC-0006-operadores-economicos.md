@@ -252,12 +252,13 @@ One decision has since been taken:
   identifier is still an identifier. Without it, every contract a source published a dash for
   would attach to a single operador holding the fiscal identifier `-`, merging unrelated firms
   under whichever name was published last — the invented operador this requirement exists to
-  forbid, arrived at by obeying it literally. Such a contract yields **no** operador — never an invented or
-  placeholder one — while remaining stored and browsable, showing **no awardee at all**, since
-  under [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R7 the awardee is held on the
-  operador that award did not produce (SPEC-0005 #11). Nothing
-  beyond the emptiness test is validated: the source publishes irregular but genuine
-  identifiers, and rejecting them would discard real awards.
+  forbid, arrived at by obeying it literally. Such a contract yields **no** operador — never an
+  invented or placeholder one — and is **stored** rather than rejected. It is not, however,
+  browsable: under [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R7 the awardee is
+  held on the operador that award did not produce, so the contract has none, and R28 makes a
+  contract missing its awardee an anomaly withheld from every reader (SPEC-0005 #11). Nothing
+  beyond emptiness and the two placeholder forms named above is validated: the source publishes
+  irregular but genuine identifiers, and rejecting them would discard real awards.
 - **R6** — Awardees that are **natural persons** and those that are **legal entities** are
   catalogued and reachable identically, and the system does not classify which is which. The
   reason is the no-inference rule of this spec's Scope, not an absence in the source: the kind
@@ -704,12 +705,21 @@ One decision has since been taken:
    The canonical form is reached from every published spelling identically, so no contract's
    arrival can move it.
 8. **(R5)** A contract published with an absent, whitespace-only, or **placeholder** fiscal
-   identifier — a lone dash or a `TEMP-…` value — is
-   stored and appears in its Órgano's list showing **no awardee** — the awardee is held on the
-   operador that award did not produce
-   ([SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) #11) — while creating no
-   operador and appearing in no operador's history, and offering no awardee route that leads
-   nowhere.
+   identifier — a lone dash or a `TEMP-…` value — is **stored and not rejected**, while creating
+   no operador and appearing in no operador's history.
+
+   **It is withheld from browsing rather than shown without an awardee**, and this criterion
+   once said the opposite. The awardee is held on the operador that award did not produce, so
+   such a contract has none; under
+   [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R28 a contract missing its awardee
+   is an **anomaly**, withheld from every reader (SPEC-0005 #11). So **no list renders a row with
+   no awardee** and none offers an awardee route that leads nowhere — the guarantee this
+   criterion was reaching for, arrived at by withholding rather than by displaying a gap.
+
+   **Widening R5 widened this population.** Every contract published with a placeholder leaves
+   the browse list and its counts for the anomaly set, where only an administrator surface
+   reaches it. That is the intended trade: a stored contract nobody browses costs less than a
+   shared identity pooling unrelated suppliers.
 9. **(R5)** A contract published with an irregular but non-empty identifier that is **not** a
    placeholder — a malformed NIF, a foreign VAT number — **is** attached to an operador rather
    than rejected or discarded. Two contracts published with the **same placeholder** are attached
