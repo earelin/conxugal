@@ -145,6 +145,14 @@ flowchart LR
   concurrent-stream count stays bounded because only administrators can open one (ADR-0009).
 
 ## Resolved questions
+- **No numeric cap on concurrent streams.** [ADR-0009](../../architecture/0009-sse-admin-realtime-metrics.md)
+  records, among its consequences, that the connection count "must be capped and closed
+  cleanly". This feature implements the closing half and **deliberately not the capping
+  half**: the endpoint is `@Secured("ADMIN")`, administrators are few and each dashboard
+  opens one stream, so the ceiling is the number of administrators — a limit the access rule
+  already sets. Adding a configurable maximum would be a moving part with no evidence behind
+  it. If concurrent streams ever become a real pressure, the cap is its own small task, and a
+  measured one. Read the ADR's wording as the risk to keep in view, not as an unmet obligation.
 - **Sample cadence** — a single **server-chosen** interval, set by a configuration property
   with a sane default. The client cannot request a coarser one; the OpenAPI operation exposes
   no parameter for it, so making the cadence client-selectable would be a contract change.

@@ -8,13 +8,16 @@ import static org.mockito.Mockito.when;
 
 import gal.conxugal.application.http.auth.support.AuthenticationTestSupport;
 import gal.conxugal.application.http.auth.support.TestUserFactory;
+import gal.conxugal.domain.metrics.HttpRequestCounter;
 import gal.conxugal.domain.metrics.RuntimeMetrics;
 import gal.conxugal.domain.metrics.RuntimeMetricsSource;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.core.io.buffer.ByteBuffer;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.MediaType;
 import io.micronaut.http.client.StreamingHttpClient;
 import io.micronaut.runtime.server.EmbeddedServer;
 import io.micronaut.test.annotation.MockBean;
@@ -47,6 +50,9 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
   @Inject
   RuntimeMetricsSource runtimeMetricsSource;
 
+  @Inject
+  HttpRequestCounter httpRequestCounter;
+
   private StreamingHttpClient streamingClient;
 
   @MockBean(RuntimeMetricsSource.class)
@@ -69,6 +75,7 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
   @Test
   void user_role_is_forbidden(RequestSpecification spec) {
     String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.normalUser());
+    RuntimeMetrics.Http before = httpRequestCounter.snapshot();
 
     given(spec)
         .header(HttpHeaders.COOKIE, sessionCookie)
@@ -76,6 +83,11 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
         .get("/api/admin/metrics")
     .then()
         .statusCode(HttpStatus.FORBIDDEN.getCode());
+
+    // The counting filter sits at the METRICS phase, ahead of SECURITY, so a request the
+    // security filter turns away never reaches the route yet still unwinds back through it.
+    // Reorder the two and this is the request that stops being counted.
+    assertThat(httpRequestCounter.snapshot().requestCount()).isEqualTo(before.requestCount() + 1);
   }
 
   @Test
@@ -85,6 +97,40 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
         .get("/api/admin/metrics")
     .then()
         .statusCode(HttpStatus.UNAUTHORIZED.getCode());
+  }
+
+  @Test
+  void stream_is_typed_as_events_and_asks_intermediaries_not_to_buffer(RequestSpecification spec) {
+    when(runtimeMetricsSource.currentSample()).thenReturn(sample(1));
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+
+    HttpResponse<ByteBuffer<?>> response = openStreamForItsHeaders(sessionCookie);
+
+    assertThat(response).isNotNull();
+    HttpHeaders headers = response.getHeaders();
+    assertThat(headers.get(HttpHeaders.CONTENT_TYPE)).startsWith(MediaType.TEXT_EVENT_STREAM);
+    // A cache or a proxy that buffers holds every sample back until the body ends, which for a
+    // stream the instance never closes is never. These two headers are what tell it not to.
+    assertThat(headers.get(HttpHeaders.CACHE_CONTROL)).isEqualTo("no-cache");
+    assertThat(headers.get("X-Accel-Buffering")).isEqualTo("no");
+  }
+
+  @Test
+  void failed_sample_is_skipped_rather_than_ending_the_stream(RequestSpecification spec)
+      throws InterruptedException {
+    when(runtimeMetricsSource.currentSample())
+        .thenThrow(new IllegalStateException("the pool gauge is unavailable"))
+        .thenReturn(sample(2));
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+
+    StreamCollector collector = openStream(sessionCookie);
+    try {
+      // A sample the source cannot assemble must cost the viewer that one tick and nothing more.
+      // Ending the stream instead would drop the panel into reconnecting on the first hiccup.
+      collector.awaitText(text -> text.contains("\"active\":2"), Duration.ofSeconds(3));
+    } finally {
+      collector.dispose();
+    }
   }
 
   @Test
@@ -144,6 +190,30 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
   }
 
   @Test
+  void subscribing_to_the_stream_is_counted_like_any_other_request(RequestSpecification spec)
+      throws InterruptedException {
+    when(runtimeMetricsSource.currentSample()).thenReturn(sample(1));
+    // AuthenticationTestSupport#loginAs issues one POST /login and follows no redirect, so the
+    // subscription below is the only request between this snapshot and the assertion. Give that
+    // helper a second round trip and the exact delta here is what tells you.
+    String sessionCookie = seedUserAndLoginAs(spec, TestUserFactory.adminUser());
+    RuntimeMetrics.Http before = httpRequestCounter.snapshot();
+
+    StreamCollector collector = openStream(sessionCookie);
+    try {
+      // Waiting for a frame is what orders the filter's run before the snapshot below; the
+      // bound is generous because promptness is another test's subject, not this one's.
+      collector.awaitText(text -> countDataFrames(text) >= 1, Duration.ofSeconds(2));
+    } finally {
+      collector.dispose();
+    }
+
+    RuntimeMetrics.Http after = httpRequestCounter.snapshot();
+    assertThat(after.requestCount()).isEqualTo(before.requestCount() + 1);
+    assertThat(after.errorCount()).isEqualTo(before.errorCount());
+  }
+
+  @Test
   void disconnecting_the_client_releases_the_subscription_and_its_timer(RequestSpecification spec)
       throws InterruptedException {
     when(runtimeMetricsSource.currentSample()).thenReturn(sample(1));
@@ -179,9 +249,21 @@ class RuntimeMetricsControllerIntegrationTest extends AuthenticationTestSupport 
   }
 
   private StreamCollector openStream(String sessionCookie) {
-    HttpRequest<?> request =
-        HttpRequest.GET("/api/admin/metrics").header(HttpHeaders.COOKIE, sessionCookie);
-    return new StreamCollector(Flux.from(streamingClient.dataStream(request)));
+    return new StreamCollector(Flux.from(streamingClient.dataStream(subscription(sessionCookie))));
+  }
+
+  /**
+   * The answer to a subscription, taken from the first chunk and then cancelled. REST-assured
+   * reads a whole body before handing over a response, so it cannot ask a stream that never ends
+   * what headers it opened with.
+   */
+  private HttpResponse<ByteBuffer<?>> openStreamForItsHeaders(String sessionCookie) {
+    return Flux.from(streamingClient.exchangeStream(subscription(sessionCookie)))
+        .blockFirst(Duration.ofSeconds(3));
+  }
+
+  private static HttpRequest<?> subscription(String sessionCookie) {
+    return HttpRequest.GET("/api/admin/metrics").header(HttpHeaders.COOKIE, sessionCookie);
   }
 
   private static int countDataFrames(String text) {
