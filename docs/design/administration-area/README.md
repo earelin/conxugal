@@ -76,11 +76,15 @@ vocabulary the dashboard already uses, sitting below the FEAT-0004 status cards 
 
 ### Sparklines
 
-A single series, so **no legend and no axes** — the tile's label names the data. A 2 px
-`indigo.6` line over an `indigo.0` fill on a `gray.1` baseline hairline, with the newest
-sample marked by a dot ringed in the surface colour. The buffer holds the last 250 samples;
-with fewer, the line spans only the elapsed part of the box, which is how "the history is
-still filling up" reads.
+A single series, so **no legend and no axes** — the tile's label names the data. As shipped:
+`strokeWidth={2}`, `color="indigo.6"` (`indigo.2` while stale) and `fillOpacity={0.4}`, over a
+`gray.1` baseline hairline. The buffer holds the last 250 samples; with fewer, the line spans
+only the elapsed part of the box, which is how "the history is still filling up" reads.
+
+Two things the mockups draw that the shipped panel does not have, because Mantine's
+`Sparkline` cannot express them: a **separate `indigo.0` area fill** (one `--chart-color`
+drives stroke and fill together, hence `fillOpacity`) and a **dot on the newest sample**
+(the component exposes no dot prop). Read those as intent, not as spec.
 
 They are **decorative and hidden from assistive technology** (`inert aria-hidden`): the
 number above a sparkline is always the accessible source of truth. There is no hover
@@ -104,8 +108,9 @@ says when it arrived (`Última mostra ás 12:45:07 · hai 18 s`). `yellow` marks
 broken* — neither green (healthy) nor red (a fault to act on).
 
 The *Actividade HTTP* card's error rate is banded rather than badged green unconditionally:
-`normal` under 1 %, `elevated` 1–5 %, `high` at or above 5 %. Those cut-offs are a UI
-judgement, not a spec requirement — see the `frontend-design` skill.
+`normal` under 1 %, `elevated` 1–5 %, `high` at or above 5 %. [SPEC-0003](../../specs/SPEC-0003-administration-area.md)
+R22 asks for the normal-vs-concerning distinction; the cut-offs themselves are a design call
+and live in the [`frontend-design` skill](../../../.claude/skills/frontend-design/SKILL.md).
 
 ## Copy
 

@@ -104,6 +104,10 @@ Access control for the area itself is established by SPEC-0002 (the admin area i
   that admin's debugging, and is discarded when they leave or reload the view.
 - **R21** — The detailed metrics never disclose secrets or credentials (the same rule as
   R5).
+- **R22** — Where a detailed metric is a rate whose health is not self-evident from the
+  number alone, the view distinguishes a normal value from a concerning one, so an
+  administrator can tell at a glance without computing it. Which metrics qualify and where
+  the boundaries fall is a design decision, not a requirement of this spec.
 
 ## Acceptance criteria
 
@@ -147,3 +151,5 @@ Access control for the area itself is established by SPEC-0002 (the admin area i
     or store that returns a past metric value, and history held in the client is cleared
     on reload.
 18. **(R21)** No secret or credential value appears anywhere in the detailed metrics.
+19. **(R22)** An administrator viewing an instance whose error rate has climbed sees that
+    metric marked as concerning; on a healthy instance the same metric is marked normal.
