@@ -87,6 +87,16 @@ function completedOf(run: ImportRun): string {
   return copy.run.completedOf(completed, organos.length);
 }
 
+/**
+ * One Órgano's failure, however many families it failed in. The reasons are
+ * deduplicated because both families read the same source through the same
+ * failure mapping — one outage gives them the identical reason, and the line
+ * names no family to tell the two halves apart.
+ */
+function failureLine(name: string, rows: ImportRunOrgano[]): string {
+  return [name, ...uniq(rows.flatMap((organo) => organo.failureReason ?? []))].join(' · ');
+}
+
 function failureLines(run: ImportRun, nameOf: (organoId: string) => string): RunFailure[] {
   const failed = groupBy(
     run.coveredOrganos.filter((organo) => organo.state === 'FAILED'),
@@ -94,15 +104,9 @@ function failureLines(run: ImportRun, nameOf: (organoId: string) => string): Run
   );
   // One entry per Órgano, not per family: the title above this list counts the
   // entries, and an Órgano that failed in both families is still one Órgano.
-  // Its reasons ride on the single line rather than one of them being lost —
-  // deduplicated, because both families read the same source through the same
-  // failure mapping, so one outage gives them the identical reason and the line
-  // carries nothing to tell the two halves apart.
   return Object.entries(failed).map(([organoId, rows]) => ({
     organoId,
-    line: [nameOf(organoId), ...uniq(rows.flatMap((organo) => organo.failureReason ?? []))].join(
-      ' · ',
-    ),
+    line: failureLine(nameOf(organoId), rows),
   }));
 }
 
