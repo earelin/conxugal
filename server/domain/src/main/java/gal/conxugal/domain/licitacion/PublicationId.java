@@ -14,7 +14,12 @@ import io.micronaut.data.model.DataType;
  * source mints them is the source's business and nothing published fixes the shape, so this holds
  * what was published rather than a reading of it — a source that started issuing alphanumeric
  * identifiers would cost a parse at the adapter rather than a column type, a migration and a
- * re-import. Nothing sorts, sums or increments one; it is matched on and nothing else.
+ * re-import. Nothing here sums or increments one, and nothing matches on anything but the text.
+ *
+ * <p>One caller does need it <em>ordered</em>, and it pays that parse rather than comparing the
+ * text: the operador name rank breaks a tie on the higher contract identifier against a contrato
+ * menor's {@code long}, and text order is not numeric order — {@code "9"} sorts above
+ * {@code "10"}. See {@link Licitacion} for why that comparison arises at all.
  *
  * <p><strong>It names a publication, not a licitación.</strong> Measured, the source serves both
  * contract families from one identifier space, so an identifier denotes one publication whichever

@@ -126,9 +126,12 @@ convergence mechanism, and it arrives with the incremental feature.
   displayed under the spelling accounted for **first**, and a re-import does not swap them. This is
   the case SPEC-0006 R4 admits rather than closes, asserted here so the behaviour is pinned rather
   than incidental. (SPEC-0006 #36)
-- A procedure whose publication identifier is not a number **is not ranked** — no operador name
-  advances from it — rather than ranked as text, which would make `"9"` outrank `"10"` and corrupt
-  the contratos menores tie-break. (SPEC-0006 #36)
+- A procedure whose publication identifier is not a number **contributes no rank** — the award
+  still resolves its operador and still stores, and no operador name advances from it — rather
+  than being ranked as text, which would make `"9"` outrank `"10"` and corrupt the contratos
+  menores tie-break. The rank-less path is TASK-0022's second entry point on `ResolveOperador`,
+  not a rank engineered to lose.
+  ([TASK-0021](TASK-0021-settle-the-licitacion-contract-identity-rank.md); SPEC-0006 #37)
 - Every award carries a resolution path, including the unresolved one. (SPEC-0008 #46)
 - The use case calling `ResolveOperador` **opens the transaction** the resolution's writes join, so
   an operador cannot be created and named while the award write that justified it rolls back. The

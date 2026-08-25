@@ -91,10 +91,19 @@ that family's spec rather than while building it:
 - an **amount**, on the VAT basis R9 fixes;
 - the **awarding Órgano**;
 - a **stable contract identity** that is **totally ordered**, and ordered consistently across
-  families — R4 breaks its tie by taking the **higher** identity, which needs more than the
-  stability [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R7 promises. Any total
-  order will do provided it is deterministic and agreed between families; the requirement is
-  that one is stated, not which;
+  families — which needs more than the stability
+  [SPEC-0005](SPEC-0005-import-browse-contratos-menores.md) R7 promises. Any total order will do
+  provided it is deterministic and agreed between families; the requirement is that one is
+  stated, not which.
+
+  **Two rules consume it, and they do not take the same thing.** R9 rows an operador's history by
+  the **whole** identity, so a family whose identity did not separate its contracts would collapse
+  rows the source publishes separately. R4 breaks its name tie by taking the **higher** identity,
+  and where an identity has several components a family may state that R4 ranks on **part** of it —
+  licitacións rank on the publication identifier without the lote. What that part must be is
+  *comparable with every other family's*, since R4 ranks one operador's contracts of every family
+  against one another; what it need not be is **total**, and R4 says what becomes of two contracts
+  that tie in it;
 - an **explicit removal rule** that is **non-destructive and reversible** — a family must say
   what it means for one of its contracts to be withdrawn, and withdrawal must hide the contract
   rather than delete it, and be undoable. R7's lifecycle hooks onto it, and R7's promise that an
@@ -114,11 +123,10 @@ is what its awards are made per, and its comparable date is the **publication** 
 the award date, because a procedure can be published long before — or without ever — being
 decided.
 
-**The two halves of that identity are not used in the same places, and R4 takes only one of
-them.** The lote is what makes a procedure's several awards distinct contracts, so R9 rows the
-history by it and an operador awarded two lotes of one procedure holds two rows. R4's name
-tie-break, by contrast, ranks on the **publication identifier alone**: the lote is not carried
-into the rank, and R4 states what follows for the awards that consequently tie.
+**And it is the family that states R4 ranks on part of that identity.** The lote is what makes a
+procedure's several awards distinct contracts, so R9 rows the history by it and an operador
+awarded two lotes of one procedure holds two rows; R4 ranks on the **publication identifier
+alone**, and states what follows for the awards that consequently tie.
 
 **Two further facts are optional, and a family that can supply them may.** They are optional
 because contratos menores cannot supply either: the source publishes neither for that family.
@@ -254,11 +262,13 @@ One decision has since been taken:
   awards per publication can therefore hold two contracts under. Licitacións are such a family:
   a procedure's awards are made per lote, so two lotes of one procedure awarded to the same
   operador share a publication date *and* a publication identifier, and where the two award rows
-  publish the awardee's name differently there is nothing here to separate them. **The name is
-  then settled by whichever of the two the import accounts for first.** That is stable across
-  re-imports so long as the source publishes a procedure's awards in a stable order, but it is
-  **not derivable from the two contracts' values alone**, and this requirement does not claim
-  it is.
+  publish the awardee's name differently there is nothing here to separate them. **Between those
+  two, the name is settled by whichever the import accounts for first** — neither displaces a
+  name a higher-ranked contract already won, so this decides only which of the tied pair takes a
+  display the pair has won between them. Once one of them is displayed **no tie can displace it**,
+  so a re-import cannot swap them; what the order decides is settled on the first import and not
+  revisited. That outcome is **not derivable from the two contracts' values alone**, and this
+  requirement does not claim it is.
 
   **What the case costs is which spelling displays, and nothing else.** Both candidates are
   names of one operador — R3 makes the fiscal identifier the identity and this leaves it
@@ -855,9 +865,11 @@ One decision has since been taken:
     then by higher contract identifier, with undated contracts last, puts the **principal name
     first** — the retained data and R4 agree by construction, including when the top two names
     share a date and when every name comes from an undated contract. Where the top two share a
-    date **and** a contract identifier, which only a family awarding several contracts per
-    publication can produce (R4), the pair is settled by which was accounted for first rather
-    than by construction; the principal still sorts first, and a re-import does not swap them.
+    date **and** the identifier R4 ranks on — which only a family awarding several contracts per
+    publication can produce (R4) — that ordering is indifferent between them and does **not** put
+    the principal first. What holds instead, and is asserted here in its place, is that **no
+    alternative outranks the principal**: the ordering never puts an alternative *ahead* of it,
+    a tie between the two is possible, and the order within that tie is unspecified.
 37. **(R15)** Re-importing contracts the system already holds leaves the retained names, their
     dates and their contract identifiers **unchanged** — the retention is idempotent, as the
     catalogue it belongs to is.

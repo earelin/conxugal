@@ -927,10 +927,12 @@ untouched everywhere else — it is still parsed, still stored on the lote, the 
 participation, and still what R9 rows an operador's history by, which is the reason it is part of
 the contract identity at all.
 
-**Three things have to hold at once for the case to be reachable**, and the third is the one that
-makes it rare: the procedure has lotes, the same operador is awarded two of them, *and* the two
-award rows spell its name differently. Two rows spelling it identically leave nothing to choose
-between. The one two-lote capture held here — 822054 — awarded its lotes to two different firms.
+**Three things have to hold at once for the case to be reachable**: the procedure has lotes, the
+same operador is awarded two of them, *and* the two award rows spell its name differently. Two
+rows spelling it identically leave nothing to choose between. **How often that happens is not
+measured**, and the decision does not rest on its being rare — lotes themselves are not rare
+(*Lote frequency and cost* measured 15 procedures in 100 with them). It rests on what the case
+costs.
 
 **And what it costs is which spelling displays.** R3 makes the fiscal identifier the operador's
 identity and this leaves it untouched, so nothing is split or merged, no history row moves, and no
@@ -943,9 +945,17 @@ the two families share one publication id space (measured), so there is nothing 
 except the lote itself.
 
 **If it ever proves to matter, `ResolveOperador` is the single place that changes.** Ordering on
-`(date, sourceId, name)` settles the pair by value instead of by arrival, needs no column and no
-migration, and leaves contratos menores provably unaffected — they never tie on `(date, sourceId)`
-to begin with. It is recorded as the cheap way back, not as work this feature takes.
+`(date, sourceId, name)` settles the pair by value instead of by arrival, and needs no column and
+no migration — `RETAIN_NAME` conflicts on `(operador, name)`, so the names are equal within a
+conflicting row and appending one to the row-value comparison cannot change its result.
+
+**It is not free for contratos menores, though, and the earlier draft of this section said it
+was.** Two *distinct* contratos menores never tie — `source_id` is `UNIQUE` — but a contrato menor
+**re-imported under a corrected name** ties against its own stored rank, and that path is
+supported: the batch resolves every contract whether it is inserted or refreshed. Today the
+corrected spelling is retained beside the operador; under the third component it would promote or
+not by lexical order. So the fallback is cheap to build and **is** a behaviour change to a shipped
+family — recorded as the way back, not as work this feature takes, and not as a free one.
 
 **The identifier component is settled here too.** Task 3 holds a licitación's publication
 identifier as **text**, so that a source which stopped minting numeric identifiers costs a parse
@@ -1188,7 +1198,7 @@ one branch off it, at the same depth as 18.
     (R18). Consortium rows are still routed past it by task 10's classification — task 13
     catalogues those, because a UTE's identifier may come from the formalisation rather than the
     bidder row — so no placeholder identifier reaches R3 here either.
-    *Depends on 6, 10, 11, 21.* *(SPEC-0008 #19 storage half, #24 storage half)*
+    *Depends on 6, 10, 11.* *(SPEC-0008 #19 storage half, #24 storage half)*
 23. **The outstanding-record ledger in the walk** — a record whose retrieval or parse fails written
     to the ledger while the walk carries on; a resumption retrying the ledger **before** the cursor;
     and `COMPLETE` gated on nothing being outstanding. The mechanism FEAT-0009 never had, and what
