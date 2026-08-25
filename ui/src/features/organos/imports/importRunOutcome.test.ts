@@ -36,7 +36,7 @@ function covered(
   return { organoId, family, state, added: 0, refreshed: 0, failureReason };
 }
 
-/** The same Órgano in both families, which is what a mark now asks for. */
+/** The same Órgano in both families, the shape a run covering both produces. */
 function bothFamilies(
   organoId: string,
   contratosMenores: ImportRunOrganoState,
@@ -188,6 +188,23 @@ describe('describeRun', () => {
         organoId: SERGAS,
         line: 'Servizo Galego de Saúde · a fonte non respondeu · o rexistro non se puido ler',
       },
+    ]);
+  });
+
+  it("says once what both of an Órgano's families failed on, when they failed alike", () => {
+    // The likely shape rather than the interesting one: both families read the
+    // same source through the same failure mapping, so one outage gives them
+    // the identical reason — and the line names no family to tell them apart.
+    const failed = run('FAILED', {
+      importer: 'AMBAS_FAMILIAS',
+      coveredOrganos: [
+        covered(SERGAS, 'FAILED', 'a fonte non respondeu'),
+        covered(SERGAS, 'FAILED', 'a fonte non respondeu', 'LICITACIONS'),
+      ],
+    });
+
+    expect(describeRun(failed, nameOf).failures).toEqual([
+      { organoId: SERGAS, line: 'Servizo Galego de Saúde · a fonte non respondeu' },
     ]);
   });
 

@@ -98,7 +98,7 @@ function covered(
   };
 }
 
-/** The same Órgano in both families, which is what a mark now asks for. */
+/** The same Órgano in both families, the shape a run covering both produces. */
 function bothFamilies(
   organoId: string,
   contratosMenores: ImportRunOrganoState,
@@ -394,7 +394,7 @@ describe('the contratos menores import', () => {
       .reply(200, { runId: null, refusal: 'IMPORT_ALREADY_RUNNING' });
     nock(BASE_URL)
       .get('/api/admin/organos')
-      .reply(200, [sergas, { ...innovacion, importable: true }]);
+      .reply(200, [sergas, { ...innovacion, importable: true }, portos]);
 
     await user.click(screen.getByRole('switch', { name: `${copy.markLabel}: ${innovacion.name}` }));
     await user.click(await screen.findByRole('button', { name: copy.mark.submit }));

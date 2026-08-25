@@ -1,4 +1,4 @@
-import { groupBy } from 'es-toolkit';
+import { groupBy, uniq } from 'es-toolkit';
 
 import { formatDateTime } from '../../../shared/lib/date';
 import { isProblemType } from '../../../shared/lib/httpError';
@@ -90,10 +90,15 @@ function failureLines(run: ImportRun, nameOf: (organoId: string) => string): Run
   );
   // One entry per Órgano, not per family: the title above this list counts the
   // entries, and an Órgano that failed in both families is still one Órgano.
-  // Both its reasons ride on the single line rather than one of them being lost.
+  // Its reasons ride on the single line rather than one of them being lost —
+  // deduplicated, because both families read the same source through the same
+  // failure mapping, so one outage gives them the identical reason and the line
+  // carries nothing to tell the two halves apart.
   return Object.entries(failed).map(([organoId, rows]) => ({
     organoId,
-    line: [nameOf(organoId), ...rows.flatMap((organo) => organo.failureReason ?? [])].join(' · '),
+    line: [nameOf(organoId), ...uniq(rows.flatMap((organo) => organo.failureReason ?? []))].join(
+      ' · ',
+    ),
   }));
 }
 

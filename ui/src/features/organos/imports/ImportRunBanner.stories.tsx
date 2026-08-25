@@ -134,10 +134,10 @@ export const PartiallySucceeded: Story = {
 };
 
 /**
- * A run a mark asked for, which covers each Órgano in both families and so holds
- * two rows per Órgano. Every figure here counts Órganos rather than rows: two
- * covered, not four — and the one that failed in both families is listed once,
- * carrying both reasons.
+ * A run covering each Órgano in both families, and so holding two rows per
+ * Órgano. Every figure here counts Órganos rather than rows: two covered, not
+ * four — and the one that failed in both families is listed once, carrying both
+ * reasons.
  */
 export const BothFamilies: Story = {
   args: {
