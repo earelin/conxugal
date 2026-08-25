@@ -173,5 +173,22 @@ final class PublishedTable {
       Element cell = cells.get(column);
       return cell == null ? null : PublishedValues.text(cell.wholeText());
     }
+
+    /**
+     * The cell under {@code column} as markup, or null where the source published no such column.
+     *
+     * <p><strong>For the one cell whose <em>structure</em> is the fact.</strong> A bidder's name
+     * cell says whether the party is a consortium by nesting a second list inside the first, and
+     * that is the only exact test there is — the alternatives read the name or the identifier and
+     * miss 7 of 35 and 33 of 35 respectively. Flattened by {@link #text}, the consortium's name and
+     * every member line arrive as one string with nothing to tell them apart.
+     *
+     * <p>It is deliberately the narrow exception rather than the general accessor. Every other
+     * caller reads text, because a rule written against markup is one the source can break by
+     * changing formatting that carries no meaning.
+     */
+    @Nullable Element element(String column) {
+      return cells.get(column);
+    }
   }
 }
