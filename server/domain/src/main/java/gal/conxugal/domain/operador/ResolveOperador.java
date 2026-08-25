@@ -147,7 +147,7 @@ public class ResolveOperador {
    * would ask the store to file a name that is still the displayed one, which it declines — losing
    * the name silently.
    *
-   * <p><strong>A displaced name that stood at {@link NomeRank#unranked()} is not filed.</strong>
+   * <p><strong>A displaced name whose rank {@link NomeRank#ranksNothing()} is not filed.</strong>
    * That rank is only ever written by {@link #resolveWithoutRanking}, so it says the displayed name
    * came from a publication that ranks nothing — a bid — and R15 retains what an operador's
    * <em>contracts</em> published. Filing it would put a bid's name among the alternatives by the
@@ -161,7 +161,7 @@ public class ResolveOperador {
     boolean renaming = !incumbent.name().equals(publishedName);
     if (rank.outranks(incumbent.nameRank())) {
       operadores.promoteName(id, publishedName, rank);
-      if (renaming && !NomeRank.unranked().equals(incumbent.nameRank())) {
+      if (renaming && !incumbent.nameRank().ranksNothing()) {
         operadores.retainName(new NomeAlternativo(id, incumbent.name(), incumbent.nameRank()));
       }
     } else if (renaming) {
