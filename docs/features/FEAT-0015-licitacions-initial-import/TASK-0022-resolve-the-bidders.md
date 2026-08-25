@@ -2,7 +2,7 @@
 feat: FEAT-0015
 domain: backend
 adrs: [0002, 0023]
-status: todo
+status: done
 depends_on: [TASK-0006, TASK-0010, TASK-0011]
 ---
 
@@ -22,8 +22,18 @@ Operadores are the stored projection of
   participation holding **no name of its own** (R18). A name belongs on the operador an identifier
   resolves to, which is why an unusable identifier leaves a party with nothing to display rather
   than a name without a link.
-- **A bidder whose identifier is unusable yields no operador** and is recorded as **no participant**
-  (R16). The licitación stays stored, and the procedure's other bidders are unaffected.
+- **A bidder whose identifier is unusable yields no operador** and is recorded as the participation
+  of **no catalogue entry** (R16) — the bid is still stored, holding a null operador reference. The
+  licitación stays stored, and the procedure's other bidders are unaffected.
+
+  *Read as "no participant" only in SPEC-0006 R16's sense, where a participation is a relation
+  between an operador and a contract it was not awarded: there is no such relation, because there
+  is no operador.* The row itself is written, and that is
+  [TASK-0006](TASK-0006-licitacions-store-the-competition-tables.md)'s design rather than this
+  task's latitude — the operador reference is nullable **for this case alone**, the natural key is
+  declared `NULLS NOT DISTINCT` so two such bidders of one award point collide on one row, and
+  `ParticipationRepository` states that collision as a known cost. Dropping the bid instead would
+  make all three dead design, and would lose a bidder SPEC-0008 #19 requires to be shown.
 - **Consortium rows are routed past this entirely**, and still are under amendment 1.
   [TASK-0010](TASK-0010-record-parse-bidders-and-consortium-detection.md)'s structural
   classification has already separated them, so no placeholder identifier ever reaches SPEC-0006 R3
@@ -60,9 +70,18 @@ Operadores are the stored projection of
 - **A losing bid does not change a catalogued operador's displayed name**, and adds nothing to its
   retained set — even when the bid is more recent than every contract that named it. This is the
   rule an earlier draft inverted, so it is asserted directly. (SPEC-0006 #33, #34)
-- A bidder whose published identifier is unusable yields no operador and no participation, and the
+- **Nor does it reach the retained set by the back door.** An operador a bid created is displayed
+  under the bid's name until a contract outranks it; when one does, the promotion would ordinarily
+  file the name it displaced. It does not here, because the displaced name stood at a rank no
+  publication produced — which is the whole of what marks it as a bid's, so nothing is tracked to
+  know it. R15 retains what an operador's **contracts** published, and a name only a bid published
+  is not one. (SPEC-0006 #33, #34)
+- A bidder whose published identifier is unusable yields **no operador**, and its bid is stored
+  **naming nobody** — a participation holding a null operador reference, not a dropped row. The
   licitación is still stored with its other bidders intact and no withdrawal marker set.
-  (SPEC-0008 #20)
+  *An earlier draft of this criterion said "no operador and no participation", which contradicted
+  the table TASK-0006 had already built for exactly this case; the Scope bullet above records why
+  the row is written.* (SPEC-0008 #20)
 - A **consortium** bidder row reaches this path not at all: nothing here is called with a
   consortium's NIF cell, and no operador holding `-` or a `TEMP-…` value is created by importing a
   fixture set containing them. *This is the observable form of the guarantee — the catalogue's
