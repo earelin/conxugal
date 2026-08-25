@@ -77,7 +77,7 @@ public class StoreLicitacionBidders {
             stored.add(participations.upsert(bidOf(firm, awardPoints)));
         // Routed past, not overlooked: cataloguing a consortium and writing its bid belong
         // together, because its identifier may come from the formalisation rather than this row.
-        case PublishedBidder.Consortium consortium -> {
+        case PublishedBidder.Consortium _ -> {
         }
       }
     }
