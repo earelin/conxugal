@@ -8,23 +8,14 @@ spec-driven workflow (`SPEC → FEAT → TASK`). This module implements
 
 ## Commands
 
-Run from `ui/`:
+`package.json`'s `scripts` block is the list; run them from `ui/`. What it doesn't tell you:
 
-- `npm run dev` — Vite dev server with HMR (<http://localhost:5173>)
-- `npm run build` — type-check with TypeScript 7's `tsc -b` then build static assets
-  to `dist/`
-- `npm run tsc7 -- <args>` — run TypeScript 7's compiler directly (e.g. `npm run tsc7 -- --version`)
-- `npm test` — run the Vitest suite once
-- `npm test -- src/App.test.tsx` — run a single test file
-- `npm test -- -t "shows the Galician not-found"` — run tests matching a name pattern
-- `npm run test:watch` — Vitest in watch mode
-- `npm run api:up` / `npm run api:down` — start/stop the stubbed API (WireMock)
-- `npm run test:acceptance` — Playwright acceptance suite (`npx playwright install chromium` first)
-- `npm run test:acceptance -- acceptance/specs/admin-users.spec.ts` — run a single acceptance spec
-- `npm run storybook` — the component workshop (<http://localhost:6006>)
-- `npm run build-storybook` — build it to `storybook-static/`
-- `npm run lint` — ESLint
-- `npm run format` / `npm run format:check` — Prettier write/check
+- `npm run test:acceptance` chains `api:up` (WireMock via `docker compose --wait`) and a full
+  `build` before Playwright runs, so it needs a **Docker daemon** and one-off
+  `npx playwright install chromium`. `api:down` stops the stub it leaves running.
+- `npm run build` type-checks with **TypeScript 7** (`tsc -b`) before bundling; `npm run tsc7`
+  reaches that compiler directly.
+- Vitest and Playwright both take a path or `-t <name pattern>` to narrow a run.
 
 ## Before committing
 
@@ -212,28 +203,19 @@ so a bundling failure there is caught locally or not at all.
   `es-toolkit` itself, never from `es-toolkit/compat` — that subpath only exists to match
   lodash's exact (looser) behaviour for projects migrating off it, which doesn't apply here.
 
-- **Server-pushed data** (`features/administration/monitoring/metrics/`): the admin
-  metrics panel is the app's only SSE consumer. `useMetricsStream` opens a plain
-  `EventSource` on `/api/admin/metrics` — the session cookie rides along, so there is no
-  credential handling here (ADR-0009) — and leans entirely on the browser's native
-  reconnection: the only states are `connecting`, `live` and `reconnecting`, and there is
-  deliberately **no error state**, because a dropped stream is already retrying. A drop
-  after the first sample keeps the last values on screen, dimmed and captioned stale,
-  rather than emptying the panel. The effect returns `source.close()`, which is what stops
-  a stream when the administrator navigates away. The rolling history lives in component
-  state only and is capped (250 samples; `VITE_METRICS_HISTORY_LIMIT` lowers it to 10 under
-  Vitest so buffer-eviction tests stay fast) — never `localStorage`, a cookie or a server
-  call, because SPEC-0003 R20 requires a reload to start it empty.
-- **The metrics panel is code-split for weight, not just for routing**
-  (`monitoring/DashboardPage.tsx`): its sparklines are `@mantine/charts`, which pulls in
-  recharts, and only an `ADMIN` reaching the dashboard can ever see them — so `MetricsPanel`
-  is a `React.lazy` behind its own `Suspense`, keeping the chart library out of the eager
-  entry chunk every visitor downloads. This is also why `main.tsx` does not import
-  `@mantine/charts/styles.css` while `.storybook/preview.tsx` does. The sparklines
-  themselves are `inert aria-hidden`: recharts' `accessibilityLayer` is on by default and
-  Mantine's `Sparkline` exposes no prop to turn it off, so without `inert` each one becomes
-  an unlabelled, focusable `role="application"` tab stop. The value rendered above a
-  sparkline is the accessible source of truth.
+- **Server-pushed data** (`monitoring/metrics/useMetricsStream`): the admin metrics panel is
+  the app's only SSE consumer — a plain `EventSource`, authenticated by the session cookie
+  that rides along (ADR-0009). It leans entirely on the browser's native reconnection, so
+  there is deliberately **no error state**; a drop keeps the last values on screen, dimmed,
+  rather than emptying the panel. The rolling history stays in component state and nowhere
+  else — never `localStorage`, a cookie or a server call — because SPEC-0003 R20 requires a
+  reload to start it empty.
+- **The metrics panel is code-split for weight, not routing** (`monitoring/DashboardPage.tsx`):
+  its sparklines pull in `@mantine/charts`/recharts, which only an `ADMIN` can ever see, so
+  `MetricsPanel` is `React.lazy` behind its own `Suspense`. That is also why `main.tsx` skips
+  `@mantine/charts/styles.css` while `.storybook/preview.tsx` imports it. The sparklines are
+  `inert aria-hidden` — recharts' `accessibilityLayer` has no opt-out prop and would otherwise
+  leave an unlabelled focusable `role="application"` tab stop on the page.
 
 <!-- distilled-from: FEAT-0001 @ 3f17cc0 -->
 <!-- distilled-from: FEAT-0002 @ 6d8a9f4 -->

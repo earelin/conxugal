@@ -52,6 +52,24 @@ that it is needed — not by a scenario we imagine we might hit.
 - If a task's design looks heavier than the problem it solves, say so and propose
   the smaller slice before implementing.
 
+## Keep the instruction files small
+
+Every `CLAUDE.md` and skill is read into context on every session, so a line that earns
+nothing costs something on every task. They only ever grow — each distillation appends —
+so shrinking them is part of the job, not a separate cleanup.
+
+- **Drop what is auto-discoverable.** If `./gradlew tasks`, a `package.json` script block, a
+  build file, a config file, an OpenAPI operation or a class's own javadoc already says it,
+  point at that instead of restating it. A restated fact is a second source of truth that
+  will drift.
+- **Write down what the code cannot say**: a decision not taken, a trap that looks correct,
+  an ordering that matters, a rule two files must agree on. That is the whole job of these
+  files.
+- **Say it once.** If a fact needs repeating in three sections, it belongs in one and the
+  others reference it.
+- **When adding to one, look for something to remove.** A section that has been overtaken by
+  an ADR, a test, or the contract is now duplication — delete it.
+
 ## Code style
 
 Do not add unnecessary comments. Skip anything the code already states plainly;

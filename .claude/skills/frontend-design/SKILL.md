@@ -148,11 +148,10 @@ a 2 px `indigo.6` line over an `indigo.0` fill on a `gray.1` baseline hairline, 
 `indigo.2` while the data is stale. Pad a partly-filled buffer to its full width rather than
 stretching a few points across the box: a short line *is* how "still filling up" reads.
 
-A sparkline is **decorative** — the number above it is the accessible source of truth — so
-mark it `inert aria-hidden`. Mantine's `Sparkline` renders recharts with `accessibilityLayer`
-on and no prop to disable it, which otherwise leaves an unlabelled, focusable
-`role="application"` tab stop on the page. `@mantine/charts` pulls in recharts, so lazy-load
-any component using it rather than growing the eager entry chunk.
+A sparkline is **decorative** — the number above it is the accessible source of truth — so mark
+it `inert aria-hidden`, or recharts' `accessibilityLayer` leaves an unlabelled focusable
+`role="application"` tab stop. Lazy-load anything importing `@mantine/charts`; it drags in
+recharts.
 
 A **segmented bar** (a pool, a quota) leaves a 2 px surface-coloured gap between segments so
 adjacent fills stay distinguishable, and names each segment in a legend — never colour alone.
