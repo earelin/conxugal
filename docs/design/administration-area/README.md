@@ -108,8 +108,9 @@ says when it arrived (`Última mostra ás 12:45:07 · hai 18 s`). `yellow` marks
 broken* — neither green (healthy) nor red (a fault to act on).
 
 The *Actividade HTTP* card's error rate is banded rather than badged green unconditionally:
-`normal` under 1 %, `elevated` 1–5 %, `high` at or above 5 %. Those cut-offs are a UI
-judgement, not a spec requirement — see the `frontend-design` skill.
+`normal` under 1 %, `elevated` 1–5 %, `high` at or above 5 %. [SPEC-0003](../../specs/SPEC-0003-administration-area.md)
+R22 asks for the normal-vs-concerning distinction; the cut-offs themselves are a design call
+and live in the [`frontend-design` skill](../../../.claude/skills/frontend-design/SKILL.md).
 
 ## Copy
 
