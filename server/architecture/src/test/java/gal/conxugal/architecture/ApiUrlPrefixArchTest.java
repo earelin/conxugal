@@ -13,34 +13,17 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
-import io.micronaut.http.annotation.Delete;
-import io.micronaut.http.annotation.Get;
-import io.micronaut.http.annotation.Head;
-import io.micronaut.http.annotation.Options;
-import io.micronaut.http.annotation.Patch;
-import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Produces;
-import io.micronaut.http.annotation.Put;
-import io.micronaut.http.annotation.Trace;
-import java.lang.annotation.Annotation;
 import java.util.Arrays;
-import java.util.Set;
 
 @AnalyzeClasses(packages = "gal.conxugal")
 class ApiUrlPrefixArchTest {
-
-  private static final Set<Class<? extends Annotation>> HTTP_METHOD_MAPPINGS =
-      Set.of(
-          Get.class, Post.class, Put.class, Delete.class, Patch.class, Head.class, Options.class,
-          Trace.class);
 
   private static final DescribedPredicate<JavaClass> SERVES_A_NON_HTML_RESPONSE =
       new DescribedPredicate<>("serve a response that is not text/html") {
         @Override
         public boolean test(JavaClass javaClass) {
-          return javaClass.getMethods().stream()
-              .filter(ApiUrlPrefixArchTest::isHandlerMethod)
-              .anyMatch(method -> !producesHtml(method));
+          return HttpRoutes.of(javaClass).anyMatch(route -> !producesHtml(route));
         }
       };
 
@@ -51,10 +34,6 @@ class ApiUrlPrefixArchTest {
           .areAnnotatedWith(Controller.class)
           .and(SERVES_A_NON_HTML_RESPONSE)
           .should(haveControllerPathStartingWithApi());
-
-  private static boolean isHandlerMethod(JavaMethod method) {
-    return HTTP_METHOD_MAPPINGS.stream().anyMatch(method::isAnnotatedWith);
-  }
 
   private static boolean producesHtml(JavaMethod method) {
     if (method.isAnnotatedWith(Produces.class)) {

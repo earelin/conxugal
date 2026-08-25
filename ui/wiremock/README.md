@@ -74,10 +74,12 @@ toggled account keeps its identity.
 
 These are stub limitations, not app bugs — worth knowing before you chase one:
 
-- **Nothing asserts the last-admin guard.** `ana.pereira` is seeded as the only enabled
-  admin so the blocked disable control is reachable in dev, and the app returns a 409 if
-  it is forced. The acceptance suite covers happy paths only, so no spec proves the guard
-  holds — the server-side rule is covered by the backend suite.
+- **No spec here asserts the last-admin guard.** `ana.pereira` is seeded as the only enabled
+  admin so the blocked disable control is reachable in dev, and the app returns a 409 if it
+  is forced. This suite covers happy paths only, so neither the blocked control nor the alert
+  raised by a forced 409 has a spec. Elsewhere they do: the client-side block is covered by
+  `src/features/administration/users/UsersPage.test.tsx`, and the server-side refusal end to
+  end by `server/acceptance/.../AdminLastEnabledAdminTest`.
 
 - **`users-enabled.json` repeats each account's email, role and dates.** The UI replaces
   a row wholesale with the toggle response, so a stub that disagreed with `users.json`

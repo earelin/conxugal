@@ -13,6 +13,7 @@ dependencies {
 
     testImplementation(libs.micronaut.http.server.netty)
     testImplementation(libs.micronaut.http.client)
+    testImplementation(libs.micronaut.security.session)
     testImplementation(libs.archunit.junit5)
 }
 

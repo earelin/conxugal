@@ -7,8 +7,9 @@
 export const accounts = {
   /**
    * The only enabled ADMIN. That is the state in which the UI blocks the
-   * disable control — visible in dev, but no spec asserts it (see the known
-   * gaps in `wiremock/README.md`).
+   * disable control — visible in dev, but no spec here asserts it (see the
+   * known gaps in `wiremock/README.md`). `UsersPage.test.tsx` covers the block
+   * itself, and the backend suite the server-side refusal behind it.
    */
   admin: { email: 'ana.pereira@conxugal.gal' },
   /** Enabled USER — the account the disable/enable journey toggles. */
