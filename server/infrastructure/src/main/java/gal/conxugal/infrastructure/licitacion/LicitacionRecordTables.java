@@ -1,9 +1,11 @@
 package gal.conxugal.infrastructure.licitacion;
 
+import gal.conxugal.domain.licitacion.LicitacionRecordUnavailableException;
 import gal.conxugal.domain.licitacion.LoteKey;
 import gal.conxugal.domain.licitacion.PublicationId;
 import gal.conxugal.domain.licitacion.PublishedAmount;
 import gal.conxugal.domain.licitacion.PublishedAward;
+import gal.conxugal.domain.licitacion.PublishedBidder;
 import gal.conxugal.domain.licitacion.PublishedCpvClassification;
 import gal.conxugal.domain.licitacion.PublishedFormalisation;
 import gal.conxugal.domain.licitacion.PublishedLote;
@@ -11,6 +13,7 @@ import gal.conxugal.domain.licitacion.PublishedNutClassification;
 import gal.conxugal.domain.money.Money;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,24 +22,25 @@ import org.jsoup.nodes.Document;
 import org.jspecify.annotations.Nullable;
 
 /**
- * What the record's five data tables say. Its sibling {@code LicitacionRecordDocument} owns
- * whether the page is a record at all and what its labelled scalars state; this owns the tables,
- * and the two are apart because they turn on two different rules with two different failure
- * modes — a scalar read by position answers a plausible value from the wrong field, whereas a
- * table read by position loses or misfiles a whole procedure's awards.
- *
- * <p>The sixth table, the bidder list, is not here: its consortium branch is a design in its own
- * right.
+ * What the record's six data tables say. Its sibling {@code LicitacionRecordDocument} owns whether
+ * the page is a record at all and what its labelled scalars state; this owns the tables, and the
+ * two are apart because they turn on two different rules with two different failure modes — a
+ * scalar read by position answers a plausible value from the wrong field, whereas a table read by
+ * position loses or misfiles a whole procedure's awards.
  *
  * <p><strong>Every table is read on construction</strong>, so a record the source has changed
  * shape on is refused once, before any value is handed out, rather than part-way through a caller
  * that has already taken some.
  *
  * <p><strong>Every lote cell goes through {@link LoteKey}.</strong> The award, formalisation and
- * NUT tables write {@code _} for a procedure-wide row, zero-padding varies within a single table
- * (the award table produced both {@code 1} and {@code 05} in one sample), and a lote identifier is
- * not always numeric. Joined on the raw cell the award table's participant count agrees with the
- * bidder rows on 63 of 158 rows; normalised, on all 158.
+ * NUT tables write {@code _} for a procedure-wide row while the bidder table writes {@code -},
+ * zero-padding varies within a single table (the award table produced both {@code 1} and {@code 05}
+ * in one sample), and a lote identifier is not always numeric. Joined on the raw cell the award
+ * table's participant count agrees with the bidder rows on 63 of 158 rows; normalised, on all 158.
+ *
+ * <p><strong>The bidder table and the award table check each other</strong>, which is the one place
+ * two of these tables are read against one another rather than side by side. What the check is and
+ * where it stops is {@link #crossCheckParticipantCounts}'s.
  */
 final class LicitacionRecordTables {
 
@@ -45,6 +49,7 @@ final class LicitacionRecordTables {
   private static final String CPV_TABLE = "div#collapseCPV";
   private static final String NUT_TABLE = "div#collapseNUT";
   private static final String LOTES_TABLE = "div#ventanaModalLotes";
+  private static final String BIDDERS_TABLE = "div#ventanaModalLicitadores";
 
   private static final String LOTE = "Lote";
   private static final String IMPORTE = "Importe";
@@ -66,10 +71,14 @@ final class LicitacionRecordTables {
   private static final String DESCRICION = "Descrición";
   private static final String VALOR_ESTIMADO = "Valor estimado";
 
+  private static final String NIF = "NIF";
+  private static final String NOME = "Nome";
+
   private final List<PublishedAward> awards;
   private final List<PublishedFormalisation> formalisations;
   private final List<PublishedCpvClassification> cpvClassifications;
   private final List<PublishedNutClassification> nutClassifications;
+  private final List<PublishedBidder> bidders;
   private final List<PublishedLote> lotes;
 
   /**
@@ -105,7 +114,12 @@ final class LicitacionRecordTables {
                 NUT_TABLE,
                 NUT_CODE,
                 PublishedNutClassification::new));
+    // Read after the four tables above so a lote they name keeps their spelling, and before the
+    // lotes are assembled so a lote only the bidder rows name is still one: a procedure that
+    // publishes bidders before it publishes any award has no other table to be discovered from.
+    this.bidders = List.copyOf(readBidders(publicationId, document, loteCells));
     this.lotes = List.copyOf(readLotes(publicationId, document, loteCells));
+    crossCheckParticipantCounts(publicationId, this.awards, this.bidders);
   }
 
   List<PublishedAward> awards() {
@@ -122,6 +136,10 @@ final class LicitacionRecordTables {
 
   List<PublishedNutClassification> nutClassifications() {
     return nutClassifications;
+  }
+
+  List<PublishedBidder> bidders() {
+    return bidders;
   }
 
   List<PublishedLote> lotes() {
@@ -192,6 +210,105 @@ final class LicitacionRecordTables {
               amountOf(row.text(IMPORTE))));
     }
     return formalisations;
+  }
+
+  /**
+   * The bidders {@code Relación de licitadores presentados} names, one per row and each classified
+   * by its own markup — which is {@link LicitadorRow}'s, and the decision this feature most depends
+   * on getting right.
+   *
+   * <p><strong>The name cell is reached as markup rather than as text</strong>, because its
+   * structure is the fact: a consortium nests a second list inside the first and a single firm does
+   * not. Every other cell on the record is read as text, and this is the one exception.
+   *
+   * <p>Only {@code Lote}, {@code NIF} and {@code Nome} are required. The header is not fixed —
+   * 828959 publishes a fourth {@code NUT} column that 822054 does not — so a positional read would
+   * misfile one of those two procedures, and requiring a column the source drops conditionally
+   * would lose it outright.
+   */
+  private List<PublishedBidder> readBidders(
+      PublicationId publicationId, Document document, List<String> loteCells) {
+    Optional<PublishedTable> table =
+        PublishedTable.under(publicationId, document, BIDDERS_TABLE, LOTE, NIF, NOME);
+    if (table.isEmpty()) {
+      return List.of();
+    }
+    List<PublishedBidder> bidders = new ArrayList<>();
+    for (PublishedTable.Row row : table.get().rows()) {
+      String lote = row.text(LOTE);
+      addLoteCell(loteCells, lote);
+      bidders.add(LicitadorRow.read(lote, row.text(NIF), row.element(NOME)));
+    }
+    return bidders;
+  }
+
+  /**
+   * The award table's {@code Part.} against the bidder rows it stands for. A parse producing a
+   * different count <strong>has failed</strong>, and the procedure is refused rather than stored
+   * with a short list: a silently short bidder list is indistinguishable from a genuine one and
+   * would understate competition for ever.
+   *
+   * <p><strong>Joined on {@link LoteKey}'s reduction, never on the raw cell.</strong> Measured over
+   * 240 procedures, the raw join disagrees on 95 of 158 award rows — every failure an artefact of
+   * {@code _} against {@code -} or {@code 05} against {@code 5} — and agrees on all 158 normalised.
+   * Unnormalised, this check would refuse most procedures the source publishes perfectly well.
+   *
+   * <p><strong>It applies only to a lote whose bidder table was published, and that precedence is
+   * stated because the two rules otherwise disagree in silence.</strong> An absent bidder table is
+   * an empty list whatever {@code Part.} says: 26 of the first 70 procedures sampled published no
+   * bidder table at all — open, pending, deserted or withdrawn — and nothing measured rules out an
+   * award row carrying a non-zero count on such a page. The source's own modal is per-lote, so a
+   * lote the table names no row for has not published its bidders either.
+   *
+   * <p>The cost, which is real and has two forms. The stated one: a lote whose {@code Part.} says 5
+   * and which publishes no row of its own passes unchecked. The one worth knowing about, because
+   * this check cannot tell it from the first: <strong>a lote key that stops matching is
+   * indistinguishable from a lote whose bidders were never published.</strong> Were the source to
+   * begin writing the bidder table's lote cell as {@code Lote 1} rather than {@code 1}, no bidder
+   * key would meet any award key, every row would be skipped, and the guard would report nothing
+   * on a record it no longer understands.
+   *
+   * <p>Refusing when the table holds rows and none of their keys meets any award key would catch
+   * that — and would also refuse a multi-lote procedure whose awards and whose published bidders do
+   * not yet overlap, which nothing measured rules out. It is left undone for want of the sample
+   * that would settle which of the two is real. What is bought meanwhile is that no procedure is
+   * refused over a table the source simply did not publish for it.
+   */
+  private static void crossCheckParticipantCounts(
+      PublicationId publicationId,
+      Iterable<PublishedAward> awards,
+      Iterable<PublishedBidder> bidders) {
+    Map<String, Integer> published = biddersPerLote(bidders);
+    for (PublishedAward award : awards) {
+      Integer stated = award.bidderCount();
+      Integer parsed = published.get(award.loteKey());
+      if (stated == null || parsed == null || stated.equals(parsed)) {
+        continue;
+      }
+      throw new LicitacionRecordUnavailableException(
+          "Record %s states %d participants for %s and publishes %d bidder rows"
+              .formatted(publicationId.value(), stated, awardPoint(award.loteKey()), parsed));
+    }
+  }
+
+  /**
+   * How many rows the bidder table published for each award point it named.
+   *
+   * <p>Keyed on the same reduction the awards are, so the procedure-wide bucket the bidder table
+   * writes {@code -} for is the one the award table writes {@code _} for. That key is null, which
+   * is why this is a map that admits one rather than a lookup that cannot.
+   */
+  private static Map<String, Integer> biddersPerLote(Iterable<PublishedBidder> bidders) {
+    Map<String, Integer> perLote = new HashMap<>();
+    for (PublishedBidder bidder : bidders) {
+      perLote.merge(bidder.loteKey(), 1, Integer::sum);
+    }
+    return perLote;
+  }
+
+  /** How a refusal names the award point, so a lotless procedure reads as a sentence. */
+  private static String awardPoint(@Nullable String loteKey) {
+    return loteKey == null ? "the procedure as a whole" : "lote %s".formatted(loteKey);
   }
 
   /**

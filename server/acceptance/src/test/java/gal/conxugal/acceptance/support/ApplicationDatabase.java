@@ -6,9 +6,9 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
- * The running instance's datastore, reached directly to remove the accounts a scenario
- * created. The administration API never deletes an account, so this is the only way back to
- * an instance that is free of them.
+ * The running instance's datastore, reached directly to undo what a scenario wrote. The
+ * administration API never deletes an account and refuses to leave the instance without an
+ * enabled administrator, so this is the only way back on both counts.
  */
 public final class ApplicationDatabase {
 
@@ -23,14 +23,33 @@ public final class ApplicationDatabase {
 
   /** Removes the account with exactly this email, if the instance still holds one. */
   public static void deleteAccount(String email) {
+    updateAccount("DELETE FROM users WHERE email = ?", email, "delete");
+  }
+
+  /**
+   * Re-enables the account with exactly this email. A scenario that drives the last-enabled-admin
+   * refusal has no way back through the API if that guard ever regresses — the instance would be
+   * left with no enabled administrator, and no endpoint can restore one — so it repairs the row
+   * here instead of leaving every later run locked out.
+   */
+  public static void enableAccount(String email) {
+    updateAccount("UPDATE users SET enabled = TRUE WHERE email = ?", email, "enable");
+  }
+
+  /**
+   * Private, and every caller hands it a literal: SpotBugs reads a statement built from a
+   * parameter of a reachable method as an injection and fails the build, which is why the two
+   * writes above name their own SQL rather than a caller naming it for them.
+   */
+  private static void updateAccount(String sql, String email, String attempted) {
     requireDatastoreOfTheInstanceUnderTest();
     try (Connection connection = DriverManager.getConnection(URL, USERNAME, CREDENTIAL);
-        PreparedStatement statement =
-            connection.prepareStatement("DELETE FROM users WHERE email = ?")) {
+        PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, email);
       statement.executeUpdate();
     } catch (SQLException e) {
-      throw new IllegalStateException("Could not delete the account %s".formatted(email), e);
+      throw new IllegalStateException(
+          "Could not %s the account %s".formatted(attempted, email), e);
     }
   }
 

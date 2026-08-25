@@ -98,6 +98,7 @@ final class LicitacionRecordDocument {
         stateLabel,
         tables.lotes(),
         tables.awards(),
+        tables.bidders(),
         tables.formalisations(),
         tables.cpvClassifications(),
         tables.nutClassifications());

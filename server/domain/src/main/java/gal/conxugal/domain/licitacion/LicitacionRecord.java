@@ -54,6 +54,7 @@ import org.jspecify.annotations.Nullable;
  * @param stateLabel {@code Estado do procedemento} — the label alone, never a code
  * @param lotes the lotes the record's tables name, with whatever {@code Relación de lotes} adds
  * @param awards the resolution table's rows, one per award point
+ * @param bidders the bidder table's rows, each a single firm or a consortium
  * @param formalisations the formalisation table's rows, one per award point
  * @param cpvClassifications the CPV table's rows
  * @param nutClassifications the NUT table's rows
@@ -71,6 +72,7 @@ public record LicitacionRecord(
     String stateLabel,
     List<PublishedLote> lotes,
     List<PublishedAward> awards,
+    List<PublishedBidder> bidders,
     List<PublishedFormalisation> formalisations,
     List<PublishedCpvClassification> cpvClassifications,
     List<PublishedNutClassification> nutClassifications) {
@@ -80,6 +82,7 @@ public record LicitacionRecord(
     Objects.requireNonNull(stateLabel, "stateLabel must not be null");
     lotes = List.copyOf(lotes);
     awards = List.copyOf(awards);
+    bidders = List.copyOf(bidders);
     formalisations = List.copyOf(formalisations);
     cpvClassifications = List.copyOf(cpvClassifications);
     nutClassifications = List.copyOf(nutClassifications);

@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.tuple;
 import gal.conxugal.domain.licitacion.LicitacionRecord;
 import gal.conxugal.domain.licitacion.PublicationId;
 import gal.conxugal.domain.licitacion.PublishedAward;
+import gal.conxugal.domain.licitacion.PublishedBidder;
+import gal.conxugal.domain.licitacion.PublishedConsortiumMember;
 import gal.conxugal.domain.licitacion.PublishedCpvClassification;
 import gal.conxugal.domain.licitacion.PublishedFormalisation;
 import gal.conxugal.domain.licitacion.PublishedLote;
@@ -18,6 +20,7 @@ import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Objects;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -262,6 +265,138 @@ class CapturedLicitacionRecordTest {
         .extracting(
             PublishedAward::loteKey, PublishedAward::amount, PublishedAward::bidderCount)
         .containsExactly(tuple(null, money("3630.00"), 1));
+  }
+
+  /**
+   * <strong>The case the whole consortium design turns on, against the markup the source really
+   * served.</strong> One row of the seventeen nests a second {@code <ul>}; it is the only
+   * consortium on the page and it publishes its members with their own identifiers. Nothing about
+   * its name or its {@code NIF} cell is consulted — the {@code -} in that cell is what an earlier
+   * draft of this feature mistook for the lote.
+   */
+  @Test
+  void recognises_the_consortium_the_captured_bidder_table_nests_its_members_in() {
+    List<PublishedBidder.Consortium> consortia = consortiaOf(read(WITH_LOTES));
+
+    assertThat(consortia)
+        .singleElement()
+        .extracting(
+            PublishedBidder.Consortium::loteKey,
+            PublishedBidder.Consortium::name,
+            PublishedBidder.Consortium::fiscalIdentifier)
+        .containsExactly("1", "UTE PRACE-TABOADA RAMOS", null);
+    assertThat(consortia.getFirst().members())
+        .extracting(
+            PublishedConsortiumMember::fiscalIdentifier, PublishedConsortiumMember::name)
+        .containsExactly(
+            tuple(new FiscalIdentifier("A70319678"), "PRACE SERVICIOS Y OBRAS SA"),
+            tuple(
+                new FiscalIdentifier("B94181807"),
+                "CONSTRUCCIONES Y OBRAS TABOADA RAMOS SLU"));
+  }
+
+  /**
+   * The other half of the same test, and the one that would fail loudly if the structural check
+   * were loosened: sixteen rows carry no nested list and not one of them is read as a consortium.
+   * Three of them — {@code MISTURAS OBRAS E PROXECTOS, S.A.}, {@code CIVIS GLOBAL  S L} and
+   * {@code ECOGAL …} — are exactly the shapes a name-based test would trip over.
+   */
+  @Test
+  void classifies_every_row_without_nested_members_as_one_firm() {
+    LicitacionRecord record = read(WITH_LOTES);
+
+    assertThat(record.bidders()).hasSize(17);
+    assertThat(record.bidders())
+        .filteredOn(PublishedBidder.SingleFirm.class::isInstance)
+        .hasSize(16);
+  }
+
+  /**
+   * The published name is the outer list's own item and never its members'. Read otherwise, the
+   * consortium above would be named for all three parties at once, and the double space
+   * {@code CIVIS GLOBAL  S L} really carries would be tidied away with it.
+   */
+  @Test
+  void keeps_the_bidder_name_the_source_published_including_its_double_space() {
+    assertThat(read(WITH_LOTES).bidders())
+        .extracting(PublishedBidder::name)
+        .contains("CIVIS GLOBAL  S L", "SOCIEDAD ANONIMA DE OBRAS Y SERVICIOS COPASA");
+  }
+
+  /**
+   * The cross-check passing on the page it was measured against: {@code Part.} says 10 and 7, and
+   * the bidder table publishes 10 and 7. A parse that lost a row would raise here rather than
+   * storing a short list, which is indistinguishable from a genuine one and would understate
+   * competition for ever.
+   */
+  @Test
+  void agrees_with_the_participant_count_the_award_table_states_for_each_lote() {
+    LicitacionRecord record = read(WITH_LOTES);
+
+    assertThat(record.awards())
+        .extracting(PublishedAward::loteKey, PublishedAward::bidderCount)
+        .containsExactly(tuple("1", 10), tuple("2", 7));
+    assertThat(biddersOfLote(record, "1")).hasSize(10);
+    assertThat(biddersOfLote(record, "2")).hasSize(7);
+  }
+
+  /**
+   * <strong>The join is on the reduced key, and this is the page that proves it has to be.</strong>
+   * The award row writes {@code _} and the bidder row writes {@code -} for the same procedure-wide
+   * award point. Compared raw the two would not meet, the count would read as zero against a
+   * stated one, and a procedure the source publishes perfectly well would go to the outstanding
+   * ledger. Measured over 240 procedures, the raw join disagrees on 95 of 158 award rows.
+   */
+  @Test
+  void agrees_across_the_underscore_and_the_hyphen_the_two_tables_write() {
+    LicitacionRecord record = read(LOTLESS);
+
+    assertThat(record.awards())
+        .extracting(PublishedAward::loteKey, PublishedAward::bidderCount)
+        .containsExactly(tuple(null, 1));
+    assertThat(record.bidders())
+        .extracting(PublishedBidder::loteKey, PublishedBidder::name)
+        .containsExactly(tuple(null, "LA DÉCIMA PLANTA, S.L."));
+  }
+
+  /**
+   * <strong>The bidder table's header is not fixed.</strong> This capture publishes a fourth
+   * {@code NUT} column that 822054 does not, so a positional read would misfile one of the two
+   * procedures — and requiring the column would lose every procedure that omits it. Only
+   * {@code Lote}, {@code NIF} and {@code Nome} are asked for.
+   */
+  @Test
+  void reads_the_bidder_row_of_the_table_that_publishes_the_extra_column() {
+    LicitacionRecord record = read(LOTLESS);
+
+    assertThat(record.bidders())
+        .singleElement()
+        .isInstanceOf(PublishedBidder.SingleFirm.class)
+        .extracting(bidder -> ((PublishedBidder.SingleFirm) bidder).fiscalIdentifier())
+        .isEqualTo(new FiscalIdentifier("B75928697"));
+  }
+
+  /** The shared identifier space's other family publishes the table too, with one row. */
+  @Test
+  void reads_the_single_bidder_the_contrato_menor_publishes() {
+    LicitacionRecord record = read(CONTRATO_MENOR);
+
+    assertThat(record.bidders())
+        .extracting(PublishedBidder::loteKey, PublishedBidder::name)
+        .containsExactly(tuple(null, "ANGEL CABARCOS ABADIN"));
+  }
+
+  private static List<PublishedBidder.Consortium> consortiaOf(LicitacionRecord record) {
+    return record.bidders().stream()
+        .filter(PublishedBidder.Consortium.class::isInstance)
+        .map(PublishedBidder.Consortium.class::cast)
+        .toList();
+  }
+
+  private static List<PublishedBidder> biddersOfLote(LicitacionRecord record, String loteKey) {
+    return record.bidders().stream()
+        .filter(bidder -> loteKey.equals(bidder.loteKey()))
+        .toList();
   }
 
   private static LicitacionRecord read(String publicationId) {
