@@ -19,11 +19,12 @@ import org.jspecify.annotations.Nullable;
  * borrowing another's source entry. What {@link #resolve} takes is what the <em>ranking</em>
  * derivation needs, which is not the same as everything a family might want to catalogue from.
  *
- * <p><strong>A caller that must catalogue without contributing a rank needs a second entry point
- * here, never a rank engineered to lose.</strong> A losing rank does not express <em>this
- * publication ranks nothing</em>: it still reaches {@code retainName}, filing the name among the
- * operador's alternatives, and no port drops a retained name except as a side effect of promoting
- * it — so the mistake is permanent and silent. A losing bid is exactly such a caller.
+ * <p><strong>A caller that must catalogue without contributing a rank has a second entry point
+ * here, {@link #resolveWithoutRanking}, never a rank engineered to lose.</strong> A losing rank
+ * does not express <em>this publication ranks nothing</em>: it still reaches {@code retainName},
+ * filing the name among the operador's alternatives, and no port drops a retained name except as a
+ * side effect of promoting it — so the mistake is permanent and silent. A losing bid is exactly
+ * such a caller.
  *
  * <p><strong>It owns no transaction.</strong> The caller's boundary is the one the writes join, so
  * the operador a contract names is created beside the write that stores the contract and the two
@@ -67,6 +68,42 @@ public class ResolveOperador {
   }
 
   /**
+   * The operador this publication names, catalogued now under the name it published if nothing
+   * named that identifier before — and otherwise <strong>left exactly as it stands</strong>.
+   * Nothing is promoted, nothing is retained and no rank advances: this publication says who bid,
+   * and says nothing about what any operador should be displayed as.
+   *
+   * <p><strong>Creating is forced, and it is the whole of what a rank-less publication contributes.
+   * </strong> SPEC-0006 R3 makes an identifier resolve to an operador or to nobody, and R16 needs
+   * the participation to name one, so a bid by a firm no contract has named cannot both be recorded
+   * and catalogue nothing. It is catalogued at {@link NomeRank#unranked()}, so the first contract
+   * to name that operador takes the display from it.
+   *
+   * <p><strong>The name such a row was created under is retained when a contract later displaces
+   * it</strong>, because a promotion files the name it displaced. That is the store's rule rather
+   * than this publication's contribution, and tracking which publication a displaced name came from
+   * would cost a column for nothing a reader could see.
+   *
+   * <p>The identifier arrives already reduced, so a caller holding nothing usable holds null —
+   * which is the same answer {@link #resolve} reaches through {@link FiscalIdentifier#of}, from the
+   * other end.
+   *
+   * @param fiscalId the party's identifier, or null where the source published none this type
+   *     accepts
+   * @param publishedName the name as published, or null where the source carried none
+   */
+  public Optional<OperadorEconomico> resolveWithoutRanking(
+      @Nullable FiscalIdentifier fiscalId, @Nullable String publishedName) {
+    if (fiscalId == null) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        operadores
+            .findByFiscalId(fiscalId)
+            .orElseGet(() -> catalogue(fiscalId, publishedName, NomeRank.unranked())));
+  }
+
+  /**
    * The operador holding this identifier: catalogued now if nothing named it before, and otherwise
    * the one already held, accounted for against the name this publication carried.
    *
@@ -78,14 +115,24 @@ public class ResolveOperador {
       FiscalIdentifier fiscalId, @Nullable String publishedName, NomeRank rank) {
     Optional<OperadorEconomico> catalogued = operadores.findByFiscalId(fiscalId);
     if (catalogued.isEmpty()) {
-      return operadores.insert(
-          new OperadorEconomico(fiscalId, publishedName == null ? "" : publishedName, rank));
+      return catalogue(fiscalId, publishedName, rank);
     }
     OperadorEconomico incumbent = catalogued.get();
     if (publishedName != null) {
       account(incumbent, publishedName, rank);
     }
     return incumbent;
+  }
+
+  /**
+   * A catalogue entry for an identifier nothing named before. Both entry points reach it, so the
+   * rule that an operador has to be displayed as something — the empty name where the publication
+   * carried none, never an invented one — holds however it was catalogued.
+   */
+  private OperadorEconomico catalogue(
+      FiscalIdentifier fiscalId, @Nullable String publishedName, NomeRank rank) {
+    return operadores.insert(
+        new OperadorEconomico(fiscalId, publishedName == null ? "" : publishedName, rank));
   }
 
   /**

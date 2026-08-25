@@ -34,6 +34,21 @@ public record NomeRank(@Nullable LocalDate date, long sourceId)
           .thenComparingLong(NomeRank::sourceId);
 
   /**
+   * The rank an operador is catalogued at by a publication that ranks nothing — a losing bid, or a
+   * procedure whose publication identifier is not a number. It is behind every rank a real
+   * publication can carry: undated, so every dated rank beats it, and at the least source
+   * identifier, so every undated one does too.
+   *
+   * <p>It exists because an operador row has to hold <em>some</em> rank while the publication that
+   * created it supplies none, and the alternative — passing that publication's own rank — would let
+   * a bid decide the displayed name, which is what {@link ResolveOperador} refuses. The first
+   * contract to name such an operador therefore outranks it and supplies the name it displays.
+   */
+  public static NomeRank unranked() {
+    return new NomeRank(null, Long.MIN_VALUE);
+  }
+
+  /**
    * R4's order, and the only order this pair has — which is what makes it the natural one: the
    * pair exists so that a name can be ranked, and it is ranked no other way.
    *

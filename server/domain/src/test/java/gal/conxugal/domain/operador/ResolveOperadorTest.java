@@ -199,6 +199,64 @@ class ResolveOperadorTest {
             new NomeAlternativo(INCUMBENT_ID, "Segunda SL", new NomeRank(MAY, 2L)));
   }
 
+  // R16 needs the bid's participation to exist and R3 needs its identifier to resolve to something,
+  // so cataloguing is forced even though the bid ranks nothing. The rank it is catalogued at is
+  // what keeps the second half of that true.
+  @Test
+  void bid_naming_an_operador_nothing_named_before_catalogues_it_behind_every_contract() {
+    nothingIsCatalogued();
+
+    Optional<OperadorEconomico> resolved = resolveWithoutRanking(ACME_ID, "ACME SL");
+
+    assertThat(resolved)
+        .get()
+        .satisfies(
+            operador -> {
+              assertThat(operador.fiscalId()).isEqualTo(ACME_ID);
+              assertThat(operador.name()).isEqualTo("ACME SL");
+              assertThat(operador.nameRank()).isEqualTo(NomeRank.unranked());
+              assertThat(new NomeRank(null, Long.MIN_VALUE + 1).outranks(operador.nameRank()))
+                  .isTrue();
+            });
+  }
+
+  // The rule an earlier draft of the task inverted: a bid is not a contract in R4, R15 or R16, so
+  // it settles nothing about what the operador is displayed as, however recent it is.
+  @Test
+  void bid_naming_catalogued_operador_neither_promotes_nor_retains() {
+    catalogued("ACME SL", MARCH, 1L);
+
+    Optional<OperadorEconomico> resolved =
+        resolveWithoutRanking(ACME_ID, "Acme Sociedade Limitada");
+
+    assertThat(resolved)
+        .get()
+        .extracting(OperadorEconomico::id)
+        .isEqualTo(INCUMBENT_ID);
+    verify(operadores, never()).promoteName(any(), any(), any());
+    verify(operadores, never()).retainName(any());
+    verify(operadores, never()).insert(any());
+  }
+
+  // Reached from the other end than resolve's: the licitacións parse runs FiscalIdentifier.of at
+  // the cell, so a caller holding nothing usable holds null by the time it arrives here.
+  @Test
+  void bid_whose_identifier_is_unusable_yields_no_operador() {
+    Optional<OperadorEconomico> resolved = resolveWithoutRanking(null, "ACME SL");
+
+    assertThat(resolved).isEmpty();
+    verifyNoInteractions(operadores);
+  }
+
+  @Test
+  void bid_that_carried_no_name_catalogues_the_operador_under_the_empty_name() {
+    nothingIsCatalogued();
+
+    Optional<OperadorEconomico> resolved = resolveWithoutRanking(ACME_ID, null);
+
+    assertThat(resolved).get().extracting(OperadorEconomico::name).isEqualTo("");
+  }
+
   /**
    * The one name the store was asked to retain. Captured rather than matched, because a retained
    * name is distinct by its spelling alone — an expected value would match whatever rank the call
@@ -217,6 +275,11 @@ class ResolveOperadorTest {
       long sourceId) {
     return new ResolveOperador(operadores)
         .resolve(publishedFiscalId, publishedName, new NomeRank(date, sourceId));
+  }
+
+  private Optional<OperadorEconomico> resolveWithoutRanking(
+      @Nullable FiscalIdentifier fiscalId, @Nullable String publishedName) {
+    return new ResolveOperador(operadores).resolveWithoutRanking(fiscalId, publishedName);
   }
 
   /** A catalogue nothing has named yet, which assigns the identity the database would on insert. */
