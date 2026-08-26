@@ -872,10 +872,11 @@ Two things the section says about the figures it shows, neither optional:
 Everything else is shown **exactly as stored** (R33), with no truncation or reformatting the row
 invents.
 
-> **The visual design is not in this feature yet.** FEAT-0011 and FEAT-0013 each carry a `design/`
-> folder of hand-authored Mantine mockups, and this feature owes one — the section, the row anatomy,
-> the filter bar and the section states — before its frontend tasks are picked up. It is called out
-> here rather than left as an omission a reader has to notice.
+> **The visual design is [`design/`](design/README.md)**, on FEAT-0011's and FEAT-0013's precedent —
+> the section in place, the row anatomy, the filter bar, the section states, and **a fifth sheet those
+> two features did not need**: the amount and the awardee, whose four and four renderings are the two
+> cells a task author can get wrong without any test noticing. That folder also carries this section's
+> Galician copy table.
 
 ## Tasks
 
@@ -954,9 +955,10 @@ another feature's, that is stated in prose here and in the task, not in its fron
 > lined up, which is the whole reason R32 borrows SPEC-0005 R24's reference environment. It is a
 > cross-feature dependency, so it is stated here rather than in frontmatter.
 >
-> **And tasks 8–12 are blocked on the `design/` folder** this feature owes and does not yet have — the
-> section, the row anatomy, the filter bar and the section states, on FEAT-0011's and FEAT-0013's
-> precedent. Stated once here rather than repeated in five tasks.
+> **Tasks 8–12 build what [`design/`](design/README.md) draws**, and that folder is the target rather
+> than a suggestion: the Galician copy table, the four amount renderings, the four awardee cases and
+> the state badge's deliberate greyness all live there. Stated once here rather than repeated in five
+> tasks.
 
 **Criteria this feature deliberately leaves incomplete**, so that no task claims what it cannot prove:
 
