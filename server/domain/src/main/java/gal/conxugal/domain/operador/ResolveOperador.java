@@ -162,7 +162,7 @@ public class ResolveOperador {
     if (catalogued.isEmpty()) {
       return operadores.insert(
           OperadorEconomico.identifiedUte(
-              fiscalId, publishedName == null ? "" : publishedName, NomeRank.unranked()));
+              fiscalId, displayedAs(publishedName), NomeRank.unranked()));
     }
     OperadorEconomico incumbent = catalogued.get();
     if (!incumbent.ute()) {
@@ -193,8 +193,7 @@ public class ResolveOperador {
    */
   public OperadorEconomico catalogueUnidentifiedConsortium(@Nullable String publishedName) {
     return operadores.insert(
-        OperadorEconomico.unidentifiedUte(
-            publishedName == null ? "" : publishedName, NomeRank.unranked()));
+        OperadorEconomico.unidentifiedUte(displayedAs(publishedName), NomeRank.unranked()));
   }
 
   /**
@@ -218,15 +217,27 @@ public class ResolveOperador {
     return incumbent;
   }
 
-  /**
-   * A catalogue entry for an identifier nothing named before. Both entry points reach it, so the
-   * rule that an operador has to be displayed as something — the empty name where the publication
-   * carried none, never an invented one — holds however it was catalogued.
-   */
+  /** A catalogue entry for an identifier nothing named before, displayed under its own rule. */
   private OperadorEconomico catalogue(
       FiscalIdentifier fiscalId, @Nullable String publishedName, NomeRank rank) {
-    return operadores.insert(
-        new OperadorEconomico(fiscalId, publishedName == null ? "" : publishedName, rank));
+    return operadores.insert(new OperadorEconomico(fiscalId, displayedAs(publishedName), rank));
+  }
+
+  /**
+   * The name a newly catalogued operador is displayed under: the one its publication carried, and
+   * the <strong>empty</strong> name where it carried none.
+   *
+   * <p>An operador has to be displayed as something and inventing one is what R13 forbids, so the
+   * empty string is the only honest answer — and it is deliberately not a placeholder anyone could
+   * mistake for a name. It never displaces a name that was published and never enters the retained
+   * set, because {@link #account} declines to file a name whose rank ranks nothing.
+   *
+   * <p>Stated here rather than at each entry point: every route that creates an operador goes
+   * through it — the ranking one, the rank-less one and both consortium ones — and the rule holding
+   * <em>however an operador was catalogued</em> is what the entry points' contracts claim.
+   */
+  private static String displayedAs(@Nullable String publishedName) {
+    return publishedName == null ? "" : publishedName;
   }
 
   /**
