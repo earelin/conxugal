@@ -109,8 +109,7 @@
   </Match>
 
   <!-- Wants checked exceptions propagated rather than wrapped. Adapters deliberately soften them:
-       domain ports declare no checked exceptions, so an adapter translating one is the design, and
-       test helpers driving those adapters wrap the same way. -->
+       domain ports declare no checked exceptions, so an adapter translating one is the design. -->
   <Match>
     <Bug pattern="EXS_EXCEPTION_SOFTENING_NO_CONSTRAINTS"/>
   </Match>
@@ -125,36 +124,6 @@
        we make when a measurement asks for it, not by default. -->
   <Match>
     <Bug pattern="PSC_PRESIZE_COLLECTIONS"/>
-  </Match>
-
-  <!-- Test-only: each of these fires on a standard JUnit/AssertJ/Mockito idiom rather than on a
-       defect — constructing a value inside assertThatThrownBy, stubbing thenReturn(true), and
-       calling the method under test twice to compare the two results. -->
-  <Match>
-    <Class name="~.*Test(\$.*)?"/>
-    <Bug pattern="SEC_SIDE_EFFECT_CONSTRUCTOR,NAB_NEEDLESS_BOOLEAN_CONSTANT_CONVERSION,PRMC_POSSIBLY_REDUNDANT_METHOD_CALLS,SEO_SUBOPTIMAL_EXPRESSION_ORDER"/>
-  </Match>
-
-  <!-- A Mockito mock is not a resource, and stubbing one that returns a ResultSet is not an
-       acquisition. Every test flagged here stubs PreparedStatement.executeQuery to hand back a
-       mocked ResultSet, which the analysis reads as an obligation the test method never closes;
-       the code under test does close it, in the try-with-resources this very class asserts the
-       behaviour of. Named to the one class so a genuinely leaked JDBC resource elsewhere — in a
-       test that drives a real connection off the container, say — still reports. -->
-  <Match>
-    <Class name="gal.conxugal.infrastructure.jdbc.licitacion.UpsertsTest"/>
-    <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
-  </Match>
-
-  <!-- The plan test builds each statement it EXPLAINs from its own constants, and its four
-       orderings are now rendered from SortKey rather than written out — which is the point, since
-       that is what keeps them the same four the paged read emits, but it also means the analysis
-       can no longer see the statement as a literal. Nothing a caller supplies reaches it: the whole
-       class takes no input. Named to this one class so a statement assembled around a value
-       elsewhere still reports. -->
-  <Match>
-    <Class name="gal.conxugal.infrastructure.jdbc.contrato.ContratoMenorVisibleBrowseSchemaIntegrationTest"/>
-    <Bug pattern="SQL_INJECTION_JDBC"/>
   </Match>
 
   <!-- A one-value enum is the point here, not an oversight. The listing source takes its order as
