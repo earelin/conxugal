@@ -5,6 +5,7 @@ import static org.assertj.db.api.Assertions.assertThat;
 
 import gal.conxugal.domain.licitacion.Award;
 import gal.conxugal.domain.licitacion.AwardeeResolutionPath;
+import gal.conxugal.domain.licitacion.ConsortiumOperadores;
 import gal.conxugal.domain.licitacion.Licitacion;
 import gal.conxugal.domain.licitacion.LicitacionId;
 import gal.conxugal.domain.licitacion.LicitacionState;
@@ -245,7 +246,8 @@ class LicitacionAwardeeDerivationIntegrationTest implements TestPropertyProvider
             List.of(),
             List.of(award(null, EQUINSE)),
             List.of(formalisation(null, EQUINSE, EQUINSE_ID)),
-            List.of());
+            List.of(),
+            ConsortiumOperadores.none());
 
     assertThat(stored)
         .singleElement()
@@ -274,7 +276,8 @@ class LicitacionAwardeeDerivationIntegrationTest implements TestPropertyProvider
         List.of(),
         List.of(award(null, EQUINSE_SPELLED_OUT)),
         List.of(formalisation(null, EQUINSE_SPELLED_OUT, EQUINSE_ID)),
-        List.of());
+        List.of(),
+        ConsortiumOperadores.none());
 
     assertThat(operadorTable()).hasNumberOfRows(1);
     assertThat(operadorTable())
@@ -289,7 +292,8 @@ class LicitacionAwardeeDerivationIntegrationTest implements TestPropertyProvider
       List<PublishedAward> published,
       List<PublishedFormalisation> formalisations,
       List<PublishedBidder> bidders) {
-    return storeAwards.store(licitacion, awardPoints, published, formalisations, bidders);
+    return storeAwards.store(
+        licitacion, awardPoints, published, formalisations, bidders, ConsortiumOperadores.none());
   }
 
   private List<Lote> storedLotes(String... identifiers) {

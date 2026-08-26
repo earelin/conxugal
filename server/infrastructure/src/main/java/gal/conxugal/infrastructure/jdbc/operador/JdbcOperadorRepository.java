@@ -27,8 +27,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Stores the operadores económicos catalogue. {@code findByFiscalId} and {@code insert} derive
- * from the port; the two writes below cannot — {@code retain} is not a Micronaut Data prefix and
- * promoting a name spans two tables — so they are written out.
+ * from the port; the writes below cannot — {@code retain} and {@code mark} are not Micronaut Data
+ * prefixes and promoting a name spans two tables — so they are written out.
  *
  * <p>Promoting is <strong>one transaction over two statements</strong>: the row takes the name and
  * the rank together, and the retained copy of that name goes. A promotion that left the row behind
@@ -62,21 +62,6 @@ import org.jspecify.annotations.Nullable;
 public abstract class JdbcOperadorRepository
     implements OperadorRepository, GenericRepository<OperadorEconomico, OperadorId> {
 
-  /**
-   * The fold {@link MatchableName} defines, expressed once for both of the tables a name can be
-   * held in. It has to answer exactly what that type answers — a key computed there is compared
-   * against a name folded here — which is why it is those three steps rather than a table of
-   * accented characters: lower-case, decompose, and keep the unaccented ASCII letters and digits.
-   * {@code normalize(…, NFD)} splits an accented letter into its base and a combining mark, and the
-   * replacement drops the mark along with every comma, full stop and space.
-   *
-   * <p>No index serves it and none is added on speculation. The catalogue match is the last route
-   * an award tries and reaches roughly a third of them; if the scan ever shows in an import's
-   * timings, an expression index over this exact expression is what it costs.
-   */
-  private static final String FOLDED_NAME =
-      "regexp_replace(normalize(lower(%s), NFD), '[^a-z0-9]', '', 'g')";
-
   private static final String OPERADORES_MATCHING_NAME =
       """
       SELECT id FROM operador_economico WHERE %s = ?::text
@@ -85,7 +70,7 @@ public abstract class JdbcOperadorRepository
         FROM operador_economico_nome_alternativo
        WHERE %s = ?::text
       """
-          .formatted(FOLDED_NAME.formatted("name"), FOLDED_NAME.formatted("name"));
+          .formatted(NameFold.of("name"), NameFold.of("name"));
 
   private static final String PROMOTE_NAME =
       """
@@ -98,6 +83,11 @@ public abstract class JdbcOperadorRepository
       """
       DELETE FROM operador_economico_nome_alternativo
        WHERE operador_economico_id = ? AND name = ?
+      """;
+
+  private static final String MARK_AS_UTE =
+      """
+      UPDATE operador_economico SET ute = TRUE WHERE id = ?
       """;
 
   private static final String RETAIN_NAME =
@@ -171,6 +161,22 @@ public abstract class JdbcOperadorRepository
       statement.setObject(1, id.value());
       statement.setString(2, name);
     });
+  }
+
+  /**
+   * Sets the marker and nothing else. It is deliberately not part of an upsert: a UTE reached here
+   * is already catalogued — by an earlier licitación, or by a contrato menor that had no notion of
+   * consortia — so what is wanted is one column moved, not a row rewritten under a name and a rank
+   * this publication does not rank.
+   *
+   * <p>Setting it on a row that already carries it writes the same value and is not an error, which
+   * is what lets the caller ask without reading first.
+   */
+  @Override
+  @Transactional
+  public void markAsUte(OperadorId id) {
+    Objects.requireNonNull(id, "id must not be null");
+    executeUpdate(MARK_AS_UTE, statement -> statement.setObject(1, id.value()));
   }
 
   @Override

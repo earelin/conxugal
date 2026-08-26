@@ -2,7 +2,7 @@
 feat: FEAT-0015
 domain: backend
 adrs: [0002, 0023]
-status: todo
+status: done
 depends_on: [TASK-0006, TASK-0012]
 ---
 
@@ -61,9 +61,23 @@ least 2 and nothing measures how many more.)*
   `ute` marker, and `licitacion_participation`'s key already contains `operador_economico_id`, so
   *the participation of this bid* cannot be looked up without already knowing the operador.
   Matching on the published name is what amendment 1 refuses. **Settling this is in scope here**,
-  and the shape that does it — a bid reference on the operador, a uniqueness constraint spanning
-  the procedure, or a lookup this task adds — is a migration of its own. Getting it wrong mints a
-  second consortium and a second participation per re-import and leaves the previous bid visible.
+  and three shapes could: a bid reference on the operador, a uniqueness constraint spanning the
+  procedure, or a lookup this task adds. Getting it wrong mints a second consortium and a second
+  participation per re-import and leaves the previous bid visible.
+
+  **Settled as the lookup, and it needs no migration.** `ParticipationRepository` gained
+  `findConsortiumOperador(licitacionId, name)`, which joins this procedure's bids to the
+  catalogue and answers the one entry among them that is a UTE holding no fiscal identifier under
+  this name. The participation the previous import wrote *is* the bid reference, read from the end
+  that has it — the port could not be asked for *the participation of this bid* because its key
+  contains the operador, but the join in the other direction is exact. That leaves
+  `operador_economico` family-neutral, which a `licitacion_id` column on it would not: SPEC-0006
+  states the catalogue is family-neutral by construction, and a second family publishing consortia
+  would need a second column. The name is compared inside **one procedure** on the fold everything
+  else here compares names on, so it claims no continuity across procedures — and the query does
+  not filter on `withdrawn`, or a reconciliation would mint a second UTE beside the one it had just
+  withdrawn. What is given up is a database constraint: uniqueness rests on the lookup and its
+  tests rather than on an index.
 - **Setting the `ute` marker on an operador already catalogued is this task's too**, and no port
   offers it yet. `OperadorRepository` has `findByFiscalId`, `insert`, `promoteName` and
   `retainName`; none writes the marker, and

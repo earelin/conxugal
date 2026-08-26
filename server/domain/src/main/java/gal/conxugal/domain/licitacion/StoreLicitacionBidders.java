@@ -30,11 +30,12 @@ import org.jspecify.annotations.Nullable;
  * <em>create</em> an operador nothing named before, because R16 needs the participation to exist
  * and R3 needs its identifier to resolve to something.
  *
- * <p><strong>A consortium row is routed past this entirely.</strong> Its identifier may come from
- * the procedure's formalisation rather than from its bidder row, so deciding here whether it is
- * identified would decide on half the evidence; cataloguing it and writing its bid belong together
- * and belong to the task that reads both tables. Nothing here is called with a consortium's
- * {@code NIF} cell, which is also why no placeholder can reach the catalogue through this path.
+ * <p><strong>A consortium row is routed past this entirely</strong>, to
+ * {@link StoreLicitacionConsortia}. Its identifier may come from the procedure's formalisation
+ * rather than from its bidder row, so deciding here whether it is identified would decide on half
+ * the evidence; cataloguing it and writing its bid belong together and belong with the class that
+ * reads both tables. Nothing here is called with a consortium's {@code NIF} cell, which is also why
+ * no placeholder can reach the catalogue through this path.
  *
  * <p><strong>Nothing here marks a bid as won.</strong> Which bid won is the award table's answer,
  * not the bidder table's, so every row is written unwon and the resolution that knows better writes
@@ -73,8 +74,8 @@ public class StoreLicitacionBidders {
       switch (bidder) {
         case PublishedBidder.SingleFirm firm ->
             stored.add(participations.upsert(bidOf(firm, awardPoints)));
-        // Routed past, not overlooked: cataloguing a consortium and writing its bid belong
-        // together, because its identifier may come from the formalisation rather than this row.
+        // Routed past, not overlooked: StoreLicitacionConsortia writes this row's bid, because
+        // its identifier may come from the formalisation rather than from this row.
         case PublishedBidder.Consortium _ -> {
         }
       }

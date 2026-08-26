@@ -50,6 +50,22 @@ public interface OperadorRepository {
   void promoteName(OperadorId id, String name, NomeRank nameRank);
 
   /**
+   * Marks an operador already in the catalogue as a consortium. Idempotent, and one-way: the
+   * source publishes being a UTE structurally and never publishes the absence of it, so nothing
+   * here unmarks.
+   *
+   * <p><strong>It exists because a UTE can be catalogued by a family that knows nothing of
+   * consortia.</strong> A consortium holding an ordinary fiscal identifier is an ordinary operador
+   * to the contratos menores import, which stores it unmarked — and that family imports first
+   * for a newly marked Órgano — so without this a UTE first named by a contrato menor
+   * would stay an ordinary firm however many licitacións published it as a consortium.
+   *
+   * <p>The marker is the only thing it writes: the name, the rank and the retained set are the
+   * name rule's, and being published as a consortium says nothing about any of them.
+   */
+  void markAsUte(OperadorId id);
+
+  /**
    * Retains a name the operador has been published under, either adding it or advancing the rank
    * of one already held. One operation, not find-then-write: the store decides which of the two
    * happened, so no caller can read, lose the race and insert a duplicate the store would then

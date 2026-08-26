@@ -35,7 +35,15 @@ public enum AwardeeResolutionPath {
    */
   NAME_DERIVED,
 
-  /** The bidder list for that award point published the awardee's fiscal identifier. */
+  /**
+   * The procedure's bidder list published the awardee. Ordinarily that means it published the
+   * awardee's fiscal identifier — and for <strong>a consortium the source declines to
+   * identify</strong> it means the bidder list published the party itself, structured as a
+   * consortium and listing its members, which is the publication SPEC-0006 R3 keys that
+   * operador on in place of an identifier.
+   * Either way nothing is inferred: the party the award names is one the record itself put on the
+   * page.
+   */
   PUBLISHED_BY_BIDDER,
 
   /**

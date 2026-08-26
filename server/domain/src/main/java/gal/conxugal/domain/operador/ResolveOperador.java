@@ -26,6 +26,12 @@ import org.jspecify.annotations.Nullable;
  * side effect of promoting it — so the mistake is permanent and silent. A losing bid is exactly
  * such a caller.
  *
+ * <p><strong>A consortium has two entry points of its own</strong>, because R3 gives it two
+ * identities. {@link #resolveConsortium} is the ordinary rule plus the UTE marker, for the one the
+ * source identifies; {@link #catalogueUnidentifiedConsortium} mints the entry R3 keys on a bid
+ * instead, which is the only insert here that answers to no identifier — and the only one whose
+ * caller has to have looked first.
+ *
  * <p><strong>What it does not do is find an operador by name.</strong> Resolution here is
  * SPEC-0006 R3's — by fiscal identifier, the value that <em>is</em> an operador's identity — and it
  * catalogues what it does not find. A caller matching a published name against the catalogue is
@@ -126,6 +132,69 @@ public class ResolveOperador {
     return operadores
         .findByFiscalId(fiscalId)
         .orElseGet(() -> catalogue(fiscalId, publishedName, NomeRank.unranked()));
+  }
+
+  /**
+   * The operador this consortium is, where the source identified it <em>anywhere on its
+   * procedure</em> — its bidder row or its formalisation, whichever published one first. It is an
+   * ordinary catalogue entry: the same operador on every other procedure naming that identifier,
+   * and marked as a UTE whether it was catalogued here or long before.
+   *
+   * <p><strong>The marking is the whole of what this adds</strong> over
+   * {@link #resolveWithoutRanking}, and it is why a consortium does not simply call that. A UTE
+   * holding an ordinary identifier is an ordinary operador to a family that knows nothing of
+   * consortia, and contratos menores import ahead of licitacións for a newly marked Órgano — so
+   * the row is often already there, unmarked, and an entry point that only ever inserted would
+   * leave it that way for good.
+   *
+   * <p><strong>It ranks nothing</strong>, on the rule {@link #resolveWithoutRanking} states: this
+   * is a bid, and R4 selects a displayed name from the operador's contracts. The award such a
+   * consortium may go on to win is a contract, and it is resolved through the ranking entry points
+   * like any other awardee's.
+   *
+   * @param fiscalId the consortium's own identifier, already reduced
+   * @param publishedName the consortium's name as published, or null where the source carried none
+   */
+  public OperadorEconomico resolveConsortium(
+      FiscalIdentifier fiscalId, @Nullable String publishedName) {
+    Objects.requireNonNull(fiscalId, "fiscalId must not be null");
+    Optional<OperadorEconomico> catalogued = operadores.findByFiscalId(fiscalId);
+    if (catalogued.isEmpty()) {
+      return operadores.insert(
+          OperadorEconomico.identifiedUte(
+              fiscalId, publishedName == null ? "" : publishedName, NomeRank.unranked()));
+    }
+    OperadorEconomico incumbent = catalogued.get();
+    if (!incumbent.ute()) {
+      operadores.markAsUte(
+          Objects.requireNonNull(incumbent.id(), "a catalogued operador must carry an identity"));
+    }
+    return incumbent.markedAsUte();
+  }
+
+  /**
+   * A catalogue entry for a consortium the source declined to identify <strong>anywhere</strong> on
+   * its procedure — 33 of every 35 measured. It holds no fiscal identifier at all: nothing is
+   * invented, and the {@code -} or {@code TEMP-…} the bidder cell carried never becomes an
+   * identity.
+   *
+   * <p><strong>This is an unconditional insert, and it has to be.</strong> Such an entry is
+   * identified by the bid it was published on rather than by anything the catalogue holds, so
+   * there is no identifier to look it up by and a name lookup across the catalogue is exactly the
+   * continuity SPEC-0006 R3 refuses to claim. <strong>Finding the one an earlier import of the
+   * same procedure already minted is therefore the caller's</strong>, through a lookup scoped to
+   * that procedure, and calling this without having asked it mints a second consortium on every
+   * re-import.
+   *
+   * <p>It ranks nothing, and for this party that is permanent: no contract will ever name an
+   * identifier it does not hold, so the name its bid published is the only name it will bear.
+   *
+   * @param publishedName the consortium's name as published, or null where the source carried none
+   */
+  public OperadorEconomico catalogueUnidentifiedConsortium(@Nullable String publishedName) {
+    return operadores.insert(
+        OperadorEconomico.unidentifiedUte(
+            publishedName == null ? "" : publishedName, NomeRank.unranked()));
   }
 
   /**

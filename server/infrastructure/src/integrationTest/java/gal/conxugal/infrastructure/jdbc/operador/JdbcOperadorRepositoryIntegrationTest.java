@@ -133,6 +133,39 @@ class JdbcOperadorRepositoryIntegrationTest implements TestPropertyProvider {
     assertThat(found.fiscalId()).isEqualTo(new FiscalIdentifier("U88779475"));
   }
 
+  // The marker is set on a row already catalogued, which is the only way a UTE a contrato menor
+  // named first ever stops being an ordinary firm — that family imports ahead of licitacións and
+  // knows nothing of consortia, so insert is not the path that can reach it.
+  @Test
+  void operador_another_family_catalogued_unmarked_is_marked_keeping_its_name_and_rank() {
+    OperadorEconomico inserted =
+        operadorRepository.insert(
+            new OperadorEconomico(
+                new FiscalIdentifier("U88779475"), "UTE Ponte", new NomeRank(PUBLISHED_ON, 4711L)));
+
+    operadorRepository.markAsUte(inserted.id());
+
+    assertThat(operadorTable())
+        .row(0)
+            .value("ute").isTrue()
+            .value("name").isEqualTo("UTE Ponte")
+            .value("name_rank_source_id").isEqualTo(4711L);
+  }
+
+  // Idempotent, which is what lets the caller ask without reading the row first.
+  @Test
+  void marking_an_operador_already_marked_leaves_it_marked() {
+    OperadorEconomico inserted =
+        operadorRepository.insert(
+            OperadorEconomico.unidentifiedUte(
+                "UTE PRACE-TABOADA RAMOS", new NomeRank(PUBLISHED_ON, 4711L)));
+
+    operadorRepository.markAsUte(inserted.id());
+
+    assertThat(operadorTable()).hasNumberOfRows(1);
+    assertThat(operadorTable()).row(0).value("ute").isTrue();
+  }
+
   // The 33-of-35 case, stored through the adapter rather than by raw SQL: the row lands with the
   // marker set and the identifier absent, and no lookup can ever reach it again.
   @Test

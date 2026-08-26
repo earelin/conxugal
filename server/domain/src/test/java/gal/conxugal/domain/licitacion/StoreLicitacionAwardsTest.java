@@ -340,9 +340,10 @@ class StoreLicitacionAwardsTest {
 
   // Whether the consortium is catalogued is a property of the procedure rather than of this row,
   // so no route is tried at all — including the formalisation, which is one of the two places its
-  // identifier is published and therefore evidence the task that attributes it needs whole.
+  // identifier is published and therefore evidence the cataloguing needs whole. A caller that has
+  // not catalogued the consortia leaves the award naming nobody rather than matching its name.
   @Test
-  void award_whose_awardee_is_consortium_row_takes_no_route_and_links_nobody() {
+  void award_whose_awardee_is_consortium_row_takes_no_route_when_none_were_catalogued() {
     theStoreAcceptsEveryAward();
 
     List<Award> stored =
@@ -362,6 +363,61 @@ class StoreLicitacionAwardsTest {
                   .isEqualTo(AwardeeResolutionPath.UNRESOLVED);
             });
     assertThat(catalogue).isEmpty();
+  }
+
+  // The award belongs to the consortium's own operador and to no member of it, which is the
+  // storage form of no euro being counted twice. An unidentified consortium has no identifier to
+  // resolve through, so the link is direct and the catalogue is left exactly as its bid made it.
+  @Test
+  void award_to_unidentified_consortium_is_held_by_its_operador_and_ranks_nothing() {
+    theStoreAcceptsEveryAward();
+    OperadorId ute = new OperadorId(UUID.randomUUID());
+
+    List<Award> stored =
+        store(
+            List.of(),
+            List.of(award(null, "UTE PRACE-TABOADA RAMOS")),
+            List.of(),
+            List.of(consortium(null, "UTE PRACE-TABOADA RAMOS")),
+            wasCatalogued(
+                "UTE PRACE-TABOADA RAMOS", ute, null, AwardeeResolutionPath.PUBLISHED_BY_BIDDER));
+
+    assertThat(stored)
+        .singleElement()
+        .satisfies(
+            award -> {
+              assertThat(award.operadorEconomicoId()).isEqualTo(ute);
+              assertThat(award.awardeeResolutionPath())
+                  .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_BIDDER);
+            });
+    assertThat(catalogue).isEmpty();
+  }
+
+  // An identified consortium is an ordinary awardee: the award resolves through the catalogue on
+  // the identifier the procedure published, so it ranks that consortium's name as any contract
+  // does — the split TASK-0022 draws between a bid, which ranks nothing, and the award it won.
+  @Test
+  void award_to_identified_consortium_resolves_through_the_catalogue_and_ranks_its_name() {
+    theStoreCataloguesOnDemand();
+    FiscalIdentifier uteId = new FiscalIdentifier("U88779475");
+
+    store(
+        List.of(),
+        List.of(award(null, "UTE INSIDE OVIGA RIBADEO")),
+        List.of(),
+        List.of(consortium(null, "UTE INSIDE OVIGA RIBADEO")),
+        wasCatalogued(
+            "UTE INSIDE OVIGA RIBADEO",
+            new OperadorId(UUID.randomUUID()),
+            uteId,
+            AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION));
+
+    assertThat(catalogued(uteId))
+        .satisfies(
+            operador -> {
+              assertThat(operador.name()).isEqualTo("UTE INSIDE OVIGA RIBADEO");
+              assertThat(operador.nameRank()).isEqualTo(new NomeRank(PUBLISHED_ON, 822054L));
+            });
   }
 
   // R16 and R25 make this an outcome rather than a failure: the award is stored, the procedure
@@ -399,7 +455,8 @@ class StoreLicitacionAwardsTest {
                 List.of(),
                 List.of(award(null, EQUINSE)),
                 List.of(formalisation(null, EQUINSE, EQUINSE_ID)),
-                List.of());
+                List.of(),
+                ConsortiumOperadores.none());
 
     assertThat(stored)
         .singleElement()
@@ -450,12 +507,33 @@ class StoreLicitacionAwardsTest {
       List<PublishedAward> published,
       List<PublishedFormalisation> formalisations,
       List<PublishedBidder> bidders) {
+    return store(lotes, published, formalisations, bidders, ConsortiumOperadores.none());
+  }
+
+  private List<Award> store(
+      List<Lote> lotes,
+      List<PublishedAward> published,
+      List<PublishedFormalisation> formalisations,
+      List<PublishedBidder> bidders,
+      ConsortiumOperadores consortia) {
     return new StoreLicitacionAwards(new ResolveOperador(operadores), operadores, awards)
-        .store(licitacion(PUBLICATION_ID), lotes, published, formalisations, bidders);
+        .store(licitacion(PUBLICATION_ID), lotes, published, formalisations, bidders, consortia);
   }
 
   private OperadorEconomico catalogued(FiscalIdentifier fiscalId) {
     return catalogue.get(fiscalId);
+  }
+
+  /** One consortium of the procedure, as the store that catalogued it answered. */
+  private static ConsortiumOperadores wasCatalogued(
+      String publishedName,
+      OperadorId operadorId,
+      @Nullable FiscalIdentifier fiscalId,
+      AwardeeResolutionPath path) {
+    return new ConsortiumOperadores(
+        Map.of(
+            MatchableName.of(publishedName).orElseThrow(),
+            new ConsortiumOperadores.CataloguedConsortium(operadorId, fiscalId, path)));
   }
 
   private static Licitacion licitacion(PublicationId publicationId) {

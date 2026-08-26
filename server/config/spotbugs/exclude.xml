@@ -92,6 +92,15 @@
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
 
+  <!-- And for the consortium store beside them, which holds the shared derivation and the two
+       ports it writes a consortium's bid and membership through. Both of those declare a mutator,
+       which is all the heuristic needs. -->
+  <Match>
+    <Class name="gal.conxugal.domain.licitacion.StoreLicitacionConsortia"/>
+    <Field name="~(resolveOperador|participations|memberships)"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+
   <!-- Micronaut Serde's generated (de)serializers. The @Generated match above cannot reach them:
        they carry javax.annotation.processing.Generated, which is SOURCE-retention and so absent
        from the bytecode SpotBugs reads, unlike Micronaut's own CLASS-retention annotation. -->

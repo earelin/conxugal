@@ -118,6 +118,22 @@ public record OperadorEconomico(
   }
 
   /**
+   * The same operador, marked as a consortium. A UTE holding an ordinary fiscal identifier can be
+   * catalogued by a family that knows nothing of consortia — contratos menores import before
+   * licitacións do — so the marker is set when a licitación publishes it as one rather than only
+   * when it is first catalogued.
+   *
+   * <p>Nothing here unmarks: the source publishes being a consortium structurally and never
+   * publishes the absence of it, so a row that has once been named as a UTE stays one.
+   */
+  public OperadorEconomico markedAsUte() {
+    if (ute) {
+      return this;
+    }
+    return new OperadorEconomico(id, fiscalId, name, true, nameRank, nomesAlternativos);
+  }
+
+  /**
    * Identity, not value, so equality never walks the retained names. An operador the database has
    * not yet assigned an id to is equal to nothing but itself.
    */

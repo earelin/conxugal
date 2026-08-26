@@ -283,6 +283,93 @@ class ResolveOperadorTest {
         .isEqualTo(new NomeAlternativo(INCUMBENT_ID, "Primeira SL", new NomeRank(MARCH, 1L)));
   }
 
+  // The criterion the marker exists for: contratos menores import ahead of licitacións, so a UTE
+  // holding an ordinary identifier is often already catalogued as a plain firm. Marking it is the
+  // whole of what this entry point adds, and without it the row would stay a firm for ever.
+  @Test
+  void consortium_that_contrato_menor_catalogued_first_is_marked_not_catalogued_twice() {
+    catalogued("UTE INSIDE OVIGA RIBADEO", MARCH, 1L);
+
+    OperadorEconomico resolved =
+        new ResolveOperador(operadores).resolveConsortium(ACME_ID, "UTE INSIDE OVIGA RIBADEO");
+
+    assertThat(resolved.ute()).isTrue();
+    verify(operadores).markAsUte(INCUMBENT_ID);
+    verify(operadores, never()).insert(any());
+  }
+
+  // A bid ranks nothing, and being published as a consortium says nothing about what any operador
+  // should be displayed as — so a name that differs from the catalogued one is neither promoted
+  // nor filed among the alternatives, which is where a rank engineered to lose would put it.
+  @Test
+  void consortium_already_marked_is_answered_unchanged_and_no_name_moves() {
+    when(operadores.findByFiscalId(ACME_ID))
+        .thenReturn(
+            Optional.of(
+                new OperadorEconomico(
+                    INCUMBENT_ID,
+                    ACME_ID,
+                    "UTE INSIDE OVIGA RIBADEO",
+                    true,
+                    new NomeRank(MARCH, 1L),
+                    Set.of())));
+
+    OperadorEconomico resolved =
+        new ResolveOperador(operadores).resolveConsortium(ACME_ID, "UTE INSIDE-OVIGA, RIBADEO");
+
+    assertThat(resolved.id()).isEqualTo(INCUMBENT_ID);
+    verify(operadores, never()).markAsUte(any());
+    verify(operadores, never()).promoteName(any(), any(), any());
+    verify(operadores, never()).retainName(any());
+  }
+
+  // The identified branch of amendment 1: an ordinary catalogue entry that happens to be marked,
+  // reachable by its identifier from every other procedure that names it.
+  @Test
+  void consortium_nothing_named_before_is_catalogued_marked_holding_its_identifier() {
+    nothingIsCatalogued();
+
+    OperadorEconomico resolved =
+        new ResolveOperador(operadores).resolveConsortium(ACME_ID, "UTE INSIDE OVIGA RIBADEO");
+
+    assertThat(theOperadorCatalogued())
+        .satisfies(
+            operador -> {
+              assertThat(operador.fiscalId()).isEqualTo(ACME_ID);
+              assertThat(operador.name()).isEqualTo("UTE INSIDE OVIGA RIBADEO");
+              assertThat(operador.ute()).isTrue();
+              assertThat(operador.nameRank()).isEqualTo(NomeRank.unranked());
+            });
+    assertThat(resolved.id()).isNotNull();
+  }
+
+  // The 33-of-35 branch: no identifier at all, so nothing is looked up — finding the one an
+  // earlier import of the same procedure minted is the caller's, through its own bid.
+  @Test
+  void unidentified_consortium_is_minted_holding_no_identifier_without_asking_the_catalogue() {
+    when(operadores.insert(any())).thenAnswer(invocation -> assigned(invocation.getArgument(0)));
+
+    new ResolveOperador(operadores).catalogueUnidentifiedConsortium("MISTURAS-INGESAN");
+
+    assertThat(theOperadorCatalogued())
+        .satisfies(
+            operador -> {
+              assertThat(operador.fiscalId()).isNull();
+              assertThat(operador.name()).isEqualTo("MISTURAS-INGESAN");
+              assertThat(operador.ute()).isTrue();
+              assertThat(operador.nameRank()).isEqualTo(NomeRank.unranked());
+            });
+    verify(operadores, never()).findByFiscalId(any());
+  }
+
+  /** The one operador the store was asked to catalogue, captured before it was assigned an id. */
+  private OperadorEconomico theOperadorCatalogued() {
+    ArgumentCaptor<OperadorEconomico> catalogued =
+        ArgumentCaptor.forClass(OperadorEconomico.class);
+    verify(operadores).insert(catalogued.capture());
+    return catalogued.getValue();
+  }
+
   /**
    * The one name the store was asked to retain. Captured rather than matched, because a retained
    * name is distinct by its spelling alone — an expected value would match whatever rank the call
@@ -311,18 +398,18 @@ class ResolveOperadorTest {
   /** A catalogue nothing has named yet, which assigns the identity the database would on insert. */
   private void nothingIsCatalogued() {
     when(operadores.findByFiscalId(any())).thenReturn(Optional.empty());
-    when(operadores.insert(any()))
-        .thenAnswer(
-            invocation -> {
-              OperadorEconomico incoming = invocation.getArgument(0);
-              return new OperadorEconomico(
-                  new OperadorId(UUID.randomUUID()),
-                  incoming.fiscalId(),
-                  incoming.name(),
-                  false,
-                  incoming.nameRank(),
-                  Set.of());
-            });
+    when(operadores.insert(any())).thenAnswer(invocation -> assigned(invocation.getArgument(0)));
+  }
+
+  /** What the store answers an insert with: the same entry, carrying the identity it assigned. */
+  private static OperadorEconomico assigned(OperadorEconomico incoming) {
+    return new OperadorEconomico(
+        new OperadorId(UUID.randomUUID()),
+        incoming.fiscalId(),
+        incoming.name(),
+        incoming.ute(),
+        incoming.nameRank(),
+        Set.of());
   }
 
   /** An operador an earlier import already catalogued, displayed under {@code name}. */
