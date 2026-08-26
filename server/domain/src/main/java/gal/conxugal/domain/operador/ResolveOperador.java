@@ -166,8 +166,7 @@ public class ResolveOperador {
     }
     OperadorEconomico incumbent = catalogued.get();
     if (!incumbent.ute()) {
-      operadores.markAsUte(
-          Objects.requireNonNull(incumbent.id(), "a catalogued operador must carry an identity"));
+      operadores.markAsUte(identityOf(incumbent));
     }
     return incumbent.markedAsUte();
   }
@@ -224,6 +223,15 @@ public class ResolveOperador {
   }
 
   /**
+   * The identity of an operador the catalogue answered with. It is null only until the database
+   * assigns it on insert, so a null here is a store that answered an insert with an unsaved row —
+   * a defect worth throwing on rather than a write quietly made against nobody.
+   */
+  private static OperadorId identityOf(OperadorEconomico operador) {
+    return Objects.requireNonNull(operador.id(), "a catalogued operador must carry an identity");
+  }
+
+  /**
    * The name a newly catalogued operador is displayed under: the one its publication carried, and
    * the <strong>empty</strong> name where it carried none.
    *
@@ -261,8 +269,7 @@ public class ResolveOperador {
    * sentinel rank on the row <em>is</em> the fact, which is why it costs no column.
    */
   private void account(OperadorEconomico incumbent, String publishedName, NomeRank rank) {
-    OperadorId id =
-        Objects.requireNonNull(incumbent.id(), "a catalogued operador must carry an identity");
+    OperadorId id = identityOf(incumbent);
     boolean renaming = !incumbent.name().equals(publishedName);
     if (rank.outranks(incumbent.nameRank())) {
       operadores.promoteName(id, publishedName, rank);
