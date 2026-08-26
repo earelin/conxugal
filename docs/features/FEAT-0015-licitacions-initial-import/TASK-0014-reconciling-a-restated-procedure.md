@@ -53,6 +53,23 @@ stored procedure, idempotently, and it is the last piece before the walk
   still be stated by procedure B — and withdrawing it because A stopped would hide a fact B still
   publishes. The rule is therefore stated over the UTE rather than over one bid, and reconciling an
   identified UTE re-derives its membership from the procedures that remain visible.
+- **A consortium the source stops declining to identify is this task's to reconcile**, and it is
+  the one case [TASK-0013](TASK-0013-consortia-and-their-membership.md)'s ordering argument does
+  not cover. *Identified* is a property of the procedure, which that task settles **within** one
+  import — the bidder row and the formalisation are weighed together before any operador is
+  created, so a single import can never mint an identifier-less UTE beside an identified one.
+  Across imports it can: a procedure moving to *formalizado* publishes an identifier the first
+  import had nowhere to read, so the second import catalogues the consortium under it and writes a
+  **second** bid, leaving the identifier-less operador the first one minted still holding the first
+  bid and its memberships.
+
+  So the reconciliation has to withdraw the bid the record no longer supports and the memberships
+  under it, exactly as it does for any other party the record stops publishing — a consortium's
+  identity moving is a restatement like any other, and SPEC-0006 #40 forbids the procedure holding
+  its consortium twice however that came about. **What it must not do is merge the two
+  operadores**: ADR-0023 rests on an identifier-less row never being re-partitioned once written,
+  so the old one is withdrawn out of visibility rather than folded into the new.
+
 - **A licitación absent from a later import is retained unchanged** (R14). Absence is not evidence
   of withdrawal, and the explicit removal that *is* (R15) is a later feature's. Nothing here
   compares the store against the listing and withdraws the difference.

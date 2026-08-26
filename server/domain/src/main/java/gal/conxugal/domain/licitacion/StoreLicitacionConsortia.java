@@ -45,7 +45,11 @@ import org.jspecify.annotations.Nullable;
  * <p><strong>One consortium per procedure and published name, not per bidder row.</strong> A UTE
  * is constituted for a procedure, so a consortium bidding on two of its lotes is one catalogue
  * entry with two bids and one membership — not two entries splitting its members and its awards
- * between them.
+ * between them. <strong>What that costs is two consortia of one procedure whose names fold
+ * alike</strong>: they become one entry holding the union of their members. The source would have
+ * to publish two genuinely different consortia under names differing only in case, accent or
+ * punctuation, and the alternative — keying on the raw spelling — mints a second entry every time
+ * a restatement repunctuates one, which is the commoner failure by far.
  *
  * <p><strong>It is minted once and found again by the bid it made.</strong> An identifier-less
  * entry answers to nothing inside the catalogue, so a re-import would mint a second without
@@ -54,9 +58,13 @@ import org.jspecify.annotations.Nullable;
  * what keeps it clear of the continuity SPEC-0006 R3 refuses to claim: two procedures publishing a
  * consortium under one name are two operadores, deliberately.
  *
- * <p><strong>One transaction.</strong> The operadores a consortium catalogues are created beside
- * the bid and the memberships that justified them, so a rollback cannot leave a catalogue entry no
- * stored bid points at. {@link ResolveOperador} owns no boundary of its own.
+ * <p><strong>One transaction, and one import.</strong> The operadores a consortium catalogues are
+ * created beside the bid and the memberships that justified them, so a rollback cannot leave a
+ * catalogue entry no stored bid points at; {@link ResolveOperador} owns no boundary of its own.
+ * Two imports of one procedure running at once would each mint a consortium, since nothing in the
+ * schema refuses the second — that is held off by the system-wide one-import-at-a-time guard
+ * ADR-0023 already rests the catalogue's create-if-absent path on, and it is named here because
+ * this is a second thing depending on it rather than a new assumption.
  */
 @Singleton
 public class StoreLicitacionConsortia {
@@ -96,39 +104,58 @@ public class StoreLicitacionConsortia {
     Objects.requireNonNull(bidders, "bidders must not be null");
     Objects.requireNonNull(formalisations, "formalisations must not be null");
     AwardPoints awardPoints = AwardPoints.of(licitacionId, lotes);
+    Map<MatchableName, List<PublishedBidder.Consortium>> named = new LinkedHashMap<>();
+    List<PublishedBidder.Consortium> nameless = new ArrayList<>();
+    group(bidders, named, nameless);
     Map<MatchableName, CataloguedConsortium> catalogued = new LinkedHashMap<>();
-    for (Map.Entry<MatchableName, List<PublishedBidder.Consortium>> entry :
-        byPublishedName(bidders).entrySet()) {
+    for (Map.Entry<MatchableName, List<PublishedBidder.Consortium>> entry : named.entrySet()) {
       catalogued.put(
           entry.getKey(),
           storeOne(awardPoints, entry.getKey(), entry.getValue(), formalisations));
+    }
+    for (PublishedBidder.Consortium row : nameless) {
+      participations.upsert(
+          new Participation(
+              awardPoints.licitacionId(), awardPoints.at(row.loteKey()), null, false));
     }
     return new ConsortiumOperadores(catalogued);
   }
 
   /**
-   * The procedure's consortium rows grouped by the name they were published under, in the order
-   * the source named them.
+   * The procedure's consortium rows split into the ones a name can key and the ones it cannot, each
+   * in the order the source named them.
    *
-   * <p><strong>A consortium row publishing no name is skipped entirely.</strong> Never observed,
-   * and it has nothing to be catalogued as: R3 keys an identifier-less entry on its bid and the
-   * name is the only thing that tells one bid's consortium from another's on the same procedure.
-   * Skipping loses one bid rather than pooling two unrelated consortia under one entry.
+   * <p><strong>A consortium row publishing no name — or one that folds to nothing — cannot be
+   * catalogued.</strong> R3 keys an identifier-less entry on its bid, and within one procedure the
+   * published name is the only thing that tells one bid's consortium from another's; pooling two
+   * such rows under one entry would attach one consortium's members to another's award.
+   *
+   * <p><strong>Its bid is written all the same, naming nobody.</strong> R16 records every operador
+   * that applied and #19 requires every published bidder to be stored, with no exception for a
+   * consortium — and {@link StoreLicitacionBidders} already takes exactly this view of a single
+   * firm whose identifier was unusable: the bid is a fact the source published, and dropping it
+   * would lose a bidder and leave the procedure's own participant count short. What is lost is the
+   * catalogue entry, not the bid. Its member firms are not catalogued either: nothing would relate
+   * them to, and an operador a bid creates but no participation reaches is unreachable by
+   * construction.
+   *
+   * <p>Never observed in 613 measured bidder rows, both branches included.
    */
-  private static Map<MatchableName, List<PublishedBidder.Consortium>> byPublishedName(
-      Iterable<PublishedBidder> bidders) {
-    Map<MatchableName, List<PublishedBidder.Consortium>> grouped = new LinkedHashMap<>();
+  private static void group(
+      Iterable<PublishedBidder> bidders,
+      Map<MatchableName, List<PublishedBidder.Consortium>> named,
+      List<PublishedBidder.Consortium> nameless) {
     for (PublishedBidder bidder : bidders) {
-      if (bidder instanceof PublishedBidder.Consortium consortium) {
-        MatchableName.of(consortium.name())
-            .ifPresent(
-                name ->
-                    grouped
-                        .computeIfAbsent(name, ignored -> new ArrayList<>())
-                        .add(consortium));
+      if (!(bidder instanceof PublishedBidder.Consortium consortium)) {
+        continue;
+      }
+      MatchableName name = MatchableName.of(consortium.name()).orElse(null);
+      if (name == null) {
+        nameless.add(consortium);
+      } else {
+        named.computeIfAbsent(name, ignored -> new ArrayList<>()).add(consortium);
       }
     }
-    return grouped;
   }
 
   /** One consortium of this procedure: catalogued, its bids written, its members related to it. */

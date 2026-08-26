@@ -2,6 +2,8 @@ package gal.conxugal.domain.licitacion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import gal.conxugal.domain.money.Money;
@@ -366,10 +368,14 @@ class StoreLicitacionAwardsTest {
   }
 
   // The award belongs to the consortium's own operador and to no member of it, which is the
-  // storage form of no euro being counted twice. An unidentified consortium has no identifier to
-  // resolve through, so the link is direct and the catalogue is left exactly as its bid made it.
+  // storage form of no euro being counted twice. The routes are what this asserts against rather
+  // than the link alone: a formalisation naming the same party carries an identifier, and taking
+  // it would attribute the award to a second operador while the bid pointed at the first — the
+  // shape SPEC-0006 #40 forbids. An unidentified consortium has nothing to resolve through, so the
+  // link is direct, the catalogue match is never asked, and the catalogue is left as its bid made
+  // it.
   @Test
-  void award_to_unidentified_consortium_is_held_by_its_operador_and_ranks_nothing() {
+  void award_to_unidentified_consortium_is_held_by_its_operador_and_takes_no_other_route() {
     theStoreAcceptsEveryAward();
     OperadorId ute = new OperadorId(UUID.randomUUID());
 
@@ -377,7 +383,7 @@ class StoreLicitacionAwardsTest {
         store(
             List.of(),
             List.of(award(null, "UTE PRACE-TABOADA RAMOS")),
-            List.of(),
+            List.of(formalisation(null, "UTE PRACE-TABOADA RAMOS", EQUINSE_ID)),
             List.of(consortium(null, "UTE PRACE-TABOADA RAMOS")),
             wasCatalogued(
                 "UTE PRACE-TABOADA RAMOS", ute, null, AwardeeResolutionPath.PUBLISHED_BY_BIDDER));
@@ -391,6 +397,8 @@ class StoreLicitacionAwardsTest {
                   .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_BIDDER);
             });
     assertThat(catalogue).isEmpty();
+    verify(operadores, never()).findAllMatchingName(any());
+    verify(operadores, never()).insert(any());
   }
 
   // An identified consortium is an ordinary awardee: the award resolves through the catalogue on

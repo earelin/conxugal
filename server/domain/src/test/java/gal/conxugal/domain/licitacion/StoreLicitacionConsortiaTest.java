@@ -274,6 +274,89 @@ class StoreLicitacionConsortiaTest {
     assertThat(theBidsStored()).extracting(Participation::operadorEconomicoId).containsOnly(ute);
   }
 
+  // The distinct-ends CHECK and UteMembership's own constructor both refuse a consortium that is
+  // its own member, and either would abort the whole procedure's import rather than lose one row.
+  // The guard is what keeps a member republishing the consortium's identifier from reaching them.
+  @Test
+  void member_publishing_the_consortiums_own_identifier_is_not_related_to_it() {
+    theStoreCataloguesOnDemand();
+
+    ConsortiumOperadores catalogued =
+        store(
+            List.of(
+                consortium(
+                    null, UTE, UTE_ID, member(UTE, UTE_ID), member(TABOADA, TABOADA_ID))),
+            List.of());
+
+    assertThat(theMembershipsStored())
+        .usingRecursiveFieldByFieldElementComparator()
+        .containsExactly(
+            new UteMembership(
+                catalogued.at(matchable(UTE)).operadorId(), cataloguedUnder(TABOADA_ID).id()));
+  }
+
+  // R16 records every operador that applied and SPEC-0008 #19 requires every published bidder to
+  // be stored, with no exception for a consortium — so a row with no name to be catalogued under
+  // still leaves its bid, naming nobody, exactly as an unusable identifier does for a single firm.
+  @Test
+  void consortium_published_under_no_name_stores_its_bid_naming_nobody() {
+    theStoreAcceptsEveryBid();
+
+    ConsortiumOperadores catalogued =
+        store(List.of(consortium(null, null, null, member(PRACE, PRACE_ID))), List.of());
+
+    assertThat(theBidsStored())
+        .singleElement()
+        .satisfies(
+            bid -> {
+              assertThat(bid.licitacionId()).isEqualTo(LICITACION_ID);
+              assertThat(bid.operadorEconomicoId()).isNull();
+            });
+    assertThat(catalogued.byName()).isEmpty();
+    verify(operadores, never()).insert(any());
+    verify(memberships, never()).upsert(any());
+  }
+
+  // The published name is the only thing telling one bid's consortium from another's inside one
+  // procedure, so a row whose name folds to nothing is keyed by nothing either — the fold refuses
+  // it for the same reason the catalogue match does.
+  @Test
+  void consortium_whose_name_folds_to_nothing_is_treated_as_publishing_none() {
+    theStoreAcceptsEveryBid();
+
+    ConsortiumOperadores catalogued =
+        store(List.of(consortium(null, "-", null, member(PRACE, PRACE_ID))), List.of());
+
+    assertThat(theBidsStored()).singleElement().extracting(Participation::operadorEconomicoId)
+        .isNull();
+    assertThat(catalogued.byName()).isEmpty();
+  }
+
+  // Two rows the source published as different consortia but named alike once folded become one
+  // entry holding both member lists. Named because it is a real cost of keying on the folded name,
+  // not because it has been observed: the alternative mints a second entry on every restatement
+  // that repunctuates a name, which is the commoner failure by far.
+  @Test
+  void two_consortia_of_one_procedure_whose_names_fold_alike_become_one_entry() {
+    theStoreCataloguesOnDemand();
+    nothingIsAlreadyMinted();
+
+    ConsortiumOperadores catalogued =
+        store(
+            List.of(
+                consortium(null, UTE, null, member(PRACE, PRACE_ID)),
+                consortium(null, "UTE Prace-Taboada, Ramos", null, member(TABOADA, TABOADA_ID))),
+            List.of());
+
+    assertThat(catalogued.byName()).hasSize(1);
+    OperadorId ute = catalogued.at(matchable(UTE)).operadorId();
+    assertThat(theMembershipsStored())
+        .usingRecursiveFieldByFieldElementComparator()
+        .containsExactly(
+            new UteMembership(ute, cataloguedUnder(PRACE_ID).id()),
+            new UteMembership(ute, cataloguedUnder(TABOADA_ID).id()));
+  }
+
   // A bid is not a contract, so it neither promotes a name nor enters the retained set — and for
   // an unidentified consortium the name its bid published is the only name it will ever have.
   @Test
@@ -343,7 +426,7 @@ class StoreLicitacionConsortiaTest {
 
   private static PublishedBidder consortium(
       @Nullable String loteKey,
-      String name,
+      @Nullable String name,
       @Nullable FiscalIdentifier fiscalIdentifier,
       PublishedConsortiumMember... members) {
     return new PublishedBidder.Consortium(loteKey, name, fiscalIdentifier, List.of(members));

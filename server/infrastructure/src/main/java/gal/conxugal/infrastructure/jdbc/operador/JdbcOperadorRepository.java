@@ -64,13 +64,15 @@ public abstract class JdbcOperadorRepository
 
   private static final String OPERADORES_MATCHING_NAME =
       """
-      SELECT id FROM operador_economico WHERE %s = ?::text
+      SELECT id FROM operador_economico
+       WHERE fiscal_id IS NOT NULL AND %s = ?::text
       UNION
-      SELECT operador_economico_id AS id
-        FROM operador_economico_nome_alternativo
-       WHERE %s = ?::text
+      SELECT alternativo.operador_economico_id AS id
+        FROM operador_economico_nome_alternativo alternativo
+        JOIN operador_economico ON operador_economico.id = alternativo.operador_economico_id
+       WHERE operador_economico.fiscal_id IS NOT NULL AND %s = ?::text
       """
-          .formatted(NameFold.of("name"), NameFold.of("name"));
+          .formatted(NameFold.of("name"), NameFold.of("alternativo.name"));
 
   private static final String PROMOTE_NAME =
       """
@@ -126,6 +128,14 @@ public abstract class JdbcOperadorRepository
    * have retained. {@code UNION} rather than {@code UNION ALL}, so an operador holding the name
    * both ways — which promotion makes impossible but a read cannot assume — answers once, and so
    * that the count the caller judges ambiguity on counts parties rather than rows.
+   *
+   * <p><strong>Both arms exclude an operador holding no fiscal identifier</strong>, which is the
+   * port's stated contract and the reason it is enforced here rather than left to the one caller.
+   * The second arm needs a join to say it: today no identifier-less entry can reach the retained
+   * set — nothing accounts for a name against one, because nothing ever finds one by identifier —
+   * but that is an argument about another class's control flow, and this guarantee is too load-
+   * bearing to rest on one. The join is a primary-key lookup against a scan this query already
+   * pays for.
    */
   @Override
   @Transactional

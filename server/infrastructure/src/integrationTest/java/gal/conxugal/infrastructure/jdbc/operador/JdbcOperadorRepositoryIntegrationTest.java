@@ -314,6 +314,52 @@ class JdbcOperadorRepositoryIntegrationTest implements TestPropertyProvider {
         .containsExactlyInAnyOrder(first, second);
   }
 
+  // SPEC-0006 R3 states it as an absolute — "an entry is never found by anything but a fiscal
+  // identifier, so no identifier-less entry can absorb a contract belonging to another party" —
+  // and ADR-0023 rests on the same sentence. This query is the one that could break it: a second
+  // procedure's award naming a consortium by text would otherwise resolve to the first
+  // procedure's, silently and plausibly, and be recorded as though the catalogue had answered.
+  @Test
+  void find_all_matching_name_never_answers_an_operador_holding_no_fiscal_identifier() {
+    operadorRepository.insert(
+        OperadorEconomico.unidentifiedUte(
+            "UTE PRACE-TABOADA RAMOS", new NomeRank(PUBLISHED_ON, 4711L)));
+
+    assertThat(matching("UTE Prace-Taboada Ramos"))
+        .isEmpty();
+  }
+
+  // The exclusion has to hold on the retained arm too, and it is not enough to argue that nothing
+  // files a name beside such an entry today: this guarantee is too load-bearing to rest on another
+  // class's control flow, so the query says it rather than assuming it.
+  @Test
+  void find_all_matching_name_never_answers_one_by_the_name_it_has_only_retained() {
+    OperadorEconomico ute =
+        operadorRepository.insert(
+            OperadorEconomico.unidentifiedUte(
+                "UTE PRACE-TABOADA RAMOS", new NomeRank(PUBLISHED_ON, 4711L)));
+    operadorRepository.retainName(
+        new NomeAlternativo(ute.id(), "UTE Prace Taboada", new NomeRank(PUBLISHED_EARLIER, 4700L)));
+
+    assertThat(matching("UTE PRACE TABOADA"))
+        .isEmpty();
+  }
+
+  // And the identified consortium is untouched by the exclusion: it holds an identifier like any
+  // other operador, so the derivation reaches it exactly as it reaches a single firm.
+  @Test
+  void find_all_matching_name_still_answers_the_consortium_the_source_identified() {
+    OperadorEconomico ute =
+        operadorRepository.insert(
+            OperadorEconomico.identifiedUte(
+                new FiscalIdentifier("U88779475"),
+                "UTE INSIDE OVIGA RIBADEO",
+                new NomeRank(PUBLISHED_ON, 4711L)));
+
+    assertThat(matching("ute inside oviga ribadeo"))
+        .containsExactly(ute.id());
+  }
+
   @Test
   void find_all_matching_name_answers_nobody_for_name_the_catalogue_does_not_hold() {
     insertOperador("B12345678", "Servizos Galegos SL", PUBLISHED_ON);

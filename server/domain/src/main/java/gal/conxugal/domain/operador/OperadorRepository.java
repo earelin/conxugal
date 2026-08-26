@@ -26,6 +26,16 @@ public interface OperadorRepository {
    *
    * <p>It asks the catalogue and changes nothing: a name nothing has been catalogued under answers
    * an empty set rather than creating anything to answer with.
+   *
+   * <p><strong>An operador holding no fiscal identifier is never among them</strong>, and the
+   * exclusion is the store's rather than each caller's. SPEC-0006 R3 admits one such party — a UTE
+   * the source declines to identify, catalogued per bid — and states its safety as an absolute:
+   * <em>"an entry is never found by anything but a fiscal identifier, so no identifier-less entry
+   * can absorb a contract belonging to another party"</em>. ADR-0023 rests on the same sentence.
+   * This is the one query that could break it: a name match reaching such an entry would attribute
+   * a second procedure's award to the first procedure's consortium, silently and plausibly. R8's
+   * user-facing lookup <em>does</em> find them by name, which is a different question asked by a
+   * reader rather than by the derivation, and it is not this method.
    */
   Set<OperadorId> findAllMatchingName(MatchableName name);
 

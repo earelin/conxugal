@@ -92,12 +92,13 @@
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
 
-  <!-- And for the consortium store beside them, which holds the shared derivation and the two
-       ports it writes a consortium's bid and membership through. Both of those declare a mutator,
-       which is all the heuristic needs. -->
+  <!-- And for the consortium store beside them, which writes a consortium's bid and its membership
+       through two ports that each declare a mutator. Only those two: the shared derivation it also
+       holds is read as immutable, exactly as it is in StoreLicitacionAwards above, so naming it
+       here would silence a genuine leak of it. -->
   <Match>
     <Class name="gal.conxugal.domain.licitacion.StoreLicitacionConsortia"/>
-    <Field name="~(resolveOperador|participations|memberships)"/>
+    <Field name="~(participations|memberships)"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
 

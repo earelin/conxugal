@@ -155,6 +155,11 @@ class LicitacionConsortiaDerivationIntegrationTest implements TestPropertyProvid
         .singleElement()
         .extracting(Award::operadorEconomicoId)
         .isEqualTo(catalogued.at(matchable(UTE)).operadorId());
+    assertThat(awardTable())
+        .row(0)
+            .value("operador_economico_id")
+                .isEqualTo(catalogued.at(matchable(UTE)).operadorId().value())
+            .value("awardee_resolution_path").isEqualTo("PUBLISHED_BY_BIDDER");
   }
 
   // SPEC-0008 #17. The row the store offers no key to be found by: without the procedure-scoped
@@ -411,6 +416,10 @@ class LicitacionConsortiaDerivationIntegrationTest implements TestPropertyProvid
 
   private static Table participationTable() {
     return table("licitacion_participation", "id");
+  }
+
+  private static Table awardTable() {
+    return table("licitacion_award", "awardee_name");
   }
 
   // Off the container rather than the injected DataSource: with no ambient transaction every write

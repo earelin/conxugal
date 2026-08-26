@@ -328,10 +328,15 @@ public class StoreLicitacionAwards {
      * consortium's own identifier is published and therefore evidence that belongs to the
      * cataloguing this class does not perform.
      *
-     * <p>It is reachable for a caller storing awards without having catalogued the consortia, and
-     * for a consortium row published under no name at all. Falling through to the routes below
-     * instead would try the consortium's name against the catalogue and attribute its award to
-     * whichever unrelated firm answered.
+     * <p>It is reachable for a caller storing awards without having catalogued the consortia —
+     * every consortium a procedure published under a usable name is otherwise accounted for above.
+     *
+     * <p><strong>What it does not reach is a consortium row published under no name</strong>, or
+     * one whose name folds to nothing: there is no key to compare an awardee against, so such a
+     * row cannot be recognised here and the award takes the ordinary routes under its own name.
+     * That is the honest outcome rather than a gap — the bidder row offers nothing to tie the two
+     * together — and it is bounded by the catalogue match declining to reach an identifier-less
+     * entry, so the award lands on a party the source published or on nobody.
      */
     boolean bidsAsConsortium(MatchableName awardee) {
       for (PublishedBidder bidder : bidders) {

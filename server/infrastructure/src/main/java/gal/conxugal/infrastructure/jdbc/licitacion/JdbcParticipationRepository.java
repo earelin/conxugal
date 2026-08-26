@@ -60,6 +60,7 @@ public abstract class JdbcParticipationRepository
          AND operador_economico.ute
          AND operador_economico.fiscal_id IS NULL
          AND %s = ?::text
+       ORDER BY operador_economico.id
        LIMIT 1
       """
           .formatted(NameFold.of("operador_economico.name"));
@@ -107,6 +108,13 @@ public abstract class JdbcParticipationRepository
    * <p><strong>{@code withdrawn} is deliberately not in the predicate</strong>, on the port's
    * reasoning: a reconciliation that withdraws the bid and then re-imports the procedure must find
    * the same entry rather than mint a second beside it.
+   *
+   * <p><strong>The order is explicit under the {@code LIMIT}</strong>, though the invariant says
+   * there is at most one row to order. Nothing in the schema enforces that invariant — it rests on
+   * this lookup and on one import running at a time — so the day it does break, an unordered limit
+   * would pick a different duplicate on different runs and leave two imports disagreeing about
+   * which operador the procedure's consortium is. Ordered, the degraded case is at least stable
+   * and diagnosable.
    */
   @Override
   @Transactional
