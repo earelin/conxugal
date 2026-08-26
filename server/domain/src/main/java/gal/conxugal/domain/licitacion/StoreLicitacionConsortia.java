@@ -113,9 +113,7 @@ public class StoreLicitacionConsortia {
           storeOne(awardPoints, entry.getKey(), entry.getValue(), formalisations));
     }
     for (PublishedBidder.Consortium row : rows.nameless()) {
-      participations.upsert(
-          new Participation(
-              awardPoints.licitacionId(), awardPoints.at(row.loteKey()), null, false));
+      recordBid(awardPoints, row, null);
     }
     return new ConsortiumOperadores(catalogued);
   }
@@ -157,22 +155,44 @@ public class StoreLicitacionConsortia {
     return new ConsortiumRows(named, nameless);
   }
 
-  /** One consortium of this procedure: catalogued, its bids written, its members related to it. */
+  /**
+   * One consortium of this procedure: catalogued, its bids written, its members related to it.
+   *
+   * <p>The rows keep the order the source published them in, because the first is what supplies
+   * the name the entry is catalogued under.
+   */
   private CataloguedConsortium storeOne(
       AwardPoints awardPoints,
       MatchableName name,
       List<PublishedBidder.Consortium> rows,
-      List<PublishedFormalisation> formalisations) {
+      Iterable<PublishedFormalisation> formalisations) {
     String publishedName = rows.getFirst().name();
     Identity identity = identify(name, rows, formalisations);
     OperadorId uteId = catalogue(awardPoints.licitacionId(), name, publishedName, identity);
     for (PublishedBidder.Consortium row : rows) {
-      participations.upsert(
-          new Participation(
-              awardPoints.licitacionId(), awardPoints.at(row.loteKey()), uteId, false));
+      recordBid(awardPoints, row, uteId);
     }
     relateMembers(uteId, rows);
     return new CataloguedConsortium(uteId, identity.fiscalId(), identity.path());
+  }
+
+  /**
+   * One consortium bidder row as the bid this procedure stores, at the award point its lote cell
+   * names.
+   *
+   * <p>The operador is null for the one row that has none — a consortium published under no usable
+   * name, which cannot be catalogued and whose bid is stored all the same. Every other bid names
+   * the consortium's own operador, whether or not the source identified it, because a consortium is
+   * a catalogue entry like any other party.
+   *
+   * <p><strong>Nothing here marks a bid as won</strong>, on {@link StoreLicitacionBidders}'s rule:
+   * which bid won is the award table's answer rather than the bidder table's.
+   */
+  private void recordBid(
+      AwardPoints awardPoints, PublishedBidder.Consortium row, @Nullable OperadorId party) {
+    participations.upsert(
+        new Participation(
+            awardPoints.licitacionId(), awardPoints.at(row.loteKey()), party, false));
   }
 
   /**
