@@ -2,6 +2,7 @@ package gal.conxugal.domain.licitacion;
 
 import io.micronaut.data.annotation.TypeDef;
 import io.micronaut.data.model.DataType;
+import java.util.OptionalLong;
 
 /**
  * The identifier the source published a procedure under — the natural key a re-import matches on.
@@ -45,6 +46,31 @@ public record PublicationId(String value) {
 
   public PublicationId {
     value = PublishedKey.canonical(value, "publicationId");
+  }
+
+  /**
+   * This identifier as the number the operador name rank orders on, or nothing at all where the
+   * source did not mint a number. Every identifier measured is one — 18 700 to 829 000 — and both
+   * families draw from that single publication id space, so a licitación's identifier compares
+   * against a contrato menor's {@code long} with no family discriminator between them.
+   *
+   * <p><strong>The parse is why the column is text and this is a method.</strong> Nothing published
+   * fixes the shape of an identifier, so the type holds what was published and pays a parse at the
+   * one caller that needs an order — rather than a column type, a migration and a re-import the day
+   * the source stops minting integers.
+   *
+   * <p><strong>Nothing at all, never a rank engineered to lose.</strong> A publication this cannot
+   * read a number out of ranks no name: its award still resolves its operador and still stores, and
+   * no name advances from it. Ranking such an identifier as text is the alternative that has to be
+   * refused rather than merely avoided — {@code "9"} would outrank {@code "10"}, silently
+   * corrupting a tie-break the shipped contratos menores family has already populated.
+   */
+  public OptionalLong asNumber() {
+    try {
+      return OptionalLong.of(Long.parseLong(value));
+    } catch (NumberFormatException notNumeric) {
+      return OptionalLong.empty();
+    }
   }
 
   @Override

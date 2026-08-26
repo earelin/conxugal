@@ -1,16 +1,14 @@
 package gal.conxugal.domain.licitacion;
 
+import gal.conxugal.domain.operador.FiscalIdentifier;
 import gal.conxugal.domain.operador.OperadorEconomico;
 import gal.conxugal.domain.operador.OperadorId;
 import gal.conxugal.domain.operador.ResolveOperador;
 import io.micronaut.transaction.annotation.Transactional;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -98,62 +96,18 @@ public class StoreLicitacionBidders {
    * The operador this bid names, or null where its published identifier was unusable. Because a
    * participation holds no name, such a bid is recorded as the participation of no catalogue entry
    * rather than as a name with nothing behind it.
+   *
+   * <p>The unusable case is answered here rather than by the collaborator, which requires an
+   * identifier: {@link PublishedBidder.SingleFirm} holds null for exactly that case, having already
+   * asked {@link FiscalIdentifier#of} at the parse, and the compiler will not let this method
+   * forget to look.
    */
   private @Nullable OperadorId partyOf(PublishedBidder.SingleFirm firm) {
-    Optional<OperadorEconomico> party =
-        resolveOperador.resolveWithoutRanking(firm.fiscalIdentifier(), firm.name());
-    if (party.isEmpty()) {
+    FiscalIdentifier published = firm.fiscalIdentifier();
+    if (published == null) {
       return null;
     }
-    return Objects.requireNonNull(
-        party.get().id(), "a catalogued operador must carry an identity");
-  }
-
-  /**
-   * The points a procedure was bid at: its lotes by the one form everything compares a lote cell
-   * on, and the procedure itself for a row that names no lote.
-   *
-   * <p>The stored spelling is reduced here rather than trusted to match a bidder row's, because the
-   * two source tables spell one lote differently — {@code 05} against {@code 5} was measured within
-   * a single record.
-   */
-  private record AwardPoints(LicitacionId licitacionId, Map<String, LoteId> byKey) {
-
-    AwardPoints {
-      byKey = Map.copyOf(byKey);
-    }
-
-    static AwardPoints of(LicitacionId licitacionId, Iterable<Lote> lotes) {
-      Map<String, LoteId> byKey = new HashMap<>();
-      for (Lote lote : lotes) {
-        LoteId id =
-            Objects.requireNonNull(
-                lote.id(), "a stored lote must carry an identity: " + lote.identifier());
-        LoteKey.normalise(lote.identifier()).ifPresent(key -> byKey.put(key, id));
-      }
-      return new AwardPoints(licitacionId, byKey);
-    }
-
-    /**
-     * The point {@code loteKey} names: a lote, or the procedure as a whole where the row named no
-     * lote.
-     *
-     * <p>A row naming a lote the procedure has not stored fails the procedure rather than being
-     * filed somewhere plausible: keying it to the procedure would collide with every other such bid
-     * on the same natural key, and skipping it would lose a published bidder silently. The record
-     * parse takes the same view of a bidder count that disagrees with the award table's.
-     */
-    @Nullable LoteId at(@Nullable String loteKey) {
-      if (loteKey == null) {
-        return null;
-      }
-      LoteId awardPoint = byKey.get(loteKey);
-      if (awardPoint == null) {
-        throw new IllegalArgumentException(
-            "bidder names lote %s, which procedure %s has not stored"
-                .formatted(loteKey, licitacionId.value()));
-      }
-      return awardPoint;
-    }
+    OperadorEconomico party = resolveOperador.resolveWithoutRanking(published, firm.name());
+    return Objects.requireNonNull(party.id(), "a catalogued operador must carry an identity");
   }
 }

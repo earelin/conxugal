@@ -1,6 +1,7 @@
 package gal.conxugal.infrastructure.jdbc.operador;
 
 import gal.conxugal.domain.operador.FiscalIdentifier;
+import gal.conxugal.domain.operador.MatchableName;
 import gal.conxugal.domain.operador.NomeAlternativo;
 import gal.conxugal.domain.operador.NomeRank;
 import gal.conxugal.domain.operador.OperadorEconomico;
@@ -14,10 +15,14 @@ import io.micronaut.data.repository.GenericRepository;
 import io.micronaut.transaction.annotation.Transactional;
 import java.sql.Date;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -56,6 +61,31 @@ import org.jspecify.annotations.Nullable;
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public abstract class JdbcOperadorRepository
     implements OperadorRepository, GenericRepository<OperadorEconomico, OperadorId> {
+
+  /**
+   * The fold {@link MatchableName} defines, expressed once for both of the tables a name can be
+   * held in. It has to answer exactly what that type answers — a key computed there is compared
+   * against a name folded here — which is why it is those three steps rather than a table of
+   * accented characters: lower-case, decompose, and keep the unaccented ASCII letters and digits.
+   * {@code normalize(…, NFD)} splits an accented letter into its base and a combining mark, and the
+   * replacement drops the mark along with every comma, full stop and space.
+   *
+   * <p>No index serves it and none is added on speculation. The catalogue match is the last route
+   * an award tries and reaches roughly a third of them; if the scan ever shows in an import's
+   * timings, an expression index over this exact expression is what it costs.
+   */
+  private static final String FOLDED_NAME =
+      "regexp_replace(normalize(lower(%s), NFD), '[^a-z0-9]', '', 'g')";
+
+  private static final String OPERADORES_MATCHING_NAME =
+      """
+      SELECT id FROM operador_economico WHERE %s = ?::text
+      UNION
+      SELECT operador_economico_id AS id
+        FROM operador_economico_nome_alternativo
+       WHERE %s = ?::text
+      """
+          .formatted(FOLDED_NAME.formatted("name"), FOLDED_NAME.formatted("name"));
 
   private static final String PROMOTE_NAME =
       """
@@ -100,6 +130,30 @@ public abstract class JdbcOperadorRepository
   @Override
   @Join(value = "nomesAlternativos", type = Join.Type.LEFT_FETCH)
   public abstract Optional<OperadorEconomico> findByFiscalId(FiscalIdentifier fiscalId);
+
+  /**
+   * The operadores holding this name, either as the one they are displayed under or as one they
+   * have retained. {@code UNION} rather than {@code UNION ALL}, so an operador holding the name
+   * both ways — which promotion makes impossible but a read cannot assume — answers once, and so
+   * that the count the caller judges ambiguity on counts parties rather than rows.
+   */
+  @Override
+  @Transactional
+  public Set<OperadorId> findAllMatchingName(MatchableName name) {
+    Objects.requireNonNull(name, "name must not be null");
+    Set<OperadorId> matching = new HashSet<>();
+    jdbcOperations.prepareStatement(OPERADORES_MATCHING_NAME, statement -> {
+      statement.setString(1, name.value());
+      statement.setString(2, name.value());
+      try (ResultSet rows = statement.executeQuery()) {
+        while (rows.next()) {
+          matching.add(new OperadorId(rows.getObject("id", UUID.class)));
+        }
+      }
+      return matching;
+    });
+    return Set.copyOf(matching);
+  }
 
   @Override
   @Transactional

@@ -26,6 +26,12 @@ import org.jspecify.annotations.Nullable;
  * side effect of promoting it — so the mistake is permanent and silent. A losing bid is exactly
  * such a caller.
  *
+ * <p><strong>What it does not do is find an operador by name.</strong> Resolution here is
+ * SPEC-0006 R3's — by fiscal identifier, the value that <em>is</em> an operador's identity — and it
+ * catalogues what it does not find. A caller matching a published name against the catalogue is
+ * asking a different question, one whose answer may be nobody or several and which must never
+ * create: that belongs to the caller that infers, with the port, and deliberately not here.
+ *
  * <p><strong>It owns no transaction.</strong> The caller's boundary is the one the writes join, so
  * the operador a contract names is created beside the write that stores the contract and the two
  * commit together — and the second contract of a batch naming a new operador reads what the first
@@ -68,6 +74,25 @@ public class ResolveOperador {
   }
 
   /**
+   * The same resolution for a caller that already holds the identifier as a value rather than as a
+   * published cell — a licitación's formalisation and its bidder rows both do, the parse having
+   * asked {@link FiscalIdentifier#of} the usability question at the edge. It answers an operador
+   * rather than an optional one for exactly that reason: the branch this type exists to make
+   * unmissable has already been taken, and re-offering it here would have every such caller write
+   * a second, unreachable one.
+   *
+   * @param fiscalId the party's identifier, already reduced
+   * @param publishedName the name as published, or null where the source carried none
+   * @param rank which publication these values were taken from
+   */
+  public OperadorEconomico resolve(
+      FiscalIdentifier fiscalId, @Nullable String publishedName, NomeRank rank) {
+    Objects.requireNonNull(fiscalId, "fiscalId must not be null");
+    Objects.requireNonNull(rank, "rank must not be null");
+    return operadorHolding(fiscalId, publishedName, rank);
+  }
+
+  /**
    * The operador this publication names, catalogued now under the name it published if nothing
    * named that identifier before — and otherwise <strong>left exactly as it stands</strong>.
    * Nothing is promoted, nothing is retained and no rank advances: this publication says who bid,
@@ -84,23 +109,23 @@ public class ResolveOperador {
    * and declines to file the name it displaced, so a bid cannot reach the alternatives by the back
    * door either.
    *
-   * <p>The identifier arrives already reduced, so a caller holding nothing usable holds null —
-   * which is the same answer {@link #resolve} reaches through {@link FiscalIdentifier#of}, from the
-   * other end.
+   * <p><strong>The identifier arrives already reduced, and required.</strong> The branch
+   * {@link FiscalIdentifier} exists to make unmissable — an unusable published cell yields no
+   * operador — has already been taken by the parse that built the value, so a caller holding
+   * nothing usable holds null and answers for that itself. Offering the branch a second time here
+   * would have every such caller write one it could never reach; this mirrors the
+   * {@link #resolve(FiscalIdentifier, String, NomeRank)} overload beside it, which declines to for
+   * the same reason.
    *
-   * @param fiscalId the party's identifier, or null where the source published none this type
-   *     accepts
+   * @param fiscalId the party's identifier, already reduced
    * @param publishedName the name as published, or null where the source carried none
    */
-  public Optional<OperadorEconomico> resolveWithoutRanking(
-      @Nullable FiscalIdentifier fiscalId, @Nullable String publishedName) {
-    if (fiscalId == null) {
-      return Optional.empty();
-    }
-    return Optional.of(
-        operadores
-            .findByFiscalId(fiscalId)
-            .orElseGet(() -> catalogue(fiscalId, publishedName, NomeRank.unranked())));
+  public OperadorEconomico resolveWithoutRanking(
+      FiscalIdentifier fiscalId, @Nullable String publishedName) {
+    Objects.requireNonNull(fiscalId, "fiscalId must not be null");
+    return operadores
+        .findByFiscalId(fiscalId)
+        .orElseGet(() -> catalogue(fiscalId, publishedName, NomeRank.unranked()));
   }
 
   /**

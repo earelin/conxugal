@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.db.api.Assertions.assertThat;
 
 import gal.conxugal.domain.operador.FiscalIdentifier;
+import gal.conxugal.domain.operador.MatchableName;
 import gal.conxugal.domain.operador.NomeAlternativo;
 import gal.conxugal.domain.operador.NomeRank;
 import gal.conxugal.domain.operador.OperadorEconomico;
@@ -23,6 +24,7 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import javax.sql.DataSource;
 import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
@@ -231,6 +233,60 @@ class JdbcOperadorRepositoryIntegrationTest implements TestPropertyProvider {
             .value("name").isEqualTo("Servizos Galegos SLU")
             .value("name_rank_date").isEqualTo(PUBLISHED_LATER)
             .value("name_rank_source_id").isEqualTo(4800L);
+  }
+
+  // The fold this query applies has to answer what MatchableName answers, since the key it is
+  // compared against was computed there. Case, accents and punctuation all go, and this is the one
+  // place the two definitions meet.
+  @Test
+  void find_all_matching_name_folds_case_accents_and_punctuation_of_the_stored_name() {
+    OperadorId operadorId =
+        idOf(insertOperador("B12345678", "Xestión Ambiental de Contratas, S.L.", PUBLISHED_ON));
+
+    assertThat(matching("XESTION AMBIENTAL DE CONTRATAS SL"))
+        .containsExactly(operadorId);
+  }
+
+  // R15's retained set is what makes a firm findable under a name it no longer displays, which is
+  // the whole reason the match reads both tables rather than the principal name alone.
+  @Test
+  void find_all_matching_name_finds_the_operador_by_name_it_has_only_retained() {
+    OperadorId operadorId = idOf(insertOperador("B12345678", "Servizos Galegos SL", PUBLISHED_ON));
+    operadorRepository.retainName(
+        new NomeAlternativo(operadorId, "Galegos, S.L.", new NomeRank(PUBLISHED_EARLIER, 4700L)));
+
+    assertThat(matching("GALEGOS SL"))
+        .containsExactly(operadorId);
+  }
+
+  // The uniqueness an awardee resolution tests is over operadores, not over names: two spellings
+  // of one party are one answer, and a query counting rows would call this an ambiguity.
+  @Test
+  void find_all_matching_name_answers_once_for_an_operador_holding_the_name_twice_over() {
+    OperadorId operadorId = idOf(insertOperador("B12345678", "Servizos Galegos SL", PUBLISHED_ON));
+    operadorRepository.retainName(
+        new NomeAlternativo(
+            operadorId, "SERVIZOS GALEGOS, S.L.", new NomeRank(PUBLISHED_EARLIER, 4700L)));
+
+    assertThat(matching("servizos galegos sl"))
+        .containsExactly(operadorId);
+  }
+
+  @Test
+  void find_all_matching_name_answers_both_operadores_that_bear_one_name() {
+    OperadorId first = idOf(insertOperador("B12345678", "Servizos Galegos SL", PUBLISHED_ON));
+    OperadorId second = idOf(insertOperador("B87654321", "SERVIZOS GALEGOS, S.L.", PUBLISHED_ON));
+
+    assertThat(matching("Servizos Galegos SL"))
+        .containsExactlyInAnyOrder(first, second);
+  }
+
+  @Test
+  void find_all_matching_name_answers_nobody_for_name_the_catalogue_does_not_hold() {
+    insertOperador("B12345678", "Servizos Galegos SL", PUBLISHED_ON);
+
+    assertThat(matching("EQUINSE, S.A."))
+        .isEmpty();
   }
 
   // The aggregate refuses to be built holding its own displayed name as an alternative, so a
@@ -592,6 +648,10 @@ class JdbcOperadorRepositoryIntegrationTest implements TestPropertyProvider {
     assertThatThrownBy(() -> operadorRepository.retainName(unfiled))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Servizos Galegos");
+  }
+
+  private Set<OperadorId> matching(String publishedName) {
+    return operadorRepository.findAllMatchingName(MatchableName.of(publishedName).orElseThrow());
   }
 
   private OperadorEconomico insertOperador(

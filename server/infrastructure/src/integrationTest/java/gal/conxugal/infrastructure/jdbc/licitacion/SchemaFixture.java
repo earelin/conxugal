@@ -158,6 +158,31 @@ final class SchemaFixture {
         loteId);
   }
 
+  /**
+   * An award naming nobody while claiming a route reached somebody. No route can answer without an
+   * operador — R3's resolution catalogues an identifier nothing named before rather than failing to
+   * find it — so this exists to be refused.
+   */
+  UUID insertAwardResolvedToNobody(UUID licitacionId) throws SQLException {
+    return insertReturningId(
+        "INSERT INTO licitacion_award (licitacion_id, awardee_resolution_path)"
+            + " VALUES (?, 'PUBLISHED_BY_FORMALISATION') RETURNING id",
+        licitacionId);
+  }
+
+  /**
+   * An award naming an operador while stating that nothing resolved it. The absence of a link is
+   * stated rather than inferred from a null, so the two saying opposite things exists to be
+   * refused.
+   */
+  UUID insertUnresolvedAwardNaming(UUID licitacionId, OperadorId operadorId) throws SQLException {
+    return insertReturningId(
+        "INSERT INTO licitacion_award (licitacion_id, operador_economico_id,"
+            + " awardee_resolution_path) VALUES (?, ?, 'UNRESOLVED') RETURNING id",
+        licitacionId,
+        operadorId.value());
+  }
+
   /** UNRESOLVED is the value an award nothing resolved carries, so this exists to be refused. */
   UUID insertAwardWithoutResolutionPath(UUID licitacionId) throws SQLException {
     return insertReturningId(

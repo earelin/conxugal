@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.db.api.Assertions.assertThat;
 
+import gal.conxugal.domain.operador.OperadorId;
 import gal.conxugal.infrastructure.jdbc.support.DatabaseCleanup;
 import gal.conxugal.infrastructure.jdbc.support.PostgresContainer;
 import io.micronaut.core.annotation.NonNull;
@@ -243,6 +244,29 @@ class LicitacionAwardPointMigrationIntegrationTest implements TestPropertyProvid
         .isInstanceOfSatisfying(
             SQLException.class,
             Refusals::violatesNotNull);
+  }
+
+  // The record refuses both shapes, and this is the guarantee behind it: one row it cannot be built
+  // from would make its whole procedure unreadable through the read a later import performs, with
+  // no delete on the port to recover it.
+  @Test
+  void award_naming_nobody_by_route_that_answered_is_refused() {
+    assertThatThrownBy(() -> schema.insertAwardResolvedToNobody(licitacionId))
+        .isInstanceOfSatisfying(
+            SQLException.class,
+            exception ->
+                Refusals.violatesCheck(exception, "licitacion_award_awardee_resolution_check"));
+  }
+
+  @Test
+  void unresolved_award_naming_an_operador_is_refused() throws Exception {
+    OperadorId operadorId = schema.operador("A41111220", "EQUINSE, S.A.");
+
+    assertThatThrownBy(() -> schema.insertUnresolvedAwardNaming(licitacionId, operadorId))
+        .isInstanceOfSatisfying(
+            SQLException.class,
+            exception ->
+                Refusals.violatesCheck(exception, "licitacion_award_awardee_resolution_check"));
   }
 
   @Test
