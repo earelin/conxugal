@@ -223,6 +223,26 @@ claims an acceptance criterion whose surface another spec still contradicts:
   this spec owes it is therefore one more fact: a run that yielded is **distinguishable from one
   that was stopped or that failed**, and is **related to the run that resumes it**, so an
   administrator sees one import converging rather than a sequence of unexplained halts.
+- **[SPEC-0009](SPEC-0009-cpv-catalogue.md) supplies the vocabulary R23 narrows by.** This spec
+  stores CPV codes (R8) and lets a reader narrow a year by one (R23), but holds nothing that says
+  what a code *means* — so as written, R23's narrowing is offered to a reader expected to
+  recognise a bare eight-digit number. That spec acquires the regulated list, derives its
+  hierarchy from the codes, and carries a Galician rendering of every entry, which no publisher
+  issues and which it therefore authors.
+
+  **R23 and #33 below are amended to consume it**: the narrowing is by a **node of that tree**
+  rather than by a code recognised from a flat list, and choosing a node selects that entry **and
+  everything beneath it**. What is chosen and what is sent is still a code — that does not move —
+  and every other property of R23 is untouched: the narrowing still applies to the whole year's
+  selection, still re-pages from the first page, and still offers only what the selection actually
+  contains.
+
+  ❗ **The last of those is where the two specs are load-bearing on each other.** R23's promise —
+  that choosing an offered narrowing can never be the reason a list is empty — is what a full
+  45-division tree would break, and SPEC-0009 R16 keeps it by pruning the tree to the selection at
+  every level. Neither spec can be built against the other's convenient reading: a tree prepared
+  once from the standard and reused across every selection satisfies SPEC-0009 R14 and violates
+  this spec's R23.
 
 ### Decisions taken, and what is left open
 
@@ -726,6 +746,25 @@ One decision remains outside this spec:
   and this spec derives none of its own — so the vocabulary a reader filters by is whatever the
   source publishes, not a set fixed here.
 
+  **The CPV narrowing is made by descending a tree, not by recognising a code.**
+  [SPEC-0009](SPEC-0009-cpv-catalogue.md) holds the regulated vocabulary the codes belong to and
+  serves the hierarchy it is built on, in Galician; a reader begins at the broadest subjects and
+  descends to whatever depth they mean. **Choosing a node narrows to that code and to every code
+  beneath it** — choosing the construction division selects a licitación classified at a leaf
+  several levels below it — and a licitación carrying two codes in the same branch appears once
+  and is counted once.
+
+  This changes how a reader *reaches* a code and nothing else in this requirement. The value
+  chosen is still a CPV code; the narrowing still applies to the whole year's selection; it still
+  re-pages from the first page; and **only what the selection actually contains is offered** —
+  which for a tree means at every level, so a reader can descend any offered branch to any depth
+  and never arrive at an empty list. SPEC-0009 R16 owes that pruning to this requirement.
+
+  **A code the catalogue does not hold is still offered and still selectable**, under its own code
+  and without wording (SPEC-0009 R6). The vocabulary is versioned and this system imports
+  procedures published across revisions of it, so a licitación classified under a retired code
+  must still be reachable by subject.
+
   **The CPV filter closes a promise this spec inherited.** SPEC-0005 offers none because the
   source publishes no CPV for contratos menores, and defers CPV-based querying explicitly to
   this spec. A licitación whose CPV is published **per lote** (R8) is in the selection when
@@ -1073,6 +1112,12 @@ One decision remains outside this spec:
     against the procedure as a whole while having lotes — and filtering by
     state returns exactly those in it. Only codes and states the year's selection actually
     contains are offered, and the states offered are the source's own.
+
+    **As amended, the code is chosen by descending a tree** ([SPEC-0009](SPEC-0009-cpv-catalogue.md)):
+    choosing a node returns the licitacións of that year carrying that code **or any code beneath
+    it**, one carrying two codes in the same branch appears once, and every node offered at every
+    level covers at least one licitación of the year — so descending any offered branch to any
+    depth and choosing there never produces an empty list.
 34. **(R23)** Narrowing, sorting and counting apply to the **whole** year's selection: the
     first page after sorting by amount descending holds the highest-amount licitación of the
     year, not merely of the page previously displayed, and applying or clearing a filter
