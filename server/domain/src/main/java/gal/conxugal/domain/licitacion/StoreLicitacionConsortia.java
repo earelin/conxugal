@@ -104,16 +104,15 @@ public class StoreLicitacionConsortia {
     Objects.requireNonNull(bidders, "bidders must not be null");
     Objects.requireNonNull(formalisations, "formalisations must not be null");
     AwardPoints awardPoints = AwardPoints.of(licitacionId, lotes);
-    Map<MatchableName, List<PublishedBidder.Consortium>> named = new LinkedHashMap<>();
-    List<PublishedBidder.Consortium> nameless = new ArrayList<>();
-    group(bidders, named, nameless);
+    ConsortiumRows rows = consortiumRowsOf(bidders);
     Map<MatchableName, CataloguedConsortium> catalogued = new LinkedHashMap<>();
-    for (Map.Entry<MatchableName, List<PublishedBidder.Consortium>> entry : named.entrySet()) {
+    for (Map.Entry<MatchableName, List<PublishedBidder.Consortium>> entry :
+        rows.named().entrySet()) {
       catalogued.put(
           entry.getKey(),
           storeOne(awardPoints, entry.getKey(), entry.getValue(), formalisations));
     }
-    for (PublishedBidder.Consortium row : nameless) {
+    for (PublishedBidder.Consortium row : rows.nameless()) {
       participations.upsert(
           new Participation(
               awardPoints.licitacionId(), awardPoints.at(row.loteKey()), null, false));
@@ -141,10 +140,9 @@ public class StoreLicitacionConsortia {
    *
    * <p>Never observed in 613 measured bidder rows, both branches included.
    */
-  private static void group(
-      Iterable<PublishedBidder> bidders,
-      Map<MatchableName, List<PublishedBidder.Consortium>> named,
-      List<PublishedBidder.Consortium> nameless) {
+  private static ConsortiumRows consortiumRowsOf(Iterable<PublishedBidder> bidders) {
+    Map<MatchableName, List<PublishedBidder.Consortium>> named = new LinkedHashMap<>();
+    List<PublishedBidder.Consortium> nameless = new ArrayList<>();
     for (PublishedBidder bidder : bidders) {
       if (!(bidder instanceof PublishedBidder.Consortium consortium)) {
         continue;
@@ -156,6 +154,7 @@ public class StoreLicitacionConsortia {
         named.computeIfAbsent(name, ignored -> new ArrayList<>()).add(consortium);
       }
     }
+    return new ConsortiumRows(named, nameless);
   }
 
   /** One consortium of this procedure: catalogued, its bids written, its members related to it. */
@@ -266,6 +265,15 @@ public class StoreLicitacionConsortia {
   private static OperadorId identityOf(OperadorEconomico operador) {
     return Objects.requireNonNull(operador.id(), "a catalogued operador must carry an identity");
   }
+
+  /**
+   * The split itself. The maps are built once and read once, so they are handed over rather than
+   * copied — copying the named one through {@link Map#copyOf} would lose the source's ordering,
+   * which is what keeps a procedure's consortia catalogued in the order it published them.
+   */
+  private record ConsortiumRows(
+      Map<MatchableName, List<PublishedBidder.Consortium>> named,
+      List<PublishedBidder.Consortium> nameless) {}
 
   /**
    * What the procedure published about this consortium's own identity: the identifier where any of
