@@ -47,6 +47,10 @@ spotbugs {
 tasks.withType<SpotBugsTask>().configureEach {
     reports.create("html")
     reports.create("xml")
+    // Production sources only. On test sources the analysis reports on JUnit/AssertJ/Mockito
+    // idioms rather than on defects, and every such report has to be answered with an entry in
+    // the exclude filter that says nothing about the code under test.
+    enabled = name == "spotbugsMain"
 }
 
 jacoco {
