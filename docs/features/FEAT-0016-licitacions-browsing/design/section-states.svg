@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1040" viewBox="0 0 1280 1040" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <rect width="1280" height="1040" fill="#f8f9fa"/>
+
+  <text x="40" y="60" font-size="22" font-weight="700" fill="#212529">O que a sección di sobre si mesma</text>
+  <text x="40" y="84" font-size="13" fill="#868e96">Dous feitos ortogonais, non un estado: a importación pode estar a medias, o órgano pode ter deixado de actualizarse, e as dúas cousas poden ser certas á vez.</text>
+  <text x="40" y="103" font-size="13" fill="#868e96">Ningún dos dous se busca: os tres —anos, «parcial» e «xa non se actualiza»— chegan no resumo que a páxina de arriba lle entrega á sección como contexto.</text>
+
+  <!-- ===== A: partial ===== -->
+  <text x="40" y="140" font-size="12" font-weight="600" fill="#495057">A importación inicial aínda non rematou</text>
+  <rect x="40" y="152" width="576" height="240" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="150" width="576" height="240" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="72" y="182" width="512" height="80" rx="8" fill="#edf2ff" stroke="#dbe4ff"/>
+  <g stroke="#3b5bdb" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="96" cy="208" r="9"/>
+    <path d="M96 203 v6 l4 3"/>
+  </g>
+  <text x="116" y="212" font-size="13" font-weight="600" fill="#3b5bdb">Importación en curso</text>
+  <text x="116" y="234" font-size="11.5" fill="#495057">Aínda se están a importar as licitacións deste órgano, así que o</text>
+  <text x="116" y="251" font-size="11.5" fill="#495057">que ves aquí está incompleto e medra entre visitas.</text>
+  <text x="72" y="292" font-size="11.5" fill="#868e96">Os anos do selector tamén medran, pero desde o extremo vello: o</text>
+  <text x="72" y="309" font-size="11.5" fill="#868e96">percorrido inicial desta familia vai por identificador ascendente, non do</text>
+  <text x="72" y="326" font-size="11.5" fill="#868e96">máis novo ao máis vello coma o de contratos menores. Así que o ano</text>
+  <text x="72" y="343" font-size="11.5" fill="#868e96">por defecto é o máis recente que hai ata agora, e pode ir moi atrás.</text>
+  <text x="72" y="368" font-size="11.5" fill="#adb5bd">Non é unha barra de progreso: é un booleano sobre os datos.</text>
+
+  <!-- ===== B: no longer updated ===== -->
+  <text x="664" y="140" font-size="12" font-weight="600" fill="#495057">O órgano xa non se actualiza</text>
+  <rect x="664" y="152" width="576" height="240" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="664" y="150" width="576" height="240" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="696" y="182" width="512" height="80" rx="8" fill="#f8f9fa" stroke="#e9ecef"/>
+  <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="720" cy="208" r="9"/>
+    <line x1="720" y1="204" x2="720" y2="209"/>
+    <circle cx="720" cy="212.5" r="0.7" fill="#868e96" stroke="none"/>
+  </g>
+  <text x="740" y="212" font-size="13" font-weight="600" fill="#495057">Este órgano xa non se actualiza</text>
+  <text x="740" y="234" font-size="11.5" fill="#868e96">As licitacións xa importadas seguen aquí e non se retira ningunha,</text>
+  <text x="740" y="251" font-size="11.5" fill="#868e96">pero non se engadirán novas.</text>
+  <text x="696" y="292" font-size="11.5" fill="#868e96">Gris, non vermello: é inerte, non un erro — a mesma semántica que</text>
+  <text x="696" y="309" font-size="11.5" fill="#868e96">unha conta desactivada na área de administración.</text>
+  <text x="696" y="343" font-size="11.5" fill="#adb5bd">Di que estes datos xa non se refrescan. Non di que unha</text>
+  <text x="696" y="360" font-size="11.5" fill="#adb5bd">administradora desmarcase o órgano: iso segue sendo dela.</text>
+
+  <!-- ===== C: both at once ===== -->
+  <text x="40" y="434" font-size="12" font-weight="600" fill="#495057">As dúas á vez</text>
+  <rect x="40" y="446" width="576" height="240" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="444" width="576" height="240" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="72" y="476" width="512" height="64" rx="8" fill="#edf2ff" stroke="#dbe4ff"/>
+  <g stroke="#3b5bdb" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="96" cy="496" r="8"/>
+    <path d="M96 492 v5 l3 2"/>
+  </g>
+  <text x="114" y="500" font-size="12.5" font-weight="600" fill="#3b5bdb">Importación en curso</text>
+  <text x="114" y="520" font-size="11" fill="#495057">O que ves está incompleto.</text>
+  <rect x="72" y="552" width="512" height="64" rx="8" fill="#f8f9fa" stroke="#e9ecef"/>
+  <g stroke="#868e96" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="96" cy="572" r="8"/>
+    <line x1="96" y1="568" x2="96" y2="573"/>
+    <circle cx="96" cy="576.5" r="0.7" fill="#868e96" stroke="none"/>
+  </g>
+  <text x="114" y="576" font-size="12.5" font-weight="600" fill="#495057">Este órgano xa non se actualiza</text>
+  <text x="114" y="596" font-size="11" fill="#868e96">E non se engadirán novas licitacións.</text>
+  <text x="72" y="642" font-size="11.5" fill="#868e96">Un órgano desmarcado a media importación inicial é as dúas cousas, e</text>
+  <text x="72" y="659" font-size="11.5" fill="#868e96">quedará así para sempre. Xuntalas nun só estado obrigaría a mentir</text>
+  <text x="72" y="676" font-size="11.5" fill="#868e96">xusto neste caso, que é o que fai falta distinguir.</text>
+
+  <!-- ===== D: neither ===== -->
+  <text x="664" y="434" font-size="12" font-weight="600" fill="#495057">Importación completa, órgano marcado e activo</text>
+  <rect x="664" y="446" width="576" height="240" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="664" y="444" width="576" height="240" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="696" y="476" width="112" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="712" y="498" font-size="13" font-weight="500" fill="#212529">2025</text>
+  <path d="M782 490 l5 5 l5 -5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="824" y="476" width="260" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="840" y="498" font-size="12" font-weight="500" fill="#212529">Data de publicación (máis recente)</text>
+  <path d="M1058 490 l5 5 l5 -5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="664" y1="530" x2="1240" y2="530" stroke="#f1f3f5"/>
+  <text x="696" y="556" font-size="11" font-weight="600" letter-spacing="0.5" fill="#adb5bd">DATA</text>
+  <text x="800" y="556" font-size="11" font-weight="600" letter-spacing="0.5" fill="#adb5bd">OBXECTO</text>
+  <text x="1208" y="556" text-anchor="end" font-size="11" font-weight="600" letter-spacing="0.5" fill="#adb5bd">IMPORTE</text>
+  <line x1="664" y1="568" x2="1240" y2="568" stroke="#f1f3f5"/>
+  <rect x="696" y="586" width="80" height="11" rx="5.5" fill="#f1f3f5"/>
+  <rect x="800" y="586" width="290" height="11" rx="5.5" fill="#f1f3f5"/>
+  <rect x="1128" y="586" width="80" height="11" rx="5.5" fill="#f1f3f5"/>
+  <rect x="696" y="616" width="80" height="11" rx="5.5" fill="#f1f3f5"/>
+  <rect x="800" y="616" width="250" height="11" rx="5.5" fill="#f1f3f5"/>
+  <rect x="1148" y="616" width="60" height="11" rx="5.5" fill="#f1f3f5"/>
+  <text x="696" y="662" font-size="11.5" fill="#868e96">Non se di nada. Non hai insignia de «ao día», nin marca de verde: unha</text>
+  <text x="696" y="679" font-size="11.5" fill="#868e96">sección que non fala é unha sección sen nada anormal que contar.</text>
+
+  <!-- ===== E: a page in flight ===== -->
+  <text x="40" y="728" font-size="12" font-weight="600" fill="#495057">Cargando unha páxina</text>
+  <rect x="40" y="740" width="576" height="240" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="738" width="576" height="240" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="72" y="770" width="112" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="88" y="792" font-size="13" font-weight="500" fill="#212529">2025</text>
+  <path d="M158 784 l5 5 l5 -5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="200" y="770" width="240" height="34" rx="8" fill="#ffffff" stroke="#ced4da"/>
+  <text x="216" y="792" font-size="12" font-weight="500" fill="#212529">Importe (maior primeiro)</text>
+  <path d="M414 784 l5 5 l5 -5" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="40" y1="824" x2="616" y2="824" stroke="#f1f3f5"/>
+  <g opacity="0.45">
+    <rect x="72" y="846" width="80" height="11" rx="5.5" fill="#dee2e6"/>
+    <rect x="200" y="846" width="250" height="11" rx="5.5" fill="#dee2e6"/>
+    <rect x="504" y="846" width="80" height="11" rx="5.5" fill="#dee2e6"/>
+    <rect x="72" y="876" width="80" height="11" rx="5.5" fill="#dee2e6"/>
+    <rect x="200" y="876" width="290" height="11" rx="5.5" fill="#dee2e6"/>
+    <rect x="524" y="876" width="60" height="11" rx="5.5" fill="#dee2e6"/>
+  </g>
+  <text x="72" y="928" font-size="11.5" fill="#868e96">As filas atenúanse; non se borran nin se substitúen por un oco. Os catro</text>
+  <text x="72" y="945" font-size="11.5" fill="#868e96">controis e a paxinación seguen no seu sitio, así que a páxina non salta</text>
+  <text x="72" y="962" font-size="11.5" fill="#868e96">baixo o rato de quen acaba de premer.</text>
+
+  <!-- ===== F: the read failed ===== -->
+  <text x="664" y="728" font-size="12" font-weight="600" fill="#495057">A lectura fallou</text>
+  <rect x="664" y="740" width="576" height="240" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="664" y="738" width="576" height="240" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="696" y="770" width="512" height="64" rx="8" fill="#fff9db" stroke="#ffec99"/>
+  <g stroke="#e67700" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <circle cx="720" cy="790" r="8"/>
+    <line x1="720" y1="786" x2="720" y2="791"/>
+    <circle cx="720" cy="794.5" r="0.7" fill="#e67700" stroke="none"/>
+  </g>
+  <text x="738" y="794" font-size="12.5" font-weight="600" fill="#e67700">Non se puido actualizar a lista</text>
+  <text x="738" y="814" font-size="11" fill="#495057">Estás a ver a última páxina que se cargou ben.</text>
+  <g opacity="0.55">
+    <rect x="696" y="856" width="80" height="11" rx="5.5" fill="#dee2e6"/>
+    <rect x="824" y="856" width="250" height="11" rx="5.5" fill="#dee2e6"/>
+    <rect x="1128" y="856" width="80" height="11" rx="5.5" fill="#dee2e6"/>
+    <rect x="696" y="886" width="80" height="11" rx="5.5" fill="#dee2e6"/>
+    <rect x="824" y="886" width="290" height="11" rx="5.5" fill="#dee2e6"/>
+    <rect x="1148" y="886" width="60" height="11" rx="5.5" fill="#dee2e6"/>
+  </g>
+  <text x="696" y="928" font-size="11.5" fill="#868e96">Amarelo, non vermello: os datos que se ven non son falsos, só son os de</text>
+  <text x="696" y="945" font-size="11.5" fill="#868e96">antes. E a sección non se arrinca da páxina, porque perder a lista enteira</text>
+  <text x="696" y="962" font-size="11.5" fill="#868e96">por unha lectura fallida é peor que amosala vella e dicilo.</text>
+
+  <text x="40" y="1014" font-size="11.5" fill="#adb5bd">Non hai estado baleiro nesta folla, e non é un descoido: o selector só ofrece anos que teñen filas, e un órgano sen licitacións visibles non ten lapela, así que esta sección nin se monta.</text>
+</svg>
