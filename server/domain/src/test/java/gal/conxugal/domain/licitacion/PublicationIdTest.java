@@ -70,4 +70,26 @@ class PublicationIdTest {
   void prints_as_the_bare_identifier_so_messages_read_unchanged() {
     assertThat(new PublicationId("822054")).hasToString("822054");
   }
+
+  @Test
+  void reads_as_the_number_the_name_rank_orders_on() {
+    // Both families draw from one publication id space, so this compares against a contrato
+    // menor's own source identifier with no family discriminator between them.
+    assertThat(new PublicationId("822054").asNumber())
+        .hasValue(822054L);
+  }
+
+  @Test
+  void orders_numerically_rather_than_as_text_so_ten_outranks_nine() {
+    assertThat(new PublicationId("10").asNumber().getAsLong())
+        .isGreaterThan(new PublicationId("9").asNumber().getAsLong());
+  }
+
+  @Test
+  void reads_as_no_number_at_all_where_the_source_did_not_mint_one() {
+    // The rank-less answer rather than a rank: such a publication resolves its operador and
+    // advances no name, which is what ranking it as text could not express.
+    assertThat(new PublicationId("LIC-2026/0042").asNumber())
+        .isEmpty();
+  }
 }

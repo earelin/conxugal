@@ -3,6 +3,7 @@ package gal.conxugal.domain.licitacion;
 import static gal.conxugal.domain.licitacion.AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION;
 import static gal.conxugal.domain.licitacion.AwardeeResolutionPath.UNRESOLVED;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import gal.conxugal.domain.money.Money;
@@ -152,6 +153,29 @@ class AwardTest {
         .isThrownBy(
             () -> new Award(LICITACION_ID, null, "Adxudicado", RESOLVED_ON, AMOUNT, null, null,
                 null, null));
+  }
+
+  // The path exists so that the absence of a link is stated rather than inferred from a null, and
+  // the two disagreeing would leave the store holding both answers with nothing to say which.
+  @Test
+  void refuses_to_name_an_operador_while_saying_no_route_reached_one() {
+    assertThatExceptionOfType(IllegalArgumentException.class)
+        .isThrownBy(
+            () -> new Award(LICITACION_ID, null, "Adxudicado", RESOLVED_ON, AMOUNT, null,
+                "ESQUEIRO, SL", OPERADOR_ID, UNRESOLVED))
+        .withMessageContaining("UNRESOLVED");
+  }
+
+  // No route answers without an operador: SPEC-0006 R3's resolution catalogues an identifier
+  // nothing named before rather than failing to find it, so a published identifier that resolves
+  // to nobody the catalogue holds is not a state to leave room for.
+  @Test
+  void refuses_to_name_nobody_while_claiming_route_reached_somebody() {
+    assertThatExceptionOfType(IllegalArgumentException.class)
+        .isThrownBy(
+            () -> new Award(LICITACION_ID, null, "Adxudicado", RESOLVED_ON, AMOUNT, null,
+                "ESQUEIRO, SL", null, PUBLISHED_BY_FORMALISATION))
+        .withMessageContaining("PUBLISHED_BY_FORMALISATION");
   }
 
   @Test

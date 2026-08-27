@@ -72,6 +72,7 @@ testing {
                 implementation(libs.assertj.db)
                 implementation(libs.micronaut.http.client)
                 implementation(libs.micronaut.serde.jackson)
+                implementation(libs.jsoup)
                 implementation(libs.wiremock.testcontainers)
                 implementation(libs.wiremock.standalone)
             }

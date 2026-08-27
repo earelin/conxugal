@@ -1,6 +1,7 @@
 package gal.conxugal.domain.operador;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
@@ -199,6 +200,89 @@ class ResolveOperadorTest {
             new NomeAlternativo(INCUMBENT_ID, "Segunda SL", new NomeRank(MAY, 2L)));
   }
 
+  // R16 needs the bid's participation to exist and R3 needs its identifier to resolve to something,
+  // so cataloguing is forced even though the bid ranks nothing. The rank it is catalogued at is
+  // what keeps the second half of that true.
+  @Test
+  void bid_naming_an_operador_nothing_named_before_catalogues_it_behind_every_contract() {
+    nothingIsCatalogued();
+
+    OperadorEconomico resolved = resolveWithoutRanking(ACME_ID, "ACME SL");
+
+    assertThat(resolved)
+        .satisfies(
+            operador -> {
+              assertThat(operador.fiscalId()).isEqualTo(ACME_ID);
+              assertThat(operador.name()).isEqualTo("ACME SL");
+              assertThat(operador.nameRank()).isEqualTo(NomeRank.unranked());
+              assertThat(new NomeRank(null, Long.MIN_VALUE + 1).outranks(operador.nameRank()))
+                  .isTrue();
+            });
+  }
+
+  // The rule an earlier draft of the task inverted: a bid is not a contract in R4, R15 or R16, so
+  // it settles nothing about what the operador is displayed as, however recent it is.
+  @Test
+  void bid_naming_catalogued_operador_neither_promotes_nor_retains() {
+    catalogued("ACME SL", MARCH, 1L);
+
+    OperadorEconomico resolved = resolveWithoutRanking(ACME_ID, "Acme Sociedade Limitada");
+
+    assertThat(resolved)
+        .extracting(OperadorEconomico::id)
+        .isEqualTo(INCUMBENT_ID);
+    verify(operadores, never()).promoteName(any(), any(), any());
+    verify(operadores, never()).retainName(any());
+    verify(operadores, never()).insert(any());
+  }
+
+  // Reached from the other end than resolve's: the licitacións parse runs FiscalIdentifier.of at
+  // the cell, so a caller holding nothing usable holds null and answers for that itself rather
+  // than being offered a branch here it could never reach. What that caller does with it is
+  // StoreLicitacionBidders' own test — that the bid stores naming nobody.
+  @Test
+  void requires_an_identifier_rather_than_offering_the_unusable_branch_twice() {
+    assertThatNullPointerException()
+        .isThrownBy(() -> resolveWithoutRanking(null, "ACME SL"));
+    verifyNoInteractions(operadores);
+  }
+
+  @Test
+  void bid_that_carried_no_name_catalogues_the_operador_under_the_empty_name() {
+    nothingIsCatalogued();
+
+    OperadorEconomico resolved = resolveWithoutRanking(ACME_ID, null);
+
+    assertThat(resolved).extracting(OperadorEconomico::name).isEqualTo("");
+  }
+
+  // The back door onto the retained set, closed. The bid's name is displaced by the first contract
+  // to name the operador, and a promotion ordinarily files the name it displaced — but R15 retains
+  // what an operador's *contracts* published, and this one no contract did.
+  @Test
+  void contract_displacing_the_name_only_bid_published_promotes_and_files_nothing() {
+    when(operadores.findByFiscalId(ACME_ID))
+        .thenReturn(Optional.of(incumbent("ACME SL", NomeRank.unranked())));
+
+    resolve("B12345678", "Acme Sociedade Limitada", JUNE, 2L);
+
+    verify(operadores).promoteName(INCUMBENT_ID, "Acme Sociedade Limitada", new NomeRank(JUNE, 2L));
+    verify(operadores, never()).retainName(any());
+  }
+
+  // The rule reads the sentinel and nothing else, so a name a contract really published is still
+  // filed when it is displaced — which is the case that would break if the guard were widened.
+  @Test
+  void contract_displacing_the_name_another_contract_published_still_files_it() {
+    catalogued("Primeira SL", MARCH, 1L);
+
+    resolve("B12345678", "Segunda SL", JUNE, 2L);
+
+    assertThat(theNameRetained())
+        .usingRecursiveComparison()
+        .isEqualTo(new NomeAlternativo(INCUMBENT_ID, "Primeira SL", new NomeRank(MARCH, 1L)));
+  }
+
   /**
    * The one name the store was asked to retain. Captured rather than matched, because a retained
    * name is distinct by its spelling alone — an expected value would match whatever rank the call
@@ -217,6 +301,11 @@ class ResolveOperadorTest {
       long sourceId) {
     return new ResolveOperador(operadores)
         .resolve(publishedFiscalId, publishedName, new NomeRank(date, sourceId));
+  }
+
+  private OperadorEconomico resolveWithoutRanking(
+      @Nullable FiscalIdentifier fiscalId, @Nullable String publishedName) {
+    return new ResolveOperador(operadores).resolveWithoutRanking(fiscalId, publishedName);
   }
 
   /** A catalogue nothing has named yet, which assigns the identity the database would on insert. */

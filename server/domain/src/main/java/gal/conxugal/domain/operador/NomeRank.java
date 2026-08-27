@@ -33,6 +33,37 @@ public record NomeRank(@Nullable LocalDate date, long sourceId)
               NomeRank::date, Comparator.nullsFirst(Comparator.<LocalDate>naturalOrder()))
           .thenComparingLong(NomeRank::sourceId);
 
+  private static final NomeRank UNRANKED = new NomeRank(null, Long.MIN_VALUE);
+
+  /**
+   * The rank an operador is catalogued at by a publication that ranks nothing — a losing bid, or a
+   * procedure whose publication identifier is not a number. It is behind every rank a real
+   * publication can carry: undated, so every dated rank beats it, and at the least source
+   * identifier, so every undated one does too.
+   *
+   * <p>It exists because an operador row has to hold <em>some</em> rank while the publication that
+   * created it supplies none, and the alternative — passing that publication's own rank — would let
+   * a bid decide the displayed name, which is what {@link ResolveOperador} refuses. The first
+   * contract to name such an operador therefore outranks it and supplies the name it displays.
+   */
+  public static NomeRank unranked() {
+    return UNRANKED;
+  }
+
+  /**
+   * Whether this is {@link #unranked()} — the rank of a publication that ranked nothing, read back
+   * off a row as a <em>fact about it</em>: the name standing at it is one no publication ranked, so
+   * the promotion that displaces it files nothing.
+   *
+   * <p>Nothing but {@link #unranked()} produces this value, which is what lets it carry that
+   * meaning without a column of its own. The question belongs here rather than at the caller, where
+   * comparing against the sentinel would leave the meaning of the value away from the type that
+   * defines it.
+   */
+  public boolean ranksNothing() {
+    return UNRANKED.equals(this);
+  }
+
   /**
    * R4's order, and the only order this pair has — which is what makes it the natural one: the
    * pair exists so that a name can be ranked, and it is ranked no other way.

@@ -2,6 +2,7 @@ package gal.conxugal.domain.operador;
 
 import io.micronaut.data.annotation.Insert;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Port for maintaining the operadores económicos catalogue. Implemented by the
@@ -16,6 +17,17 @@ public interface OperadorRepository {
    * form.
    */
   Optional<OperadorEconomico> findByFiscalId(FiscalIdentifier fiscalId);
+
+  /**
+   * The operadores the catalogue holds under this name — the one each is displayed under, or any
+   * one it has retained beside it. Identities rather than entries, because what the question is
+   * really asking is <em>how many parties does this name reach</em>: two retained spellings of one
+   * operador are one answer, and one name borne by two operadores is two.
+   *
+   * <p>It asks the catalogue and changes nothing: a name nothing has been catalogued under answers
+   * an empty set rather than creating anything to answer with.
+   */
+  Set<OperadorId> findAllMatchingName(MatchableName name);
 
   @Insert
   OperadorEconomico insert(OperadorEconomico operador);
