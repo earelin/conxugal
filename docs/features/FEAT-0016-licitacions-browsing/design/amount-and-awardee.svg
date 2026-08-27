@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="860" viewBox="0 0 1280 860" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <rect width="1280" height="860" fill="#f8f9fa"/>
+
+  <text x="40" y="60" font-size="22" font-weight="700" fill="#212529">O importe e o adxudicatario</text>
+  <text x="40" y="84" font-size="13" fill="#868e96">As dúas celas que o servidor decide enteiras e a fila só debuxa. Todo o que hai aquí chega resolto: nin se calcula, nin se combina, nin se substitúe nada no cliente.</text>
+
+  <text x="40" y="124" font-size="12" font-weight="600" letter-spacing="0.5" fill="#495057">O IMPORTE — CATRO RENDERIZADOS, TRES BASES</text>
+
+  <!-- ===== A: awarded ===== -->
+  <rect x="40" y="142" width="576" height="190" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="140" width="576" height="190" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="72" y="186" width="200" height="72" rx="6" fill="#ffffff" stroke="#e9ecef"/>
+  <text x="256" y="216" text-anchor="end" font-size="17" font-weight="600" fill="#212529">1.284.500,00 €</text>
+  <text x="256" y="238" text-anchor="end" font-size="11.5" fill="#868e96">Adxudicado</text>
+  <text x="296" y="180" font-size="13" font-weight="600" fill="#212529">Adxudicado</text>
+  <text x="296" y="202" font-size="11.5" fill="#868e96">Hai polo menos unha adxudicación non retirada que</text>
+  <text x="296" y="219" font-size="11.5" fill="#868e96">leva importe, e non queda ningún lote por adxudicar.</text>
+  <text x="296" y="241" font-size="11.5" fill="#868e96">A cifra é a suma dos importes adxudicados. Con lotes,</text>
+  <text x="296" y="258" font-size="11.5" fill="#868e96">é a suma dos que van adxudicados: nunca unha cifra</text>
+  <text x="296" y="275" font-size="11.5" fill="#868e96">soa nin unha media.</text>
+  <text x="296" y="300" font-size="11" fill="#adb5bd">Unha adxudicación á que a fonte non lle publicou</text>
+  <text x="296" y="315" font-size="11" fill="#adb5bd">importe non conta aquí. Vai ao caso de abaixo.</text>
+
+  <!-- ===== B: partly awarded ===== -->
+  <rect x="664" y="142" width="576" height="190" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="664" y="140" width="576" height="190" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="696" y="186" width="200" height="72" rx="6" fill="#ffffff" stroke="#e9ecef"/>
+  <text x="880" y="216" text-anchor="end" font-size="17" font-weight="600" fill="#212529">842.300,00 €</text>
+  <text x="880" y="238" text-anchor="end" font-size="11.5" fill="#868e96">Adxudicado en parte</text>
+  <text x="920" y="180" font-size="13" font-weight="600" fill="#212529">Adxudicado en parte</text>
+  <text x="920" y="202" font-size="11.5" fill="#868e96">O mesmo caso, pero aínda quedan lotes sen adxudicar.</text>
+  <text x="920" y="219" font-size="11.5" fill="#868e96">A cifra non cambia: segue sendo o que vai adxudicado.</text>
+  <text x="920" y="241" font-size="11.5" fill="#868e96">O que engade a marca é que esa cifra non cobre todo o</text>
+  <text x="920" y="258" font-size="11.5" fill="#868e96">procedemento. Nunca se amosa o orzamento no seu</text>
+  <text x="920" y="275" font-size="11.5" fill="#868e96">canto, e nunca unha mestura dos dous.</text>
+  <text x="920" y="300" font-size="11" fill="#adb5bd">A marca é a lenda, non unha etiqueta de cor: cualifica</text>
+  <text x="920" y="315" font-size="11" fill="#adb5bd">a cifra, non clasifica a fila.</text>
+
+  <!-- ===== C: the base budget ===== -->
+  <rect x="40" y="356" width="576" height="190" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="354" width="576" height="190" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="72" y="400" width="200" height="72" rx="6" fill="#ffffff" stroke="#e9ecef"/>
+  <text x="256" y="430" text-anchor="end" font-size="17" font-weight="600" fill="#212529">2.150.000,00 €</text>
+  <text x="256" y="452" text-anchor="end" font-size="11.5" fill="#868e96">Orzamento base (IVE incl.)</text>
+  <text x="296" y="394" font-size="13" font-weight="600" fill="#212529">Orzamento base</text>
+  <text x="296" y="416" font-size="11.5" fill="#868e96">Ningunha adxudicación leva importe e a fonte publicou</text>
+  <text x="296" y="433" font-size="11.5" fill="#868e96">orzamento base. Dise que é orzamento, e dise que leva</text>
+  <text x="296" y="450" font-size="11.5" fill="#868e96">o IVE dentro: unha cifra sen etiquetar convida xusto á</text>
+  <text x="296" y="467" font-size="11.5" fill="#868e96">comparación equivocada.</text>
+  <text x="296" y="492" font-size="11" fill="#adb5bd">Tamén cae aquí unha licitación adxudicada á que non</text>
+  <text x="296" y="507" font-size="11" fill="#adb5bd">se lle publicou importe. Non é «nada adxudicado», así</text>
+  <text x="296" y="522" font-size="11" fill="#adb5bd">que é unha lectura forzada, e está dita como tal.</text>
+
+  <!-- ===== D: nothing stated ===== -->
+  <rect x="664" y="356" width="576" height="190" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="664" y="354" width="576" height="190" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <rect x="696" y="400" width="200" height="72" rx="6" fill="#ffffff" stroke="#e9ecef"/>
+  <text x="880" y="442" text-anchor="end" font-size="11.5" fill="#868e96">Sen importe publicado</text>
+  <text x="920" y="394" font-size="13" font-weight="600" fill="#212529">Sen importe ningún</text>
+  <text x="920" y="416" font-size="11.5" fill="#868e96">Nin adxudicación con importe nin orzamento publicado.</text>
+  <text x="920" y="433" font-size="11.5" fill="#868e96">A licitación vese igual, porque o que a fai visible é ter</text>
+  <text x="920" y="450" font-size="11.5" fill="#868e96">data, e nada máis.</text>
+  <text x="920" y="472" font-size="11.5" fill="#868e96">Non se amosa 0, nin unha raia que faga de número.</text>
+  <text x="920" y="497" font-size="11" fill="#adb5bd">A lenda queda e a cifra non: a lenda non substitúe un</text>
+  <text x="920" y="512" font-size="11" fill="#adb5bd">número, di que non o hai. Unha cela baleira de todo</text>
+  <text x="920" y="527" font-size="11" fill="#adb5bd">obrigaría a quen le a adiviñar cal das dúas cousas é.</text>
+
+  <text x="40" y="576" font-size="11.5" fill="#868e96">«En parte» decídese contando lotes cun importe adxudicado fronte ao maior entre os lotes gardados e o número de lotes que a fonte publica. É o mellor esforzo posible e inclínase a marcar</text>
+  <text x="40" y="593" font-size="11.5" fill="#868e96">antes que a non marcar: unha fila sen marca afirma que está completa, e unha marcada de máis só di que pode quedar algún lote por decidir.</text>
+
+  <text x="40" y="636" font-size="12" font-weight="600" letter-spacing="0.5" fill="#495057">O ADXUDICATARIO — CATRO CASOS, UN SÓ NOME OU NINGÚN</text>
+
+  <!-- ===== awardee: exactly one ===== -->
+  <rect x="40" y="654" width="280" height="170" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="40" y="652" width="280" height="170" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="60" y="678" font-size="12.5" font-weight="600" fill="#212529">Exactamente un</text>
+  <rect x="60" y="690" width="240" height="56" rx="6" fill="#ffffff" stroke="#e9ecef"/>
+  <text x="76" y="712" font-size="13" fill="#212529">CLINILAB GALICIA, S.L.</text>
+  <text x="76" y="732" font-size="11" font-family="SFMono-Regular, Menlo, Consolas, monospace" fill="#868e96">ESB15234567</text>
+  <text x="60" y="770" font-size="11.5" fill="#868e96">Nómase, co seu identificador fiscal.</text>
+  <text x="60" y="787" font-size="11.5" fill="#868e96">É o nome do operador económico,</text>
+  <text x="60" y="804" font-size="11.5" fill="#868e96">non o que a fonte escribiu na adxudicación.</text>
+
+  <!-- ===== awardee: one, with no fiscal id ===== -->
+  <rect x="344" y="654" width="280" height="170" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="344" y="652" width="280" height="170" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="364" y="678" font-size="12.5" font-weight="600" fill="#212529">Un, sen identificador fiscal</text>
+  <rect x="364" y="690" width="240" height="56" rx="6" fill="#ffffff" stroke="#e9ecef"/>
+  <text x="380" y="722" font-size="13" fill="#212529">UTE GASES DO NOROESTE</text>
+  <text x="364" y="770" font-size="11.5" fill="#868e96">Unha UTE que a fonte non identificou</text>
+  <text x="364" y="787" font-size="11.5" fill="#868e96">é un adxudicatario coma outro calquera:</text>
+  <text x="364" y="804" font-size="11.5" fill="#868e96">o que lle falta é o número, non a ficha.</text>
+
+  <!-- ===== awardee: more than one ===== -->
+  <rect x="648" y="654" width="280" height="170" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="648" y="652" width="280" height="170" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="668" y="678" font-size="12.5" font-weight="600" fill="#212529">Máis dun</text>
+  <rect x="668" y="690" width="240" height="56" rx="6" fill="#ffffff" stroke="#e9ecef"/>
+  <text x="684" y="722" font-size="13" fill="#495057">3 adxudicatarios</text>
+  <text x="668" y="770" font-size="11.5" fill="#868e96">Dise cantos, e non se escolle un deles</text>
+  <text x="668" y="787" font-size="11.5" fill="#868e96">para representalos. Quen sexan é a</text>
+  <text x="668" y="804" font-size="11.5" fill="#868e96">páxina da licitación, que aínda non hai.</text>
+
+  <!-- ===== awardee: none resolved ===== -->
+  <rect x="952" y="654" width="280" height="170" rx="8" fill="#212529" opacity="0.05"/>
+  <rect x="952" y="652" width="280" height="170" rx="8" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="972" y="678" font-size="12.5" font-weight="600" fill="#212529">Ningún resolto</text>
+  <rect x="972" y="690" width="240" height="56" rx="6" fill="#ffffff" stroke="#e9ecef"/>
+  <text x="988" y="722" font-size="13" fill="#868e96">Sen adxudicatarios</text>
+  <text x="972" y="770" font-size="11.5" fill="#868e96">Unha licitación cunha soa adxudicación</text>
+  <text x="972" y="787" font-size="11.5" fill="#868e96">sen resolver di cero, non un. Nomear a</text>
+  <text x="972" y="804" font-size="11.5" fill="#868e96">quen non se resolveu daría un camiño cego.</text>
+</svg>
