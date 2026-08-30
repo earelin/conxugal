@@ -2,7 +2,7 @@
 feat: FEAT-0015
 domain: backend
 adrs: [0002, 0008, 0023]
-status: todo
+status: done
 depends_on: [TASK-0005, TASK-0006, TASK-0009, TASK-0013]
 ---
 
@@ -100,6 +100,25 @@ stored procedure, idempotently, and it is the last piece before the walk
 
 **Out of scope:** the walk, the cursor, the ledger, and any comparison across procedures. This use
 case sees one procedure at a time and knows nothing about the Órgano's history as a whole.
+
+## What the build settled that this task did not state
+
+- **The membership row gained the procedure that states it** (migration V23, keyed on
+  `(ute_id, operador_economico_id, licitacion_id)`). *"No visible bid of its UTE still publishes
+  it"* is unanswerable from the pair alone: nothing in the store could say whether procedure B
+  still states a membership procedure A has stopped stating, and re-reading B's record is exactly
+  the cross-procedure comparison this task rules out. With the stating procedure on the row, both
+  branches take **one** code path — reconciling a procedure withdraws its own statements and no one
+  else's, and the pair a reader is shown is visible while any statement of it is. The table was
+  empty in every environment, so the migration cost nothing.
+- **`licitacion_participation.won` is written here.** [TASK-0006](TASK-0006-licitacions-store-the-competition-tables.md)
+  writes every bid unwon and says the resolution that knows better writes over it; this is that
+  orchestrator, and no other task claimed the column. It is an **update and never an insert** — an
+  awardee that never bid is the ordinary case, so upserting a winner would invent a participation
+  the source never published and add a row on a re-import that must change nothing.
+- **The awardee gate is applied before the operador is reached**, not after. Deciding the route
+  first and resolving second is what keeps a refused write from cataloguing an operador, or
+  promoting a name, on the strength of a link no stored award ends up holding.
 
 ## Acceptance criteria
 

@@ -200,11 +200,13 @@ class LicitacionConsortiaDerivationIntegrationTest implements TestPropertyProvid
     List<PublishedFormalisation> formalisations = List.of(formalisation(null, UTE, UTE_ID));
 
     ConsortiumOperadores catalogued =
-        storeConsortia.store(
-            licitacion.id(),
-            List.of(),
-            List.of(consortium(null, UTE, null, member(PRACE, PRACE_ID))),
-            formalisations);
+        storeConsortia
+            .store(
+                licitacion.id(),
+                List.of(),
+                List.of(consortium(null, UTE, null, member(PRACE, PRACE_ID))),
+                formalisations)
+            .operadores();
     List<Award> awards = storeAwards(List.of(award(null, UTE)), formalisations, catalogued);
 
     assertThat(identifierLessOperadores()).isEmpty();
@@ -241,13 +243,15 @@ class LicitacionConsortiaDerivationIntegrationTest implements TestPropertyProvid
   @Test
   void member_whose_identifier_is_unusable_yields_no_operador_and_no_membership() throws Exception {
     ConsortiumOperadores catalogued =
-        storeConsortia.store(
-            licitacion.id(),
-            List.of(),
-            List.of(
-                consortium(
-                    null, UTE, null, member("Sen NIF SL", null), member(TABOADA, TABOADA_ID))),
-            List.of());
+        storeConsortia
+            .store(
+                licitacion.id(),
+                List.of(),
+                List.of(
+                    consortium(
+                        null, UTE, null, member("Sen NIF SL", null), member(TABOADA, TABOADA_ID))),
+                List.of())
+            .operadores();
 
     assertThat(operadorTable()).hasNumberOfRows(2);
     assertThat(membersOf(catalogued.at(matchable(UTE)).operadorId().value()))
@@ -293,17 +297,19 @@ class LicitacionConsortiaDerivationIntegrationTest implements TestPropertyProvid
   /** One consortium and its two member firms, catalogued and bid on the procedure as a whole. */
   private ConsortiumOperadores catalogueConsortium(
       Licitacion procedure, String name, @Nullable FiscalIdentifier fiscalIdentifier) {
-    return storeConsortia.store(
-        procedure.id(),
-        List.of(),
-        List.of(
-            consortium(
-                null,
-                name,
-                fiscalIdentifier,
-                member(PRACE, PRACE_ID),
-                member(TABOADA, TABOADA_ID))),
-        List.of());
+    return storeConsortia
+        .store(
+            procedure.id(),
+            List.of(),
+            List.of(
+                consortium(
+                    null,
+                    name,
+                    fiscalIdentifier,
+                    member(PRACE, PRACE_ID),
+                    member(TABOADA, TABOADA_ID))),
+            List.of())
+        .operadores();
   }
 
   private List<Award> storeAwards(

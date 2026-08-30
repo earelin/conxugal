@@ -1,5 +1,7 @@
 package gal.conxugal.domain.licitacion;
 
+import java.util.Collection;
+
 /**
  * Port for a procedure's lotes. Implemented by the {@code infrastructure} module.
  *
@@ -28,4 +30,24 @@ public interface LoteRepository {
    * <p>The procedure must already be stored, carrying the identity its own upsert answered with.
    */
   Lote upsert(Lote lote);
+
+  /**
+   * Marks withdrawn every lote of this procedure that {@code retained} does not name — the ones a
+   * restatement stopped publishing. Answers how many it newly marked.
+   *
+   * <p><strong>This is the reconciliation's whole shape, and every child port repeats it.</strong>
+   * A restatement republishes the procedure in full, so what it no longer names is what the store
+   * must stop showing; the caller hands back the identities its own upserts just answered with, and
+   * everything else of this procedure goes. Nothing is compared field by field, because a
+   * restatement is not a diff — it is the source's current statement, whole.
+   *
+   * <p><strong>An empty {@code retained} is ordinary rather than degenerate</strong>: it is a
+   * procedure whose record now publishes no lote at all, and every lote it holds is withdrawn.
+   *
+   * <p>A lote already withdrawn is left alone, so a re-import that changes nothing writes nothing
+   * here — which is what lets an unchanged restatement be observably free.
+   *
+   * <p>Still no delete: the row stays, and republishing it un-withdraws it through {@link #upsert}.
+   */
+  int withdrawAbsent(LicitacionId licitacionId, Collection<LoteId> retained);
 }

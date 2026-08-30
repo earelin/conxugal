@@ -1,5 +1,6 @@
 package gal.conxugal.infrastructure.jdbc.licitacion;
 
+import gal.conxugal.domain.licitacion.LicitacionId;
 import gal.conxugal.domain.licitacion.Lote;
 import gal.conxugal.domain.licitacion.LoteId;
 import gal.conxugal.domain.licitacion.LoteKey;
@@ -9,6 +10,7 @@ import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.GenericRepository;
 import io.micronaut.transaction.annotation.Transactional;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -60,6 +62,8 @@ public abstract class JdbcLoteRepository
       RETURNING id, lote_identifier
       """;
 
+  private static final String WITHDRAW_ABSENT = Withdrawals.statementFor("licitacion_lote");
+
   private final JdbcOperations jdbcOperations;
 
   protected JdbcLoteRepository(JdbcOperations jdbcOperations) {
@@ -92,6 +96,15 @@ public abstract class JdbcLoteRepository
                 lote.description(),
                 lote.estimatedValue(),
                 lote.withdrawn()));
+  }
+
+  @Override
+  @Transactional
+  public int withdrawAbsent(LicitacionId licitacionId, Collection<LoteId> retained) {
+    Objects.requireNonNull(licitacionId, "licitacionId must not be null");
+    Objects.requireNonNull(retained, "retained must not be null");
+    return Withdrawals.absent(
+        jdbcOperations, WITHDRAW_ABSENT, licitacionId, retained, LoteId::value);
   }
 
   /**

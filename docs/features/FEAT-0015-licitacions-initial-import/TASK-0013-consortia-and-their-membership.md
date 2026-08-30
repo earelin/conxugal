@@ -100,6 +100,12 @@ least 2 and nothing measures how many more.)*
 - **The membership relates the two operadores**, so it reads from either end in both branches —
   *who was this consortium made of* and *what has this firm been part of* are one relation. The
   earlier model hung it off the bid, which answered only the second.
+
+  *(Amended by [TASK-0014](TASK-0014-reconciling-a-restated-procedure.md): the row also names the
+  **procedure that states it**, so the same pair stated by two procedures is two rows. The relation
+  a reader is shown is unchanged — a pair is visible while any statement of it is — and the
+  addition is what makes an identified UTE reconcilable at all, since the pair alone cannot say
+  whether another procedure still states a membership this one has stopped stating.)*
 - **The award belongs to the consortium's operador alone**, in both branches, so it enters no
   member's totals and **no euro is counted twice** — the property R17 exists to protect.
 - R16's unusable-identifier rule holds for a single-firm bidder, an awardee and a UTE **member** —

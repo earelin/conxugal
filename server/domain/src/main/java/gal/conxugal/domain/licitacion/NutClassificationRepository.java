@@ -1,5 +1,7 @@
 package gal.conxugal.domain.licitacion;
 
+import java.util.Collection;
+
 /**
  * Port for a procedure's NUTS classifications. Implemented by the {@code infrastructure} module.
  *
@@ -20,4 +22,11 @@ public interface NutClassificationRepository {
    * than writing a null into a {@code NOT NULL} foreign key.
    */
   NutClassification upsert(NutClassification classification);
+
+  /**
+   * Marks withdrawn every classification of this procedure that {@code retained} does not name, on
+   * {@link LoteRepository#withdrawAbsent}'s rule and for its reasons. Answers how many it newly
+   * marked.
+   */
+  int withdrawAbsent(LicitacionId licitacionId, Collection<NutClassificationId> retained);
 }

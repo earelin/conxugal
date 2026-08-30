@@ -510,6 +510,154 @@ class StoreLicitacionAwardsTest {
             });
   }
 
+  // The mechanism behind the historical tail closing: a procedure moves from adxudicado to
+  // formalizado, and the run that re-reads it replaces a name-derived link with a published one —
+  // even where that names a different operador, because the source now says so.
+  @Test
+  void formalising_supersedes_name_derived_link_even_for_another_operador() {
+    theStoreCataloguesOnDemand();
+    OperadorEconomico guessed = catalogueHolds(XESTION_ID, XESTION);
+    theStoreAlreadyHolds(
+        storedAward(null, guessed.id(), AwardeeResolutionPath.NAME_DERIVED));
+
+    List<Award> stored =
+        store(
+            List.of(),
+            List.of(award(null, EQUINSE)),
+            List.of(formalisation(null, EQUINSE, EQUINSE_ID)),
+            List.of());
+
+    assertThat(stored)
+        .singleElement()
+        .satisfies(
+            award -> {
+              assertThat(award.operadorEconomicoId()).isEqualTo(catalogued(EQUINSE_ID).id());
+              assertThat(award.awardeeResolutionPath())
+                  .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION);
+            });
+  }
+
+  // The gate, and the reason it outranks the refresh rule for this one field: a formalisation
+  // withdrawn at the source is not evidence that the identifier it published was wrong.
+  @Test
+  void formalisation_disappearing_leaves_the_published_link_it_justified_standing() {
+    theStoreAcceptsEveryAward();
+    OperadorEconomico published = catalogueHolds(EQUINSE_ID, EQUINSE);
+    theStoreAlreadyHolds(
+        storedAward(null, published.id(), AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION));
+
+    List<Award> stored = store(List.of(), List.of(award(null, EQUINSE)), List.of(), List.of());
+
+    assertThat(stored)
+        .singleElement()
+        .satisfies(
+            award -> {
+              assertThat(award.operadorEconomicoId()).isEqualTo(published.id());
+              assertThat(award.awardeeResolutionPath())
+                  .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION);
+            });
+  }
+
+  // The same rule one step down the order: a bid published the identifier, and a later record that
+  // can only match a name does not get to replace it with an inference.
+  @Test
+  void name_derived_route_does_not_replace_link_the_bidder_list_published() {
+    theStoreAcceptsEveryAward();
+    OperadorEconomico published = catalogueHolds(EQUINSE_ID, EQUINSE);
+    theStoreAlreadyHolds(
+        storedAward(null, published.id(), AwardeeResolutionPath.PUBLISHED_BY_BIDDER));
+
+    List<Award> stored = store(List.of(), List.of(award(null, EQUINSE)), List.of(), List.of());
+
+    assertThat(stored)
+        .singleElement()
+        .satisfies(
+            award ->
+                assertThat(award.awardeeResolutionPath())
+                    .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_BIDDER));
+  }
+
+  // A refused write catalogues nothing and promotes no name: the gate is applied before the
+  // operador is reached, not after, so nothing is written on the strength of a link nothing holds.
+  @Test
+  void refused_write_reaches_no_operador_at_all() {
+    theStoreAcceptsEveryAward();
+    OperadorEconomico published = catalogueHolds(EQUINSE_ID, EQUINSE);
+    theStoreAlreadyHolds(
+        storedAward(null, published.id(), AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION));
+
+    store(
+        List.of(),
+        List.of(award(null, EQUINSE)),
+        List.of(),
+        List.of(singleFirm(null, EQUINSE, EQUINSE_ID)));
+
+    verify(operadores, never()).insert(any());
+    verify(operadores, never()).promoteName(any(), any(), any());
+  }
+
+  // The everyday case, and the one an over-eager gate would break: nothing has changed, so the
+  // award is written exactly as it stands rather than being frozen by its own stored route.
+  @Test
+  void an_unchanged_restatement_writes_the_same_link_by_the_same_route() {
+    theStoreAcceptsEveryAward();
+    theCatalogueAnswers();
+    OperadorEconomico published = catalogueHolds(EQUINSE_ID, EQUINSE);
+    theStoreAlreadyHolds(
+        storedAward(null, published.id(), AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION));
+
+    List<Award> stored =
+        store(
+            List.of(),
+            List.of(award(null, EQUINSE)),
+            List.of(formalisation(null, EQUINSE, EQUINSE_ID)),
+            List.of());
+
+    assertThat(stored)
+        .singleElement()
+        .satisfies(
+            award -> {
+              assertThat(award.operadorEconomicoId()).isEqualTo(published.id());
+              assertThat(award.awardeeResolutionPath())
+                  .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION);
+            });
+  }
+
+  /** An operador the catalogue already holds, as a route reaching its identifier would find it. */
+  private OperadorEconomico catalogueHolds(FiscalIdentifier fiscalId, String name) {
+    OperadorEconomico operador =
+        new OperadorEconomico(
+            new OperadorId(UUID.randomUUID()),
+            fiscalId,
+            name,
+            false,
+            new NomeRank(PUBLISHED_ON, 822054L),
+            Set.of());
+    catalogue.put(fiscalId, operador);
+    return operador;
+  }
+
+  private void theStoreAlreadyHolds(Award award) {
+    when(awards.findAllByLicitacionId(LICITACION_ID)).thenReturn(List.of(award));
+  }
+
+  /** An award as an earlier import left it: at an award point, naming somebody, by some route. */
+  private static Award storedAward(
+      @Nullable LoteId loteId, @Nullable OperadorId operadorId, AwardeeResolutionPath path) {
+    return new Award(
+        new AwardId(UUID.randomUUID()),
+        LICITACION_ID,
+        loteId,
+        null,
+        null,
+        AWARDED,
+        null,
+        EQUINSE,
+        operadorId,
+        path,
+        false);
+  }
+
   private List<Award> store(
       List<Lote> lotes,
       List<PublishedAward> published,
@@ -637,16 +785,21 @@ class StoreLicitacionAwardsTest {
             });
   }
 
+  /** The catalogue as it stands, for a route that only ever looks an identifier up. */
+  private void theCatalogueAnswers() {
+    when(operadores.findByFiscalId(any()))
+        .thenAnswer(
+            invocation ->
+                Optional.ofNullable(catalogue.get(invocation.<FiscalIdentifier>getArgument(0))));
+  }
+
   /**
    * A catalogue an award can add to, shared across the whole call as it would be inside the use
    * case's transaction, so a second award naming the same firm reads what the first one wrote.
    */
   private void theStoreCataloguesOnDemand() {
     theStoreAcceptsEveryAward();
-    when(operadores.findByFiscalId(any()))
-        .thenAnswer(
-            invocation ->
-                Optional.ofNullable(catalogue.get(invocation.<FiscalIdentifier>getArgument(0))));
+    theCatalogueAnswers();
     when(operadores.insert(any()))
         .thenAnswer(
             invocation -> {

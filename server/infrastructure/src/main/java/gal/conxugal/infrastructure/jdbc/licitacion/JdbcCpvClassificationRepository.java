@@ -5,11 +5,13 @@ import gal.conxugal.domain.licitacion.CpvClassification;
 import gal.conxugal.domain.licitacion.CpvClassificationId;
 import gal.conxugal.domain.licitacion.CpvClassificationRepository;
 import gal.conxugal.domain.licitacion.CpvId;
+import gal.conxugal.domain.licitacion.LicitacionId;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.GenericRepository;
 import io.micronaut.transaction.annotation.Transactional;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -41,6 +43,8 @@ public abstract class JdbcCpvClassificationRepository
       RETURNING id
       """;
 
+  private static final String WITHDRAW_ABSENT = Withdrawals.statementFor("licitacion_cpv");
+
   private final JdbcOperations jdbcOperations;
 
   protected JdbcCpvClassificationRepository(JdbcOperations jdbcOperations) {
@@ -70,6 +74,16 @@ public abstract class JdbcCpvClassificationRepository
         classification.cpv(),
         classification.diffusionDate(),
         classification.withdrawn());
+  }
+
+  @Override
+  @Transactional
+  public int withdrawAbsent(
+      LicitacionId licitacionId, Collection<CpvClassificationId> retained) {
+    Objects.requireNonNull(licitacionId, "licitacionId must not be null");
+    Objects.requireNonNull(retained, "retained must not be null");
+    return Withdrawals.absent(
+        jdbcOperations, WITHDRAW_ABSENT, licitacionId, retained, CpvClassificationId::value);
   }
 
   /**
