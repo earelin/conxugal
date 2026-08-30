@@ -1,5 +1,6 @@
 package gal.conxugal.domain.licitacion;
 
+import gal.conxugal.domain.licitacion.ConsortiumOperadores.CataloguedConsortium;
 import gal.conxugal.domain.operador.FiscalIdentifier;
 import gal.conxugal.domain.operador.MatchableName;
 import gal.conxugal.domain.operador.NomeRank;
@@ -53,12 +54,20 @@ import org.jspecify.annotations.Nullable;
  * outcome, and R25 refuses to make a resolvable awardee a condition of the procedure's visibility.
  * An unresolved awardee costs a link, never a procedure.
  *
- * <p><strong>An award whose awardee is a consortium row takes no route at all here.</strong>
+ * <p><strong>An award whose awardee is a consortium takes none of the three routes.</strong>
  * Whether a consortium is catalogued under an identifier is a property of the procedure — the
  * bidder row and the formalisation are both allowed to supply it — rather than of the award row, so
- * attributing it belongs with the task that reads both. Left to the routing below, the catalogue
- * match would try {@code UTE PRACE-TABOADA RAMOS} against a catalogue that holds nothing like it,
- * which is an accident rather than a design.
+ * {@link StoreLicitacionConsortia} settles it first and this takes the answer it reached. Left to
+ * the routing below, the catalogue match would try {@code UTE PRACE-TABOADA RAMOS} against a
+ * catalogue that holds nothing like it, which is an accident rather than a design.
+ *
+ * <p>An award to an <strong>identified</strong> consortium is then an ordinary awardee: it resolves
+ * through the catalogue on the identifier the procedure published and ranks that consortium's name
+ * like any other contract. An award to an <strong>unidentified</strong> one links to the operador
+ * its bid minted and ranks nothing — there is no identifier to resolve through, and that entry
+ * keeps the one name its bid published. Either way the award is held by the consortium's own
+ * operador and by no member of it, which is the storage form of the property that no euro is
+ * counted twice.
  *
  * <p><strong>One transaction.</strong> An operador a resolution catalogues is created beside the
  * award that justified it, so a rollback cannot leave a catalogue entry no stored award points at.
@@ -96,6 +105,10 @@ public class StoreLicitacionAwards {
    * @param formalisations the formalisation table's rows, the first route to an identifier
    * @param bidders the bidder table's rows, the second route to one and the only thing that says
    *     an awardee is a consortium
+   * @param consortia the operador each of the procedure's consortia was catalogued as, from
+   *     {@link StoreLicitacionConsortia}, which must have run first — {@link
+   *     ConsortiumOperadores#none()} for a caller that has not, which leaves an award to a
+   *     consortium naming nobody rather than attributing it by name
    */
   @Transactional
   public List<Award> store(
@@ -103,17 +116,19 @@ public class StoreLicitacionAwards {
       List<Lote> lotes,
       List<PublishedAward> published,
       List<PublishedFormalisation> formalisations,
-      List<PublishedBidder> bidders) {
+      List<PublishedBidder> bidders,
+      ConsortiumOperadores consortia) {
     Objects.requireNonNull(licitacion, "licitacion must not be null");
     Objects.requireNonNull(lotes, "lotes must not be null");
     Objects.requireNonNull(published, "published must not be null");
     Objects.requireNonNull(formalisations, "formalisations must not be null");
     Objects.requireNonNull(bidders, "bidders must not be null");
+    Objects.requireNonNull(consortia, "consortia must not be null");
     LicitacionId licitacionId =
         Objects.requireNonNull(
             licitacion.id(), "the procedure must be stored before its awards are");
     AwardPoints awardPoints = AwardPoints.of(licitacionId, lotes);
-    Routes routes = new Routes(formalisations, bidders, rankOf(licitacion));
+    Routes routes = new Routes(formalisations, bidders, consortia, rankOf(licitacion));
     List<Award> stored = new ArrayList<>(published.size());
     for (PublishedAward row : published) {
       stored.add(awards.upsert(awardOf(row, licitacionId, awardPoints, routes)));
@@ -149,8 +164,14 @@ public class StoreLicitacionAwards {
    */
   private Awardee awardeeOf(PublishedAward row, Routes routes) {
     Optional<MatchableName> awardee = MatchableName.of(row.awardeeName());
-    if (awardee.isPresent() && routes.bidsAsConsortium(awardee.get())) {
-      return Awardee.nobody();
+    if (awardee.isPresent()) {
+      CataloguedConsortium consortium = routes.consortiumFor(awardee.get());
+      if (consortium != null) {
+        return awardedToConsortium(row, consortium, routes);
+      }
+      if (routes.bidsAsConsortium(awardee.get())) {
+        return Awardee.nobody();
+      }
     }
     Contratista formalised = routes.contratistaFor(row, awardee.orElse(null));
     if (formalised != null) {
@@ -170,6 +191,25 @@ public class StoreLicitacionAwards {
       return new Awardee(catalogued, AwardeeResolutionPath.NAME_DERIVED);
     }
     return Awardee.nobody();
+  }
+
+  /**
+   * The award as attributed to the consortium that bid: to <strong>its</strong> operador and to no
+   * member of it, which is what keeps a member's totals free of a contract its consortium won.
+   *
+   * <p>An identified consortium resolves through the catalogue like any other awardee, so this
+   * award ranks its name; an unidentified one has no identifier to resolve through and is linked
+   * directly, ranking nothing. The route recorded is the one that reached the <em>identifier</em>,
+   * so a procedure that later formalises and publishes one supersedes the link its bid alone
+   * supported.
+   */
+  private Awardee awardedToConsortium(
+      PublishedAward row, CataloguedConsortium consortium, Routes routes) {
+    FiscalIdentifier fiscalId = consortium.fiscalId();
+    if (fiscalId == null) {
+      return new Awardee(consortium.operadorId(), consortium.path());
+    }
+    return awarded(fiscalId, row.awardeeName(), routes, consortium.path());
   }
 
   /**
@@ -264,6 +304,7 @@ public class StoreLicitacionAwards {
   private record Routes(
       List<PublishedFormalisation> formalisations,
       List<PublishedBidder> bidders,
+      ConsortiumOperadores consortia,
       @Nullable NomeRank rank) {
 
     Routes {
@@ -272,10 +313,30 @@ public class StoreLicitacionAwards {
     }
 
     /**
-     * Whether this name is one the procedure's bidder table published as a consortium. Such an
-     * award is left unattributed here whatever else could reach an identifier for it — including a
-     * formalisation, which is precisely one of the two places a consortium's own identifier is
-     * published and therefore evidence the task that attributes consortia needs to weigh whole.
+     * The consortium this awardee name was catalogued as, or null where the procedure published
+     * none such. Asked before every other route, because a consortium's identity was settled with
+     * both its publications in hand and no route below sees more than one of them.
+     */
+    @Nullable CataloguedConsortium consortiumFor(MatchableName awardee) {
+      return consortia.at(awardee);
+    }
+
+    /**
+     * Whether this name is one the procedure's bidder table published as a consortium and the
+     * consortia handed in do not account for. Such an award names nobody whatever else could reach
+     * an identifier for it — including a formalisation, which is precisely one of the two places a
+     * consortium's own identifier is published and therefore evidence that belongs to the
+     * cataloguing this class does not perform.
+     *
+     * <p>It is reachable for a caller storing awards without having catalogued the consortia —
+     * every consortium a procedure published under a usable name is otherwise accounted for above.
+     *
+     * <p><strong>What it does not reach is a consortium row published under no name</strong>, or
+     * one whose name folds to nothing: there is no key to compare an awardee against, so such a
+     * row cannot be recognised here and the award takes the ordinary routes under its own name.
+     * That is the honest outcome rather than a gap — the bidder row offers nothing to tie the two
+     * together — and it is bounded by the catalogue match declining to reach an identifier-less
+     * entry, so the award lands on a party the source published or on nobody.
      */
     boolean bidsAsConsortium(MatchableName awardee) {
       for (PublishedBidder bidder : bidders) {

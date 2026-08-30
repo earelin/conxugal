@@ -825,7 +825,7 @@ the order matters because only the last one infers:
 ```mermaid
 flowchart TD
   A[Award row: Adxudicatario text] --> Z{Awardee is a consortium bidder row?}
-  Z -- yes --> H[Award stored, names nobody]
+  Z -- yes --> H[Held by the operador that consortium was catalogued as, before any award]
   Z -- no --> B{Formalisation for this lote publishes an identifier?}
   B -- yes --> Y{Does it name the same party as the resolution?}
   Y -- yes --> C[Path A: take the identifier it publishes]
@@ -1333,6 +1333,14 @@ source publishes for that Órgano is stored.
   operador, whose membership is the union of what they publish. This is the case that makes
   *"a membership stops being visible when no visible bid of its UTE still publishes it"* more than a
   restatement of *"its bid was withdrawn"*. *(SPEC-0008 #21 as amended; SPEC-0006 #40)*
+- **A consortium row published under no name**, or under one that folds to nothing. Never observed
+  in 613 rows. It cannot be catalogued: R3 keys an identifier-less consortium on its bid, and
+  within one procedure the published name is the only thing telling one bid's consortium from
+  another's, so pooling two such rows under one entry would attach one consortium's members to
+  another's award. **Its bid is still stored, naming nobody** — R16 records every operador that
+  applied and #19 requires every published bidder to be stored, with no exception for a consortium,
+  and it is the same answer this family already gives a single firm whose identifier is unusable.
+  Its member firms are not catalogued, there being nothing to relate them to. *(SPEC-0008 #19, #20)*
 - **A consortium published under a name that does not begin `UTE`** — 7 of 35, such as
   `MISTURAS-INGESAN`. Detected identically, because the test is the markup and not the name. A
   name-prefix test would have recorded it as a single firm bidding under a placeholder identifier.
