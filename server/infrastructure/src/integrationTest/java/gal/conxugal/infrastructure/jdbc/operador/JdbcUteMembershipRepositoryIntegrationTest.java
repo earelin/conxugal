@@ -3,6 +3,7 @@ package gal.conxugal.infrastructure.jdbc.operador;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.db.api.Assertions.assertThat;
 
+import gal.conxugal.domain.licitacion.LicitacionId;
 import gal.conxugal.domain.operador.FiscalIdentifier;
 import gal.conxugal.domain.operador.NomeRank;
 import gal.conxugal.domain.operador.OperadorEconomico;
@@ -16,13 +17,21 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
 import jakarta.inject.Inject;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import javax.sql.DataSource;
 import org.assertj.db.type.AssertDbConnectionFactory;
 import org.assertj.db.type.Table;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -36,6 +45,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * <strong>both ends</strong>, which is what moving it off the bid bought; and that a
  * <strong>withdrawn</strong> membership leaves an operador's visible set, which is the storage
  * half of the reachability predicate.
+ *
+ * <p>A fourth carries the reconciliation: a membership is a statement by <strong>one
+ * procedure</strong>, so withdrawing what this procedure no longer states leaves what another
+ * still does — which is the only thing that keeps an identified UTE, one operador across every
+ * procedure naming it, reconcilable at all.
  */
 @MicronautTest(startApplication = false)
 @Testcontainers(disabledWithoutDocker = true)
@@ -67,6 +81,15 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
   @Inject
   DataSource dataSource;
 
+  private LicitacionId statedBy;
+  private @Nullable UUID stateId;
+
+  @BeforeEach
+  void oneProcedureStatesTheMembership() throws Exception {
+    stateId = null;
+    statedBy = licitacion("822054");
+  }
+
   @AfterEach
   void cleanUp() throws Exception {
     DatabaseCleanup.truncateAllTables(dataSource);
@@ -79,7 +102,7 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
     OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
     OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
 
-    membershipRepository.upsert(new UteMembership(uteId, memberId));
+    membershipRepository.upsert(new UteMembership(uteId, memberId, statedBy));
 
     assertThat(memberships()).hasNumberOfRows(1);
     assertThat(memberships())
@@ -95,15 +118,16 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
     OperadorId firstId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
     OperadorId secondId = firm(OTHER_MEMBER_FISCAL_ID, OTHER_MEMBER_NAME);
 
-    membershipRepository.upsert(new UteMembership(uteId, firstId));
-    membershipRepository.upsert(new UteMembership(uteId, secondId));
+    membershipRepository.upsert(new UteMembership(uteId, firstId, statedBy));
+    membershipRepository.upsert(new UteMembership(uteId, secondId, statedBy));
 
     assertThat(memberships()).hasNumberOfRows(2);
     // Asserted through the port rather than by row index: both members carry generated ids, whose
     // relative order is the database's business rather than anything this test set.
     assertThat(membershipRepository.findByUteIdAndWithdrawnFalse(uteId))
         .containsExactlyInAnyOrder(
-            new UteMembership(uteId, firstId), new UteMembership(uteId, secondId));
+            new UteMembership(uteId, firstId, statedBy),
+            new UteMembership(uteId, secondId, statedBy));
   }
 
   // Absorbed by the primary key rather than raising, which is what the ON CONFLICT is for: the
@@ -113,8 +137,8 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
     OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
     OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
 
-    membershipRepository.upsert(new UteMembership(uteId, memberId));
-    membershipRepository.upsert(new UteMembership(uteId, memberId));
+    membershipRepository.upsert(new UteMembership(uteId, memberId, statedBy));
+    membershipRepository.upsert(new UteMembership(uteId, memberId, statedBy));
 
     assertThat(memberships()).hasNumberOfRows(1);
   }
@@ -130,7 +154,7 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
                     new FiscalIdentifier("U88779475"), "UTE Ponte", RANK)));
     OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
 
-    membershipRepository.upsert(new UteMembership(uteId, memberId));
+    membershipRepository.upsert(new UteMembership(uteId, memberId, statedBy));
 
     assertThat(memberships()).hasNumberOfRows(1);
     assertThat(memberships())
@@ -146,14 +170,15 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
     OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
     OperadorId firstId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
     OperadorId secondId = firm(OTHER_MEMBER_FISCAL_ID, OTHER_MEMBER_NAME);
-    membershipRepository.upsert(new UteMembership(uteId, firstId));
-    membershipRepository.upsert(new UteMembership(uteId, secondId));
+    membershipRepository.upsert(new UteMembership(uteId, firstId, statedBy));
+    membershipRepository.upsert(new UteMembership(uteId, secondId, statedBy));
 
     assertThat(membershipRepository.findByUteIdAndWithdrawnFalse(uteId))
         .containsExactlyInAnyOrder(
-            new UteMembership(uteId, firstId), new UteMembership(uteId, secondId));
+            new UteMembership(uteId, firstId, statedBy),
+            new UteMembership(uteId, secondId, statedBy));
     assertThat(membershipRepository.findByOperadorIdAndWithdrawnFalse(firstId))
-        .containsExactly(new UteMembership(uteId, firstId));
+        .containsExactly(new UteMembership(uteId, firstId, statedBy));
   }
 
   // The storage half of the reachability predicate: a member firm whose only tie is a membership
@@ -163,11 +188,11 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
     OperadorId withdrawnUte = unidentifiedUte(CONSORTIUM_NAME);
     OperadorId visibleUte = unidentifiedUte("UTE Ría de Arousa");
     OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
-    membershipRepository.upsert(new UteMembership(withdrawnUte, memberId, true));
-    membershipRepository.upsert(new UteMembership(visibleUte, memberId));
+    membershipRepository.upsert(new UteMembership(withdrawnUte, memberId, statedBy, true));
+    membershipRepository.upsert(new UteMembership(visibleUte, memberId, statedBy));
 
     assertThat(membershipRepository.findByOperadorIdAndWithdrawnFalse(memberId))
-        .containsExactly(new UteMembership(visibleUte, memberId));
+        .containsExactly(new UteMembership(visibleUte, memberId, statedBy));
     assertThat(membershipRepository.findByUteIdAndWithdrawnFalse(withdrawnUte)).isEmpty();
     assertThat(memberships()).hasNumberOfRows(2);
   }
@@ -177,7 +202,7 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
     OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
     OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
     OperadorId strangerId = firm(OTHER_MEMBER_FISCAL_ID, OTHER_MEMBER_NAME);
-    membershipRepository.upsert(new UteMembership(uteId, memberId));
+    membershipRepository.upsert(new UteMembership(uteId, memberId, statedBy));
 
     assertThat(membershipRepository.findByOperadorIdAndWithdrawnFalse(strangerId)).isEmpty();
   }
@@ -188,12 +213,131 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
   void re_storing_withdrawn_membership_as_published_makes_it_visible_again() {
     OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
     OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
-    membershipRepository.upsert(new UteMembership(uteId, memberId, true));
+    membershipRepository.upsert(new UteMembership(uteId, memberId, statedBy, true));
 
-    membershipRepository.upsert(new UteMembership(uteId, memberId));
+    membershipRepository.upsert(new UteMembership(uteId, memberId, statedBy));
 
     assertThat(memberships()).hasNumberOfRows(1);
     assertThat(memberships()).row(0).value("withdrawn").isFalse();
+  }
+
+  // The reconciliation's ordinary case: the record restates the consortium with one member gone,
+  // and the statement this procedure no longer makes stops being shown without being erased.
+  @Test
+  void withdraws_the_statements_this_procedure_no_longer_makes() {
+    OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
+    OperadorId keptId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
+    OperadorId droppedId = firm(OTHER_MEMBER_FISCAL_ID, OTHER_MEMBER_NAME);
+    UteMembership kept = new UteMembership(uteId, keptId, statedBy);
+    membershipRepository.upsert(kept);
+    membershipRepository.upsert(new UteMembership(uteId, droppedId, statedBy));
+
+    membershipRepository.withdrawAbsent(statedBy, List.of(kept));
+
+    assertThat(memberships()).hasNumberOfRows(2);
+    assertThat(membershipRepository.findByUteIdAndWithdrawnFalse(uteId)).containsExactly(kept);
+    assertThat(membershipRepository.findByOperadorIdAndWithdrawnFalse(droppedId)).isEmpty();
+  }
+
+  // The consortium the record stopped publishing altogether: nothing is retained, so everything
+  // this procedure stated goes -- and the empty set is the ordinary case, not a caller's slip.
+  @Test
+  void withdraws_every_statement_when_the_record_publishes_no_consortium() {
+    OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
+    OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
+    membershipRepository.upsert(new UteMembership(uteId, memberId, statedBy));
+
+    membershipRepository.withdrawAbsent(statedBy, List.of());
+
+    assertThat(memberships()).hasNumberOfRows(1);
+    assertThat(membershipRepository.findByOperadorIdAndWithdrawnFalse(memberId)).isEmpty();
+  }
+
+  // The identified minority, and the reason licitacion_id is in the key: one UTE operador is
+  // published by two procedures, so a withdrawal at one must not hide what the other still states.
+  @Test
+  void withdrawal_at_one_procedure_leaves_what_another_still_states() throws Exception {
+    LicitacionId statedByAnother = licitacion("822055");
+    OperadorId uteId =
+        identityOf(
+            operadorRepository.insert(
+                OperadorEconomico.identifiedUte(
+                    new FiscalIdentifier("U88779475"), "UTE Ponte", RANK)));
+    OperadorId sharedId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
+    OperadorId onlyHereId = firm(OTHER_MEMBER_FISCAL_ID, OTHER_MEMBER_NAME);
+    membershipRepository.upsert(new UteMembership(uteId, sharedId, statedBy));
+    membershipRepository.upsert(new UteMembership(uteId, onlyHereId, statedBy));
+    membershipRepository.upsert(new UteMembership(uteId, sharedId, statedByAnother));
+
+    membershipRepository.withdrawAbsent(statedBy, List.of());
+
+    // The shared member stays reachable through the other procedure's statement; the one only this
+    // procedure ever made is gone, because now no procedure makes it.
+    assertThat(membershipRepository.findByOperadorIdAndWithdrawnFalse(sharedId))
+        .containsExactly(new UteMembership(uteId, sharedId, statedByAnother));
+    assertThat(membershipRepository.findByOperadorIdAndWithdrawnFalse(onlyHereId)).isEmpty();
+  }
+
+  // Withdrawal is not a rewrite: a re-import that changes nothing must leave rows it marked on an
+  // earlier run untouched, which is what makes an unchanged restatement observably free.
+  @Test
+  void withdrawing_twice_marks_nothing_the_second_time() {
+    OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
+    OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
+    membershipRepository.upsert(new UteMembership(uteId, memberId, statedBy));
+    assertThat(membershipRepository.withdrawAbsent(statedBy, List.of())).isOne();
+
+    // The count, not the row state, is what pins the NOT withdrawn guard: the table looks identical
+    // either way, and only "newly marked" tells a re-import that wrote nothing from one that
+    // rewrote every row it had already marked.
+    assertThat(membershipRepository.withdrawAbsent(statedBy, List.of())).isZero();
+    assertThat(memberships()).hasNumberOfRows(1);
+    assertThat(memberships()).row(0).value("withdrawn").isTrue();
+  }
+
+  /**
+   * A procedure for the memberships to be stated by. Raw SQL rather than the licitacións package's
+   * own fixture, which is package-private to it — three inserts is less than promoting a fixture
+   * across packages for one column's sake.
+   */
+  private LicitacionId licitacion(String publicationId) throws SQLException {
+    UUID organoId =
+        insertReturningId(
+            "INSERT INTO organo_contratacion (id, source_key, name, active)"
+                + " VALUES (uuidv7(), ?, ?, TRUE) RETURNING id",
+            "consorcio-" + publicationId,
+            "Consorcio " + publicationId);
+    // One state row for every procedure this class stores: the vocabulary is keyed on the code the
+    // source publishes, so a second insert of the same code is a duplicate rather than a fixture.
+    if (stateId == null) {
+      stateId =
+          insertReturningId(
+              "INSERT INTO licitacion_state (code, label) VALUES (?, ?) RETURNING id",
+              2,
+              "Adxudicado");
+    }
+    return new LicitacionId(
+        insertReturningId(
+            "INSERT INTO licitacion (publication_id, organo_id, state_id) VALUES (?, ?, ?)"
+                + " RETURNING id",
+            publicationId,
+            organoId,
+            stateId));
+  }
+
+  private UUID insertReturningId(String sql, Object... parameters) throws SQLException {
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement statement = connection.prepareStatement(sql)) {
+      for (int index = 0; index < parameters.length; index++) {
+        statement.setObject(index + 1, parameters[index]);
+      }
+      try (ResultSet rows = statement.executeQuery()) {
+        if (!rows.next()) {
+          throw new IllegalStateException("Insert did not return a generated id");
+        }
+        return rows.getObject("id", UUID.class);
+      }
+    }
   }
 
   private OperadorId unidentifiedUte(String name) {

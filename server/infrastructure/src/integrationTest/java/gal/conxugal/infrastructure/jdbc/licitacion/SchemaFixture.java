@@ -239,10 +239,20 @@ final class SchemaFixture {
   }
 
   /**
-   * A member firm of a consortium that bid. No {@code RETURNING id}: the table holds no such
-   * column, the pair being its whole identity, so this answers nothing.
+   * A member firm of a consortium that bid, as one procedure states it. No {@code RETURNING id}:
+   * the table holds no such column, the triple being its whole identity, so this answers nothing.
    */
-  void insertUteMembership(UUID uteId, UUID operadorId) throws SQLException {
+  void insertUteMembership(UUID uteId, UUID operadorId, UUID licitacionId) throws SQLException {
+    executeUpdate(
+        "INSERT INTO operador_ute_membership (ute_id, operador_economico_id, licitacion_id)"
+            + " VALUES (?, ?, ?)",
+        uteId,
+        operadorId,
+        licitacionId);
+  }
+
+  /** A membership with no procedure behind it, which exists only to be refused. */
+  void insertUteMembershipWithoutLicitacion(UUID uteId, UUID operadorId) throws SQLException {
     executeUpdate(
         "INSERT INTO operador_ute_membership (ute_id, operador_economico_id) VALUES (?, ?)",
         uteId,

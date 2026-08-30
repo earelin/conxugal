@@ -1,5 +1,7 @@
 package gal.conxugal.domain.operador;
 
+import gal.conxugal.domain.licitacion.LicitacionId;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -22,6 +24,28 @@ public interface UteMembershipRepository {
    * <p>Both operadores must already be stored.
    */
   void upsert(UteMembership membership);
+
+  /**
+   * Marks withdrawn every membership <strong>this procedure</strong> states and the given ones do
+   * not — the reconciliation of a consortium the record has restated, or dropped altogether.
+   *
+   * <p><strong>Scoped to the one procedure, which is the whole point.</strong> The rule is that a
+   * membership stops being visible when no visible bid of its UTE still publishes it, not when one
+   * procedure stops publishing it. A UTE the source identifies is one operador across every
+   * procedure naming it, so withdrawing what this procedure no longer states leaves what another
+   * still states visible, and the pair disappears from a reader's view only when the last statement
+   * of it does. For a UTE the source declines to identify every statement is this procedure's, so
+   * the same call withdraws the lot.
+   *
+   * <p>An <strong>empty</strong> retained set is the ordinary case rather than a caller's mistake:
+   * it is a procedure whose record no longer publishes the consortium at all, and every membership
+   * it stated goes.
+   *
+   * <p>A membership already withdrawn is left alone, so a re-import that changes nothing writes
+   * nothing here. Answers how many it <em>newly</em> marked, which is what lets a caller — a test
+   * above all — tell that apart from marking the same rows again.
+   */
+  int withdrawAbsent(LicitacionId licitacionId, Collection<UteMembership> retained);
 
   /**
    * The consortia this operador is <strong>visibly</strong> a member of — the memberships that

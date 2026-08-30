@@ -2,6 +2,7 @@ package gal.conxugal.domain.licitacion;
 
 import gal.conxugal.domain.operador.MatchableName;
 import gal.conxugal.domain.operador.OperadorId;
+import java.util.Collection;
 import java.util.Optional;
 
 /**
@@ -34,8 +35,8 @@ public interface ParticipationRepository {
   Participation upsert(Participation participation);
 
   /**
-   * The operador an <strong>identifier-less consortium</strong> of this procedure was catalogued
-   * as, where an earlier import of it already minted one under this name.
+   * The operador a <strong>consortium</strong> of this procedure was catalogued as, where an
+   * earlier import of it already catalogued one under this name.
    *
    * <p><strong>It exists because such an entry answers to nothing else.</strong> SPEC-0006 R3 keys
    * it on the bid it was published on, so it holds no fiscal identifier to be found by, and this
@@ -54,8 +55,53 @@ public interface ParticipationRepository {
    * consortium's bid and then re-imports the procedure would otherwise mint a second entry beside
    * the one it had just marked, leaving the procedure holding its consortium twice.
    *
-   * <p>Identified consortia are excluded: those are found by their fiscal identifier like any other
-   * operador, and matching one here on a name would be the merge R3 forbids.
+   * <p><strong>An identified entry answers too, and only the caller's order keeps that
+   * safe.</strong>
+   * A consortium the record identifies is resolved by its identifier before this is ever asked, so
+   * the only way to arrive here holding an identified entry is a record that has <em>stopped</em>
+   * publishing an identifier it published before. Minting a rival identifier-less entry for it
+   * would move the bid off the operador the award still names and leave the procedure holding its
+   * consortium twice — SPEC-0006 #40's failure, reached from the other direction. Answering with
+   * what this procedure already catalogued is what refuses that.
+   *
+   * <p>It is still not the merge R3 forbids: the join starts from <em>this</em> procedure's bids,
+   * so nothing outside it can be reached, and two procedures publishing a consortium under one name
+   * remain two operadores.
    */
   Optional<OperadorId> findConsortiumOperador(LicitacionId licitacionId, MatchableName name);
+
+  /**
+   * Marks withdrawn every bid of this procedure that {@code retained} does not name, on
+   * {@link LoteRepository#withdrawAbsent}'s rule and for its reasons. Answers how many it newly
+   * marked.
+   *
+   * <p>It sees a consortium's bid and a single firm's alike, so it is called once, after both have
+   * been written — a consortium whose identity moved between imports loses its old bid here, beside
+   * the ordinary bidder the record stopped naming.
+   */
+  int withdrawAbsent(LicitacionId licitacionId, Collection<ParticipationId> retained);
+
+  /**
+   * Sets each bid of this procedure to won or not, from the award points {@code winners} names.
+   *
+   * <p><strong>It only ever updates, and never writes a bid.</strong> An awardee that never bid is
+   * the ordinary case rather than the exception — the bidder table is absent on most records, and a
+   * name-derived awardee need not appear on this procedure at all — so upserting a winner would
+   * invent a participation the source never published, inflate the procedure's bidder count, and
+   * add a row on a re-import that is supposed to change nothing. A winner matching no bid marks
+   * nothing, which is the honest outcome.
+   *
+   * <p><strong>Every bid of the procedure is written, not only the winners</strong>, so a bid that
+   * stops winning is cleared by the same call. Withdrawn bids are included: one the source no
+   * longer publishes must not stay marked as the winner of anything.
+   *
+   * <p>An award naming no operador marks nothing, and must: an award nothing resolved names nobody,
+   * a bid whose identifier was unusable resolved to nobody, and two unidentified parties are not
+   * evidence of one. A withdrawn award marks nothing either — it is no longer an award this
+   * procedure makes.
+   *
+   * @param awards this procedure's awards, which is where the answer lives: which bid won is the
+   *     resolution table's to say and the bidder table has no opinion on it
+   */
+  void markWinners(LicitacionId licitacionId, Collection<Award> awards);
 }
