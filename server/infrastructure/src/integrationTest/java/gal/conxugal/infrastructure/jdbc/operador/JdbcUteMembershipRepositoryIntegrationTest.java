@@ -285,10 +285,12 @@ class JdbcUteMembershipRepositoryIntegrationTest implements TestPropertyProvider
     OperadorId uteId = unidentifiedUte(CONSORTIUM_NAME);
     OperadorId memberId = firm(MEMBER_FISCAL_ID, MEMBER_NAME);
     membershipRepository.upsert(new UteMembership(uteId, memberId, statedBy));
-    membershipRepository.withdrawAbsent(statedBy, List.of());
+    assertThat(membershipRepository.withdrawAbsent(statedBy, List.of())).isOne();
 
-    membershipRepository.withdrawAbsent(statedBy, List.of());
-
+    // The count, not the row state, is what pins the NOT withdrawn guard: the table looks identical
+    // either way, and only "newly marked" tells a re-import that wrote nothing from one that
+    // rewrote every row it had already marked.
+    assertThat(membershipRepository.withdrawAbsent(statedBy, List.of())).isZero();
     assertThat(memberships()).hasNumberOfRows(1);
     assertThat(memberships()).row(0).value("withdrawn").isTrue();
   }

@@ -119,6 +119,16 @@ case sees one procedure at a time and knows nothing about the Órgano's history 
 - **The awardee gate is applied before the operador is reached**, not after. Deciding the route
   first and resolving second is what keeps a refused write from cataloguing an operador, or
   promoting a name, on the strength of a link no stored award ends up holding.
+- **A consortium's identity does not move backwards either.** The scope above names the forward
+  case — the source starts identifying a consortium it declined to identify — and the reverse turned
+  out to be reachable by exactly the event the awardee gate exists for: a formalisation withdrawn at
+  the source. Left alone, the identifier-less branch would mint a *second* entry beside the
+  identified one this procedure already bid as, the bid would move to it while the gated award
+  stayed on the old, and the procedure would hold its consortium twice — SPEC-0006 #40's failure,
+  reached from the other direction, with the `won` marker silently cleared as a side effect. So the
+  per-procedure lookup answers with whatever this procedure already catalogued, identified or not,
+  and prefers the identified entry where both exist. That is still not R3's forbidden merge: the
+  lookup joins from this procedure's own bids and can reach nothing outside it.
 
 ## Acceptance criteria
 

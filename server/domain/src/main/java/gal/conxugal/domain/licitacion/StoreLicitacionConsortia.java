@@ -247,9 +247,22 @@ public class StoreLicitacionConsortia {
 
   /**
    * The catalogue entry this consortium is. Identified, it is an ordinary operador found by its
-   * identifier and marked as a UTE; unidentified, it is the entry this procedure minted — found
-   * again through its own bid where an earlier import already made one, and minted here where none
-   * did.
+   * identifier and marked as a UTE; unidentified, it is the entry this procedure already
+   * catalogued — found again through its own bid — and minted here only where there is none.
+   *
+   * <p><strong>The lookup does not care whether the entry it finds holds an identifier</strong>,
+   * which is what keeps a consortium's identity from moving <em>backwards</em>. A record that
+   * stops publishing the identifier it published before — a formalisation withdrawn at the source,
+   * which is precisely the event the awardee gate exists to survive — would otherwise mint a
+   * second, identifier-less entry beside the identified one this procedure already bid as. The bid
+   * would move to the new entry while the award, gated on its published route, stayed on the old:
+   * the procedure holding its consortium twice, which SPEC-0006 #40 forbids however it came about.
+   * Reusing the entry keeps bid and award on one operador, and its members with them.
+   *
+   * <p>That is not the merge R3 forbids, because the lookup cannot reach beyond this procedure: it
+   * joins from <em>this</em> procedure's own bids, so the only entry it can answer with is one this
+   * procedure already catalogued under this name. Identity still never moves — the entry that was
+   * identified stays identified, and this restatement simply declines to invent a rival for it.
    */
   private OperadorId catalogue(
       LicitacionId licitacionId,

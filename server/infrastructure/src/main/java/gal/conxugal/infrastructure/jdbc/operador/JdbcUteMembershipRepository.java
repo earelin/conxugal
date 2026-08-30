@@ -95,7 +95,7 @@ public abstract class JdbcUteMembershipRepository
 
   @Override
   @Transactional
-  public void withdrawAbsent(LicitacionId licitacionId, Collection<UteMembership> retained) {
+  public int withdrawAbsent(LicitacionId licitacionId, Collection<UteMembership> retained) {
     Objects.requireNonNull(licitacionId, "licitacionId must not be null");
     Objects.requireNonNull(retained, "retained must not be null");
     UUID[] utes = new UUID[retained.size()];
@@ -106,7 +106,7 @@ public abstract class JdbcUteMembershipRepository
       members[index] = membership.operadorId().value();
       index++;
     }
-    jdbcOperations.prepareStatement(WITHDRAW_ABSENT, statement -> {
+    return jdbcOperations.prepareStatement(WITHDRAW_ABSENT, statement -> {
       statement.setObject(1, licitacionId.value());
       statement.setArray(2, statement.getConnection().createArrayOf("uuid", utes));
       statement.setArray(3, statement.getConnection().createArrayOf("uuid", members));

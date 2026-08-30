@@ -277,6 +277,32 @@ class StoreLicitacionConsortiaTest {
     assertThat(theBidsStored()).extracting(Participation::operadorEconomicoId).containsOnly(ute);
   }
 
+  // The bids are handed back rather than reconciled here, because they are half of one table
+  // StoreLicitacionBidders writes the other half of. A caller that could not see them would have to
+  // reconcile half a table against itself and withdraw every single-firm bid on the procedure.
+  //
+  // What it hands back is the *stored* bid rather than the one passed in, which is the half that
+  // matters: reconciliation withdraws by identity, and the identity is what the store assigns.
+  @Test
+  void answers_the_stored_bids_so_the_bidder_table_is_reconciled_once() {
+    theStoreCataloguesOnDemand();
+    Lote first = storedLote("1");
+    Lote second = storedLote("2");
+
+    StoredConsortia stored =
+        stored(
+            List.of(first, second),
+            List.of(
+                consortium("1", UTE, null, member(PRACE, PRACE_ID)),
+                consortium("2", UTE, null, member(PRACE, PRACE_ID))),
+            List.of());
+
+    assertThat(stored.bids())
+        .extracting(Participation::loteId)
+        .containsExactly(first.id(), second.id());
+    assertThat(stored.bids()).allSatisfy(bid -> assertThat(bid.id()).isNotNull());
+  }
+
   // The distinct-ends CHECK and UteMembership's own constructor both refuse a consortium that is
   // its own member, and either would abort the whole procedure's import rather than lose one row.
   // The guard is what keeps a member republishing the consortium's identifier from reaching them.

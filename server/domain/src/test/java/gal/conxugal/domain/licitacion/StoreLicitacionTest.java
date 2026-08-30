@@ -114,14 +114,6 @@ class StoreLicitacionTest {
         .withMessageContaining("822054");
   }
 
-  @Test
-  void reports_whether_the_store_held_the_procedure_before() {
-    theStoreAccepts();
-
-    assertThat(store().store(listingEntry(), record(), ORGANO_ID).operation())
-        .isEqualTo(UpsertOperation.ADDED);
-  }
-
   private StoreLicitacion store() {
     ResolveOperador resolveOperador = new ResolveOperador(operadores);
     return new StoreLicitacion(

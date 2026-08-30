@@ -559,11 +559,13 @@ class StoreLicitacionAwardsTest {
   }
 
   // The same rule one step down the order: a bid published the identifier, and a later record that
-  // can only match a name does not get to replace it with an inference.
+  // can only match a name does not get to replace it with an inference — even where the name
+  // reaches a different operador, which is the only reading under which the gate is doing anything.
   @Test
   void name_derived_route_does_not_replace_link_the_bidder_list_published() {
     theStoreAcceptsEveryAward();
     OperadorEconomico published = catalogueHolds(EQUINSE_ID, EQUINSE);
+    OperadorId wouldBeDerived = theCatalogueHoldsOneOperadorNamed();
     theStoreAlreadyHolds(
         storedAward(null, published.id(), AwardeeResolutionPath.PUBLISHED_BY_BIDDER));
 
@@ -572,9 +574,41 @@ class StoreLicitacionAwardsTest {
     assertThat(stored)
         .singleElement()
         .satisfies(
-            award ->
-                assertThat(award.awardeeResolutionPath())
-                    .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_BIDDER));
+            award -> {
+              assertThat(award.operadorEconomicoId())
+                  .isEqualTo(published.id())
+                  .isNotEqualTo(wouldBeDerived);
+              assertThat(award.awardeeResolutionPath())
+                  .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_BIDDER);
+            });
+  }
+
+  // The gate's own boundary: an equal route still writes, so a restatement that reaches a different
+  // party by the same route repoints the award rather than being frozen by what is stored.
+  @Test
+  void equal_route_still_writes_so_the_award_follows_what_the_record_now_publishes() {
+    theStoreCataloguesOnDemand();
+    OperadorEconomico wasAwarded = catalogueHolds(XESTION_ID, XESTION);
+    theStoreAlreadyHolds(
+        storedAward(null, wasAwarded.id(), AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION));
+
+    List<Award> stored =
+        store(
+            List.of(),
+            List.of(award(null, EQUINSE)),
+            List.of(formalisation(null, EQUINSE, EQUINSE_ID)),
+            List.of());
+
+    assertThat(stored)
+        .singleElement()
+        .satisfies(
+            award -> {
+              assertThat(award.operadorEconomicoId())
+                  .isEqualTo(catalogued(EQUINSE_ID).id())
+                  .isNotEqualTo(wasAwarded.id());
+              assertThat(award.awardeeResolutionPath())
+                  .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION);
+            });
   }
 
   // A refused write catalogues nothing and promotes no name: the gate is applied before the

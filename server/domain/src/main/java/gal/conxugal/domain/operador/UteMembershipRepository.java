@@ -42,9 +42,10 @@ public interface UteMembershipRepository {
    * it stated goes.
    *
    * <p>A membership already withdrawn is left alone, so a re-import that changes nothing writes
-   * nothing here.
+   * nothing here. Answers how many it <em>newly</em> marked, which is what lets a caller — a test
+   * above all — tell that apart from marking the same rows again.
    */
-  void withdrawAbsent(LicitacionId licitacionId, Collection<UteMembership> retained);
+  int withdrawAbsent(LicitacionId licitacionId, Collection<UteMembership> retained);
 
   /**
    * The consortia this operador is <strong>visibly</strong> a member of — the memberships that

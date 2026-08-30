@@ -35,8 +35,8 @@ public interface ParticipationRepository {
   Participation upsert(Participation participation);
 
   /**
-   * The operador an <strong>identifier-less consortium</strong> of this procedure was catalogued
-   * as, where an earlier import of it already minted one under this name.
+   * The operador a <strong>consortium</strong> of this procedure was catalogued as, where an
+   * earlier import of it already catalogued one under this name.
    *
    * <p><strong>It exists because such an entry answers to nothing else.</strong> SPEC-0006 R3 keys
    * it on the bid it was published on, so it holds no fiscal identifier to be found by, and this
@@ -55,8 +55,18 @@ public interface ParticipationRepository {
    * consortium's bid and then re-imports the procedure would otherwise mint a second entry beside
    * the one it had just marked, leaving the procedure holding its consortium twice.
    *
-   * <p>Identified consortia are excluded: those are found by their fiscal identifier like any other
-   * operador, and matching one here on a name would be the merge R3 forbids.
+   * <p><strong>An identified entry answers too, and only the caller's order keeps that
+   * safe.</strong>
+   * A consortium the record identifies is resolved by its identifier before this is ever asked, so
+   * the only way to arrive here holding an identified entry is a record that has <em>stopped</em>
+   * publishing an identifier it published before. Minting a rival identifier-less entry for it
+   * would move the bid off the operador the award still names and leave the procedure holding its
+   * consortium twice — SPEC-0006 #40's failure, reached from the other direction. Answering with
+   * what this procedure already catalogued is what refuses that.
+   *
+   * <p>It is still not the merge R3 forbids: the join starts from <em>this</em> procedure's bids,
+   * so nothing outside it can be reached, and two procedures publishing a consortium under one name
+   * remain two operadores.
    */
   Optional<OperadorId> findConsortiumOperador(LicitacionId licitacionId, MatchableName name);
 

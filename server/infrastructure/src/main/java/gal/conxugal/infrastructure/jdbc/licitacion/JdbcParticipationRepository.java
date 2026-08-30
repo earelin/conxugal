@@ -61,9 +61,8 @@ public abstract class JdbcParticipationRepository
           ON operador_economico.id = licitacion_participation.operador_economico_id
        WHERE licitacion_participation.licitacion_id = ?::uuid
          AND operador_economico.ute
-         AND operador_economico.fiscal_id IS NULL
          AND %s = ?::text
-       ORDER BY operador_economico.id
+       ORDER BY operador_economico.fiscal_id IS NULL, operador_economico.id
        LIMIT 1
       """
           .formatted(NameFold.of("operador_economico.name"));
@@ -85,18 +84,29 @@ public abstract class JdbcParticipationRepository
    * catalogue. The operador is compared with {@code =} on purpose: two nulls are two parties
    * nothing identified, not one party.
    *
-   * <p>Every row is written rather than only the winners, so a bid that stops winning is cleared by
-   * the same statement, and empty arrays clear the procedure outright.
+   * <p>Every row is <em>considered</em> rather than only the winners, so a bid that stops winning is
+   * cleared by the same statement and empty arrays clear the procedure outright — but only the rows
+   * whose marker actually moves are written. {@code IS DISTINCT FROM} against the computed value is
+   * what makes a re-import that changes nothing cost no rows here, on the {@code NOT withdrawn}
+   * guard's reasoning; the predicate is computed once in the CTE rather than repeated in the filter,
+   * so the two can never drift apart.
    */
   private static final String MARK_WINNERS =
       """
+      WITH marked AS (
+          SELECT bid.id,
+              EXISTS (
+                  SELECT 1
+                  FROM unnest(?::uuid[], ?::uuid[]) AS winner(lote_id, operador_economico_id)
+                  WHERE winner.lote_id IS NOT DISTINCT FROM bid.lote_id
+                      AND winner.operador_economico_id = bid.operador_economico_id) AS won
+          FROM licitacion_participation AS bid
+          WHERE bid.licitacion_id = ?::uuid)
       UPDATE licitacion_participation AS bid
-      SET won = EXISTS (
-          SELECT 1
-          FROM unnest(?::uuid[], ?::uuid[]) AS winner(lote_id, operador_economico_id)
-          WHERE winner.lote_id IS NOT DISTINCT FROM bid.lote_id
-              AND winner.operador_economico_id = bid.operador_economico_id)
-      WHERE bid.licitacion_id = ?::uuid
+      SET won = marked.won
+      FROM marked
+      WHERE marked.id = bid.id
+          AND bid.won IS DISTINCT FROM marked.won
       """;
 
   private final JdbcOperations jdbcOperations;
@@ -143,12 +153,18 @@ public abstract class JdbcParticipationRepository
    * reasoning: a reconciliation that withdraws the bid and then re-imports the procedure must find
    * the same entry rather than mint a second beside it.
    *
-   * <p><strong>The order is explicit under the {@code LIMIT}</strong>, though the invariant says
-   * there is at most one row to order. Nothing in the schema enforces that invariant — it rests on
-   * this lookup and on one import running at a time — so the day it does break, an unordered limit
-   * would pick a different duplicate on different runs and leave two imports disagreeing about
-   * which operador the procedure's consortium is. Ordered, the degraded case is at least stable
-   * and diagnosable.
+   * <p><strong>An identified entry is preferred over an identifier-less one</strong>, which is what
+   * {@code fiscal_id IS NULL} leading the sort buys. The caller only asks when the record itself
+   * published no identifier, so both kinds can be present only where an earlier import identified
+   * the consortium and this one no longer does; answering with the identified entry keeps the bid
+   * on the operador the award still names.
+   *
+   * <p><strong>The rest of the order is explicit under the {@code LIMIT}</strong>, though the
+   * invariant says there is at most one row of each kind to order. Nothing in the schema enforces
+   * that invariant — it rests on this lookup and on one import running at a time — so the day it
+   * does break, an unordered limit would pick a different duplicate on different runs and leave two
+   * imports disagreeing about which operador the procedure's consortium is. Ordered, the degraded
+   * case is at least stable and diagnosable.
    */
   @Override
   @Transactional

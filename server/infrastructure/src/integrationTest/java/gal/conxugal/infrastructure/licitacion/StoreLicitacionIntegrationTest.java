@@ -277,16 +277,60 @@ class StoreLicitacionIntegrationTest implements TestPropertyProvider {
 
   // The gate: a formalisation withdrawn at the source is not evidence that the identifier it
   // published was wrong, so the published link survives a record whose routing answers lower.
+  //
+  // A second operador is catalogued under the same published name first, so the restatement's name
+  // match is ambiguous and reaches nobody. Without the gate the award would be stored naming
+  // nobody, which is what makes the operador assertion below bite rather than restate the setup.
   @Test
   void restatement_that_would_lower_the_resolution_path_does_not_write() throws Exception {
+    store(listingFor("822055"), biddersOnlyRecordFor("822055", EQUINSE, CORRECTED_ID));
     store(listing(), awardOnlyRecord(EQUINSE, List.of(formalisation(null, EQUINSE, EQUINSE_ID))));
     UUID published = awardeeOf("822054");
+    assertThat(published).isEqualTo(operadorIdOf(EQUINSE_ID));
 
     store(listing(), awardOnlyRecord(EQUINSE, List.of()));
 
     assertThat(awardPathOf("822054"))
         .isEqualTo(AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION.name());
     assertThat(awardeeOf("822054")).isEqualTo(published);
+  }
+
+  // The consortium case TASK-0013's ordering argument does not cover: a procedure moving to
+  // formalizado publishes an identifier the first import had nowhere to read. The old entry is
+  // withdrawn out of visibility, never folded into the new -- ADR-0023 forbids re-partitioning it.
+  @Test
+  void consortium_the_source_starts_identifying_is_catalogued_afresh_and_never_merged()
+      throws Exception {
+    store(listing(), consortiumRecord(null));
+    UUID minted = operadorIdOfIdentifierLessUte();
+
+    store(listing(), consortiumRecord(UTE_ID));
+
+    UUID identified = operadorIdOf(UTE_ID);
+    assertThat(identified).isNotEqualTo(minted);
+    // Both entries survive -- nothing merges them -- but only the identified one is still bid as.
+    assertThat(rowCount("operador_economico WHERE ute")).isEqualTo(2);
+    assertThat(visibleBidders("822054")).containsExactly(identified);
+    assertThat(visibleMembersOf(minted)).isEmpty();
+    assertThat(visibleMembersOf(identified))
+        .containsExactlyInAnyOrder(operadorIdOf(PRACE_ID), operadorIdOf(TABOADA_ID));
+  }
+
+  // And the reverse, which is the same event the awardee gate exists for: the record stops
+  // publishing the identifier it published before. Minting a rival entry would leave the bid on one
+  // operador and the award on another -- the procedure holding its consortium twice.
+  @Test
+  void consortium_the_source_stops_identifying_keeps_the_entry_it_was_catalogued_under()
+      throws Exception {
+    store(listing(), consortiumAwardRecord(UTE_ID));
+    UUID identified = operadorIdOf(UTE_ID);
+
+    store(listing(), consortiumAwardRecord(null));
+
+    assertThat(rowCount("operador_economico WHERE ute")).isOne();
+    assertThat(visibleBidders("822054")).containsExactly(identified);
+    assertThat(awardeeOf("822054")).isEqualTo(identified);
+    assertThat(wonBidders("822054")).containsExactly(identified);
   }
 
   // R14: absence at the source is not evidence of withdrawal, so a procedure a later run never
@@ -302,6 +346,10 @@ class StoreLicitacionIntegrationTest implements TestPropertyProvider {
     assertThat(procedureColumns("822054")).isEqualTo(before);
     assertThat(one("SELECT withdrawn::text AS v FROM licitacion WHERE publication_id = '822054'"))
         .isEqualTo("false");
+    // And its children with it. Every withdrawal is one statement shared by six tables, so a
+    // predicate that lost its licitacion_id would withdraw this procedure's whole record while
+    // storing the other -- silently, and invisibly to any assertion that reads only the aggregate.
+    assertThat(withdrawnChildrenOf("822054")).isZero();
   }
 
   // One transaction: an award naming a lote the record does not publish fails the procedure, and
@@ -342,7 +390,28 @@ class StoreLicitacionIntegrationTest implements TestPropertyProvider {
             List.of()));
 
     assertThat(rowCount("licitacion_participation")).isEqualTo(2);
-    assertThat(wonBidders()).containsExactly(operadorIdOf(EQUINSE_ID));
+    assertThat(wonBidders("822054")).containsExactly(operadorIdOf(EQUINSE_ID));
+  }
+
+  // The marker is set procedure by procedure. Unscoped, one import would clear every other
+  // procedure's winners -- which no single-procedure test can see.
+  @Test
+  void marking_one_procedures_winner_leaves_another_procedures_alone() throws Exception {
+    List<PublishedBidder> bidders =
+        List.of(singleFirm(null, EQUINSE, EQUINSE_ID), singleFirm(null, PLUSMER, PLUSMER_ID));
+    store(
+        listing(),
+        recordOf("Servizo", List.of(), List.of(award(null, EQUINSE)), bidders,
+            List.of(formalisation(null, EQUINSE, EQUINSE_ID)), List.of(), List.of()));
+    organoId = new OrganoId(insertOrgano("outro-organo"));
+
+    store(
+        listingFor("822055"),
+        recordOf("822055", "Outro servizo", List.of(), List.of(award(null, PLUSMER)), bidders,
+            List.of(formalisation(null, PLUSMER, PLUSMER_ID)), List.of(), List.of()));
+
+    assertThat(wonBidders("822054")).containsExactly(operadorIdOf(EQUINSE_ID));
+    assertThat(wonBidders("822055")).containsExactly(operadorIdOf(PLUSMER_ID));
   }
 
   // A bid that stops winning is cleared by the same pass, so the marker follows the resolution
@@ -361,7 +430,7 @@ class StoreLicitacionIntegrationTest implements TestPropertyProvider {
         recordOf("Servizo", List.of(), List.of(award(null, PLUSMER)), bidders,
             List.of(formalisation(null, PLUSMER, PLUSMER_ID)), List.of(), List.of()));
 
-    assertThat(wonBidders()).containsExactly(operadorIdOf(PLUSMER_ID));
+    assertThat(wonBidders("822054")).containsExactly(operadorIdOf(PLUSMER_ID));
   }
 
   private UpsertOutcome store(LicitacionListingEntry entry, LicitacionRecord record) {
@@ -454,12 +523,32 @@ class StoreLicitacionIntegrationTest implements TestPropertyProvider {
 
   /** A procedure that only catalogues its bidders, so a later name match has something to find. */
   private static LicitacionRecord biddersOnlyRecordFor(String publicationId) {
+    return biddersOnlyRecordFor(publicationId, PLUSMER, PLUSMER_ID);
+  }
+
+  private static LicitacionRecord biddersOnlyRecordFor(
+      String publicationId, String name, FiscalIdentifier fiscalIdentifier) {
     return recordOf(
         publicationId,
         "Outro servizo",
         List.of(),
         List.of(),
-        List.of(singleFirm(null, PLUSMER, PLUSMER_ID)),
+        List.of(singleFirm(null, name, fiscalIdentifier)),
+        List.of(),
+        List.of(),
+        List.of());
+  }
+
+  /** One consortium that bid and won, so bid and award have to agree about which operador it is. */
+  private static LicitacionRecord consortiumAwardRecord(
+      @Nullable FiscalIdentifier uteIdentifier) {
+    return recordOf(
+        "Obra",
+        List.of(),
+        List.of(award(null, UTE)),
+        List.of(
+            new PublishedBidder.Consortium(
+                null, UTE, uteIdentifier, List.of(member(PRACE, PRACE_ID)))),
         List.of(),
         List.of(),
         List.of());
@@ -567,9 +656,45 @@ class StoreLicitacionIntegrationTest implements TestPropertyProvider {
             publicationId));
   }
 
-  private static List<UUID> wonBidders() throws SQLException {
+  /** Scoped to one procedure, so a statement that lost its own scoping is visible as a failure. */
+  private static List<UUID> wonBidders(String publicationId) throws SQLException {
     return uuids(
-        "SELECT operador_economico_id::text AS v FROM licitacion_participation WHERE won");
+        "SELECT p.operador_economico_id::text AS v FROM licitacion_participation p"
+            + " JOIN licitacion l ON l.id = p.licitacion_id"
+            + " WHERE p.won AND l.publication_id = ?",
+        publicationId);
+  }
+
+  /** How many of this procedure's children carry the withdrawal marker, across all six tables. */
+  private static int withdrawnChildrenOf(String publicationId) throws SQLException {
+    int withdrawn = 0;
+    for (String table :
+        List.of(
+            "licitacion_lote",
+            "licitacion_cpv",
+            "licitacion_nut",
+            "licitacion_award",
+            "licitacion_formalisation",
+            "licitacion_participation")) {
+      withdrawn +=
+          Integer.parseInt(
+              one(
+                  "SELECT count(*)::text AS v FROM %s c JOIN licitacion l"
+                      .formatted(table)
+                      + " ON l.id = c.licitacion_id WHERE c.withdrawn AND l.publication_id = ?",
+                  publicationId));
+    }
+    return withdrawn;
+  }
+
+  /** The operadores this procedure still visibly holds a bid for. */
+  private static List<UUID> visibleBidders(String publicationId) throws SQLException {
+    return uuids(
+        "SELECT DISTINCT p.operador_economico_id::text AS v FROM licitacion_participation p"
+            + " JOIN licitacion l ON l.id = p.licitacion_id"
+            + " WHERE NOT p.withdrawn AND p.operador_economico_id IS NOT NULL"
+            + " AND l.publication_id = ?",
+        publicationId);
   }
 
   private static List<UUID> visibleMembersOf(UUID uteId) throws SQLException {
