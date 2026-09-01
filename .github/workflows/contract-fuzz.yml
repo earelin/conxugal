@@ -53,17 +53,19 @@ jobs:
         with:
           persist-credentials: false
 
+      # setup-java takes the distribution from .tool-versions' vendor prefix
+      # (temurin-25.0.4); this input is only the fallback if that prefix is dropped.
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
-          java-version: "25"
+          java-version-file: .tool-versions
 
       # ./gradlew :application:dockerBuild also runs the UI's npm build (server/application/build.gradle.kts).
       # working-directory does not apply to a `uses:` step, so these paths are
       # relative to the repository root.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: ui/package.json
+          node-version-file: .tool-versions
           cache: npm
           cache-dependency-path: ui/package-lock.json
 

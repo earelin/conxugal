@@ -13,13 +13,16 @@ Governing decisions: [ADR-0003](../docs/architecture/0003-react-router-ui-served
 
 ## Requirements
 
-- Node.js 20+ (developed against Node 24)
+- Node.js — pinned in the repo-root [`.tool-versions`](../.tool-versions) and installed
+  with `mise install` ([ADR-0026](../docs/architecture/0026-pinned-toolchain-with-mise.md))
 - npm
 
 ## Getting started
 
+Dependencies are installed by the repo-root `scripts/setup-dev-env.sh`; `npm ci` from here
+does the same thing on its own.
+
 ```bash
-npm install
 npm run api:up     # start the stubbed API (WireMock, http://localhost:8081)
 npm run dev        # start the dev server (http://localhost:5173)
 ```

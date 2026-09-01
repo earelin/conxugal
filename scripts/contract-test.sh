@@ -40,7 +40,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
+cd "$ROOT" || exit 1
 
 OPENAPI_DOC="docs/api/openapi.yaml"
 CONFIG_FILE="schemathesis.toml"

@@ -105,8 +105,8 @@ bump that one property rather than pinning individual library versions.
 first: `npmCi` → `npmBuild` → `copyUiDist` in `application/build.gradle.kts` run the
 `ui/` module's own `npm ci` and `npm run build`, then copy `ui/dist` onto the runtime
 classpath under `public/`, where `micronaut.router.static-resources` picks it up. **The
-server build therefore needs Node**, not just a JVM — the version is pinned in
-`ui/package.json`'s `volta.node`, which CI's `setup-node` reads — and a UI source change
+server build therefore needs Node**, not just a JVM — the version is pinned in the
+repo-root `.tool-versions`, which CI's `setup-node` reads — and a UI source change
 reaches the next server build with no manual `npm run build`.
 
 Two things here are load-bearing and easy to undo:
