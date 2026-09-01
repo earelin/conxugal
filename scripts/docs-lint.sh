@@ -14,7 +14,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
+cd "$ROOT" || exit 1
 
 # Markdown to lint: everything under docs/ plus root-level docs. Kept explicit so
 # ui/ and server/ (and their node_modules/build output) are never scanned.
@@ -35,7 +35,7 @@ have()    { command -v "$1" >/dev/null 2>&1; }
 lint_markdown() {
   section "Markdown format (markdownlint-cli2)"
   if ! have markdownlint-cli2; then
-    printf '%sSKIP%s markdownlint-cli2 not found — install with: npm i -g markdownlint-cli2\n' "$yellow" "$reset"
+    printf '%sSKIP%s markdownlint-cli2 not found — run: mise install\n' "$yellow" "$reset"
     FAILED+=("markdown-format (tool missing)")
     return
   fi
@@ -51,7 +51,7 @@ lint_markdown() {
 lint_links() {
   section "Internal links (lychee --offline)"
   if ! have lychee; then
-    printf '%sSKIP%s lychee not found — install from https://lychee.cli.rs (brew install lychee)\n' "$yellow" "$reset"
+    printf '%sSKIP%s lychee not found — run: mise install (https://lychee.cli.rs)\n' "$yellow" "$reset"
     FAILED+=("internal-links (tool missing)")
     return
   fi
@@ -76,13 +76,13 @@ lint_mermaid() {
   elif have npx; then
     maid=(npx -y @probelabs/maid)
   else
-    printf '%sSKIP%s maid not found — install with: npm i -g @probelabs/maid\n' "$yellow" "$reset"
+    printf '%sSKIP%s maid not found — run: mise install\n' "$yellow" "$reset"
     FAILED+=("mermaid (tool missing)")
     return
   fi
 
   # maid exits 0 when there are no diagrams, so an empty doc set is a pass.
-  if "${maid[@]}" docs *.md; then
+  if "${maid[@]}" docs ./*.md; then
     printf '%sOK%s mermaid diagrams\n' "$green" "$reset"
   else
     printf '%sFAIL%s mermaid diagrams\n' "$red" "$reset"

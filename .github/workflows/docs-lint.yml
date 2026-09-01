@@ -9,6 +9,7 @@ on:
       - ".markdownlint.jsonc"
       - "scripts/docs-lint.sh"
       - ".github/workflows/docs-lint.yml"
+      - ".tool-versions"
   push:
     branches: [trunk]
     paths:
@@ -17,6 +18,7 @@ on:
       - ".markdownlint.jsonc"
       - "scripts/docs-lint.sh"
       - ".github/workflows/docs-lint.yml"
+      - ".tool-versions"
 
 permissions:
   contents: read
@@ -29,22 +31,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      # node is installed because markdownlint-cli2 and maid come from the npm backend.
+      # install_args keeps the JDK out of this job.
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
-          node-version: "24"
-
-      # Deliberately unlocked: these are throwaway linters on a runner that holds
-      # no secrets, and pinning them would be a bump obligation Dependabot cannot see.
-      - name: Install markdownlint-cli2 and maid
-        run: | # zizmor: ignore[adhoc-packages]
-          npm install -g markdownlint-cli2 @probelabs/maid
-
-      - name: Install lychee
-        run: |
-          curl -fsSL "https://github.com/lycheeverse/lychee/releases/latest/download/lychee-x86_64-unknown-linux-gnu.tar.gz" \
-            | tar -xz -C "$RUNNER_TEMP"
-          mv "$RUNNER_TEMP"/lychee-x86_64-unknown-linux-gnu/lychee "$RUNNER_TEMP"/lychee
-          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+          version: "2026.8.16"
+          install_args: node lychee npm:markdownlint-cli2 npm:@probelabs/maid
 
       - name: Run docs-lint.sh
         run: scripts/docs-lint.sh
