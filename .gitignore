@@ -1,5 +1,9 @@
 .attach_pid*
 .claude/worktrees/
 .jdtls-workspace/
+.mise.*.local.toml
+.mise.local.toml
+.mise/*.local.toml
 .vscode
-
+mise.*.local.toml
+mise.local.toml

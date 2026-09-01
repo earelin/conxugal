@@ -13,12 +13,17 @@ Java 25, PostgreSQL), [ADR-0002](../docs/architecture/0002-hexagonal-architectur
 
 ## Requirements
 
-- **Java 25** — the toolchain is pinned in `build.gradle.kts` and auto-provisioned by
-  Gradle if not installed, so no manual JDK setup is required.
+- **Java 25** — installed by mise from the repo-root
+  [`.tool-versions`](../.tool-versions)
+  ([ADR-0026](../docs/architecture/0026-pinned-toolchain-with-mise.md)). This build applies
+  no toolchain resolver, so Gradle cannot auto-provision a JDK: run `mise install` first.
+  `gradle.properties` adds `JAVA_HOME` to Gradle's toolchain candidates, so a
+  mise-activated shell resolves the toolchain. Launched without mise on the environment
+  (from an IDE, say), Gradle finds no JDK 25 and fails rather than downloading one.
 - **PostgreSQL** — the datastore ([ADR-0001](../docs/architecture/0001-backend-stack.md)).
 - **Node.js and npm** — `./gradlew build` also builds the UI it serves
   ([ADR-0003](../docs/architecture/0003-react-router-ui-served-by-backend.md)), so a
-  JVM alone is not enough. The version is pinned in `../ui/package.json`.
+  JVM alone is not enough. The version is pinned at the repo root, not in `../ui/`.
 
 ## Getting started
 

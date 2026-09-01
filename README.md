@@ -42,10 +42,35 @@ Galicia, publicada en [contratosdegalicia.gal](https://www.contratosdegalicia.ga
 
 ## Requisitos
 
-- **Java 25** (o toolchain provisiónao Gradle automaticamente se non está instalado).
-- **Node.js 20+** e **npm** (desenvolvido con Node 24).
-- **PostgreSQL** como almacenamento
-  ([ADR-0001](docs/architecture/0001-backend-stack.md)).
+- **[mise](https://mise.jdx.dev)**, que instala **todo o demais**: o JDK, Node e as
+  ferramentas dos portos de calidade. As versións de todo o repo están en
+  [`.tool-versions`](.tool-versions)
+  ([ADR-0026](docs/architecture/0026-pinned-toolchain-with-mise.md)).
+- **Docker** con `docker compose` v2 — o único que mise non fornece. Precísano
+  PostgreSQL ([ADR-0001](docs/architecture/0001-backend-stack.md)), as probas de
+  integración e de aceptación, e as de contrato
+  ([ADR-0021](docs/architecture/0021-openapi-contract-testing-with-schemathesis.md)).
+
+Instala mise, engade o seu *hook* ao teu ficheiro de arranque da shell e corre o script
+de posta a punto:
+
+```bash
+echo 'eval "$(mise activate zsh)"' >> ~/.zshrc   # ou bash, fish...
+./scripts/setup-dev-env.sh
+```
+
+Fai `mise install`, instala as dependencias de npm e comproba que as ferramentas que
+responden no `PATH` son as fixadas e non outras que teñas instaladas.
+
+Se vés do contorno anterior, o script marcará como `shadowed` todo o que resolva a unha
+copia allea: as de `brew` (`lychee`, `actionlint`, `shellcheck`, `zizmor`, `vacuum`), as de
+`npm i -g` (`markdownlint-cli2`, `maid`) e —sobre todo— **Volta** e **SDKMAN**, que tiña
+que ter todo o mundo porque o pin de Node vivía en `ui/package.json`. Non fai falta
+desinstalalos: abonda con poñer o `eval` de mise *despois* deles no ficheiro de arranque,
+para que as rutas de mise queden diante.
+
+Gradle **non** aprovisiona o JDK por si só — este build non aplica ningún *toolchain
+resolver* —, así que `mise install` é obrigatorio antes de compilar o servidor.
 
 ## Posta en marcha
 
@@ -56,10 +81,9 @@ Backend (dende `server/`):
 ./gradlew build   # compila, executa as probas e ensambla os módulos
 ```
 
-UI (dende `ui/`):
+UI (dende `ui/`, coas dependencias xa instaladas por `setup-dev-env.sh`):
 
 ```bash
-npm install
 npm run dev       # servidor de desenvolvemento en http://localhost:5173
 npm run build     # xera os activos estáticos en dist/
 ```
@@ -81,22 +105,9 @@ de facer commit (CI vólveos comprobar ao facer push):
 - `scripts/openapi-lint.sh` — o contrato REST de `docs/api/openapi.yaml`
   ([ADR-0010](docs/architecture/0010-design-first-openapi-contract.md)).
 
-Requiren estas ferramentas (os scripts avisan se falta algunha):
+As ferramentas que precisan (`markdownlint-cli2`, `maid`, `lychee`, `actionlint`,
+`shellcheck`, `zizmor` e `vacuum`) veñen todas de [`.tool-versions`](.tool-versions), así
+que `mise install` chega en calquera sistema operativo. Os scripts avisan se falta algunha.
 
-```bash
-# docs-lint.sh
-npm install -g markdownlint-cli2 @probelabs/maid   # formato Markdown + Mermaid
-brew install lychee                                # ligazóns internas (https://lychee.cli.rs)
-
-# actions-lint.sh
-brew install actionlint shellcheck                 # workflows + scripts `run:` embebidos
-brew install zizmor                                # auditoría de seguridade (https://docs.zizmor.sh)
-
-# openapi-lint.sh
-brew install vacuum                                # contrato OpenAPI (docs/api/openapi.yaml)
-```
-
-Fóra de macOS, instala `lychee`, `actionlint`, `shellcheck`, `zizmor` e `vacuum` co xestor
-de paquetes do teu sistema, dende as súas páxinas de publicación, con
-`uv tool install zizmor` no caso de `zizmor`, ou con
-`curl -fsSL https://quobix.com/scripts/install_vacuum.sh | sh` no caso de `vacuum`.
+CI corre estas mesmas versións, de xeito que un porto que pasa en local pasa tamén no
+*pull request*.

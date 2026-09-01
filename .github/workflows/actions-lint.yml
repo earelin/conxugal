@@ -6,16 +6,15 @@ on:
     paths:
       - ".github/workflows/**"
       - ".github/dependabot.yml"
-      - "scripts/actions-lint.sh"
+      - "scripts/**"
+      - ".tool-versions"
   push:
     branches: [trunk]
     paths:
       - ".github/workflows/**"
       - ".github/dependabot.yml"
-      - "scripts/actions-lint.sh"
-
-env:
-  ZIZMOR_VERSION: "1.28.0"
+      - "scripts/**"
+      - ".tool-versions"
 
 permissions:
   contents: read
@@ -28,20 +27,16 @@ jobs:
         with:
           persist-credentials: false
 
-      # shellcheck ships preinstalled on the ubuntu-latest runner image;
-      # actionlint auto-detects it on PATH to lint embedded `run:` steps.
-      - name: Install actionlint
-        run: |
-          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) latest "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
-
-      # Pinned rather than tracking latest: zizmor ships new audits often, and an
-      # unrelated pull request should not turn red because one landed.
-      - name: Install zizmor
-        run: |
-          curl -fsSL "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/zizmor-x86_64-unknown-linux-gnu.tar.gz" \
-            | tar -xz -C "$RUNNER_TEMP" zizmor
-          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      # shellcheck is pinned here rather than taken from the runner image: actionlint
+      # auto-detects it on PATH to lint embedded `run:` steps, so its version changes
+      # what this job reports. install_args keeps the JDK and Node out of this job.
+      # mise itself is pinned: left unset, the action installs whatever released
+      # today, and the cache that would hide that is keyed on .tool-versions — so
+      # the resolver would change on exactly the commits that bump a tool version.
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: "2026.8.16"
+          install_args: actionlint zizmor shellcheck
 
       - name: Run actions-lint.sh
         env:

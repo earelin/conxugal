@@ -1,22 +1,26 @@
 #!/usr/bin/env bash
 #
 # actions-lint.sh — verify the GitHub Actions workflows under .github/workflows/
-# with two complementary tools:
+# and the shell scripts they invoke, with three complementary tools:
 #
 #   actionlint — YAML syntax, GH Actions semantics (job/step schema, expression
 #     syntax, action inputs) and embedded `run:` shell scripts (via shellcheck,
 #     when installed).
+#   scripts/*.sh — linted with shellcheck. actionlint only reaches the shell
+#     embedded in a workflow, so the scripts those `run:` steps call, including
+#     this one, were previously linted by nothing.
 #   zizmor — supply-chain and privilege auditing: unpinned action references,
 #     persisted checkout credentials, over-broad GITHUB_TOKEN scopes, template
 #     injection. Also audits .github/dependabot.yml, which actionlint ignores.
 #
-# No-op (pass) if .github/workflows/ doesn't exist or has no workflow files.
+# The workflow checks are a no-op (pass) if .github/workflows/ doesn't exist or
+# has no workflow files.
 #
 # Usage: scripts/actions-lint.sh
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
+cd "$ROOT" || exit 1
 
 WORKFLOWS_DIR=".github/workflows"
 
@@ -45,7 +49,7 @@ lint_workflows() {
   fi
 
   if ! have actionlint; then
-    printf '%sSKIP%s actionlint not found — install from https://github.com/rhysd/actionlint (brew install actionlint)\n' "$yellow" "$reset"
+    printf '%sSKIP%s actionlint not found — run: mise install (https://github.com/rhysd/actionlint)\n' "$yellow" "$reset"
     FAILED+=("actions-lint (tool missing)")
     return
   fi
@@ -63,7 +67,7 @@ audit_workflows() {
   section "GitHub Actions security (zizmor)"
 
   if ! have zizmor; then
-    printf '%sSKIP%s zizmor not found — install from https://docs.zizmor.sh/installation (brew install zizmor)\n' "$yellow" "$reset"
+    printf '%sSKIP%s zizmor not found — run: mise install (https://docs.zizmor.sh)\n' "$yellow" "$reset"
     FAILED+=("actions-security (tool missing)")
     return
   fi
@@ -79,7 +83,28 @@ audit_workflows() {
   fi
 }
 
+# --- Shell scripts ------------------------------------------------------------
+# actionlint only reaches shellcheck for `run:` blocks embedded in workflows; the
+# scripts those blocks invoke were never linted by anything.
+lint_scripts() {
+  section "Shell scripts (shellcheck)"
+
+  if ! have shellcheck; then
+    printf '%sSKIP%s shellcheck not found — run: mise install\n' "$yellow" "$reset"
+    FAILED+=("shell-scripts (tool missing)")
+    return
+  fi
+
+  if shellcheck scripts/*.sh; then
+    printf '%sOK%s shell scripts\n' "$green" "$reset"
+  else
+    printf '%sFAIL%s shell scripts\n' "$red" "$reset"
+    FAILED+=("shell-scripts")
+  fi
+}
+
 lint_workflows
+lint_scripts
 audit_workflows
 
 section "Summary"

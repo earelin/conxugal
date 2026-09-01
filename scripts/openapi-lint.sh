@@ -7,7 +7,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
+cd "$ROOT" || exit 1
 
 OPENAPI_DOC="docs/api/openapi.yaml"
 RULESET=".vacuum.yaml"
@@ -27,7 +27,7 @@ have()    { command -v "$1" >/dev/null 2>&1; }
 lint_openapi() {
   section "OpenAPI contract (vacuum)"
   if ! have vacuum; then
-    printf '%sSKIP%s vacuum not found — install with: brew install vacuum\n' "$yellow" "$reset"
+    printf '%sSKIP%s vacuum not found — run: mise install\n' "$yellow" "$reset"
     FAILED+=("openapi-lint (tool missing)")
     return
   fi
