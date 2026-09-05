@@ -53,8 +53,7 @@ jobs:
           # Both of setup-node's caching routes off; see the note in ui-ci.yml.
           package-manager-cache: false
 
-      # Restored, never written — ui-ci.yml is the sole writer of this key; see the note
-      # there. hashFiles() resolves from the repository root, not working-directory.
+      # Restored, never written — ui-ci.yml is the sole writer of this key; see the note there.
       - name: Restore the npm cache
         id: npm-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

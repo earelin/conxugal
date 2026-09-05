@@ -53,7 +53,9 @@ jobs:
       # repeat the input and point back here.
       #
       # This job is the only writer of npm-ui-v1-*, and that is forced rather than preferred.
-      # The key is the hash of ui/package-lock.json, so it moves only when that file moves,
+      # The key is the hash of ui/package-lock.json — hashFiles() resolves from the repository
+      # root, so the path carries the ui/ prefix despite this job's working-directory — and it
+      # moves only when that file moves,
       # and that file is under this workflow's `ui/**` push filter — so a trunk push that can
       # move the key always runs this job. Server CI cannot take the role: `ui/**` is not in
       # its push filter at all, even though ./gradlew build runs npm ci through the npmCi task,
