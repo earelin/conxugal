@@ -33,10 +33,27 @@ jobs:
       # mise itself is pinned: left unset, the action installs whatever released
       # today, and the cache that would hide that is keyed on .tool-versions — so
       # the resolver would change on exactly the commits that bump a tool version.
+      #
+      # cache_save is the "restore always, write only from trunk" toggle, and it is the same
+      # policy the Playwright and npm caches follow: an entry created in a pull request is
+      # scoped to refs/pull/N/merge, unreadable by any other run, and only ever evicts the
+      # trunk entry that serves everyone. No cache_key override is needed — the action's
+      # default template already keys on install_args and a hash of the mise config files,
+      # here only .tool-versions, and this workflow's paths: filter covers every input to the
+      # key that the repository controls.
+      #
+      # Two it does not. The key's platform segment carries $ImageOS, so GitHub rolling the
+      # ubuntu-latest image moves it with no commit at all; and the config-file hash globs
+      # **/.tool-versions and **/mise.toml, so a new one under ui/ or server/ would move it
+      # from outside all three lint workflows' filters. mise-action passes no restore-keys, so
+      # either is a total miss, not a partial one — every pull request then pays a cold
+      # install until the next trunk push touches this workflow's paths:. It self-heals; it is
+      # only worth knowing about when a lint job is unexpectedly slow.
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
           version: "2026.8.16"
           install_args: actionlint zizmor shellcheck
+          cache_save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/trunk' }}
 
       - name: Run actions-lint.sh
         env:
