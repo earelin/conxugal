@@ -41,15 +41,16 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .tool-versions
-          # Belt and braces with dropping `cache: npm`: this input defaults to true, and
-          # setup-node then reads a root package.json's `packageManager`/`devEngines` and
-          # turns npm caching back on by itself. There is no root package.json today, so the
-          # rule below would rest on that absence rather than on anything stated.
           package-manager-cache: false
 
-      # `cache: npm` is gone from setup-node above: its post action saves on any event and
-      # v7.0.0 exposes no read-only toggle, so a lockfile bump on a pull request left an 85 MB
-      # copy in refs/pull/N/merge that no other run could read.
+      # setup-node above is made to cache nothing, by both of the routes it has. `cache: npm`
+      # is gone because its post action saves on any event and v7.0.0 exposes no read-only
+      # toggle, so a lockfile bump on a pull request left an 85 MB copy in refs/pull/N/merge
+      # that no other run could read. `package-manager-cache` is set because it defaults to
+      # true and turns npm caching back on by itself when a root package.json declares
+      # `packageManager` or `devEngines` — there is none today, and left unset the rule below
+      # would rest on that absence rather than on anything stated. The four restore-only sites
+      # repeat the input and point back here.
       #
       # This job is the only writer of npm-ui-v1-*, and that is forced rather than preferred.
       # The key is the hash of ui/package-lock.json, so it moves only when that file moves,

@@ -64,10 +64,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .tool-versions
-          # Belt and braces with dropping `cache: npm`: this input defaults to true, and
-          # setup-node then reads a root package.json's `packageManager`/`devEngines` and
-          # turns npm caching back on by itself. There is no root package.json today, so the
-          # rule below would rest on that absence rather than on anything stated.
+          # Both of setup-node's caching routes off; see the note in ui-ci.yml.
           package-manager-cache: false
 
       # Restored, never written — ui-ci.yml is the sole writer of this key; see the note
@@ -119,10 +116,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .tool-versions
-          # Belt and braces with dropping `cache: npm`: this input defaults to true, and
-          # setup-node then reads a root package.json's `packageManager`/`devEngines` and
-          # turns npm caching back on by itself. There is no root package.json today, so the
-          # rule below would rest on that absence rather than on anything stated.
+          # Both of setup-node's caching routes off; see the note in ui-ci.yml.
           package-manager-cache: false
 
       # Restored, never written — ui-ci.yml is the sole writer of this key; see the note
