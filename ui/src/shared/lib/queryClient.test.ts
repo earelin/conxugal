@@ -20,7 +20,7 @@ describe('queryClient', () => {
 
   it('navigates to /login when a query fails with a 401', async () => {
     await queryClient
-      .fetchQuery({
+      .query({
         queryKey: ['session-loss-query'],
         queryFn: () => {
           throw new HttpError(401, 'unauthorized');
@@ -34,7 +34,7 @@ describe('queryClient', () => {
 
   it('does not navigate when a query fails with a non-401 error', async () => {
     await queryClient
-      .fetchQuery({
+      .query({
         queryKey: ['other-failure-query'],
         queryFn: () => {
           throw new HttpError(500, 'server error');
@@ -77,10 +77,10 @@ describe('queryClient', () => {
 
     await Promise.all([
       queryClient
-        .fetchQuery({ queryKey: ['session-loss-query-a'], queryFn: failWith401, retry: false })
+        .query({ queryKey: ['session-loss-query-a'], queryFn: failWith401, retry: false })
         .catch(() => undefined),
       queryClient
-        .fetchQuery({ queryKey: ['session-loss-query-b'], queryFn: failWith401, retry: false })
+        .query({ queryKey: ['session-loss-query-b'], queryFn: failWith401, retry: false })
         .catch(() => undefined),
     ]);
 
@@ -96,7 +96,7 @@ describe('queryClient', () => {
 
     await Promise.all([
       queryClient
-        .fetchQuery({
+        .query({
           queryKey: ['session-loss-query-and-mutation'],
           queryFn: () => {
             throw new HttpError(401, 'unauthorized');
@@ -114,7 +114,7 @@ describe('queryClient', () => {
     const queryFn = vi.fn().mockRejectedValue(new HttpError(401, 'unauthorized'));
 
     await queryClient
-      .fetchQuery({ queryKey: ['session-loss-default-retry-query'], queryFn })
+      .query({ queryKey: ['session-loss-default-retry-query'], queryFn })
       .catch(() => undefined);
 
     expect(queryFn).toHaveBeenCalledTimes(1);
@@ -126,7 +126,7 @@ describe('queryClient', () => {
       .mockRejectedValueOnce(new HttpError(503, 'unavailable'))
       .mockResolvedValueOnce('ok');
 
-    const result = await queryClient.fetchQuery({
+    const result = await queryClient.query({
       queryKey: ['transient-failure-query'],
       queryFn,
       retryDelay: 0,
@@ -140,7 +140,7 @@ describe('queryClient', () => {
     const queryFn = vi.fn().mockRejectedValue(new HttpError(400, 'bad request'));
 
     await queryClient
-      .fetchQuery({ queryKey: ['non-transient-failure-query'], queryFn })
+      .query({ queryKey: ['non-transient-failure-query'], queryFn })
       .catch(() => undefined);
 
     expect(queryFn).toHaveBeenCalledTimes(1);
