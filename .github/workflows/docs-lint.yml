@@ -38,7 +38,7 @@ jobs:
         with:
           version: "2026.8.16"
           install_args: node lychee npm:markdownlint-cli2 npm:@probelabs/maid
-          cache_save: ${{ github.event_name == 'push' }}
+          cache_save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/trunk' }}
 
       - name: Run docs-lint.sh
         run: scripts/docs-lint.sh

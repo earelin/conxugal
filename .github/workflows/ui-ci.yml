@@ -41,6 +41,11 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .tool-versions
+          # Belt and braces with dropping `cache: npm`: this input defaults to true, and
+          # setup-node then reads a root package.json's `packageManager`/`devEngines` and
+          # turns npm caching back on by itself. There is no root package.json today, so the
+          # rule below would rest on that absence rather than on anything stated.
+          package-manager-cache: false
 
       # `cache: npm` is gone from setup-node above: its post action saves on any event and
       # v7.0.0 exposes no read-only toggle, so a lockfile bump on a pull request left an 85 MB
@@ -53,18 +58,27 @@ jobs:
       # its push filter at all, even though ./gradlew build runs npm ci through the npmCi task,
       # so a merged lockfile bump would never trigger it and the key would go unseeded.
       # Narrowing this workflow's paths: would strand the four restore-only sites.
+      #
+      # The writer alone gets no restore-keys, and that asymmetry is the point. Nothing prunes
+      # ~/.npm — `npm ci` does not, only `npm cache verify` GCs — so restoring the previous
+      # entry by prefix and saving on top of it would ratchet the entry upward on every
+      # lockfile bump, for ever. An exact-key miss here means one cold download in the one job
+      # that can afford it, which is what setup-node's npm path did (it passes no restore keys
+      # either). The four readers keep the prefix, so a bump stays cheap for them.
       - name: Restore the npm cache
         id: npm-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.npm
           key: npm-ui-v1-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
-          restore-keys: npm-ui-v1-${{ runner.os }}-
 
       - run: npm ci
 
+      # No status function on the `if:`, so `success()` is implied: a failed `npm ci` must not
+      # upload a half-populated ~/.npm, because the entry is immutable and the primary-key hit
+      # it then scores would suppress every later save.
       - name: Save the npm cache
-        if: ${{ github.event_name == 'push' && steps.npm-cache.outputs.cache-hit != 'true' && !cancelled() }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/trunk' && steps.npm-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.npm

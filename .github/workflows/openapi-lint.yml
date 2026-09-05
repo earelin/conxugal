@@ -34,7 +34,7 @@ jobs:
         with:
           version: "2026.8.16"
           install_args: vacuum
-          cache_save: ${{ github.event_name == 'push' }}
+          cache_save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/trunk' }}
 
       - name: Run openapi-lint.sh
         run: scripts/openapi-lint.sh
