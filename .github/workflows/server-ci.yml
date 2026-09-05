@@ -150,10 +150,10 @@ jobs:
       # Java binding is capped at 1.62.0 on Maven Central while the UI is on 1.62.1, and the key
       # carries the full version. Both resolve to chromium-1234 today, so restore-keys is what
       # makes that pay — either side's entry satisfies the other's install step, which is left
-      # unconditional below and so verifies rather than re-downloads. It also abandons a
-      # truncated entry saved by a run cancelled mid-download, which the bare key could not.
-      - name: Cache the Playwright browser
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # unconditional below and so verifies rather than re-downloads.
+      - name: Restore the Playwright browser
+        id: playwright-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-v1-${{ runner.os }}-${{ steps.playwright.outputs.version }}
@@ -163,6 +163,22 @@ jobs:
       # this only verifies the download.
       - name: Install Playwright browser
         run: ./gradlew :acceptance:installPlaywrightBrowsers
+
+      # Written only from pushes to trunk — and every push trigger in this repository is
+      # `branches: [trunk]`, so the event name is the whole test. An entry created in a pull
+      # request is scoped to refs/pull/N/merge and no other run can read it, so it only ever
+      # evicts the trunk entry that serves everyone. The key input lives under this workflow's
+      # own push `paths:` filter, so a trunk push always seeds the key it moves.
+      #
+      # Saved here rather than left to `actions/cache`'s post step, which declares
+      # `post-if: success()` and so writes nothing when a later step fails. A browser download
+      # is valid whatever the suite then does with it, so `!cancelled()` is the right guard.
+      - name: Save the Playwright browser
+        if: ${{ github.event_name == 'push' && steps.playwright-cache.outputs.cache-hit != 'true' && !cancelled() }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright-cache.outputs.cache-primary-key }}
 
       - name: Run acceptance tests
         env:
