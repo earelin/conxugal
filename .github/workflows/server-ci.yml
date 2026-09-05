@@ -64,8 +64,16 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .tool-versions
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
+
+      # Restored, never written — ui-ci.yml is the sole writer of this key; see the note
+      # there. hashFiles() resolves from the repository root, not working-directory.
+      - name: Restore the npm cache
+        id: npm-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-ui-v1-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
+          restore-keys: npm-ui-v1-${{ runner.os }}-
 
       # Handles dependency/build caching and Gradle Wrapper checksum validation. It writes only
       # from the default branch, and `cache-cleanup: on-success` (its default) purges what the
@@ -106,8 +114,16 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .tool-versions
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
+
+      # Restored, never written — ui-ci.yml is the sole writer of this key; see the note
+      # there. hashFiles() resolves from the repository root, not working-directory.
+      - name: Restore the npm cache
+        id: npm-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-ui-v1-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
+          restore-keys: npm-ui-v1-${{ runner.os }}-
 
       # Handles dependency/build caching and Gradle Wrapper checksum validation. It writes only
       # from the default branch, and `cache-cleanup: on-success` (its default) purges what the
