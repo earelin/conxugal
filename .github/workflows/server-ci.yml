@@ -184,17 +184,10 @@ jobs:
       - name: Install Playwright browser
         run: ./gradlew :acceptance:installPlaywrightBrowsers
 
-      # Written only from pushes to trunk: an entry created in a pull request is scoped to
-      # refs/pull/N/merge and no other run can read it, so it only ever evicts the trunk entry
-      # that serves everyone. The key input lives under this workflow's own push `paths:`
-      # filter, so a trunk push always seeds the key it moves.
-      #
-      # Saved here rather than left to `actions/cache`'s post step, which declares
-      # `post-if: success()` and so writes nothing when the suite below goes red. The `if:`
-      # carries no status function, so `success()` is implied — and at this position that
-      # means exactly "the download succeeded". It has to stay implied rather than become
-      # `!cancelled()`: an entry is immutable and a primary-key hit suppresses the save, so
-      # uploading a half-downloaded browser would poison the key until the version moves.
+      # Written only from pushes to trunk, and saved here rather than in a post step: see the
+      # note in ui-acceptance.yml for both reasons, and for why this `if:` must not grow a
+      # `!cancelled()`. The key input is under this workflow's own push `paths:` filter, so a
+      # trunk push always seeds the key it moves.
       - name: Save the Playwright browser
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/trunk' && steps.playwright-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
