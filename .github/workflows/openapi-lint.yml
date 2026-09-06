@@ -29,10 +29,12 @@ jobs:
         with:
           persist-credentials: false
 
+      # Restored always, written only from trunk — see the note in actions-lint.yml.
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
           version: "2026.8.16"
           install_args: vacuum
+          cache_save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/trunk' }}
 
       - name: Run openapi-lint.sh
         run: scripts/openapi-lint.sh

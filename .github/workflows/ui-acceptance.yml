@@ -50,8 +50,17 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .tool-versions
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
+          # Both of setup-node's caching routes off; see the note in ui-ci.yml.
+          package-manager-cache: false
+
+      # Restored, never written — ui-ci.yml is the sole writer of this key; see the note there.
+      - name: Restore the npm cache
+        id: npm-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-ui-v1-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
+          restore-keys: npm-ui-v1-${{ runner.os }}-
 
       - run: npm ci
 
@@ -62,13 +71,12 @@ jobs:
         id: playwright
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
-      # Entries are immutable per key and only written when the primary key
-      # missed, so a truncated one — saved by the post step of a run cancelled
-      # mid-download — would otherwise be restored until the version changed.
-      # Bump the generation to abandon it; restore-keys makes a version bump
+      # Entries are immutable per key, so bumping the generation prefix is the
+      # only way to abandon a bad one; restore-keys makes a version bump
       # download only what moved rather than the whole browser set.
-      - name: Cache Playwright browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore Playwright browsers
+        id: playwright-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-v1-${{ runner.os }}-${{ steps.playwright.outputs.version }}
@@ -83,6 +91,24 @@ jobs:
       # mirror once stalled this step for ten minutes.
       - name: Install Playwright browser
         run: npx playwright install chromium
+
+      # Written only from pushes to trunk: an entry created in a pull request is scoped to
+      # refs/pull/N/merge and no other run can read it, so it only ever evicts the trunk entry
+      # that serves everyone. The key input lives under this workflow's own push `paths:`
+      # filter, so a trunk push always seeds the key it moves.
+      #
+      # Saved here rather than left to `actions/cache`'s post step, which declares
+      # `post-if: success()` and so writes nothing when the suite below goes red. The `if:`
+      # carries no status function, so `success()` is implied — and at this position that
+      # means exactly "the download succeeded". It has to stay implied rather than become
+      # `!cancelled()`: an entry is immutable and a primary-key hit suppresses the save, so
+      # uploading a half-downloaded browser would poison the key until the version moves.
+      - name: Save Playwright browsers
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/trunk' && steps.playwright-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright-cache.outputs.cache-primary-key }}
 
       # The stub the built SPA is proxied to (preview.proxy in vite.config.ts).
       # `api:up` already waits for the container's healthcheck; --quiet-pull

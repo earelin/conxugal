@@ -33,10 +33,12 @@ jobs:
 
       # node is installed because markdownlint-cli2 and maid come from the npm backend.
       # install_args keeps the JDK out of this job.
+      # Restored always, written only from trunk — see the note in actions-lint.yml.
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
           version: "2026.8.16"
           install_args: node lychee npm:markdownlint-cli2 npm:@probelabs/maid
+          cache_save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/trunk' }}
 
       - name: Run docs-lint.sh
         run: scripts/docs-lint.sh

@@ -41,10 +41,52 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .tool-versions
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
+          package-manager-cache: false
+
+      # setup-node above is made to cache nothing, by both of the routes it has. `cache: npm`
+      # is gone because its post action saves on any event and v7.0.0 exposes no read-only
+      # toggle, so a lockfile bump on a pull request left an 85 MB copy in refs/pull/N/merge
+      # that no other run could read. `package-manager-cache` is set because it defaults to
+      # true and turns npm caching back on by itself when a root package.json declares
+      # `packageManager` or `devEngines` — there is none today, and left unset the rule below
+      # would rest on that absence rather than on anything stated.
+      #
+      # This job is the only writer of npm-ui-v1-*, and that is forced rather than preferred.
+      # The key hashes ui/package-lock.json — hashFiles() resolves from the repository root,
+      # hence the ui/ prefix despite this job's working-directory — so it moves only when that
+      # file does, and that file is under this workflow's `ui/**` push filter. A trunk push
+      # able to move the key therefore always runs this job. Server CI cannot take the role:
+      # `ui/**` is not in its push filter at all, even though ./gradlew build runs npm ci
+      # through the npmCi task, so a merged lockfile bump would never trigger it.
+      #
+      # The writer alone gets no restore-keys, and that asymmetry is the point. Nothing prunes
+      # ~/.npm — `npm ci` does not, only `npm cache verify` GCs — so restoring by prefix and
+      # saving on top would ratchet the entry upward on every lockfile bump, for ever. An
+      # exact-key miss here costs one cold download in the one job that can afford it, which
+      # is what setup-node's npm path did; it passes no restore keys either.
+      #
+      # Four sites restore this key and never write it: server-ci.yml twice, ui-acceptance.yml
+      # and contract-fuzz.yml. They repeat `package-manager-cache`, they keep the prefix so a
+      # bump stays cheap for them, and narrowing this workflow's paths: would strand them all.
+      - name: Restore the npm cache
+        id: npm-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-ui-v1-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
 
       - run: npm ci
+
+      # No status function on the `if:`, so `success()` is implied: a failed `npm ci` must not
+      # upload a half-populated ~/.npm, because the entry is immutable and the primary-key hit
+      # it then scores would suppress every later save.
+      - name: Save the npm cache
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/trunk' && steps.npm-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: ${{ steps.npm-cache.outputs.cache-primary-key }}
+
       - run: npm run lint
       - run: npm run test
       - run: npm run build
