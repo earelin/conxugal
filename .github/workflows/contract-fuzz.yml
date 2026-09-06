@@ -98,6 +98,7 @@ jobs:
           path: |
             ~/.gradle/caches
             !~/.gradle/caches/modules-2
+            server/.gradle/configuration-cache
             server/buildSrc/build
           key: gradle-tasks-v2-build-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: gradle-tasks-v2-build-

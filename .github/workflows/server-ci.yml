@@ -116,14 +116,25 @@ jobs:
       # the "Retire superseded cache entries" step below is what stops that, and it is not
       # optional in this design.
       #
-      # buildSrc/build rides along: a clean checkout deletes it, the convention plugins
-      # recompile, and restoring it preserves the mtimes that let Gradle skip that work.
+      # The configuration cache lives in the project directory rather than ~/.gradle, so
+      # without caching it CI wrote an entry on every run and never once read one back: the
+      # checkout is clean each time. It belongs in this half because the same thing invalidates
+      # it as the task outputs — a change to the build scripts. Only that subdirectory is
+      # taken; the rest of server/.gradle is output-directory state, and restoring it without
+      # the build/ directories it describes would be meaningless.
+      #
+      # buildSrc/build travels with it and is not optional: without it the configuration cache
+      # restores and is then never reused. The clean checkout deletes it, the convention
+      # plugins recompile, and the result is an input to :buildSrc:compilePluginsBlocks in the
+      # fingerprint. Restoring it as the cache does — mtimes preserved, no execution history —
+      # reuses instead.
       - name: Restore the Gradle task outputs
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.gradle/caches
             !~/.gradle/caches/modules-2
+            server/.gradle/configuration-cache
             server/buildSrc/build
           key: gradle-tasks-v2-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: gradle-tasks-v2-${{ github.job }}-
@@ -166,6 +177,7 @@ jobs:
           path: |
             ~/.gradle/caches
             !~/.gradle/caches/modules-2
+            server/.gradle/configuration-cache
             server/buildSrc/build
           key: gradle-tasks-v2-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
 
@@ -273,6 +285,7 @@ jobs:
           path: |
             ~/.gradle/caches
             !~/.gradle/caches/modules-2
+            server/.gradle/configuration-cache
             server/buildSrc/build
           key: gradle-tasks-v2-build-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: gradle-tasks-v2-build-
