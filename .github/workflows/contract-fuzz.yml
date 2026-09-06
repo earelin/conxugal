@@ -78,12 +78,30 @@ jobs:
           key: npm-ui-v1-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
           restore-keys: npm-ui-v1-${{ runner.os }}-
 
-      # Handles dependency/build caching and Gradle Wrapper checksum validation. It writes only
-      # from the default branch, and `cache-cleanup: on-success` (its default) purges what the
-      # build did not touch before saving — which is what keeps build-cache-1 at ~40 MB.
-      # Nothing may restore into ~/.gradle ahead of it: a pre-existing Gradle User Home makes it
-      # disable its own caching silently, with only a job-summary line to show for it.
-      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      # This job reads and writes nothing: server-ci.yml's `build` owns both entries. The
+      # dependency key has no job identity, so the entry is simply shared. The task outputs are
+      # build's, and what lands here is always the `restore-keys` fallback — build's exact key
+      # for the current run does not exist yet when this step runs, and in contract-fuzz.yml
+      # there is no build job at all.
+      - name: Restore the Gradle dependencies
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-v1-${{ hashFiles('server/gradle/libs.versions.toml', 'server/**/*.gradle.kts', 'server/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-deps-v1-
+
+      - name: Restore the Gradle task outputs of build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches
+            !~/.gradle/caches/modules-2
+            server/.gradle/configuration-cache
+            server/buildSrc/build
+          key: gradle-tasks-v2-build-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: gradle-tasks-v2-build-
 
       # Drawn here rather than inside the script so it is recorded in the log and the job
       # summary before anything can fail, and so a replay dispatch can hand back the same one.

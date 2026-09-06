@@ -39,6 +39,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Every other job in this repository stays on the workflow-level contents: read.
+    permissions:
+      contents: read
+      actions: write  # retire superseded cache entries
     # A normal run is under ten minutes. The cap is for the stalls, and matters most on trunk,
     # where the concurrency group is deliberately uncancellable and a hung run would hold it
     # for GitHub's 6h default.
@@ -76,18 +80,152 @@ jobs:
           key: npm-ui-v1-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
           restore-keys: npm-ui-v1-${{ runner.os }}-
 
-      # Handles dependency/build caching and Gradle Wrapper checksum validation. It writes only
-      # from the default branch, and `cache-cleanup: on-success` (its default) purges what the
-      # build did not touch before saving — which is what keeps build-cache-1 at ~40 MB.
-      # Nothing may restore into ~/.gradle ahead of it: a pre-existing Gradle User Home makes it
-      # disable its own caching silently, with only a job-summary line to show for it.
-      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      # Two entries, cut by volatility rather than by branch.
+      #
+      # setup-gradle managed this before, and spread it over nine entries totalling 3.34 GB for
+      # a union of about 500 MB. It also decided when to write by branch, which is why the
+      # nightly — a schedule run, so `github.ref_name` is trunk — wrote from a workflow this
+      # repository otherwise treats as read-only. Both entries below are written by an explicit
+      # step, so one rule governs every cache here: trunk pushes write, everything else reads.
+      #
+      # What is given up with it: Gradle Wrapper checksum validation, which setup-gradle did
+      # and nothing here replaces. `validateDistributionUrl` in gradle-wrapper.properties
+      # checks the URL, not the jar.
+      #
+      # Near-static half. Only changes when the declarations do, so the key is their content;
+      # the catalogue pins every version, so the hash covers the whole declared graph.
+      - name: Restore the Gradle dependencies
+        id: deps-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-v1-${{ hashFiles('server/gradle/libs.versions.toml', 'server/**/*.gradle.kts', 'server/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-deps-v1-
+
+      # Volatile half: task outputs and Gradle's derived state, everything under
+      # ~/.gradle/caches except the dependency modules the entry above owns. The negated path
+      # is what keeps the two from overlapping — without it the same 500 MB would be stored
+      # twice, which is the mistake the old setup-gradle/overlay pairing made.
+      #
+      # Keyed by run and attempt because an entry cannot be updated in place and run_id alone
+      # repeats on a re-run; the exact key therefore never hits and `restore-keys` always
+      # supplies the most recent trunk entry. Nothing prunes build-cache-1 now that
+      # setup-gradle's `cache-cleanup` is gone, so every push would leave a superseded copy —
+      # the "Retire superseded cache entries" step below is what stops that, and it is not
+      # optional in this design.
+      #
+      # The configuration cache lives in the project directory rather than ~/.gradle, so
+      # without caching it CI wrote an entry on every run and never once read one back: the
+      # checkout is clean each time. It belongs in this half because the same thing invalidates
+      # it as the task outputs — a change to the build scripts. Only that subdirectory is
+      # taken; the rest of server/.gradle is output-directory state, and restoring it without
+      # the build/ directories it describes would be meaningless.
+      #
+      # buildSrc/build travels with it and is not optional: without it the configuration cache
+      # restores and is then never reused. The clean checkout deletes it, the convention
+      # plugins recompile, and the result is an input to :buildSrc:compilePluginsBlocks in the
+      # fingerprint. Restoring it as the cache does — mtimes preserved, no execution history —
+      # reuses instead.
+      - name: Restore the Gradle task outputs
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches
+            !~/.gradle/caches/modules-2
+            server/.gradle/configuration-cache
+            server/buildSrc/build
+          key: gradle-tasks-v2-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: gradle-tasks-v2-${{ github.job }}-
 
       # One invocation rather than two: integrationTest is deliberately kept out
       # of `check`, so this adds it without running anything twice, and saves a
       # second startup and configuration phase across the whole build.
       - name: Build, unit and integration tests
         run: ./gradlew build integrationTest
+
+      # Both saves are explicit rather than left to `actions/cache`'s post step, which declares
+      # `post-if: success()` and so writes nothing when any later step fails.
+      #
+      # The two guards differ deliberately. The dependency entry is content-keyed, so a copy
+      # written from a half-finished resolution would stick under that key until the
+      # declarations move: it saves only on a clean run, via the implicit `success()`. The task
+      # entry carries run_id, so every run writes a fresh key and a partial copy is superseded
+      # by the next one rather than poisoning anything — `!cancelled()` there means a red push
+      # to trunk still leaves the outputs behind, which is sound because Gradle only stores
+      # tasks that passed.
+      #
+      # `cache-hit` is only `true` on an exact-key hit; a prefix hit reports `false`, which is
+      # exactly when there are new dependencies worth writing. The key comes from the restore
+      # step's output so the two cannot diverge.
+      - name: Save the Gradle dependencies
+        id: deps-cache-save
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/trunk' && steps.deps-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: ${{ steps.deps-cache.outputs.cache-primary-key }}
+
+      - name: Save the Gradle task outputs
+        id: tasks-cache-save
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/trunk' && !cancelled() }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches
+            !~/.gradle/caches/modules-2
+            server/.gradle/configuration-cache
+            server/buildSrc/build
+          key: gradle-tasks-v2-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      # One live entry per key, not one per run. The task entry carries run_id, so each push to
+      # trunk leaves the previous copy dead — only the newest is ever read, through
+      # `restore-keys`. Left alone that is how the retired overlay reached 7.70 GB of a 10 GB
+      # quota and started evicting the entries every job depends on.
+      #
+      # Deleted here rather than in a separate cleanup job so the window in which two copies
+      # exist is as short as possible. The price is a race: a run already restoring the entry
+      # being deleted loses its cache and rebuilds — `actions/cache` warns and continues.
+      #
+      # A prefix is only swept once the survivor is known to exist: the task entry because it
+      # has just been saved, the dependency entry because it either hit the exact key or has
+      # just been saved. Without that proof the sweep would leave the repository with no entry
+      # for the prefix at all.
+      - name: Retire superseded cache entries
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/trunk' && !cancelled() }}
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TASKS_PREFIX: gradle-tasks-v2-${{ github.job }}-
+          TASKS_KEEP: gradle-tasks-v2-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          TASKS_SAVED: ${{ steps.tasks-cache-save.outcome == 'success' }}
+          DEPS_PREFIX: gradle-deps-v1-
+          DEPS_KEEP: ${{ steps.deps-cache.outputs.cache-primary-key }}
+          DEPS_PRESENT: ${{ steps.deps-cache.outputs.cache-hit == 'true' || steps.deps-cache-save.outcome == 'success' }}
+        run: |
+          prune() {
+            local prefix="$1" keep="$2" id key
+            gh cache list --key "$prefix" --limit 100 --json id,key \
+              --jq '.[] | [.id, .key] | @tsv' \
+            | while IFS=$'\t' read -r id key; do
+                if [[ "$key" == "$keep" ]]; then
+                  continue
+                fi
+                echo "deleting $key"
+                gh cache delete "$id" || true
+              done
+          }
+
+          if [[ "$TASKS_SAVED" == "true" ]]; then
+            prune "$TASKS_PREFIX" "$TASKS_KEEP"
+          fi
+          if [[ "$DEPS_PRESENT" == "true" ]]; then
+            prune "$DEPS_PREFIX" "$DEPS_KEEP"
+          fi
 
   acceptance:
     runs-on: ubuntu-latest
@@ -127,12 +265,30 @@ jobs:
           key: npm-ui-v1-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
           restore-keys: npm-ui-v1-${{ runner.os }}-
 
-      # Handles dependency/build caching and Gradle Wrapper checksum validation. It writes only
-      # from the default branch, and `cache-cleanup: on-success` (its default) purges what the
-      # build did not touch before saving — which is what keeps build-cache-1 at ~40 MB.
-      # Nothing may restore into ~/.gradle ahead of it: a pre-existing Gradle User Home makes it
-      # disable its own caching silently, with only a job-summary line to show for it.
-      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      # This job reads and writes nothing: server-ci.yml's `build` owns both entries. The
+      # dependency key has no job identity, so the entry is simply shared. The task outputs are
+      # build's, and what lands here is always the `restore-keys` fallback — build's exact key
+      # for the current run does not exist yet when this step runs, and in contract-fuzz.yml
+      # there is no build job at all.
+      - name: Restore the Gradle dependencies
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-v1-${{ hashFiles('server/gradle/libs.versions.toml', 'server/**/*.gradle.kts', 'server/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-deps-v1-
+
+      - name: Restore the Gradle task outputs of build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches
+            !~/.gradle/caches/modules-2
+            server/.gradle/configuration-cache
+            server/buildSrc/build
+          key: gradle-tasks-v2-build-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: gradle-tasks-v2-build-
 
       # The service images are pulled while the application image builds: nothing about them
       # depends on it, and `up --wait` below would otherwise pay for them serially.
