@@ -177,7 +177,7 @@ Deliberately **out of scope**, each owned elsewhere or left to a later increment
 
 ### What this spec requires of its sibling specs
 
-This family supplies things no earlier family did, and two sibling specs have to move before
+This family supplies things no earlier family did, and four sibling specs have to move before
 the requirements that depend on them can be built. They are named here so that no feature
 claims an acceptance criterion whose surface another spec still contradicts:
 
@@ -223,6 +223,39 @@ claims an acceptance criterion whose surface another spec still contradicts:
   this spec owes it is therefore one more fact: a run that yielded is **distinguishable from one
   that was stopped or that failed**, and is **related to the run that resumes it**, so an
   administrator sees one import converging rather than a sequence of unexplained halts.
+- **[SPEC-0009](SPEC-0009-cpv-catalogue.md) supplies the wording R23 narrows by, and changes
+  nothing else here.** This spec stores CPV codes (R8) and lets a reader narrow a year by one
+  (R23), but holds nothing saying what a code *means* — so R23's narrowing is offered today to a
+  reader expected to recognise a bare eight-digit number. That spec acquires the regulated list and
+  carries a Galician rendering of every entry, which no publisher issues and which it therefore
+  authors. **R23 is unchanged by it**: the same flat list of codes, each now nameable.
+
+  ❗ **One thing it settles that this spec must eventually answer.** SPEC-0009 R9 holds two Spanish
+  wordings for an entry — the publisher's official one, and whatever the source printed beside the
+  code in the classification cell, which R33 stores as published. They can disagree, and neither is
+  wrong: the source describes *this contract's* subject, the publisher names a category. **Which
+  one a licitación's row shows is this spec's call and is not yet made.** Nothing breaks while the
+  question is open, because nothing displays either today.
+
+- **[SPEC-0010](SPEC-0010-hierarchical-cpv-selection.md) will amend R23 — but not yet, and the
+  order matters.** That spec replaces R23's flat list of codes with a **tree** a reader descends,
+  where choosing a node selects that code and every code beneath it. It is held back deliberately:
+  its own R1 makes the change conditional on a measurement nobody has taken — how many distinct CPV
+  codes an Órgano's selection actually carries — and a tree over two dozen codes is worse than a
+  list of two dozen. **Until that measurement is taken and read in favour of the tree, R23 as
+  written is correct and features are built against it.**
+
+  ❗ **When the amendment does land it must settle a word R23 leaves ambiguous**, because the tree
+  makes the ambiguity load-bearing where the flat list did not. R23 offers "only codes and states
+  the year's selection actually contains", and *the selection* reads two ways: the year's rows, or
+  the year's rows under whatever other narrowing is already in effect. FEAT-0016 has settled it the
+  first way in writing, and accepts as a stated residual that choosing a CPV **and** a state can
+  empty the list — so R23's never-empty promise holds one narrowing at a time. SPEC-0010 R6 is
+  written to that same reading, and the two must not drift.
+
+  The amendment will also have to widen R23's offer rule rather than restate it: under a tree a
+  node is offered when a licitación is classified **at or beneath** it, so a division is offered for
+  what lies beneath it and not for itself — which the present wording, read literally, forbids.
 
 ### Decisions taken, and what is left open
 
