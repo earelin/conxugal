@@ -3,11 +3,14 @@ package gal.conxugal.infrastructure.jdbc.licitacion;
 import gal.conxugal.domain.licitacion.Award;
 import gal.conxugal.domain.licitacion.AwardId;
 import gal.conxugal.domain.licitacion.AwardRepository;
+import gal.conxugal.domain.licitacion.LicitacionId;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.GenericRepository;
 import io.micronaut.transaction.annotation.Transactional;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -51,6 +54,8 @@ public abstract class JdbcAwardRepository
       RETURNING id
       """;
 
+  private static final String WITHDRAW_ABSENT = Withdrawals.statementFor("licitacion_award");
+
   private final JdbcOperations jdbcOperations;
 
   protected JdbcAwardRepository(JdbcOperations jdbcOperations) {
@@ -89,5 +94,23 @@ public abstract class JdbcAwardRepository
         award.operadorEconomicoId(),
         award.awardeeResolutionPath(),
         award.withdrawn());
+  }
+
+  /**
+   * Derived, because it is an ordinary read over columns the record maps: no join, since an award
+   * holds its lote and its operador as identifiers rather than as relations, and no predicate on
+   * {@code withdrawn}, because the supersession gate compares against what the store <em>knows</em>
+   * about an award rather than against what it currently shows.
+   */
+  @Override
+  public abstract List<Award> findAllByLicitacionId(LicitacionId licitacionId);
+
+  @Override
+  @Transactional
+  public int withdrawAbsent(LicitacionId licitacionId, Collection<AwardId> retained) {
+    Objects.requireNonNull(licitacionId, "licitacionId must not be null");
+    Objects.requireNonNull(retained, "retained must not be null");
+    return Withdrawals.absent(
+        jdbcOperations, WITHDRAW_ABSENT, licitacionId, retained, AwardId::value);
   }
 }

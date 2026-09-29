@@ -1,5 +1,7 @@
 package gal.conxugal.domain.licitacion;
 
+import java.util.Collection;
+
 /**
  * Port for a procedure's CPV classifications. Implemented by the {@code infrastructure} module.
  *
@@ -26,4 +28,11 @@ public interface CpvClassificationRepository {
    * procedure the classification belongs to.
    */
   CpvClassification upsert(CpvClassification classification);
+
+  /**
+   * Marks withdrawn every classification of this procedure that {@code retained} does not name, on
+   * {@link LoteRepository#withdrawAbsent}'s rule and for its reasons. Answers how many it newly
+   * marked.
+   */
+  int withdrawAbsent(LicitacionId licitacionId, Collection<CpvClassificationId> retained);
 }

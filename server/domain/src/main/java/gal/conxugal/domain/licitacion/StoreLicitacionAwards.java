@@ -11,7 +11,9 @@ import gal.conxugal.domain.operador.ResolveOperador;
 import io.micronaut.transaction.annotation.Transactional;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -68,6 +70,21 @@ import org.jspecify.annotations.Nullable;
  * keeps the one name its bid published. Either way the award is held by the consortium's own
  * operador and by no member of it, which is the storage form of the property that no euro is
  * counted twice.
+ *
+ * <p><strong>A restatement re-runs the routing, and a write that would lower the route is
+ * refused.</strong> The routing is a pure function of the record, so re-running it costs nothing;
+ * what a restatement adds is the comparison against the route the stored award already holds, under
+ * {@link AwardeeResolutionPath}'s total order. This <em>deliberately outranks</em> the rule that a
+ * restatement refreshes what the source now publishes, for this one field: a formalisation
+ * withdrawn at the source would otherwise demote a published link to a derived one — or to nothing
+ * — and an awardee the source once named would be forgotten. The identifier was published; the
+ * withdrawal of the row that published it is not evidence that it was wrong.
+ *
+ * <p>The win is <strong>strict</strong>, so an equal route writes: a formalisation that now names a
+ * different party repoints the award, which is what closes the historical tail when a procedure
+ * moves from <em>adxudicado</em> to <em>formalizado</em>. And the gate is applied
+ * <strong>before</strong> the operador is reached, not after, so a refused write catalogues nothing
+ * and promotes no name.
  *
  * <p><strong>One transaction.</strong> An operador a resolution catalogues is created beside the
  * award that justified it, so a rollback cannot leave a catalogue entry no stored award points at.
@@ -129,11 +146,26 @@ public class StoreLicitacionAwards {
             licitacion.id(), "the procedure must be stored before its awards are");
     AwardPoints awardPoints = AwardPoints.of(licitacionId, lotes);
     Routes routes = new Routes(formalisations, bidders, consortia, rankOf(licitacion));
+    Map<LoteId, Award> incumbents = incumbentsOf(licitacionId);
     List<Award> stored = new ArrayList<>(published.size());
     for (PublishedAward row : published) {
-      stored.add(awards.upsert(awardOf(row, licitacionId, awardPoints, routes)));
+      stored.add(awards.upsert(awardOf(row, licitacionId, awardPoints, routes, incumbents)));
     }
+    awards.withdrawAbsent(licitacionId, stored.stream().map(Award::id).toList());
     return List.copyOf(stored);
+  }
+
+  /**
+   * What this procedure's awards already say about their awardees, by the award point each belongs
+   * to. A {@code HashMap} rather than {@code Map.copyOf} because the procedure-as-a-whole award
+   * point is a <strong>null</strong> key, which is what 85 of 100 measured procedures have.
+   */
+  private Map<LoteId, Award> incumbentsOf(LicitacionId licitacionId) {
+    Map<LoteId, Award> byAwardPoint = new HashMap<>();
+    for (Award award : awards.findAllByLicitacionId(licitacionId)) {
+      byAwardPoint.put(award.loteId(), award);
+    }
+    return byAwardPoint;
   }
 
   /**
@@ -142,9 +174,13 @@ public class StoreLicitacionAwards {
    * punctuation intact — and the only thing this adds is who that name reached and how.
    */
   private Award awardOf(
-      PublishedAward row, LicitacionId licitacionId, AwardPoints awardPoints, Routes routes) {
+      PublishedAward row,
+      LicitacionId licitacionId,
+      AwardPoints awardPoints,
+      Routes routes,
+      Map<LoteId, Award> incumbents) {
     LoteId awardPoint = awardPoints.at(row.loteKey());
-    Awardee awardee = awardeeOf(row, routes);
+    Awardee awardee = awardeeOf(row, routes, incumbents.get(awardPoint));
     return new Award(
         licitacionId,
         awardPoint,
@@ -162,35 +198,65 @@ public class StoreLicitacionAwards {
    * route that cannot answer falls through to the next; the last one falling through is an award
    * that names nobody, which is an outcome rather than a failure.
    */
-  private Awardee awardeeOf(PublishedAward row, Routes routes) {
+  private Awardee awardeeOf(PublishedAward row, Routes routes, @Nullable Award incumbent) {
+    Route route = routeFor(row, routes);
+    if (incumbent != null
+        && incumbent.awardeeResolutionPath().supersedes(route.path())) {
+      return new Awardee(incumbent.operadorEconomicoId(), incumbent.awardeeResolutionPath());
+    }
+    return reach(route, routes);
+  }
+
+  /**
+   * Which route answers for this award, without reaching the operador it names. Splitting the two
+   * is what lets the gate above refuse a write <em>before</em> anything is catalogued or ranked: a
+   * resolution the gate then discarded would still have promoted an operador's displayed name on
+   * the strength of a link no stored award points at.
+   *
+   * <p>The order is the one that puts both published routes ahead of the inferring one. A route
+   * that cannot answer falls through to the next; the last one falling through is an award that
+   * names nobody, which is an outcome rather than a failure.
+   */
+  private Route routeFor(PublishedAward row, Routes routes) {
     Optional<MatchableName> awardee = MatchableName.of(row.awardeeName());
     if (awardee.isPresent()) {
       CataloguedConsortium consortium = routes.consortiumFor(awardee.get());
       if (consortium != null) {
-        return awardedToConsortium(row, consortium, routes);
+        return awardedToConsortium(row, consortium);
       }
       if (routes.bidsAsConsortium(awardee.get())) {
-        return Awardee.nobody();
+        return Route.nobody();
       }
     }
     Contratista formalised = routes.contratistaFor(row, awardee.orElse(null));
     if (formalised != null) {
-      return awarded(
+      return Route.published(
           formalised.fiscalId(),
           nameOf(row, formalised),
-          routes,
           AwardeeResolutionPath.PUBLISHED_BY_FORMALISATION);
     }
     FiscalIdentifier bid = awardee.map(routes::bidIdentifierFor).orElse(null);
     if (bid != null) {
-      return awarded(
-          bid, row.awardeeName(), routes, AwardeeResolutionPath.PUBLISHED_BY_BIDDER);
+      return Route.published(
+          bid, row.awardeeName(), AwardeeResolutionPath.PUBLISHED_BY_BIDDER);
     }
     OperadorId catalogued = awardee.flatMap(this::uniqueCatalogueMatch).orElse(null);
     if (catalogued != null) {
-      return new Awardee(catalogued, AwardeeResolutionPath.NAME_DERIVED);
+      return Route.linked(catalogued, AwardeeResolutionPath.NAME_DERIVED);
     }
-    return Awardee.nobody();
+    return Route.nobody();
+  }
+
+  /**
+   * The operador the chosen route names, catalogued now if nothing named it before. This is the
+   * only step that writes, which is why nothing calls it for an award the gate has already settled.
+   */
+  private Awardee reach(Route route, Routes routes) {
+    FiscalIdentifier fiscalId = route.fiscalId();
+    if (fiscalId == null) {
+      return new Awardee(route.operadorId(), route.path());
+    }
+    return awarded(fiscalId, route.publishedName(), routes, route.path());
   }
 
   /**
@@ -203,13 +269,13 @@ public class StoreLicitacionAwards {
    * so a procedure that later formalises and publishes one supersedes the link its bid alone
    * supported.
    */
-  private Awardee awardedToConsortium(
-      PublishedAward row, CataloguedConsortium consortium, Routes routes) {
+  private static Route awardedToConsortium(
+      PublishedAward row, CataloguedConsortium consortium) {
     FiscalIdentifier fiscalId = consortium.fiscalId();
     if (fiscalId == null) {
-      return new Awardee(consortium.operadorId(), consortium.path());
+      return Route.linked(consortium.operadorId(), consortium.path());
     }
-    return awarded(fiscalId, row.awardeeName(), routes, consortium.path());
+    return Route.published(fiscalId, row.awardeeName(), consortium.path());
   }
 
   /**
@@ -287,12 +353,39 @@ public class StoreLicitacionAwards {
    */
   private record Contratista(FiscalIdentifier fiscalId, @Nullable String name) {}
 
-  /** Which operador an award reached, and by which route. */
-  private record Awardee(@Nullable OperadorId operadorId, AwardeeResolutionPath path) {
+  /**
+   * Which operador an award reached, and by which route. An award no route reached holds no
+   * operador and says so, carrying {@link AwardeeResolutionPath#UNRESOLVED}.
+   */
+  private record Awardee(@Nullable OperadorId operadorId, AwardeeResolutionPath path) {}
 
-    /** An award no route reached: it holds no operador and says so. */
-    static Awardee nobody() {
-      return new Awardee(null, AwardeeResolutionPath.UNRESOLVED);
+  /**
+   * How an award <em>would</em> reach its operador, decided but not yet acted on. It exists so the
+   * route can be weighed against the one already stored before anything is written — the
+   * difference between re-resolving an awardee and re-cataloguing the catalogue on every import.
+   *
+   * <p>Exactly one of the two ways is filled. {@code fiscalId} means the route reached an
+   * identifier and the catalogue is asked for it; {@code operadorId} means it reached an operador
+   * directly — a consortium the source declines to identify, or the one name match that infers —
+   * and there is nothing to resolve through. Both are null for an award that names nobody.
+   */
+  private record Route(
+      @Nullable FiscalIdentifier fiscalId,
+      @Nullable String publishedName,
+      @Nullable OperadorId operadorId,
+      AwardeeResolutionPath path) {
+
+    static Route published(
+        FiscalIdentifier fiscalId, @Nullable String publishedName, AwardeeResolutionPath path) {
+      return new Route(fiscalId, publishedName, null, path);
+    }
+
+    static Route linked(OperadorId operadorId, AwardeeResolutionPath path) {
+      return new Route(null, null, operadorId, path);
+    }
+
+    static Route nobody() {
+      return new Route(null, null, null, AwardeeResolutionPath.UNRESOLVED);
     }
   }
 

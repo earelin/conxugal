@@ -1,5 +1,8 @@
 package gal.conxugal.domain.licitacion;
 
+import java.util.Collection;
+import java.util.List;
+
 /**
  * Port for a procedure's awards. Implemented by the {@code infrastructure} module.
  *
@@ -24,4 +27,23 @@ public interface AwardRepository {
    * <p>The operador an award names, where it names one, must already be stored.
    */
   Award upsert(Award award);
+
+  /**
+   * Every award this procedure holds, withdrawn ones included, in no guaranteed order.
+   *
+   * <p><strong>Withdrawn ones included, and that is the point.</strong> This is what a restatement
+   * compares its freshly resolved awardee against, and the comparison is on the route that reached
+   * the stored link rather than on whether the row is currently shown. An award withdrawn by an
+   * earlier restatement and published again still carries the identifier its formalisation once
+   * gave it, and hiding it here would let a name-derived link overwrite a published one the moment
+   * the source republished the row.
+   */
+  List<Award> findAllByLicitacionId(LicitacionId licitacionId);
+
+  /**
+   * Marks withdrawn every award of this procedure that {@code retained} does not name, on
+   * {@link LoteRepository#withdrawAbsent}'s rule and for its reasons. Answers how many it newly
+   * marked.
+   */
+  int withdrawAbsent(LicitacionId licitacionId, Collection<AwardId> retained);
 }

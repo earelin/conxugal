@@ -74,12 +74,15 @@ class LicitacionCompetitionMigrationIntegrationTest implements TestPropertyProvi
             "id", "licitacion_id", "lote_id", "operador_economico_id", "won", "withdrawn");
   }
 
-  // No surrogate id, and that absence is the point: the pair is the identity, so an id beside it
-  // would be a second key naming the same row -- and it is the pair a repeated member collapses on.
+  // No surrogate id, and that absence is the point: the triple is the identity, so an id beside it
+  // would be a second key naming the same row -- and it is the triple a member one procedure lists
+  // twice collapses on.
   @Test
-  void the_membership_holds_its_two_references_and_takes_no_identity_of_its_own() throws Exception {
+  void the_membership_holds_its_three_references_and_takes_no_identity_of_its_own()
+      throws Exception {
     assertThat(schema.columnNamesOf("operador_ute_membership"))
-        .containsExactlyInAnyOrder("ute_id", "operador_economico_id", "withdrawn");
+        .containsExactlyInAnyOrder(
+            "ute_id", "operador_economico_id", "licitacion_id", "withdrawn");
   }
 
   @Test
@@ -168,23 +171,49 @@ class LicitacionCompetitionMigrationIntegrationTest implements TestPropertyProvi
       throws Exception {
     UUID uteId = schema.insertUnidentifiedUte("UTE PRACE-TABOADA RAMOS");
     UUID memberId = schema.insertOperadorEconomico("A41111220", "EQUINSE, S.A.");
-    schema.insertUteMembership(uteId, memberId);
+    schema.insertUteMembership(uteId, memberId, licitacionId);
 
-    assertThatThrownBy(() -> schema.insertUteMembership(uteId, memberId))
+    assertThatThrownBy(() -> schema.insertUteMembership(uteId, memberId, licitacionId))
         .isInstanceOfSatisfying(
             SQLException.class,
             exception -> Refusals.violatesUniqueness(exception, "operador_ute_membership_pkey"));
+  }
+
+  // The identified minority: one UTE operador is published by two procedures, so the same pair
+  // stated by each is two rows -- which is what lets a withdrawal at one leave the other's alone.
+  @Test
+  void one_pair_stated_by_two_procedures_is_two_rows() throws Exception {
+    UUID uteId = schema.insertUnidentifiedUte("UTE PRACE-TABOADA RAMOS");
+    UUID memberId = schema.insertOperadorEconomico("A41111220", "EQUINSE, S.A.");
+    UUID anotherLicitacionId =
+        schema.insertLicitacion(
+            "822055", schema.insertOrgano("consorcio-y"), schema.insertState(3, "Formalizado"));
+    schema.insertUteMembership(uteId, memberId, licitacionId);
+
+    assertThatCode(() -> schema.insertUteMembership(uteId, memberId, anotherLicitacionId))
+        .doesNotThrowAnyException();
   }
 
   @Test
   void membership_of_unknown_consortium_is_refused_by_the_foreign_key() throws Exception {
     UUID memberId = schema.insertOperadorEconomico("A41111220", "EQUINSE, S.A.");
 
-    assertThatThrownBy(() -> schema.insertUteMembership(UUID.randomUUID(), memberId))
+    assertThatThrownBy(() -> schema.insertUteMembership(UUID.randomUUID(), memberId, licitacionId))
         .isInstanceOfSatisfying(
             SQLException.class,
             exception ->
                 Refusals.violatesForeignKey(exception, "operador_ute_membership_ute_id_fkey"));
+  }
+
+  // A membership is a statement by a procedure, so one standing on its own would be a fact the
+  // reconciliation could never withdraw: no procedure would ever stop stating it.
+  @Test
+  void membership_stated_by_no_procedure_is_refused() throws Exception {
+    UUID uteId = schema.insertUnidentifiedUte("UTE PRACE-TABOADA RAMOS");
+    UUID memberId = schema.insertOperadorEconomico("A41111220", "EQUINSE, S.A.");
+
+    assertThatThrownBy(() -> schema.insertUteMembershipWithoutLicitacion(uteId, memberId))
+        .isInstanceOf(SQLException.class);
   }
 
   @Test
@@ -194,12 +223,14 @@ class LicitacionCompetitionMigrationIntegrationTest implements TestPropertyProvi
         .containsExactlyInAnyOrder("licitacion", "licitacion_lote", "operador_economico");
   }
 
-  // Both ends are catalogue entries and no licitación appears in it, which is what lets the
-  // relation be read from either side rather than only from the member's.
+  // Both ends of the relation are catalogue entries, which is what lets it be read from either
+  // side rather than only from the member's; the third reference is not an end but the procedure
+  // stating it, which is what makes the statement withdrawable without touching another's.
   @Test
-  void the_membership_reaches_the_catalogue_at_both_ends_and_nothing_else() throws Exception {
+  void the_membership_reaches_the_catalogue_at_both_ends_and_the_procedure_stating_it()
+      throws Exception {
     assertThat(schema.foreignKeyTargetsOf("operador_ute_membership"))
-        .containsExactly("operador_economico", "operador_economico");
+        .containsExactlyInAnyOrder("operador_economico", "operador_economico", "licitacion");
   }
 
   // licitacion_id is already leftmost in the natural key's index, so it is not indexed again.
@@ -214,15 +245,17 @@ class LicitacionCompetitionMigrationIntegrationTest implements TestPropertyProvi
             "licitacion_participation_operador_economico_id_idx");
   }
 
-  // ute_id is leftmost in the primary key, so only the member's end needs an index of its own —
-  // and it needs one, because reading the relation from that end is half its purpose.
+  // ute_id is leftmost in the primary key, so it is not indexed again. The other two are: reading
+  // the relation from the member's end is half its purpose, and the reconciliation reads it by the
+  // procedure it is restating, which the key's third column cannot serve.
   @Test
-  void the_membership_is_indexed_on_its_key_and_on_the_member_end_and_nothing_else()
+  void the_membership_is_indexed_on_its_key_the_member_end_and_the_stating_procedure()
       throws Exception {
     assertThat(schema.indexNamesOf("operador_ute_membership"))
         .containsExactlyInAnyOrder(
             "operador_ute_membership_pkey",
-            "operador_ute_membership_operador_economico_id_idx");
+            "operador_ute_membership_operador_economico_id_idx",
+            "operador_ute_membership_licitacion_id_idx");
   }
 
   private Table operadores() {

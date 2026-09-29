@@ -3,11 +3,13 @@ package gal.conxugal.infrastructure.jdbc.licitacion;
 import gal.conxugal.domain.licitacion.Formalisation;
 import gal.conxugal.domain.licitacion.FormalisationId;
 import gal.conxugal.domain.licitacion.FormalisationRepository;
+import gal.conxugal.domain.licitacion.LicitacionId;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.GenericRepository;
 import io.micronaut.transaction.annotation.Transactional;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -46,6 +48,9 @@ public abstract class JdbcFormalisationRepository
       RETURNING id
       """;
 
+  private static final String WITHDRAW_ABSENT =
+      Withdrawals.statementFor("licitacion_formalisation");
+
   private final JdbcOperations jdbcOperations;
 
   protected JdbcFormalisationRepository(JdbcOperations jdbcOperations) {
@@ -80,5 +85,14 @@ public abstract class JdbcFormalisationRepository
         formalisation.nationality(),
         formalisation.amount(),
         formalisation.withdrawn());
+  }
+
+  @Override
+  @Transactional
+  public int withdrawAbsent(LicitacionId licitacionId, Collection<FormalisationId> retained) {
+    Objects.requireNonNull(licitacionId, "licitacionId must not be null");
+    Objects.requireNonNull(retained, "retained must not be null");
+    return Withdrawals.absent(
+        jdbcOperations, WITHDRAW_ABSENT, licitacionId, retained, FormalisationId::value);
   }
 }

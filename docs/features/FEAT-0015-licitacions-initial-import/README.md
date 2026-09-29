@@ -759,7 +759,13 @@ path rather than an exception:
   UTE publishes it"* rather than *"its bid was withdrawn"*, and the reconciliation re-derives that
   UTE's membership from the procedures that remain visible. **Task 14 owns the mechanism**; it is
   called out here because the cheap reading — follow the one bid — is right for the 94% and wrong
-  for the rest;
+  for the rest.
+
+  **The mechanism turned out to be a column.** A membership row names the **procedure that states
+  it**, so reconciling one procedure withdraws its own statements and no one else's, and the pair a
+  reader is shown is visible while any statement of it is. Both branches then take one code path:
+  for an unidentified UTE every statement is the one procedure's anyway. Keyed on the pair alone,
+  the store could not answer *"does another procedure still state this?"* at all;
 - a **licitación absent from a later import is retained unchanged** (R14). Absence is not evidence of
   withdrawal, and the explicit removal that is (R15) is a later feature's.
 
@@ -1122,7 +1128,8 @@ one branch off it, at the same depth as 18.
    needs: `operador_economico.fiscal_id` becomes **nullable** and the row gains a **`ute`
    marker**. A participation carries a nullable operador FK and nothing else about the party —
    no consortium marker, no published name. A membership is **operador ↔ operador**, keyed on the
-   pair, carrying its own withdrawal marker so a member's reachability can follow it.
+   pair **and — task 14's amendment — the procedure that states it**, carrying its own withdrawal
+   marker so a member's reachability can follow it.
    *Depends on 4, 5.* *(SPEC-0008 #21 storage half; SPEC-0006 #40 storage half)*
 7. **`LicitacionListingSource` port + JSON adapter** — one (Órgano, offset, order) page over the
    shared `contratosdegalicia` client, sending the **full DataTables payload**, surfacing
@@ -1172,9 +1179,10 @@ one branch off it, at the same depth as 18.
     parsed record together**, matching by publication identifier, refreshing in place, and marking
     withdrawn any lote, classification, bidder, award, **formalisation or UTE membership** the
     record no longer publishes. A membership stops being visible when **no visible bid of its UTE
-    still publishes it** — which for an unidentified UTE is its one bid, and for an identified one
-    published by several procedures means re-deriving that UTE's membership from the procedures
-    that remain. **The awardee link is re-resolved on every restatement** under a stated total
+    still publishes it**, which the membership row carries the **stating procedure** to answer —
+    one code path for the unidentified UTE whose statements are all one procedure's and for the
+    identified one several procedures state. **The awardee link is re-resolved on every restatement**
+    under a stated total
     order over the four resolution paths, so a published identifier supersedes a derived one even
     where that moves the award to a different operador — which is what closes the historical tail
     when a procedure formalises. *Depends on 5, 6, 9, 13.* *(SPEC-0008 #16 import half, #17)*
