@@ -83,8 +83,19 @@ public class StoreLicitacionConsortia {
   }
 
   /**
-   * Catalogues every consortium the record published, stores its bids and its membership, and
-   * answers which operador each became — which is what the award resolution then attributes to.
+   * Catalogues every consortium the record published, stores its bids and its membership, withdraws
+   * the memberships this procedure no longer states, and answers which operador each became — which
+   * is what the award resolution then attributes to.
+   *
+   * <p><strong>The membership reconciliation is this class's and not its caller's</strong>, because
+   * this is the only place a procedure's whole published membership is known: above it there are
+   * bidder rows, and below it there are operadores, and the mapping between them is what happens
+   * here. It is scoped to this procedure, so a UTE the source identifies keeps every membership
+   * another procedure still states — see {@link UteMembershipRepository#withdrawAbsent}.
+   *
+   * <p>The bids, by contrast, are handed <em>back</em>: they are half of one table that
+   * {@link StoreLicitacionBidders} writes the other half of, and reconciling half a table against
+   * itself would withdraw every single-firm bid on the procedure.
    *
    * @param licitacionId the stored procedure these bids were made for
    * @param lotes the procedure's stored lotes, which is what a bidder row's lote cell is matched
@@ -94,7 +105,7 @@ public class StoreLicitacionConsortia {
    *     identifier is published and often the only one
    */
   @Transactional
-  public ConsortiumOperadores store(
+  public StoredConsortia store(
       LicitacionId licitacionId,
       List<Lote> lotes,
       List<PublishedBidder> bidders,
@@ -106,16 +117,19 @@ public class StoreLicitacionConsortia {
     AwardPoints awardPoints = AwardPoints.of(licitacionId, lotes);
     ConsortiumRows rows = consortiumRowsOf(bidders);
     Map<MatchableName, CataloguedConsortium> catalogued = new LinkedHashMap<>();
+    List<Participation> bids = new ArrayList<>();
+    List<UteMembership> stated = new ArrayList<>();
     for (Map.Entry<MatchableName, List<PublishedBidder.Consortium>> entry :
         rows.named().entrySet()) {
       catalogued.put(
           entry.getKey(),
-          storeOne(awardPoints, entry.getKey(), entry.getValue(), formalisations));
+          storeOne(awardPoints, entry.getKey(), entry.getValue(), formalisations, bids, stated));
     }
     for (PublishedBidder.Consortium row : rows.nameless()) {
-      recordBid(awardPoints, row, null);
+      bids.add(recordBid(awardPoints, row, null));
     }
-    return new ConsortiumOperadores(catalogued);
+    memberships.withdrawAbsent(licitacionId, stated);
+    return new StoredConsortia(new ConsortiumOperadores(catalogued), bids);
   }
 
   /**
@@ -165,14 +179,16 @@ public class StoreLicitacionConsortia {
       AwardPoints awardPoints,
       MatchableName name,
       List<PublishedBidder.Consortium> rows,
-      Iterable<PublishedFormalisation> formalisations) {
+      Iterable<PublishedFormalisation> formalisations,
+      List<Participation> bids,
+      List<UteMembership> stated) {
     String publishedName = rows.getFirst().name();
     Identity identity = identify(name, rows, formalisations);
     OperadorId uteId = catalogue(awardPoints.licitacionId(), name, publishedName, identity);
     for (PublishedBidder.Consortium row : rows) {
-      recordBid(awardPoints, row, uteId);
+      bids.add(recordBid(awardPoints, row, uteId));
     }
-    relateMembers(uteId, rows);
+    relateMembers(awardPoints.licitacionId(), uteId, rows, stated);
     return new CataloguedConsortium(uteId, identity.fiscalId(), identity.path());
   }
 
@@ -188,9 +204,9 @@ public class StoreLicitacionConsortia {
    * <p><strong>Nothing here marks a bid as won</strong>, on {@link StoreLicitacionBidders}'s rule:
    * which bid won is the award table's answer rather than the bidder table's.
    */
-  private void recordBid(
+  private Participation recordBid(
       AwardPoints awardPoints, PublishedBidder.Consortium row, @Nullable OperadorId party) {
-    participations.upsert(
+    return participations.upsert(
         new Participation(
             awardPoints.licitacionId(), awardPoints.at(row.loteKey()), party, false));
   }
@@ -231,9 +247,22 @@ public class StoreLicitacionConsortia {
 
   /**
    * The catalogue entry this consortium is. Identified, it is an ordinary operador found by its
-   * identifier and marked as a UTE; unidentified, it is the entry this procedure minted — found
-   * again through its own bid where an earlier import already made one, and minted here where none
-   * did.
+   * identifier and marked as a UTE; unidentified, it is the entry this procedure already
+   * catalogued — found again through its own bid — and minted here only where there is none.
+   *
+   * <p><strong>The lookup does not care whether the entry it finds holds an identifier</strong>,
+   * which is what keeps a consortium's identity from moving <em>backwards</em>. A record that
+   * stops publishing the identifier it published before — a formalisation withdrawn at the source,
+   * which is precisely the event the awardee gate exists to survive — would otherwise mint a
+   * second, identifier-less entry beside the identified one this procedure already bid as. The bid
+   * would move to the new entry while the award, gated on its published route, stayed on the old:
+   * the procedure holding its consortium twice, which SPEC-0006 #40 forbids however it came about.
+   * Reusing the entry keeps bid and award on one operador, and its members with them.
+   *
+   * <p>That is not the merge R3 forbids, because the lookup cannot reach beyond this procedure: it
+   * joins from <em>this</em> procedure's own bids, so the only entry it can answer with is one this
+   * procedure already catalogued under this name. Identity still never moves — the entry that was
+   * identified stays identified, and this restatement simply declines to invent a rival for it.
    */
   private OperadorId catalogue(
       LicitacionId licitacionId,
@@ -266,7 +295,11 @@ public class StoreLicitacionConsortia {
    * was its own member would be a row saying nothing, and it would let one keep <em>itself</em>
    * reachable under a predicate that counts a single visible membership.
    */
-  private void relateMembers(OperadorId uteId, Iterable<PublishedBidder.Consortium> rows) {
+  private void relateMembers(
+      LicitacionId licitacionId,
+      OperadorId uteId,
+      Iterable<PublishedBidder.Consortium> rows,
+      List<UteMembership> stated) {
     for (PublishedBidder.Consortium row : rows) {
       for (PublishedConsortiumMember member : row.members()) {
         FiscalIdentifier published = member.fiscalIdentifier();
@@ -276,7 +309,9 @@ public class StoreLicitacionConsortia {
         OperadorId memberId =
             identityOf(resolveOperador.resolveWithoutRanking(published, member.name()));
         if (!memberId.equals(uteId)) {
-          memberships.upsert(new UteMembership(uteId, memberId));
+          UteMembership membership = new UteMembership(uteId, memberId, licitacionId);
+          memberships.upsert(membership);
+          stated.add(membership);
         }
       }
     }

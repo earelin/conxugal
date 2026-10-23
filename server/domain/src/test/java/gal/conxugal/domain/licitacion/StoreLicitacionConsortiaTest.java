@@ -202,8 +202,8 @@ class StoreLicitacionConsortiaTest {
     assertThat(theMembershipsStored())
         .usingRecursiveFieldByFieldElementComparator()
         .containsExactly(
-            new UteMembership(ute, cataloguedUnder(PRACE_ID).id()),
-            new UteMembership(ute, cataloguedUnder(TABOADA_ID).id()));
+            new UteMembership(ute, cataloguedUnder(PRACE_ID).id(), LICITACION_ID),
+            new UteMembership(ute, cataloguedUnder(TABOADA_ID).id(), LICITACION_ID));
   }
 
   // One shape, two branches: the identified consortium's membership is the unidentified one's.
@@ -223,10 +223,11 @@ class StoreLicitacionConsortiaTest {
         .usingRecursiveFieldByFieldElementComparator()
         .containsExactly(
             new UteMembership(
-                identified.at(matchable(UTE)).operadorId(), cataloguedUnder(PRACE_ID).id()),
-            new UteMembership(
-                unidentified.at(matchable("MISTURAS-INGESAN")).operadorId(),
-                cataloguedUnder(PRACE_ID).id()));
+                identified.at(matchable(UTE)).operadorId(),
+                cataloguedUnder(PRACE_ID).id(),
+                LICITACION_ID),
+            new UteMembership(unidentified.at(matchable("MISTURAS-INGESAN")).operadorId(),
+                cataloguedUnder(PRACE_ID).id(), LICITACION_ID));
   }
 
   // R16's rule reaches a member: it yields no operador and no membership, and costs the
@@ -247,7 +248,9 @@ class StoreLicitacionConsortiaTest {
         .usingRecursiveFieldByFieldElementComparator()
         .containsExactly(
             new UteMembership(
-                catalogued.at(matchable(UTE)).operadorId(), cataloguedUnder(TABOADA_ID).id()));
+                catalogued.at(matchable(UTE)).operadorId(),
+                cataloguedUnder(TABOADA_ID).id(),
+                LICITACION_ID));
   }
 
   // A UTE is constituted for a procedure, so bidding on two of its lotes is one catalogue entry
@@ -274,6 +277,32 @@ class StoreLicitacionConsortiaTest {
     assertThat(theBidsStored()).extracting(Participation::operadorEconomicoId).containsOnly(ute);
   }
 
+  // The bids are handed back rather than reconciled here, because they are half of one table
+  // StoreLicitacionBidders writes the other half of. A caller that could not see them would have to
+  // reconcile half a table against itself and withdraw every single-firm bid on the procedure.
+  //
+  // What it hands back is the *stored* bid rather than the one passed in, which is the half that
+  // matters: reconciliation withdraws by identity, and the identity is what the store assigns.
+  @Test
+  void answers_the_stored_bids_so_the_bidder_table_is_reconciled_once() {
+    theStoreCataloguesOnDemand();
+    Lote first = storedLote("1");
+    Lote second = storedLote("2");
+
+    StoredConsortia stored =
+        stored(
+            List.of(first, second),
+            List.of(
+                consortium("1", UTE, null, member(PRACE, PRACE_ID)),
+                consortium("2", UTE, null, member(PRACE, PRACE_ID))),
+            List.of());
+
+    assertThat(stored.bids())
+        .extracting(Participation::loteId)
+        .containsExactly(first.id(), second.id());
+    assertThat(stored.bids()).allSatisfy(bid -> assertThat(bid.id()).isNotNull());
+  }
+
   // The distinct-ends CHECK and UteMembership's own constructor both refuse a consortium that is
   // its own member, and either would abort the whole procedure's import rather than lose one row.
   // The guard is what keeps a member republishing the consortium's identifier from reaching them.
@@ -292,7 +321,9 @@ class StoreLicitacionConsortiaTest {
         .usingRecursiveFieldByFieldElementComparator()
         .containsExactly(
             new UteMembership(
-                catalogued.at(matchable(UTE)).operadorId(), cataloguedUnder(TABOADA_ID).id()));
+                catalogued.at(matchable(UTE)).operadorId(),
+                cataloguedUnder(TABOADA_ID).id(),
+                LICITACION_ID));
   }
 
   // R16 records every operador that applied and SPEC-0008 #19 requires every published bidder to
@@ -353,8 +384,8 @@ class StoreLicitacionConsortiaTest {
     assertThat(theMembershipsStored())
         .usingRecursiveFieldByFieldElementComparator()
         .containsExactly(
-            new UteMembership(ute, cataloguedUnder(PRACE_ID).id()),
-            new UteMembership(ute, cataloguedUnder(TABOADA_ID).id()));
+            new UteMembership(ute, cataloguedUnder(PRACE_ID).id(), LICITACION_ID),
+            new UteMembership(ute, cataloguedUnder(TABOADA_ID).id(), LICITACION_ID));
   }
 
   // A bid is not a contract, so it neither promotes a name nor enters the retained set — and for
@@ -384,6 +415,13 @@ class StoreLicitacionConsortiaTest {
   }
 
   private ConsortiumOperadores store(
+      List<Lote> lotes,
+      List<PublishedBidder> bidders,
+      List<PublishedFormalisation> formalisations) {
+    return stored(lotes, bidders, formalisations).operadores();
+  }
+
+  private StoredConsortia stored(
       List<Lote> lotes,
       List<PublishedBidder> bidders,
       List<PublishedFormalisation> formalisations) {

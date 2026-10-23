@@ -1,5 +1,7 @@
 package gal.conxugal.domain.licitacion;
 
+import java.util.Collection;
+
 /**
  * Port for a procedure's formalisations. Implemented by the {@code infrastructure} module.
  *
@@ -17,4 +19,15 @@ public interface FormalisationRepository {
    * identity assigned to it. A null lote means the procedure as a whole and is part of the key.
    */
   Formalisation upsert(Formalisation formalisation);
+
+  /**
+   * Marks withdrawn every formalisation of this procedure that {@code retained} does not name, on
+   * {@link LoteRepository#withdrawAbsent}'s rule and for its reasons. Answers how many it newly
+   * marked.
+   *
+   * <p>It is the row whose disappearance matters most, and the reason the awardee link is gated
+   * rather than simply re-derived: a formalisation withdrawn here would otherwise demote the award
+   * it published from {@code PUBLISHED_BY_FORMALISATION} to a derived link or to nothing.
+   */
+  int withdrawAbsent(LicitacionId licitacionId, Collection<FormalisationId> retained);
 }

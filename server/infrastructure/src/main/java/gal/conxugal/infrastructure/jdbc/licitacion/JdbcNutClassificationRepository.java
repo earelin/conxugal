@@ -1,5 +1,6 @@
 package gal.conxugal.infrastructure.jdbc.licitacion;
 
+import gal.conxugal.domain.licitacion.LicitacionId;
 import gal.conxugal.domain.licitacion.Nut;
 import gal.conxugal.domain.licitacion.NutClassification;
 import gal.conxugal.domain.licitacion.NutClassificationId;
@@ -10,6 +11,7 @@ import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.GenericRepository;
 import io.micronaut.transaction.annotation.Transactional;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -34,6 +36,8 @@ public abstract class JdbcNutClassificationRepository
           withdrawn = EXCLUDED.withdrawn
       RETURNING id
       """;
+
+  private static final String WITHDRAW_ABSENT = Withdrawals.statementFor("licitacion_nut");
 
   private final JdbcOperations jdbcOperations;
 
@@ -64,6 +68,16 @@ public abstract class JdbcNutClassificationRepository
         classification.nut(),
         classification.diffusionDate(),
         classification.withdrawn());
+  }
+
+  @Override
+  @Transactional
+  public int withdrawAbsent(
+      LicitacionId licitacionId, Collection<NutClassificationId> retained) {
+    Objects.requireNonNull(licitacionId, "licitacionId must not be null");
+    Objects.requireNonNull(retained, "retained must not be null");
+    return Withdrawals.absent(
+        jdbcOperations, WITHDRAW_ABSENT, licitacionId, retained, NutClassificationId::value);
   }
 
   private static UUID identityOf(Nut nut) {
