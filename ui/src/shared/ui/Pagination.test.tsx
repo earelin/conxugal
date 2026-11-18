@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -28,18 +28,21 @@ function renderPagination({
   totalPages = 37,
 }: Envelope = {}) {
   const onPageChange = vi.fn();
-  const view = render(
+  const at = (current: number) => (
     <MantineProvider env="test">
       <Pagination
-        page={page}
+        page={current}
         size={size}
         totalItems={totalItems}
         totalPages={totalPages}
         onPageChange={onPageChange}
       />
-    </MantineProvider>,
+    </MantineProvider>
   );
-  return { ...view, onPageChange, user: userEvent.setup() };
+  const view = render(at(page));
+  /** The page arriving from outside, as the caller's URL would hand it over. */
+  const rerenderAt = (current: number) => view.rerender(at(current));
+  return { ...view, onPageChange, rerenderAt, user: userEvent.setup() };
 }
 
 function button(name: string) {
@@ -201,29 +204,53 @@ describe('Pagination', () => {
   });
 
   it('follows the page it is given, so paging by button keeps the box honest', () => {
-    const { rerender } = renderPagination({ page: 3 });
+    const { rerenderAt } = renderPagination({ page: 3 });
     expect(jumpBox()).toHaveValue('3');
 
-    rerender(
-      <MantineProvider env="test">
-        <Pagination page={4} size={50} totalItems={1832} totalPages={37} onPageChange={vi.fn()} />
-      </MantineProvider>,
-    );
+    rerenderAt(4);
 
     expect(jumpBox()).toHaveValue('4');
   });
 
-  it('moves focus to the box when the button that was pressed disables itself', async () => {
-    const { rerender, user } = renderPagination({ page: 36 });
+  it('moves focus to the box when the pressed button disables itself before the browser lets go of it', async () => {
+    const { rerenderAt, user } = renderPagination({ page: 36 });
 
     await user.click(button(copy.last));
-    rerender(
-      <MantineProvider env="test">
-        <Pagination page={37} size={50} totalItems={1832} totalPages={37} onPageChange={vi.fn()} />
-      </MantineProvider>,
-    );
+    rerenderAt(37);
 
     expect(button(copy.last)).toBeDisabled();
     expect(jumpBox()).toHaveFocus();
+  });
+
+  it('moves focus to the box when the browser has already dropped it to the document', async () => {
+    const { rerenderAt, user } = renderPagination({ page: 36 });
+
+    await user.click(button(copy.last));
+    act(() => {
+      button(copy.last).blur();
+    });
+    rerenderAt(37);
+
+    expect(jumpBox()).toHaveFocus();
+  });
+
+  it('leaves focus alone when the page arrives from outside the control', () => {
+    const { rerenderAt } = renderPagination({ page: 36 });
+
+    act(() => {
+      button(copy.last).focus();
+    });
+    rerenderAt(37);
+
+    expect(jumpBox()).not.toHaveFocus();
+  });
+
+  it('leaves focus on a step that can still be pressed again', async () => {
+    const { rerenderAt, user } = renderPagination({ page: 3 });
+
+    await user.click(button(copy.next));
+    rerenderAt(4);
+
+    expect(button(copy.next)).toHaveFocus();
   });
 });
