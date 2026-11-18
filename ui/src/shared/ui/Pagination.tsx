@@ -92,14 +92,16 @@ export function Pagination({ page, totalItems, totalPages, onPageChange }: Pagin
 
   /**
    * The ordinary end of a walk disables the very control that got there:
-   * *Última* on the last page, *Primeira* on the first. A disabled element
-   * cannot hold focus, so the browser drops it to the document and a keyboard
-   * reader is returned to the top of the page — from a button they pressed on
-   * purpose. Focus moves to the box between the two pairs, which is the one
-   * thing here still reachable at either end.
+   * *Última* on the last page, *Primeira* on the first. Some browsers drop
+   * focus from a disabled element to the document, returning a keyboard reader
+   * to the top of the page; newer Chromium leaves it stranded on the disabled
+   * button instead. Either way it sits somewhere it cannot act, so focus moves
+   * to the box between the two pairs, the one thing here still reachable at
+   * either end.
    */
   useEffect(() => {
-    if (steppedRef.current && document.activeElement === document.body) {
+    const active = document.activeElement;
+    if (steppedRef.current && (active === document.body || active?.matches(':disabled'))) {
       jumpRef.current?.focus();
     }
     steppedRef.current = false;

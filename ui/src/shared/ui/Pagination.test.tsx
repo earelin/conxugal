@@ -212,4 +212,18 @@ describe('Pagination', () => {
 
     expect(jumpBox()).toHaveValue('4');
   });
+
+  it('moves focus to the box when the button that was pressed disables itself', async () => {
+    const { rerender, user } = renderPagination({ page: 36 });
+
+    await user.click(button(copy.last));
+    rerender(
+      <MantineProvider env="test">
+        <Pagination page={37} size={50} totalItems={1832} totalPages={37} onPageChange={vi.fn()} />
+      </MantineProvider>,
+    );
+
+    expect(button(copy.last)).toBeDisabled();
+    expect(jumpBox()).toHaveFocus();
+  });
 });
