@@ -17,7 +17,7 @@ and the navigation that follows it, alongside the existing session read in
 arrives in [TASK-0002](TASK-0002-header-user-menu.md) — and it changes **nothing on the
 backend**: `POST /logout` and the 401-on-XHR behaviour are already delivered for
 [SPEC-0002](../../specs/SPEC-0002-user-authentication.md), and documented in
-[`server/CLAUDE.md`](../../../server/CLAUDE.md).
+[`server/AGENTS.md`](../../../server/AGENTS.md).
 
 ## Scope
 - A `logout()` call in `ui/src/shared/entities/currentUser.ts` — the module ADR-0015

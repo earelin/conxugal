@@ -68,7 +68,7 @@ Galician, consistent with the project and its data source.
     (React Router served by the backend),
     [ADR-0004](../architecture/0004-ui-stack-vite-mantine.md) (Vite build, library-mode
     SPA, Mantine, npm)
-  - System: [`ui/README.md`](../../ui/README.md) and [`ui/CLAUDE.md`](../../ui/CLAUDE.md)
+  - System: [`ui/README.md`](../../ui/README.md) and [`ui/AGENTS.md`](../../ui/AGENTS.md)
     — the `ui/` module's structure, routing, theme, i18n seam and scripts as built
   - Behaviour: `ui/src/App.test.tsx` covers AC1 (shell with product name and primary
     navigation) and AC4 (in-shell Galician not-found state)
@@ -81,7 +81,7 @@ Galician, consistent with the project and its data source.
     prefix that lets the fallback tell a missing endpoint from a client-side route),
     [ADR-0007](../architecture/0007-acceptance-testing-module.md) (Playwright, scoped to
     the served UI)
-  - System: [`server/CLAUDE.md`](../../server/CLAUDE.md) — the UI build inside the server
+  - System: [`server/AGENTS.md`](../../server/AGENTS.md) — the UI build inside the server
     build, and the routing/fallback matrix as built;
     [`server/README.md`](../../server/README.md) — what the server build needs and what a
     request without a session gets
