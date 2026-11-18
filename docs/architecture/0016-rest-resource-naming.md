@@ -80,7 +80,7 @@ it lands. Every other existing path already conforms.
 
 Like ADR-0006 this is an enforceable convention upheld by review: a path that addresses
 one element through a plural noun is a defect. It is restated in
-[`docs/api/CLAUDE.md`](../api/CLAUDE.md) — next to `openapi.yaml`, where paths are actually
+[`docs/api/AGENTS.md`](../api/AGENTS.md) — next to `openapi.yaml`, where paths are actually
 chosen — for day-to-day visibility, but this ADR is the governing record.
 
 ## Consequences

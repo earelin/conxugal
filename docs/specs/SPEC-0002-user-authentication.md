@@ -127,10 +127,10 @@ granted to ADMIN.
     virtual thread, not the event loop),
     [ADR-0024](../architecture/0024-argon2id-password-hashing.md) (Argon2id and its
     self-describing stored form)
-  - System: [`server/CLAUDE.md`](../../server/CLAUDE.md) — the session model as
+  - System: [`server/AGENTS.md`](../../server/AGENTS.md) — the session model as
     configured, the 30-minute idle window, the Accept-header 401/303 split, the
     three-branch indistinct-failure contract and the server-rendered views;
-    [`ui/CLAUDE.md`](../../ui/CLAUDE.md) — how the SPA detects a gone session and
+    [`ui/AGENTS.md`](../../ui/AGENTS.md) — how the SPA detects a gone session and
     redirects once
   - Behaviour: `AcceptHeaderRejectionTest` covers AC1 — a browser navigation without a
     session gets `303` to `/login`, an XHR gets `401`, which is the split the SPA depends

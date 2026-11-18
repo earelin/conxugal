@@ -21,7 +21,7 @@ server-side session behind a cookie, ended by `POST /logout`, which redirects to
 server-rendered `/login`. That endpoint, and the SPA's 401-on-session-loss redirect,
 were delivered for
 [SPEC-0002](../../specs/SPEC-0002-user-authentication.md) and are documented in
-[`server/CLAUDE.md`](../../../server/CLAUDE.md); they are not revisited here. What is
+[`server/AGENTS.md`](../../../server/AGENTS.md); they are not revisited here. What is
 missing is purely the affordance: until now the
 only logout control in the product was on the server-rendered forbidden page, so a
 user inside the app could only get out by waiting for the 30-minute idle timeout or
@@ -44,7 +44,7 @@ single origin established by
 **Out of scope (already delivered or owned elsewhere):**
 - `POST /logout` itself, session invalidation, and the 401-on-XHR contract — owned by
   [SPEC-0002](../../specs/SPEC-0002-user-authentication.md) and documented in
-  [`server/CLAUDE.md`](../../../server/CLAUDE.md). No backend or configuration change
+  [`server/AGENTS.md`](../../../server/AGENTS.md). No backend or configuration change
   belongs to this feature.
 - Any account or profile screen. The dropdown holds exactly one item; adding "my
   account" would need a screen no spec asks for yet.
