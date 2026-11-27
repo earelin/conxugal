@@ -22,7 +22,7 @@
     "api:down": "docker compose down"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.9.1",
+    "@hookform/resolvers": "^7.0.8",
     "@mantine/charts": "^9.8.2",
     "@mantine/core": "^9.8.0",
     "@mantine/hooks": "^9.8.0",
